@@ -1,1 +1,7 @@
 ccr_syncer
+.vscode
+.envrc
+bin
+ccr.db
+backup
+ccr_syncer.sh

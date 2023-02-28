@@ -1,0 +1,154 @@
+package main
+
+import (
+	"encoding/json"
+	"flag"
+
+	"github.com/selectdb/ccr_syncer/ccr/base"
+	"github.com/selectdb/ccr_syncer/utils"
+
+	"github.com/selectdb/ccr_syncer/ccr"
+	"github.com/selectdb/ccr_syncer/rpc"
+	log "github.com/sirupsen/logrus"
+)
+
+// commit_seq flag default 0
+var (
+	action    string
+	labelName string
+	token     string
+)
+
+func init_flags() {
+	flag.StringVar(&action, "action", "get", "action")
+	flag.StringVar(&labelName, "label", "snapshot_20230605", "label")
+	flag.StringVar(&token, "token", "5ff161c3-2c08-4079-b108-26c8850b6598", "token")
+	flag.Parse()
+}
+
+func test_get_snapshot(spec *base.Spec) {
+	rpc, err := rpc.NewThriftRpc(spec)
+	if err != nil {
+		panic(err)
+	}
+
+	resp, err := rpc.GetSnapshot(spec, labelName)
+	if err != nil {
+		panic(err)
+	}
+	log.Infof("resp: %v\n", resp)
+	log.Infof("job: %s\n", string(resp.GetJobInfo()))
+}
+
+func test_restore_snapshot(src *base.Spec, dest *base.Spec) {
+	// Get snapshot from src
+	srcRpc, err := rpc.NewThriftRpc(src)
+	if err != nil {
+		panic(err)
+	}
+	snapshotResp, err := srcRpc.GetSnapshot(src, labelName)
+	if err != nil {
+		panic(err)
+	}
+	// log.Infof("resp: %v\n", snapshotResp)
+	log.Infof("job: %s\n", string(snapshotResp.GetJobInfo()))
+
+	var jobInfo map[string]interface{}
+	// json umarshal jobInfo
+	err = json.Unmarshal(snapshotResp.GetJobInfo(), &jobInfo)
+	if err != nil {
+		panic(err)
+	}
+	log.Infof("jobInfo: %v\n", jobInfo)
+
+	extraInfo := genExtraInfo(src, token)
+	log.Infof("extraInfo: %v\n", extraInfo)
+
+	jobInfo["extra_info"] = extraInfo
+
+	// marshal jobInfo
+	jobInfoBytes, err := json.Marshal(jobInfo)
+	if err != nil {
+		panic(err)
+	}
+	log.Infof("jobInfoBytes: %s\n", string(jobInfoBytes))
+	snapshotResp.SetJobInfo(jobInfoBytes)
+
+	// Restore snapshot to det
+	destRpc, err := rpc.NewThriftRpc(dest)
+	if err != nil {
+		panic(err)
+	}
+	restoreResp, err := destRpc.RestoreSnapshot(dest, labelName, snapshotResp)
+	if err != nil {
+		panic(err)
+	}
+	log.Infof("resp: %v\n", restoreResp)
+}
+
+func test_snapshot_op(src *base.Spec, dest *base.Spec) {
+	switch action {
+	case "get":
+		test_get_snapshot(src)
+	case "restore":
+		test_restore_snapshot(src, dest)
+	default:
+		panic("unknown action")
+	}
+}
+
+func init() {
+	init_flags()
+	utils.InitLog()
+}
+
+type JobInfo map[string]interface{}
+
+func genExtraInfo(src *base.Spec, token string) *base.ExtraInfo {
+	meta := ccr.NewMeta(src)
+	backends, err := meta.GetBackends()
+	if err != nil {
+		panic(err)
+	} else {
+		log.Infof("found backends: %v\n", backends)
+	}
+
+	beNetworkMap := make(map[int64]base.NetworkAddr)
+	for _, backend := range backends {
+		log.Infof("backend: %v\n", backend)
+		addr := base.NetworkAddr{
+			Ip:   backend.Host,
+			Port: backend.HttpPort,
+		}
+		beNetworkMap[backend.Id] = addr
+	}
+
+	return &base.ExtraInfo{
+		BeNetworkMap: beNetworkMap,
+		Token:        token,
+	}
+}
+
+func main() {
+	src := &base.Spec{
+		Host:       "localhost",
+		Port:       "9030",
+		ThriftPort: "9020",
+		User:       "root",
+		Password:   "",
+		Database:   "ccr",
+		Table:      "src_1",
+	}
+
+	dest := &base.Spec{
+		Host:       "localhost",
+		Port:       "29030",
+		ThriftPort: "29020",
+		User:       "root",
+		Password:   "",
+		Database:   "ccr",
+		Table:      "dest_1",
+	}
+
+	test_snapshot_op(src, dest)
+}
