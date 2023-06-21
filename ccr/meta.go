@@ -41,20 +41,21 @@ func (p *PartitionMeta) String() string {
 type IndexMeta struct {
 	Id          int64
 	Name        string
-	TabletMetas map[int64]TabletMeta // tabletId -> tablet
+	TabletMetas map[int64]*TabletMeta // tabletId -> tablet
 }
 
 type TabletMeta struct {
 	Id           int64
-	ReplicaMetas map[int64]ReplicaMeta // replicaId -> replica
+	ReplicaMetas map[int64]*ReplicaMeta // replicaId -> replica
 }
 
 type ReplicaMeta struct {
 	Id        int64
+	TabletId  int64
 	BackendId int64
 }
 
-// All op is not thread safety
+// All op is not concurrent safety
 // Meta
 type Meta struct {
 	base.Spec
@@ -182,6 +183,7 @@ func (m *Meta) UpdateTable(tableName string) error {
 		}
 		// match parsedDbname == dbname, return dbId
 		if parsedTableName == tableName {
+			log.Debugf("found table:%s, tableId:%d", fullTableName, tableId)
 			m.TableName2IdMap[fullTableName] = tableId
 			if m.Tables == nil {
 				m.Tables = make(map[int64]*TableMeta)
@@ -247,7 +249,7 @@ func (m *Meta) UpdatePartitions(tableName string) error {
 	}
 
 	// Step 2: get tableId
-	tableId, err := m.GetTableId(tableName)
+	table, err := m.GetTable(tableName)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -265,7 +267,7 @@ func (m *Meta) UpdatePartitions(tableName string) error {
 		log.Error(err)
 		return err
 	}
-	partitions := make([]PartitionMeta, 0)
+	partitions := make([]*PartitionMeta, 0)
 	// total rows 18
 	var partitionId int64
 	var partitionName string
@@ -274,7 +276,7 @@ func (m *Meta) UpdatePartitions(tableName string) error {
 	for i := range discardCols {
 		scanArgs = append(scanArgs, &discardCols[i])
 	}
-	query := fmt.Sprintf("show proc '/dbs/%d/%d/partitions'", dbId, tableId)
+	query := fmt.Sprintf("show proc '/dbs/%d/%d/partitions'", dbId, table.Id)
 	log.Info(query)
 	rows, err := db.Query(query)
 	if err != nil {
@@ -288,7 +290,7 @@ func (m *Meta) UpdatePartitions(tableName string) error {
 			log.Fatal(err)
 		}
 		log.Printf("partitionId: %d, partitionName: %s", partitionId, partitionName)
-		partition := PartitionMeta{
+		partition := &PartitionMeta{
 			Id:   partitionId,
 			Name: partitionName,
 		}
@@ -300,10 +302,15 @@ func (m *Meta) UpdatePartitions(tableName string) error {
 		return err
 	}
 
+	table.Partitions = make(map[int64]*PartitionMeta)
+	for _, partition := range partitions {
+		table.Partitions[partition.Id] = partition
+	}
+
 	return nil
 }
 
-func (m *Meta) getPartitionsWithUpdate(tableName string, depth int64) ([]*PartitionMeta, error) {
+func (m *Meta) getPartitionsWithUpdate(tableName string, depth int64) (map[int64]*PartitionMeta, error) {
 	if depth >= 3 {
 		return nil, fmt.Errorf("getPartitions depth >= 3")
 	}
@@ -317,12 +324,13 @@ func (m *Meta) getPartitionsWithUpdate(tableName string, depth int64) ([]*Partit
 	return m.getPartitions(tableName, depth)
 }
 
-func (m *Meta) getPartitions(tableName string, depth int64) ([]*PartitionMeta, error) {
+func (m *Meta) getPartitions(tableName string, depth int64) (map[int64]*PartitionMeta, error) {
 	if depth >= 3 {
 		return nil, fmt.Errorf("getPartitions depth >= 3")
 	}
 
-	tableId, ok := m.TableName2IdMap[tableName]
+	fullTableName := m.GetFullTableName(tableName)
+	tableId, ok := m.TableName2IdMap[fullTableName]
 	if !ok {
 		return m.getPartitionsWithUpdate(tableName, depth)
 	}
@@ -336,14 +344,10 @@ func (m *Meta) getPartitions(tableName string, depth int64) ([]*PartitionMeta, e
 		return m.getPartitionsWithUpdate(tableName, depth)
 	}
 
-	partitions := make([]*PartitionMeta, 0)
-	for _, partition := range tableMeta.Partitions {
-		partitions = append(partitions, partition)
-	}
-	return partitions, nil
+	return tableMeta.Partitions, nil
 }
 
-func (m *Meta) GetPartitions(tableName string) ([]*PartitionMeta, error) {
+func (m *Meta) GetPartitions(tableName string) (map[int64]*PartitionMeta, error) {
 	return m.getPartitions(tableName, 0)
 }
 
@@ -436,6 +440,13 @@ func (m *Meta) GetBackendId(host string, portStr string) (int64, error) {
 	return 0, fmt.Errorf("hostPort: %s not found", hostPort)
 }
 
+// func (m *Meta) UpdateIndexes() error {
+
+// }
+
+// func (m *Meta) GetIndexes() ([]*IndexMeta, error) {
+// }
+
 // func (m *Meta) UpdateReplicas() error {
 // 	// Step 1: get dbId
 // 	dbId, err := m.GetDbId(dbName)
@@ -443,22 +454,46 @@ func (m *Meta) GetBackendId(host string, portStr string) (int64, error) {
 // 		log.Fatal(err)
 // 		return nil, err
 // 	}
+
 // }
 
-// func (m *Meta) GetReplicas(tableName string) ([]ReplicaMeta, error) {
+// func (m *Meta) GetReplicas(tableName string) ([]*ReplicaMeta, error) {
+// 	partitions, err := m.GetPartitions(m.Table)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 		return nil, err
+// 	}
+
+// 	for _, partition := range partitions {
+// 		log.Debugf("partition: %v", partition)
+// 	}
 // }
 
-func (m *Meta) GetMasterToken() (string, error) {
+func (m *Meta) UpdateToken() error {
 	spec := &m.Spec
 
 	rpc, err := rpc.NewThriftRpc(spec)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	if token, err := rpc.GetMasterToken(spec); err != nil {
-		return "", err
+		return err
 	} else {
-		return token, nil
+		m.token = token
+		return nil
 	}
+}
+
+func (m *Meta) GetMasterToken() (string, error) {
+	if m.token != "" {
+		return m.token, nil
+	}
+
+	if err := m.UpdateToken(); err != nil {
+		log.Error(err)
+		return "", err
+	}
+
+	return m.token, nil
 }
