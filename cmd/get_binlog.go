@@ -4,7 +4,9 @@ import (
 	"flag"
 
 	"github.com/selectdb/ccr_syncer/ccr/base"
+	"github.com/selectdb/ccr_syncer/ccr/record"
 	"github.com/selectdb/ccr_syncer/rpc"
+	festruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/frontendservice"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -35,7 +37,17 @@ func test_get_binlog(spec *base.Spec) {
 		log.Infof("binlog: %v", binlog)
 	}
 	log.Infof("resp binlogs: %v", resp.GetBinlogs())
-	log.Infof("first resp binlog data: %v", resp.GetBinlogs()[0].GetData())
+
+	binlog := resp.GetBinlogs()[0]
+	jsonData := binlog.GetData()
+	log.Infof("first resp binlog data: %v", jsonData)
+	if binlog.GetType() == festruct.TBinlogType_UPSERT {
+		if upsert, err := record.NewUpsertFromJson(jsonData); err != nil {
+			panic(err)
+		} else {
+			log.Infof("upsert: %s", upsert)
+		}
+	}
 }
 
 func main() {
