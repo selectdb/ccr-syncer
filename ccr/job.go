@@ -28,7 +28,8 @@ const (
 	DBSync    SyncType = 0
 	TableSync SyncType = 1
 
-	SYNC_DURATION = time.Second * 5
+	SYNC_DURATION                = time.Second * 5
+	UPDATE_JOB_PROGRESS_DURATION = time.Second * 3
 )
 
 type Job struct {
@@ -99,7 +100,6 @@ func NewJobFromJson(jsonData string, db storage.DB) (*Job, error) {
 	return &job, nil
 }
 
-// valid
 func (j *Job) valid() error {
 	var err error
 	if exist, err := j.db.IsJobExist(j.Name); err != nil {
@@ -289,7 +289,8 @@ func (j *Job) genExtraInfo() (*base.ExtraInfo, error) {
 	}, nil
 }
 
-func (j *Job) firstSync() error {
+// TODO: check snapshot state
+func (j *Job) tableFullSync() error {
 	// Step 1: Create snapshot
 	snapshotName, err := j.Src.CreateSnapshotAndWaitForDone()
 	if err != nil {
@@ -312,6 +313,7 @@ func (j *Job) firstSync() error {
 	log.Infof("resp: %v\n", snapshotResp)
 	log.Infof("job: %s\n", string(snapshotResp.GetJobInfo()))
 
+	// Step 3: Add extra info
 	var jobInfo map[string]interface{}
 	// json umarshal jobInfo
 	err = json.Unmarshal(snapshotResp.GetJobInfo(), &jobInfo)
@@ -338,8 +340,8 @@ func (j *Job) firstSync() error {
 	log.Infof("jobInfoBytes: %s\n", string(jobInfoBytes))
 	snapshotResp.SetJobInfo(jobInfoBytes)
 
-	// Step 2: restore snapshot
-	// Restore snapshot to det
+	// Step 4: restore snapshot
+	// Restore snapshot to dest
 	dest := &j.Dest
 	destRpc, err := rpc.NewThriftRpc(dest)
 	if err != nil {
@@ -510,6 +512,7 @@ func (j *Job) dealUpsertBinlog(data string) error {
 
 	dest := &j.Dest
 	commitSeq := upsert.CommitSeq
+
 	// Step 1: begin txn
 	destRpc, err := rpc.NewThriftRpc(dest)
 	if err != nil {
@@ -526,22 +529,28 @@ func (j *Job) dealUpsertBinlog(data string) error {
 	txnId := beginTxnResp.GetTxnId()
 	log.Infof("TxnId: %d, DbId: %d\n", txnId, beginTxnResp.GetDbId())
 
-	// Step 2: ingest be
+	// Step 2: update job progress
+	j.progress.State = JobStateDoing
+	j.progress.CommitSeq = commitSeq
+	j.progress.TransactionId = txnId
+	j.updateJobProgress()
+
+	// Step 3: ingest binlog
 	err = j.ingestBinlog(txnId, upsert)
 	if err != nil {
 		return err
 	}
 
-	// Step 3: commit txn
+	// Step 4: commit txn
 	resp, err := destRpc.CommitTransaction(dest, txnId)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("resp: %v\n", resp)
+	log.Debugf("commit resp: %v\n", resp)
 	return nil
 }
 
-func (j *Job) contineSync() error {
+func (j *Job) tableIncrementalSync() error {
 	commitSeq := j.progress.CommitSeq
 	src := &j.Src
 
@@ -563,6 +572,7 @@ func (j *Job) contineSync() error {
 	if len(binlogs) == 0 {
 		return fmt.Errorf("no binlog")
 	}
+
 	binlog := binlogs[0]
 	switch binlog.GetType() {
 	case festruct.TBinlogType_UPSERT:
@@ -575,7 +585,8 @@ func (j *Job) contineSync() error {
 	}
 
 	// Step 3: update progress to db
-	// TODO
+	j.progress.State = JobStateDone
+	j.updateJobProgress()
 	return nil
 }
 
@@ -605,9 +616,30 @@ func (j *Job) recoverJobProgress() error {
 	}
 }
 
-func (j *Job) Sync() error {
+// write progress to db, busy loop until success
+func (j *Job) updateJobProgress() {
+	for {
+		// Step 1: to json
+		progressJson, err := j.progress.ToJson()
+		if err != nil {
+			log.Error("parse job progress failed", zap.String("job", j.Name), zap.Error(err))
+			time.Sleep(UPDATE_JOB_PROGRESS_DURATION)
+			continue
+		}
+
+		// Step 2: write to db
+		err = j.db.UpdateProgress(j.Name, progressJson)
+		if err != nil {
+			log.Error("update job progress failed", zap.String("job", j.Name), zap.Error(err))
+			time.Sleep(UPDATE_JOB_PROGRESS_DURATION)
+			continue
+		}
+	}
+}
+
+func (j *Job) tableSync() error {
 	if j.isFirstSync {
-		return j.firstSync()
+		return j.tableFullSync()
 	}
 
 	/// Continue sync
@@ -617,7 +649,23 @@ func (j *Job) Sync() error {
 			return err
 		}
 	}
-	return j.contineSync()
+	return j.tableIncrementalSync()
+}
+
+func (j *Job) dbSync() error {
+	// TODO(Drogon): impl
+	return nil
+}
+
+func (j *Job) Sync() error {
+	switch j.SyncType {
+	case TableSync:
+		return j.tableSync()
+	case DBSync:
+		return j.dbSync()
+	default:
+		return fmt.Errorf("unknown sync type: %v", j.SyncType)
+	}
 }
 
 // run job

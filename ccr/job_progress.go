@@ -32,3 +32,12 @@ func NewJobProgressFromJson(jsonData string) (*JobProgress, error) {
 		return &jobProgress, nil
 	}
 }
+
+// ToJson
+func (j *JobProgress) ToJson() (string, error) {
+	if jsonData, err := json.Marshal(j); err != nil {
+		return "", err
+	} else {
+		return string(jsonData), nil
+	}
+}
