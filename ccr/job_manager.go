@@ -98,7 +98,7 @@ func (jm *JobManager) runJob(job *Job) {
 	jm.wg.Add(1)
 
 	go func() {
-		job.Loop()
+		job.Run()
 		jm.wg.Done()
 	}()
 }

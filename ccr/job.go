@@ -312,7 +312,6 @@ func (j *Job) firstSync() error {
 	log.Infof("resp: %v\n", snapshotResp)
 	log.Infof("job: %s\n", string(snapshotResp.GetJobInfo()))
 
-	// Step 2: restore snapshot
 	var jobInfo map[string]interface{}
 	// json umarshal jobInfo
 	err = json.Unmarshal(snapshotResp.GetJobInfo(), &jobInfo)
@@ -339,6 +338,7 @@ func (j *Job) firstSync() error {
 	log.Infof("jobInfoBytes: %s\n", string(jobInfoBytes))
 	snapshotResp.SetJobInfo(jobInfoBytes)
 
+	// Step 2: restore snapshot
 	// Restore snapshot to det
 	dest := &j.Dest
 	destRpc, err := rpc.NewThriftRpc(dest)
@@ -363,6 +363,7 @@ func new_label(t *base.Spec, commitSeq int64) string {
 }
 
 // Table ingestBinlog
+// TODO: add check success
 func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) error {
 	srcTableId, err := j.srcMeta.GetTableId(j.Src.Table)
 	if err != nil {
@@ -578,39 +579,6 @@ func (j *Job) contineSync() error {
 	return nil
 }
 
-// func (j *Job) contineSync() error {
-// 	src := &j.Src
-// 	commitSeq := j.progress.CommitSeq
-
-// 	// Step 1: get binlog
-// 	srcRpc, err := rpc.NewThriftRpc(src)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	getBinlogResp, err := srcRpc.GetBinlog(src, commitSeq)
-// 	if err != nil {
-// 		log.Errorf("get binlog failed, err: %v", err)
-// 		return nil
-// 	}
-
-// 	// Step 2: begin txn
-// 	label := new_label(src, commitSeq)
-// 	beginResp, err := srcRpc.BeginTransaction(src, label)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	fmt.Printf("resp: %v\n", beginResp)
-// 	log.Infof("TxnId: %d, DbId: %d\n", beginResp.GetTxnId(), beginResp.GetDbId())
-
-// 	// Step 3: ingest be
-
-// 	// Step 4: commit txn
-
-// 	// Step 5: save to db
-
-// 	return nil
-// }
-
 func (j *Job) recoverJobProgress() error {
 	// get progress from db, retry 3 times
 	var err error
@@ -653,7 +621,7 @@ func (j *Job) Sync() error {
 }
 
 // run job
-func (j *Job) Loop() error {
+func (j *Job) Run() error {
 	// 5s check once
 	ticker := time.NewTicker(SYNC_DURATION)
 	defer ticker.Stop()
