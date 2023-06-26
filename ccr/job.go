@@ -3,11 +3,17 @@ package ccr
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/selectdb/ccr_syncer/ccr/base"
+	"github.com/selectdb/ccr_syncer/ccr/record"
 	"github.com/selectdb/ccr_syncer/rpc"
+	bestruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/backendservice"
+	festruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/frontendservice"
+	"github.com/selectdb/ccr_syncer/rpc/kitex_gen/types"
 	"github.com/selectdb/ccr_syncer/storage"
+	u "github.com/selectdb/ccr_syncer/utils"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -350,12 +356,225 @@ func (j *Job) firstSync() error {
 	return nil
 }
 
+// TODO: rewrite by another format
 func new_label(t *base.Spec, commitSeq int64) string {
 	// label "ccr_sync_job:${db}:${table}:${commit_seq}"
 	return fmt.Sprintf("ccr_sync_job:%s:%s:%d", t.Database, t.Table, commitSeq)
 }
 
+// Table ingestBinlog
+func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) error {
+	srcTableId, err := j.srcMeta.GetTableId(j.Src.Table)
+	if err != nil {
+		return err
+	}
+	tableRecord, ok := upsert.TableRecords[srcTableId]
+	if !ok {
+		return fmt.Errorf("table record not found, table: %s", j.Src.Table)
+	}
+
+	var wg sync.WaitGroup
+	var srcBackendMap map[int64]*base.Backend
+	srcBackendMap, err = j.srcMeta.GetBackendMap()
+	if err != nil {
+		return err
+	}
+	var destBackendMap map[int64]*base.Backend
+	destBackendMap, err = j.destMeta.GetBackendMap()
+	if err != nil {
+		return err
+	}
+
+	var lastErr error
+	var lastErrLock sync.RWMutex
+	updateLastError := func(err error) {
+		lastErrLock.Lock()
+		lastErr = err
+		lastErrLock.Unlock()
+	}
+	getLastError := func() error {
+		lastErrLock.RLock()
+		defer lastErrLock.RUnlock()
+		return lastErr
+	}
+	for _, partitionRecord := range tableRecord.PartitionRecords {
+		binlogVersion := partitionRecord.Version
+
+		srcPartitionId := partitionRecord.PartitionID
+		var srcPartitionName string
+		srcPartitionName, err = j.srcMeta.GetPartitionName(j.Src.Table, srcPartitionId)
+		if err != nil {
+			updateLastError(err)
+			break
+		}
+		var destPartitionId int64
+		destPartitionId, err = j.destMeta.GetPartitionIdByName(j.Dest.Table, srcPartitionName)
+		if err != nil {
+			updateLastError(err)
+			break
+		}
+
+		var srcTablets []*TabletMeta
+		srcTablets, err = j.srcMeta.GetTabletList(j.Src.Table, srcPartitionId)
+		if err != nil {
+			updateLastError(err)
+			break
+		}
+		var destTablets []*TabletMeta
+		destTablets, err = j.destMeta.GetTabletList(j.Dest.Table, destPartitionId)
+		if err != nil {
+			updateLastError(err)
+			break
+		}
+		if len(srcTablets) != len(destTablets) {
+			updateLastError(fmt.Errorf("tablet count not match, src: %d, dest: %d", len(srcTablets), len(destTablets)))
+			break
+		}
+
+		for tabletIndex, destTablet := range destTablets {
+			srcTablet := srcTablets[tabletIndex]
+
+			// iterate dest replicas
+			destTablet.ReplicaMetas.Scan(func(destReplicaId int64, destReplica *ReplicaMeta) bool {
+				log.Debugf("handle dest replica id: %v", destReplicaId)
+				destBackend, ok := destBackendMap[destReplica.BackendId]
+				if !ok {
+					lastErr = fmt.Errorf("backend not found, backend id: %d", destReplica.BackendId)
+					return false
+				}
+				destTabletId := destReplica.TabletId
+
+				destRpc, err := rpc.NewBeThriftRpc(destBackend)
+				if err != nil {
+					updateLastError(err)
+					return false
+				}
+				loadId := types.NewTUniqueId()
+				loadId.SetHi(-1)
+				loadId.SetLo(-1)
+
+				srcReplicas := srcTablet.ReplicaMetas
+				iter := srcReplicas.Iter()
+				if ok := iter.First(); ok != true {
+					updateLastError(fmt.Errorf("src replicas is empty"))
+					return false
+				}
+				srcBackendId := iter.Value().BackendId
+				var srcBackend *base.Backend
+				srcBackend, ok = srcBackendMap[srcBackendId]
+				if !ok {
+					updateLastError(fmt.Errorf("backend not found, backend id: %d", srcBackendId))
+					return false
+				}
+				req := &bestruct.TIngestBinlogRequest{
+					TxnId:          u.ThriftValueWrapper(txnId),
+					RemoteTabletId: u.ThriftValueWrapper[int64](srcTablet.Id),
+					BinlogVersion:  u.ThriftValueWrapper(binlogVersion),
+					RemoteHost:     u.ThriftValueWrapper(srcBackend.Host),
+					RemotePort:     u.ThriftValueWrapper(srcBackend.GetHttpPortStr()),
+					PartitionId:    u.ThriftValueWrapper[int64](destPartitionId),
+					LocalTabletId:  u.ThriftValueWrapper[int64](destTabletId),
+					LoadId:         loadId,
+				}
+
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+
+					resp, err := destRpc.IngestBinlog(req)
+					if err != nil {
+						updateLastError(err)
+					}
+					log.Debugf("ingest resp: %v\n", resp)
+				}()
+
+				return true
+			})
+			if getLastError() != nil {
+				break
+			}
+		}
+	}
+
+	wg.Wait()
+	return getLastError()
+}
+
+// TODO: deal error by abort txn
+func (j *Job) dealUpsertBinlog(data string) error {
+	upsert, err := record.NewUpsertFromJson(data)
+	if err != nil {
+		return err
+	}
+
+	dest := &j.Dest
+	commitSeq := upsert.CommitSeq
+	// Step 1: begin txn
+	destRpc, err := rpc.NewThriftRpc(dest)
+	if err != nil {
+		panic(err)
+	}
+
+	label := new_label(dest, commitSeq)
+
+	beginTxnResp, err := destRpc.BeginTransaction(dest, label)
+	if err != nil {
+		panic(err)
+	}
+	log.Infof("resp: %v\n", beginTxnResp)
+	txnId := beginTxnResp.GetTxnId()
+	log.Infof("TxnId: %d, DbId: %d\n", txnId, beginTxnResp.GetDbId())
+
+	// Step 2: ingest be
+	err = j.ingestBinlog(txnId, upsert)
+	if err != nil {
+		return err
+	}
+
+	// Step 3: commit txn
+	resp, err := destRpc.CommitTransaction(dest, txnId)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("resp: %v\n", resp)
+	return nil
+}
+
 func (j *Job) contineSync() error {
+	commitSeq := j.progress.CommitSeq
+	src := &j.Src
+
+	// Step 1: get binlog
+	srcRpc, err := rpc.NewThriftRpc(src)
+	if err != nil {
+		return nil
+	}
+	getBinlogResp, err := srcRpc.GetBinlog(src, commitSeq)
+	if err != nil {
+		return nil
+	}
+	fmt.Printf("resp: %v\n", getBinlogResp)
+
+	// Step 2: deal binlog records
+	// TODO: handle binlog error, no new binlog
+	// TODO: deal more than 1 binlog
+	binlogs := getBinlogResp.GetBinlogs()
+	if len(binlogs) == 0 {
+		return fmt.Errorf("no binlog")
+	}
+	binlog := binlogs[0]
+	switch binlog.GetType() {
+	case festruct.TBinlogType_UPSERT:
+		err = j.dealUpsertBinlog(binlog.GetData())
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unknown binlog type: %v", binlog.GetType())
+	}
+
+	// Step 3: update progress to db
+	// TODO
 	return nil
 }
 

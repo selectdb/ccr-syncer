@@ -67,11 +67,10 @@ func (jm *JobManager) RemoveJob(name string) error {
 // go run all jobs and wait for stop chan
 func (jm *JobManager) Start() error {
 	jm.lock.RLock()
-	defer jm.lock.RUnlock()
-
 	for _, job := range jm.jobs {
 		jm.runJob(job)
 	}
+	jm.lock.RUnlock()
 
 	<-jm.stop
 	return nil
@@ -81,12 +80,12 @@ func (jm *JobManager) Start() error {
 // first stop all jobs, then stop job manager
 func (jm *JobManager) Stop() error {
 	jm.lock.RLock()
-	defer jm.lock.RUnlock()
 
 	// stop all jobs
 	for _, job := range jm.jobs {
 		job.Stop()
 	}
+	jm.lock.RUnlock()
 
 	// stop job manager
 	close(jm.stop)

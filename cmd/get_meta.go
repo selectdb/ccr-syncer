@@ -13,7 +13,7 @@ func init() {
 }
 
 func test_init_meta(m *ccr.Meta) {
-	if dbId, err := m.GetDbId(m.Database); err != nil {
+	if dbId, err := m.GetDbId(); err != nil {
 		panic(err)
 	} else {
 		log.Infof("found db: %s, dbId: %d\n", m.Database, dbId)
@@ -25,10 +25,17 @@ func test_init_meta(m *ccr.Meta) {
 		log.Infof("found table: %s, tableId: %d\n", m.Table, tableId)
 	}
 
-	if partitionIds, err := m.GetPartitions(m.Table); err != nil {
+	var partitionId int64
+	if partitions, err := m.GetPartitions(m.Table); err != nil {
 		panic(err)
 	} else {
-		log.Infof("found partitions: %v\n", partitionIds)
+		if len(partitions) == 0 {
+			panic("no partitions")
+		}
+		for k := range partitions {
+			partitionId = k
+		}
+		log.Infof("found partitions: %v\n", partitions)
 	}
 
 	if backends, err := m.GetBackends(); err != nil {
@@ -43,6 +50,18 @@ func test_init_meta(m *ccr.Meta) {
 		log.Infof("update backends success\n")
 	}
 	log.Infof("meta: %#v", m)
+
+	if indexes, err := m.GetIndexes(m.Table, partitionId); err != nil {
+		panic(err)
+	} else {
+		log.Infof("partitionid: %d, found indexes: %v\n", partitionId, indexes)
+	}
+
+	if replicas, err := m.GetReplicas(m.Table, partitionId); err != nil {
+		panic(err)
+	} else {
+		log.Infof("partitionid: %d, found replicas: %v\n", partitionId, replicas)
+	}
 }
 
 func main() {

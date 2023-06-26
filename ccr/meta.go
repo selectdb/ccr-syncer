@@ -3,15 +3,22 @@ package ccr
 import (
 	"database/sql"
 	"fmt"
+	"sort"
 	"strconv"
 
 	"github.com/selectdb/ccr_syncer/ccr/base"
 	"github.com/selectdb/ccr_syncer/rpc"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/tidwall/btree"
+)
+
+const (
+	degree = 128
 )
 
 // All Update* functions force to update meta from fe
+// TODO: reduce code, need to each level contain up level reference to get id
 
 func fmtHostPort(host string, port int16) string {
 	return fmt.Sprintf("%s:%d", host, port)
@@ -23,14 +30,16 @@ type DatabaseMeta struct {
 }
 
 type TableMeta struct {
-	Id         int64
-	Partitions map[int64]*PartitionMeta // partitionId -> partition
+	DatabaseMeta *DatabaseMeta
+	Id           int64
+	Partitions   map[int64]*PartitionMeta // partitionId -> partition
 }
 
 type PartitionMeta struct {
-	Id      int64
-	Name    string
-	Indexes map[int64]*IndexMeta // indexId -> index
+	TableMeta *TableMeta
+	Id        int64
+	Name      string
+	Indexes   map[int64]*IndexMeta // indexId -> index
 }
 
 // Stringer
@@ -39,20 +48,24 @@ func (p *PartitionMeta) String() string {
 }
 
 type IndexMeta struct {
-	Id          int64
-	Name        string
-	TabletMetas map[int64]*TabletMeta // tabletId -> tablet
+	PartitionMeta *PartitionMeta
+	Id            int64
+	Name          string
+	TabletMetas   *btree.Map[int64, *TabletMeta]  // tabletId -> tablet
+	ReplicaMetas  *btree.Map[int64, *ReplicaMeta] // replicaId -> replica
 }
 
 type TabletMeta struct {
+	IndexMeta    *IndexMeta
 	Id           int64
-	ReplicaMetas map[int64]*ReplicaMeta // replicaId -> replica
+	ReplicaMetas *btree.Map[int64, *ReplicaMeta] // replicaId -> replica
 }
 
 type ReplicaMeta struct {
-	Id        int64
-	TabletId  int64
-	BackendId int64
+	TabletMeta *TabletMeta
+	Id         int64
+	TabletId   int64
+	BackendId  int64
 }
 
 // All op is not concurrent safety
@@ -61,7 +74,7 @@ type Meta struct {
 	base.Spec
 	DatabaseMeta
 	token                 string
-	Backends              map[int64]base.Backend // backendId -> backend
+	Backends              map[int64]*base.Backend // backendId -> backend
 	DatabaseName2IdMap    map[string]int64
 	TableName2IdMap       map[string]int64
 	BackendHostPort2IdMap map[string]int64
@@ -71,14 +84,16 @@ func NewMeta(tableSpec *base.Spec) *Meta {
 	return &Meta{
 		Spec:                  *tableSpec,
 		DatabaseMeta:          DatabaseMeta{},
-		Backends:              make(map[int64]base.Backend),
+		Backends:              make(map[int64]*base.Backend),
 		DatabaseName2IdMap:    make(map[string]int64),
 		TableName2IdMap:       make(map[string]int64),
 		BackendHostPort2IdMap: make(map[string]int64),
 	}
 }
 
-func (m *Meta) GetDbId(dbName string) (int64, error) {
+func (m *Meta) GetDbId() (int64, error) {
+	dbName := m.Database
+
 	if dbId, ok := m.DatabaseName2IdMap[dbName]; ok {
 		return dbId, nil
 	}
@@ -140,10 +155,9 @@ func (m *Meta) GetFullTableName(tableName string) string {
 }
 
 func (m *Meta) UpdateTable(tableName string) error {
-	dbName := m.Database
 	fullTableName := m.GetFullTableName(tableName)
 
-	dbId, err := m.GetDbId(dbName)
+	dbId, err := m.GetDbId()
 	if err != nil {
 		return err
 	}
@@ -189,7 +203,8 @@ func (m *Meta) UpdateTable(tableName string) error {
 				m.Tables = make(map[int64]*TableMeta)
 			}
 			m.Tables[tableId] = &TableMeta{
-				Id: tableId,
+				DatabaseMeta: &m.DatabaseMeta,
+				Id:           tableId,
 			}
 			return nil
 		}
@@ -201,7 +216,7 @@ func (m *Meta) UpdateTable(tableName string) error {
 	}
 
 	// not found
-	return fmt.Errorf("%s:%s not found table", dbName, tableName)
+	return fmt.Errorf("%s not found table", fullTableName)
 }
 
 func (m *Meta) GetTable(tableName string) (*TableMeta, error) {
@@ -239,10 +254,8 @@ func (m *Meta) GetTableId(tableName string) (int64, error) {
 }
 
 func (m *Meta) UpdatePartitions(tableName string) error {
-	dbName := m.Database
-
 	// Step 1: get dbId
-	dbId, err := m.GetDbId(dbName)
+	dbId, err := m.GetDbId()
 	if err != nil {
 		log.Error(err)
 		return err
@@ -268,7 +281,7 @@ func (m *Meta) UpdatePartitions(tableName string) error {
 		return err
 	}
 	partitions := make([]*PartitionMeta, 0)
-	// total rows 18
+	// total columns 18
 	var partitionId int64
 	var partitionName string
 	discardCols := make([]sql.RawBytes, 16)
@@ -280,7 +293,7 @@ func (m *Meta) UpdatePartitions(tableName string) error {
 	log.Info(query)
 	rows, err := db.Query(query)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
 		return err
 	}
 
@@ -291,8 +304,9 @@ func (m *Meta) UpdatePartitions(tableName string) error {
 		}
 		log.Printf("partitionId: %d, partitionName: %s", partitionId, partitionName)
 		partition := &PartitionMeta{
-			Id:   partitionId,
-			Name: partitionName,
+			TableMeta: table,
+			Id:        partitionId,
+			Name:      partitionName,
 		}
 		partitions = append(partitions, partition)
 	}
@@ -351,6 +365,54 @@ func (m *Meta) GetPartitions(tableName string) (map[int64]*PartitionMeta, error)
 	return m.getPartitions(tableName, 0)
 }
 
+func (m *Meta) GetPartitionIds(tableName string) ([]int64, error) {
+	// TODO: optimize performance, cache it
+	partitions, err := m.GetPartitions(tableName)
+	if err != nil {
+		return nil, err
+	}
+
+	partitionIds := make([]int64, len(partitions))
+	for partitionId := range partitions {
+		partitionIds = append(partitionIds, partitionId)
+	}
+	// return sort partitionIds
+	sort.Slice(partitionIds, func(i, j int) bool {
+		return partitionIds[i] < partitionIds[j]
+	})
+	return partitionIds, nil
+}
+
+func (m *Meta) GetPartitionName(tableName string, partitionId int64) (string, error) {
+	partitions, err := m.GetPartitions(tableName)
+	if err != nil {
+		return "", err
+	}
+
+	partition, ok := partitions[partitionId]
+	if !ok {
+		return "", fmt.Errorf("partitionId %d not found", partitionId)
+	}
+
+	return partition.Name, nil
+}
+
+func (m *Meta) GetPartitionIdByName(tableName string, partitionName string) (int64, error) {
+	// TODO: optimize performance
+	partitions, err := m.GetPartitions(tableName)
+	if err != nil {
+		return 0, err
+	}
+
+	for partitionId, partition := range partitions {
+		if partition.Name == partitionName {
+			return partitionId, nil
+		}
+	}
+
+	return 0, fmt.Errorf("partitionName %s not found", partitionName)
+}
+
 func (m *Meta) UpdateBackends() error {
 	// mysql> show proc '/backends';
 	// +-----------+-----------------+-----------+---------------+--------+----------+----------+---------------------+---------------------+-------+----------------------+-----------------------+-----------+------------------+---------------+---------------+---------+----------------+--------------------+--------------------------+--------+------------------------------+-------------------------------------------------------------------------------------------------------------------------------+-------------------------+----------+
@@ -392,7 +454,7 @@ func (m *Meta) UpdateBackends() error {
 	}
 
 	for _, backend := range backends {
-		m.Backends[backend.Id] = backend
+		m.Backends[backend.Id] = &backend
 
 		hostPort := fmtHostPort(backend.Host, backend.BePort)
 		m.BackendHostPort2IdMap[hostPort] = backend.Id
@@ -401,9 +463,9 @@ func (m *Meta) UpdateBackends() error {
 	return nil
 }
 
-func (m *Meta) GetBackends() ([]base.Backend, error) {
+func (m *Meta) GetBackends() ([]*base.Backend, error) {
 	if len(m.Backends) > 0 {
-		backends := make([]base.Backend, len(m.Backends))
+		backends := make([]*base.Backend, len(m.Backends))
 		for _, backend := range m.Backends {
 			backends = append(backends, backend)
 		}
@@ -416,6 +478,19 @@ func (m *Meta) GetBackends() ([]base.Backend, error) {
 	}
 
 	return m.GetBackends()
+}
+
+func (m *Meta) GetBackendMap() (map[int64]*base.Backend, error) {
+	if len(m.Backends) > 0 {
+		return m.Backends, nil
+	}
+
+	if err := m.UpdateBackends(); err != nil {
+		log.Error(err)
+		return nil, err
+	}
+
+	return m.GetBackendMap()
 }
 
 func (m *Meta) GetBackendId(host string, portStr string) (int64, error) {
@@ -440,34 +515,311 @@ func (m *Meta) GetBackendId(host string, portStr string) (int64, error) {
 	return 0, fmt.Errorf("hostPort: %s not found", hostPort)
 }
 
-// func (m *Meta) UpdateIndexes() error {
+func (m *Meta) UpdateIndexes(tableName string, partitionId int64) error {
+	// TODO: Optimize performance
+	// Step 1: get dbId
+	dbId, err := m.GetDbId()
+	if err != nil {
+		log.Error(err)
+		return err
+	}
 
-// }
+	// Step 2: get tableId
+	table, err := m.GetTable(tableName)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
 
-// func (m *Meta) GetIndexes() ([]*IndexMeta, error) {
-// }
+	// Step 3: get partitions
+	parititions, err := m.GetPartitions(tableName)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
 
-// func (m *Meta) UpdateReplicas() error {
-// 	// Step 1: get dbId
-// 	dbId, err := m.GetDbId(dbName)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 		return nil, err
-// 	}
+	partition, ok := parititions[partitionId]
+	if !ok {
+		return fmt.Errorf("partitionId: %d not found", partitionId)
+	}
 
-// }
+	// mysql> show proc '/dbs/10116/10118/partitions/10117';
+	// +---------+---------------+--------+--------------------------+
+	// | IndexId | IndexName     | State  | LastConsistencyCheckTime |
+	// +---------+---------------+--------+--------------------------+
+	// | 10119   | enable_binlog | NORMAL | NULL                     |
+	// +---------+---------------+--------+--------------------------+
+	// 1 row in set (0.01 sec)
+	db, err := m.Connect()
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	indexes := make([]*IndexMeta, 0)
+	// totoal rows 4
+	var indexId int64
+	var indexName string
+	discardCols := make([]sql.RawBytes, 2)
+	scanArgs := []interface{}{&indexId, &indexName}
+	for i := range discardCols {
+		scanArgs = append(scanArgs, &discardCols[i])
+	}
+	query := fmt.Sprintf("show proc '/dbs/%d/%d/partitions/%d'", dbId, table.Id, partition.Id)
+	log.Info(query)
+	rows, err := db.Query(query)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
 
-// func (m *Meta) GetReplicas(tableName string) ([]*ReplicaMeta, error) {
-// 	partitions, err := m.GetPartitions(m.Table)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 		return nil, err
-// 	}
+	defer rows.Close()
+	for rows.Next() {
+		if err := rows.Scan(scanArgs...); err != nil {
+			log.Fatal(err)
+		}
+		log.Debugf("indexId: %d, indexName: %s", indexId, indexName)
 
-// 	for _, partition := range partitions {
-// 		log.Debugf("partition: %v", partition)
-// 	}
-// }
+		index := &IndexMeta{
+			PartitionMeta: partition,
+			Id:            indexId,
+			Name:          indexName,
+		}
+		indexes = append(indexes, index)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Fatal(err)
+		return err
+	}
+
+	partition.Indexes = make(map[int64]*IndexMeta)
+	for _, index := range indexes {
+		partition.Indexes[index.Id] = index
+	}
+
+	return nil
+}
+
+func (m *Meta) getIndexes(tableName string, partitionId int64, hasUpdate bool) (map[int64]*IndexMeta, error) {
+	parititions, err := m.GetPartitions(tableName)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	partition, ok := parititions[partitionId]
+	if !ok || len(partition.Indexes) == 0 {
+		if hasUpdate {
+			return nil, fmt.Errorf("partitionId: %d not found", partitionId)
+		}
+
+		err = m.UpdateIndexes(tableName, partitionId)
+		if err != nil {
+			log.Fatal(err)
+			return nil, err
+		}
+		return m.getIndexes(tableName, partitionId, true)
+	}
+
+	return partition.Indexes, nil
+}
+
+func (m *Meta) GetIndexes(tableName string, partitionId int64) (map[int64]*IndexMeta, error) {
+	return m.getIndexes(tableName, partitionId, false)
+}
+
+func (m *Meta) updateReplica(index *IndexMeta) error {
+	indexId := index.Id
+	partitionId := index.PartitionMeta.Id
+	tableId := index.PartitionMeta.TableMeta.Id
+	dbId := index.PartitionMeta.TableMeta.DatabaseMeta.Id
+	// mysql> show proc '/dbs/10116/10118/partitions/10117/10119';
+	// +----------+-----------+-----------+------------+---------+-------------------+------------------+---------------+---------------+----------------+----------+--------+-------------------------+--------------+--------------+-----------+----------------------+---------------------------------------------+-----------------------------------------------------------+-------------------+----------------+
+	// | TabletId | ReplicaId | BackendId | SchemaHash | Version | LstSuccessVersion | LstFailedVersion | LstFailedTime | LocalDataSize | RemoteDataSize | RowCount | State  | LstConsistencyCheckTime | CheckVersion | VersionCount | QueryHits | PathHash             | MetaUrl                                     | CompactionStatus                                          | CooldownReplicaId | CooldownMetaId |
+	// +----------+-----------+-----------+------------+---------+-------------------+------------------+---------------+---------------+----------------+----------+--------+-------------------------+--------------+--------------+-----------+----------------------+---------------------------------------------+-----------------------------------------------------------+-------------------+----------------+
+	// | 10120    | 10121     | 10028     | 2092007568 | 28      | 28                | -1               | NULL          | 1401          | 0              | 1        | NORMAL | NULL                    | -1           | 1            | 0         | -6333148228203168624 | http://127.0.0.1:8040/api/meta/header/10120 | http://127.0.0.1:8040/api/compaction/show?tablet_id=10120 | -1                |                |
+	// | 10122    | 10123     | 10028     | 2092007568 | 28      | 28                | -1               | NULL          | 0             | 0              | 0        | NORMAL | NULL                    | -1           | 1            | 0         | -6333148228203168624 | http://127.0.0.1:8040/api/meta/header/10122 | http://127.0.0.1:8040/api/compaction/show?tablet_id=10122 | -1                |                |
+	// | 10124    | 10125     | 10028     | 2092007568 | 28      | 28                | -1               | NULL          | 1402          | 0              | 1        | NORMAL | NULL                    | -1           | 1            | 0         | -6333148228203168624 | http://127.0.0.1:8040/api/meta/header/10124 | http://127.0.0.1:8040/api/compaction/show?tablet_id=10124 | -1                |                |
+	// +----------+-----------+-----------+------------+---------+-------------------+------------------+---------------+---------------+----------------+----------+--------+-------------------------+--------------+--------------+-----------+----------------------+---------------------------------------------+-----------------------------------------------------------+-------------------+----------------+
+	db, err := m.Connect()
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	replicas := make([]*ReplicaMeta, 0)
+	// total columns 21
+	var tabletId int64
+	var replicaId int64
+	var backendId int64
+	discardCols := make([]sql.RawBytes, 18)
+	scanArgs := []interface{}{&tabletId, &replicaId, &backendId}
+	for i := range discardCols {
+		scanArgs = append(scanArgs, &discardCols[i])
+	}
+	query := fmt.Sprintf("show proc '/dbs/%d/%d/partitions/%d/%d'", dbId, tableId, partitionId, indexId)
+	log.Info(query)
+	rows, err := db.Query(query)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+
+	defer rows.Close()
+	for rows.Next() {
+		if err := rows.Scan(scanArgs...); err != nil {
+			log.Fatal(err)
+		}
+		replica := &ReplicaMeta{
+			Id:        replicaId,
+			TabletId:  tabletId,
+			BackendId: backendId,
+		}
+		replicas = append(replicas, replica)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Fatal(err)
+		return err
+	}
+
+	index.TabletMetas = btree.NewMap[int64, *TabletMeta](degree)
+	index.ReplicaMetas = btree.NewMap[int64, *ReplicaMeta](degree)
+	for _, replica := range replicas {
+		tablet, ok := index.TabletMetas.Get(replica.TabletId)
+		if !ok {
+			tablet = &TabletMeta{
+				IndexMeta:    index,
+				Id:           replica.TabletId,
+				ReplicaMetas: btree.NewMap[int64, *ReplicaMeta](degree),
+			}
+			index.TabletMetas.Set(tablet.Id, tablet)
+		}
+		replica.TabletMeta = tablet
+		index.ReplicaMetas.Set(replica.Id, replica)
+	}
+	return nil
+}
+
+func (m *Meta) UpdateReplicas(tableName string, partitionId int64) error {
+	indexes, err := m.GetIndexes(tableName, partitionId)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+
+	if len(indexes) == 0 {
+		return fmt.Errorf("indexes is empty")
+	}
+
+	// TODO: Update index as much as possible, record error
+	for _, index := range indexes {
+		if err := m.updateReplica(index); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *Meta) GetReplicas(tableName string, partitionId int64) (*btree.Map[int64, *ReplicaMeta], error) {
+	indexes, err := m.GetIndexes(tableName, partitionId)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	if len(indexes) == 0 {
+		return nil, fmt.Errorf("indexes is empty")
+	}
+
+	// fast path, no rollup
+	if len(indexes) == 1 {
+		var indexId int64
+		for id := range indexes {
+			indexId = id
+			break
+		}
+
+		index := indexes[indexId]
+		if index.ReplicaMetas == nil {
+			if err := m.updateReplica(index); err != nil {
+				return nil, err
+			}
+		}
+		return index.ReplicaMetas, nil
+	}
+
+	// slow path, rollup
+	replicas := btree.NewMap[int64, *ReplicaMeta](degree)
+	for _, index := range indexes {
+		if index.ReplicaMetas == nil {
+			if err := m.updateReplica(index); err != nil {
+				return nil, err
+			}
+		}
+
+		for _, replica := range index.ReplicaMetas.Values() {
+			replicas.Set(replica.Id, replica)
+		}
+	}
+
+	return replicas, nil
+}
+
+func (m *Meta) GetTablets(tableName string, partitionId int64) (*btree.Map[int64, *TabletMeta], error) {
+	_, err := m.GetReplicas(tableName, partitionId)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	indexes, err := m.GetIndexes(tableName, partitionId)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	if len(indexes) == 0 {
+		return nil, fmt.Errorf("indexes is empty")
+	}
+
+	// fast path, no rollup
+	if len(indexes) == 1 {
+		var indexId int64
+		for id := range indexes {
+			indexId = id
+			break
+		}
+
+		index := indexes[indexId]
+		return index.TabletMetas, nil
+	}
+
+	// slow path, rollup
+	tablets := btree.NewMap[int64, *TabletMeta](degree)
+	for _, index := range indexes {
+		for _, tablet := range index.TabletMetas.Values() {
+			tablets.Set(tablet.Id, tablet)
+		}
+	}
+
+	return tablets, nil
+}
+
+func (m *Meta) GetTabletList(tableName string, partitionId int64) ([]*TabletMeta, error) {
+	tablets, err := m.GetTablets(tableName, partitionId)
+	if err != nil {
+		return nil, err
+	}
+
+	if tablets.Len() == 0 {
+		return nil, fmt.Errorf("tablets is empty")
+	}
+
+	list := make([]*TabletMeta, 0, tablets.Len())
+	list = append(list, tablets.Values()...)
+
+	return list, nil
+}
 
 func (m *Meta) UpdateToken() error {
 	spec := &m.Spec
