@@ -1,7 +1,7 @@
 curdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 SYNCER_HOME="$(
-    cd "${curdir}"
+    cd "${curdir}/.."
     pwd
 )"
 export SYNCER_HOME
