@@ -29,18 +29,17 @@ while true; do
     esac
 done
 
-if [[ ! -d ${SYNCER_OUTPUT} ]]; then
-    mkdir ${SYNCER_OUTPUT}
-fi
+mkdir -p ${SYNCER_OUTPUT}/log
 
 if [[ "${CLEAN}" -eq 1 ]]; then
-    rm -rf ${SYNCER_HOME}/lib
+    rm -rf ${SYNCER_HOME}/bin
     exit 0
 fi
 
 make -j ${PARALLEL}
 
-cp -r ${SYNCER_HOME}/lib ${SYNCER_OUTPUT}/lib
 cp -r ${SYNCER_HOME}/bin ${SYNCER_OUTPUT}/bin
-mkdir ${SYNCER_OUTPUT}/log
+cp ${SYNCER_HOME}/shell/* ${SYNCER_OUTPUT}/bin/
+
+
 
