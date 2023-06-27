@@ -62,6 +62,13 @@ func NewJobFromService(name string, src, dest base.Spec, db storage.DB) (*Job, e
 	if err := job.valid(); err != nil {
 		return nil, errors.Wrap(err, "job is invalid")
 	}
+
+	if job.Src.Table == "" {
+		job.SyncType = DBSync
+	} else {
+		job.SyncType = TableSync
+	}
+
 	return job, nil
 }
 
@@ -701,10 +708,12 @@ func (j *Job) FirstRunCheck() error {
 	} else if !src_db_exists {
 		return fmt.Errorf("src database %s not exists", j.Src.Database)
 	}
-	if enable, err := j.Src.IsDatabaseEnableBinlog(); err != nil {
-		return err
-	} else if !enable {
-		return fmt.Errorf("src database %s not enable binlog", j.Src.Database)
+	if j.SyncType == DBSync {
+		if enable, err := j.Src.IsDatabaseEnableBinlog(); err != nil {
+			return err
+		} else if !enable {
+			return fmt.Errorf("src database %s not enable binlog", j.Src.Database)
+		}
 	}
 
 	// Step 2: check src table exists, if not exists, return err
