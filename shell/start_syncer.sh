@@ -27,12 +27,11 @@ while true; do
 done
 
 SYNCER_HOME="$(
-    cd "${curdir}/.."
+    cd "${curdir}"
     pwd
 )"
 export SYNCER_HOME
 
-export LOG_DIR="${SYNCER_HOME}/log"
 PID_DIR="$(
     cd "${curdir}"
     pwd
@@ -40,7 +39,7 @@ PID_DIR="$(
 export PID_DIR
 
 
-pidfile="${PID_DIR}/be.pid"
+pidfile="${PID_DIR}/syncer.pid"
 if [[ -f "${pidfile}" ]]; then
     if kill -0 "$(cat "${pidfile}")" >/dev/null 2>&1; then
         echo "Syncer running as process $(cat "${pidfile}"). Stop it first."
@@ -50,12 +49,12 @@ if [[ -f "${pidfile}" ]]; then
     fi
 fi
 
-chmod 755 "${SYNCER_HOME}/lib/ccr_syncer"
+chmod 755 "${SYNCER_HOME}/bin/ccr_syncer"
 echo "start time: $(date)" >>"${LOG_DIR}/ccr_syncer.out"
 
 if [[ "${RUN_DAEMON}" -eq 1 ]]; then
-    nohup "${SYNCER_HOME}/lib/ccr_syncer" "$@" >>"${LOG_DIR}/ccr_syncer.out" 2>&1 </dev/null &
+    nohup "${SYNCER_HOME}/bin/ccr_syncer" "$@" >>"${LOG_DIR}/ccr_syncer.out" 2>&1 </dev/null &
     echo $! > bin/syncer.pid
 else
-    "${SYNCER_HOME}/lib/ccr_syncer" "$@" 2>&1 </dev/null
+    "${SYNCER_HOME}/bin/ccr_syncer" "$@" 2>&1 </dev/null
 fi
