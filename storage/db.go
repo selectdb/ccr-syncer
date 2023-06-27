@@ -10,6 +10,8 @@ var (
 type DB interface {
 	// Add ccr job
 	AddJob(jobName string, jobInfo string) error
+	// Update ccr job
+	UpdateJob(jobName string, jobInfo string) error
 	// Check Job exist
 	IsJobExist(jobName string) (bool, error)
 	// Get all jobs

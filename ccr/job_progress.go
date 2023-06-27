@@ -9,15 +9,25 @@ const (
 	JobStateDone  JobState = 1
 )
 
+type SyncState int
+
+const (
+	FullSync        SyncState = 0
+	IncrementalSync SyncState = 1
+)
+
 type JobProgress struct {
-	State         JobState `json:"state"`
-	CommitSeq     int64    `json:"commit_seq"`
-	TransactionId int64    `json:"transaction_id"`
+	JobState      JobState  `json:"state"`
+	SyncState     SyncState `json:"sync_state"`
+	CommitSeq     int64     `json:"commit_seq"`
+	TransactionId int64     `json:"transaction_id"`
+	Data          []byte    `json:"data"` // this often for binlog or snapshot info
 }
 
 func NewJobProgress() *JobProgress {
 	return &JobProgress{
-		State:         JobStateDone,
+		JobState:      JobStateDone,
+		SyncState:     FullSync,
 		CommitSeq:     0,
 		TransactionId: 0,
 	}
@@ -40,4 +50,18 @@ func (j *JobProgress) ToJson() (string, error) {
 	} else {
 		return string(jsonData), nil
 	}
+}
+
+func (j *JobProgress) NewFullSync(commitSeq int64) {
+	j.JobState = JobStateDoing
+	j.SyncState = FullSync
+	j.CommitSeq = commitSeq
+}
+
+func (j *JobProgress) Done() {
+	j.JobState = JobStateDone
+}
+
+func (j *JobProgress) NewIncrementalSync() {
+	j.SyncState = IncrementalSync
 }

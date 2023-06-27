@@ -45,6 +45,23 @@ func (s *SQLiteDB) AddJob(jobName string, jobInfo string) error {
 	return err
 }
 
+// Update Job
+func (s *SQLiteDB) UpdateJob(jobName string, jobInfo string) error {
+	// check job name exists, if not exists, return error
+	var count int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM jobs WHERE job_name = ?", jobName).Scan(&count)
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return ErrJobNotExists
+	}
+
+	// update job info
+	_, err = s.db.Exec("UPDATE jobs SET job_info = ? WHERE job_name = ?", jobInfo, jobName)
+	return err
+}
+
 func (s *SQLiteDB) IsJobExist(jobName string) (bool, error) {
 	var count int
 	err := s.db.QueryRow("SELECT COUNT(*) FROM jobs WHERE job_name = ?", jobName).Scan(&count)

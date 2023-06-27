@@ -191,12 +191,12 @@ func (rpc *ThriftRpc) GetSnapshot(spec *base.Spec, labelName string) (*festruct.
 	}
 	setAuthInfo(req, spec)
 
-	log.Infof("GetBinlog req: %+v", req)
+	log.Debugf("GetBinlog req: %+v", req)
 	if resp, err := client.GetSnapshot(context.Background(), req); err != nil {
 		log.Fatal(err)
 		return nil, err
 	} else {
-		log.Infof("GetBinlog resp: %+v", resp)
+		log.Debugf("GetBinlog resp: %+v", resp)
 		return resp, nil
 	}
 }

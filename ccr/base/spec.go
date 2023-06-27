@@ -20,7 +20,9 @@ type Spec struct {
 	Password   string `json:"password,required"`
 	Cluster    string `json:"cluster,required"`
 	Database   string `json:"database,required"`
+	DbId       int64  `json:"db_id"`
 	Table      string `json:"table,required"`
+	TableId    int64  `json:"table_id"`
 }
 
 // valid table spec

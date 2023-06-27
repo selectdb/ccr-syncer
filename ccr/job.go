@@ -298,6 +298,7 @@ func (j *Job) genExtraInfo() (*base.ExtraInfo, error) {
 
 // TODO: check snapshot state
 func (j *Job) tableFullSync() error {
+	// TODO: snapshot machine, not need create snapshot each time
 	// Step 1: Create snapshot
 	snapshotName, err := j.Src.CreateSnapshotAndWaitForDone()
 	if err != nil {
@@ -317,18 +318,31 @@ func (j *Job) tableFullSync() error {
 		log.Errorf("get snapshot failed, err: %v", err)
 		return err
 	}
-	log.Infof("resp: %v\n", snapshotResp)
-	log.Infof("job: %s\n", string(snapshotResp.GetJobInfo()))
+	log.Debugf("job: %s\n", string(snapshotResp.GetJobInfo()))
+
+	if !snapshotResp.IsSetJobInfo() {
+		return errors.New("jobInfo is not set")
+	}
+
+	jobInfo := snapshotResp.GetJobInfo()
+	tableCommitSeqMap, err := ExtractTableCommitSeqMap(jobInfo)
+	if err != nil {
+		log.Errorf("extract table commit seq map failed, err: %v", err)
+		return err
+	}
+	commitSeq, ok := tableCommitSeqMap[j.Src.TableId]
+	if !ok {
+		return errors.New("table commit seq not found")
+	}
 
 	// Step 3: Add extra info
-	var jobInfo map[string]interface{}
-	// json umarshal jobInfo
-	err = json.Unmarshal(snapshotResp.GetJobInfo(), &jobInfo)
+	var jobInfoMap map[string]interface{}
+	err = json.Unmarshal(jobInfo, &jobInfoMap)
 	if err != nil {
 		log.Errorf("unmarshal jobInfo failed, err: %v", err)
 		return err
 	}
-	log.Infof("jobInfo: %v\n", jobInfo)
+	log.Debugf("jobInfo: %v\n", jobInfoMap)
 
 	extraInfo, err := j.genExtraInfo()
 	if err != nil {
@@ -336,10 +350,8 @@ func (j *Job) tableFullSync() error {
 	}
 	log.Infof("extraInfo: %v\n", extraInfo)
 
-	jobInfo["extra_info"] = extraInfo
-
-	// marshal jobInfo
-	jobInfoBytes, err := json.Marshal(jobInfo)
+	jobInfoMap["extra_info"] = extraInfo
+	jobInfoBytes, err := json.Marshal(jobInfoMap)
 	if err != nil {
 		log.Errorf("marshal jobInfo failed, err: %v", err)
 		return err
@@ -347,7 +359,11 @@ func (j *Job) tableFullSync() error {
 	log.Infof("jobInfoBytes: %s\n", string(jobInfoBytes))
 	snapshotResp.SetJobInfo(jobInfoBytes)
 
-	// Step 4: restore snapshot
+	// Step 4: start a new fullsync && persist
+	j.progress.NewFullSync(commitSeq)
+	j.updateJobProgress()
+
+	// Step 5: restore snapshot
 	// Restore snapshot to dest
 	dest := &j.Dest
 	destRpc, err := rpc.NewThriftRpc(dest)
@@ -361,6 +377,25 @@ func (j *Job) tableFullSync() error {
 		return nil
 	}
 	log.Infof("resp: %v\n", restoreResp)
+
+	// Step 6: Update job progress && dest table id
+	// update job info, only for dest table id
+	// TODO: retry && mark it for not start a new full sync
+	if destTableId, err := j.destMeta.GetTableId(j.Dest.Table); err != nil {
+		return err
+	} else {
+		j.Dest.TableId = destTableId
+	}
+	j.progress.Done()
+	j.updateJobProgress()
+	// TODO: reload check job table id
+	data, err := json.Marshal(j)
+	if err != nil {
+		return err
+	}
+	if err := j.db.UpdateJob(j.Name, string(data)); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -537,7 +572,7 @@ func (j *Job) dealUpsertBinlog(data string) error {
 	log.Infof("TxnId: %d, DbId: %d\n", txnId, beginTxnResp.GetDbId())
 
 	// Step 2: update job progress
-	j.progress.State = JobStateDoing
+	j.progress.JobState = JobStateDoing
 	j.progress.CommitSeq = commitSeq
 	j.progress.TransactionId = txnId
 	j.updateJobProgress()
@@ -592,7 +627,7 @@ func (j *Job) tableIncrementalSync() error {
 	}
 
 	// Step 3: update progress to db
-	j.progress.State = JobStateDone
+	j.progress.JobState = JobStateDone
 	j.updateJobProgress()
 	return nil
 }
@@ -627,6 +662,7 @@ func (j *Job) recoverJobProgress() error {
 func (j *Job) updateJobProgress() {
 	for {
 		// Step 1: to json
+		// TODO: fix to json error
 		progressJson, err := j.progress.ToJson()
 		if err != nil {
 			log.Error("parse job progress failed", zap.String("job", j.Name), zap.Error(err))
@@ -699,7 +735,7 @@ func (j *Job) Stop() error {
 	return nil
 }
 
-func (j *Job) FirstRunCheck() error {
+func (j *Job) FirstRun() error {
 	log.Info("first run check job", zap.String("src", j.Src.String()), zap.String("dest", j.Dest.String()))
 
 	// Step 1: check src database
@@ -715,6 +751,11 @@ func (j *Job) FirstRunCheck() error {
 			return fmt.Errorf("src database %s not enable binlog", j.Src.Database)
 		}
 	}
+	if srcDbId, err := j.srcMeta.GetDbId(); err != nil {
+		return err
+	} else {
+		j.Src.DbId = srcDbId
+	}
 
 	// Step 2: check src table exists, if not exists, return err
 	if j.SyncType == TableSync {
@@ -723,44 +764,43 @@ func (j *Job) FirstRunCheck() error {
 		} else if !src_table_exists {
 			return fmt.Errorf("src table %s.%s not exists", j.Src.Database, j.Src.Table)
 		}
+
 		if enable, err := j.Src.IsTableEnableBinlog(); err != nil {
 			return err
 		} else if !enable {
 			return fmt.Errorf("src table %s.%s not enable binlog", j.Src.Database, j.Src.Table)
 		}
+
+		if srcTableId, err := j.srcMeta.GetTableId(j.Src.Table); err != nil {
+			return err
+		} else {
+			j.Src.TableId = srcTableId
+		}
 	}
 
 	// Step 3: check dest database && table exists
 	// if dest database && table exists, return err
-	if dest_db_exists, err := j.CheckDestDatabaseExists(); err != nil {
-		return err
-	} else if !dest_db_exists {
-		return nil
-	} else if j.SyncType == TableSync {
-		if dest_table_exists, err := j.CheckDestTableExists(); err != nil {
-			return err
-		} else if dest_table_exists {
-			return fmt.Errorf("dest table %s.%s already exists", j.Dest.Database, j.Dest.Table)
-		}
-	}
-
-	return nil
-}
-
-func (j *Job) Create() error {
-	log.Info("create job", zap.String("src", j.Src.String()), zap.String("dest", j.Dest.String()))
-
-	// Step 1: check dest database exists
-	var err error
-	dest_db_exists := false
-	if dest_db_exists, err = j.CheckDestDatabaseExists(); err != nil {
+	dest_db_exists, err := j.CheckDestDatabaseExists()
+	if err != nil {
 		return err
 	}
-
-	// Step 2: create table by dest table spec
 	if !dest_db_exists {
 		if err := j.DestCreateDatabase(); err != nil {
 			return err
+		}
+	}
+	if destDbId, err := j.destMeta.GetDbId(); err != nil {
+		return err
+	} else {
+		j.Dest.DbId = destDbId
+	}
+	if j.SyncType == TableSync {
+		dest_table_exists, err := j.CheckDestTableExists()
+		if err != nil {
+			return err
+		}
+		if dest_table_exists {
+			return fmt.Errorf("dest table %s.%s already exists", j.Dest.Database, j.Dest.Table)
 		}
 	}
 

@@ -21,7 +21,7 @@ var (
 
 func init_flags() {
 	flag.StringVar(&action, "action", "get", "action")
-	flag.StringVar(&labelName, "label", "snapshot_20230605", "label")
+	flag.StringVar(&labelName, "label", "ccr_snapshot_20230605", "label")
 	flag.StringVar(&token, "token", "5ff161c3-2c08-4079-b108-26c8850b6598", "token")
 	flag.Parse()
 }
@@ -32,12 +32,27 @@ func test_get_snapshot(spec *base.Spec) {
 		panic(err)
 	}
 
-	resp, err := rpc.GetSnapshot(spec, labelName)
+	snapshotResp, err := rpc.GetSnapshot(spec, labelName)
 	if err != nil {
 		panic(err)
 	}
-	log.Infof("resp: %v\n", resp)
-	log.Infof("job: %s\n", string(resp.GetJobInfo()))
+	jobInfo := snapshotResp.GetJobInfo()
+	log.Infof("resp: %v\n", snapshotResp)
+	log.Infof("job: %s\n", string(jobInfo))
+
+	var jobInfoMap map[string]interface{}
+	// json umarshal jobInfo
+	err = json.Unmarshal(jobInfo, &jobInfoMap)
+	if err != nil {
+		panic(err)
+	}
+	log.Infof("jobInfo: %v\n", jobInfoMap)
+
+	if tableCommitSeqMap, err := ccr.ExtractTableCommitSeqMap(jobInfo); err != nil {
+		panic(err)
+	} else {
+		log.Infof("tableCommitSeqMap: %v\n", tableCommitSeqMap)
+	}
 }
 
 func test_restore_snapshot(src *base.Spec, dest *base.Spec) {
