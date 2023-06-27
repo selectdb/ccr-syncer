@@ -208,8 +208,8 @@ func (s *Spec) ClearDB() error {
 
 // mysql> BACKUP SNAPSHOT ccr.snapshot_20230605 TO `__keep_on_local__` ON (      src_1 ) PROPERTIES ("type" = "full");
 func (s *Spec) CreateSnapshotAndWaitForDone() (string, error) {
-	// get unix timestamp
-	snapshotName := "ccr_snapshot_" + strconv.FormatInt(time.Now().Unix(), 10)
+	// snapshot name format "ccr_snapshot_${db}_${table}_${timestamp}"
+	snapshotName := fmt.Sprintf("ccr_snapshot_%s_%s_%d", s.Database, s.Table, time.Now().UnixNano())
 	table := s.Table
 
 	log.Infof("create snapshot %s.%s", s.Database, snapshotName)
@@ -228,7 +228,7 @@ func (s *Spec) CreateSnapshotAndWaitForDone() (string, error) {
 	}
 
 	// TODO(impl): Add wait for done
-	time.Sleep(100 * time.Second)
+	time.Sleep(30 * time.Second)
 
 	return snapshotName, nil
 }

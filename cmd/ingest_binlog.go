@@ -7,7 +7,7 @@ import (
 
 	"github.com/selectdb/ccr_syncer/ccr/base"
 	bestruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/backendservice"
-	"github.com/selectdb/ccr_syncer/rpc/kitex_gen/types"
+	festruct_types "github.com/selectdb/ccr_syncer/rpc/kitex_gen/types"
 	u "github.com/selectdb/ccr_syncer/utils"
 
 	"github.com/selectdb/ccr_syncer/rpc"
@@ -20,14 +20,28 @@ var (
 	txnId         int64
 	action        string
 	binlogVersion int64
+	tabletId      int64
+	backendId     int64
 )
 
 func init_flags() {
 	flag.Int64Var(&commitSeq, "commit_seq", 0, "commit_seq")
 	flag.Int64Var(&txnId, "txn_id", 0, "txn_id")
 	flag.StringVar(&action, "action", "begin", "action")
+	flag.Int64Var(&tabletId, "tablet_id", 0, "tablet id")
+	flag.Int64Var(&backendId, "backend_id", 0, "backend id")
 	flag.Int64Var(&binlogVersion, "binlog_version", 0, "binlog_version")
 	flag.Parse()
+}
+
+func newCommitInfos() []*festruct_types.TTabletCommitInfo {
+	commitInfo := festruct_types.TTabletCommitInfo{
+		TabletId:  tabletId,
+		BackendId: backendId,
+	}
+	commitInfos := make([]*festruct_types.TTabletCommitInfo, 0, 1)
+	commitInfos = append(commitInfos, &commitInfo)
+	return commitInfos
 }
 
 func test_get(t *base.Spec) {
@@ -69,7 +83,7 @@ func test_commit(t *base.Spec) {
 		panic(err)
 	}
 
-	resp, err := rpc.CommitTransaction(t, txnId)
+	resp, err := rpc.CommitTransaction(t, txnId, newCommitInfos())
 	if err != nil {
 		panic(err)
 	}
@@ -102,7 +116,7 @@ func test_ingest_be() {
 		panic(err)
 	}
 
-	loadId := types.NewTUniqueId()
+	loadId := festruct_types.NewTUniqueId()
 	loadId.SetHi(-1)
 	loadId.SetLo(-1)
 

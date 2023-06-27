@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"flag"
 
 	"github.com/selectdb/ccr_syncer/ccr/base"
 	festruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/frontendservice"
@@ -88,26 +87,6 @@ func (rpc *ThriftRpc) BeginTransaction(spec *base.Spec, label string) (*festruct
 	return client.BeginTxn(context.Background(), req)
 }
 
-var (
-	tabletId  int64
-	backendId int64
-)
-
-func init() {
-	flag.Int64Var(&tabletId, "tablet_id", 0, "tablet id")
-	flag.Int64Var(&backendId, "backend_id", 0, "backend id")
-}
-
-func newCommitInfos() []*festruct_types.TTabletCommitInfo {
-	commitInfo := festruct_types.TTabletCommitInfo{
-		TabletId:  tabletId,
-		BackendId: backendId,
-	}
-	commitInfos := make([]*festruct_types.TTabletCommitInfo, 0, 1)
-	commitInfos = append(commitInfos, &commitInfo)
-	return commitInfos
-}
-
 //	struct TCommitTxnRequest {
 //	    1: optional string cluster
 //	    2: required string user
@@ -122,13 +101,13 @@ func newCommitInfos() []*festruct_types.TTabletCommitInfo {
 //	    11: optional string token
 //	    12: optional i64 db_id
 //	}
-func (rpc *ThriftRpc) CommitTransaction(spec *base.Spec, txnId int64) (*festruct.TCommitTxnResult_, error) {
+func (rpc *ThriftRpc) CommitTransaction(spec *base.Spec, txnId int64, commitInfos []*festruct_types.TTabletCommitInfo) (*festruct.TCommitTxnResult_, error) {
 	log.Info("CommitTransaction")
 	client := rpc.client
 	req := &festruct.TCommitTxnRequest{}
 	setAuthInfo(req, spec)
 	req.TxnId = &txnId
-	req.CommitInfos = newCommitInfos()
+	req.CommitInfos = commitInfos
 
 	log.Infof("CommitTransaction req: %+v", req)
 	// return nil, nil
@@ -146,7 +125,8 @@ func (rpc *ThriftRpc) CommitTransaction(spec *base.Spec, txnId int64) (*festruct
 //	    8: required i64 prev_commit_seq
 //	}
 func (rpc *ThriftRpc) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogResult_, error) {
-	log.Info("GetBinlog")
+	log.Tracef("GetBinlog: %d", commitSeq)
+
 	client := rpc.client
 	req := &festruct.TGetBinlogRequest{
 		PrevCommitSeq: &commitSeq,
