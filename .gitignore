@@ -2,11 +2,8 @@ ccr_syncer
 .idea
 .vscode
 .envrc
-bin/*.pid
-lib
-log
+bin
 output
 ccr.db
 backup
 ccr_syncer.sh
-bin

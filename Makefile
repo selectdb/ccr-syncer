@@ -9,10 +9,10 @@ endif
 ## build : Build binary
 build: ccr_syncer get_binlog ingest_binlog get_meta snapshot_op get_master_token spec_checker
 
-.PHONY: lib
-## lib : Create lib directory
-lib:
-	@mkdir -p lib
+.PHONY: bin
+## bin : Create bin directory
+bin:
+	@mkdir -p bin
 
 .PHONY: lint
 ## lint : Lint codespace
@@ -40,17 +40,17 @@ help: Makefile
 .PHONY: cmd/ccr_syncer
 .PHONY: ccr_syncer
 ## ccr_syncer : Build ccr_syncer binary
-ccr_syncer: lib
-	$(V)go build -o lib/ccr_syncer cmd/ccr_syncer.go
+ccr_syncer: bin
+	$(V)go build -o bin/ccr_syncer cmd/ccr_syncer.go
 
 .PHONY: get_binlog
 ## get_binlog : Build get_binlog binary
-get_binlog: lib
-	$(V)go build -o lib/get_binlog cmd/get_binlog.go
+get_binlog: bin
+	$(V)go build -o bin/get_binlog cmd/get_binlog.go
 
 ## run_get_binlog : Run get_binlog binary
 run_get_binlog: get_binlog
-	$(V)lib/get_binlog
+	$(V)bin/get_binlog
 
 .PHONY: sync_thrift
 ## sync_thrift : Sync thrift
@@ -60,25 +60,25 @@ sync_thrift:
 
 .PHONY: ingest_binlog
 ## ingest_binlog : Build ingest_binlog binary
-ingest_binlog: lib
-	$(V)go build -o lib/ingest_binlog cmd/ingest_binlog.go
+ingest_binlog: bin
+	$(V)go build -o bin/ingest_binlog cmd/ingest_binlog.go
 
 .PHONY: get_meta
 ## get_meta : Build get_meta binary
-get_meta: lib
-	$(V)go build -o lib/get_meta cmd/get_meta.go
+get_meta: bin
+	$(V)go build -o bin/get_meta cmd/get_meta.go
 
 .PHONY: snapshot_op
 ## snapshot_op : Build snapshot_op binary
-snapshot_op: lib
-	$(V)go build -o lib/snapshot_op cmd/snapshot_op.go
+snapshot_op: bin
+	$(V)go build -o bin/snapshot_op cmd/snapshot_op.go
 
 .PHONY: get_master_token
 ## get_master_token : Build get_master_token binary
-get_master_token: lib
-	$(V)go build -o lib/get_master_token cmd/get_master_token.go
+get_master_token: bin
+	$(V)go build -o bin/get_master_token cmd/get_master_token.go
 
 .PHONY: spec_checker
 ## spec_checker : Build spec_checker binary
-spec_checker: lib
-	$(V)go build -o lib/spec_checker cmd/spec_checker.go
+spec_checker: bin
+	$(V)go build -o bin/spec_checker cmd/spec_checker.go
