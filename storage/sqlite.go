@@ -29,7 +29,7 @@ func NewSQLiteDB(dbPath string) (DB, error) {
 	return &SQLiteDB{db: db}, nil
 }
 
-func (s *SQLiteDB) AddJobInfo(jobName string, jobInfo string) error {
+func (s *SQLiteDB) AddJob(jobName string, jobInfo string) error {
 	// check job name exists, if exists, return error
 	var count int
 	err := s.db.QueryRow("SELECT COUNT(*) FROM jobs WHERE job_name = ?", jobName).Scan(&count)
@@ -54,7 +54,7 @@ func (s *SQLiteDB) IsJobExist(jobName string) (bool, error) {
 	return count > 0, nil
 }
 
-func (s *SQLiteDB) GetAllJobInfo() (map[string]string, error) {
+func (s *SQLiteDB) GetAllJobs() (map[string]string, error) {
 	rows, err := s.db.Query("SELECT job_name, job_info FROM jobs")
 	if err != nil {
 		return nil, err
