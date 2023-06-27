@@ -8,12 +8,14 @@ var (
 )
 
 type DB interface {
-	// Add ccr job info
-	AddJobInfo(jobName string, jobInfo string) error
+	// Add ccr job
+	AddJob(jobName string, jobInfo string) error
+	// Update ccr job
+	UpdateJob(jobName string, jobInfo string) error
 	// Check Job exist
 	IsJobExist(jobName string) (bool, error)
-	// GetAllJobInfo
-	GetAllJobInfo() (map[string]string, error)
+	// Get all jobs
+	GetAllJobs() (map[string]string, error)
 
 	// Update ccr sync progress
 	UpdateProgress(jobName string, progress string) error

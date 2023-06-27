@@ -87,7 +87,7 @@ func (s *HttpService) RegisterHandlers() {
 
 func (s *HttpService) Start() error {
 	addr := fmt.Sprintf(":%d", s.port)
-	fmt.Printf("Server listening on %s\n", addr)
+	log.Infof("Server listening on %s\n", addr)
 	s.RegisterHandlers()
 	return http.ListenAndServe(addr, s.mux)
 }

@@ -372,7 +372,7 @@ func (m *Meta) GetPartitionIds(tableName string) ([]int64, error) {
 		return nil, err
 	}
 
-	partitionIds := make([]int64, len(partitions))
+	partitionIds := make([]int64, 0, len(partitions))
 	for partitionId := range partitions {
 		partitionIds = append(partitionIds, partitionId)
 	}
@@ -426,7 +426,7 @@ func (m *Meta) UpdateBackends() error {
 		return err
 	}
 
-	backends := make([]base.Backend, 0)
+	backends := make([]*base.Backend, 0)
 	query := "show proc '/backends'"
 	log.Info(query)
 	rows, err := db.Query(query)
@@ -450,11 +450,11 @@ func (m *Meta) UpdateBackends() error {
 			return err
 		}
 		log.Debugf("backend: %v", &backend)
-		backends = append(backends, backend)
+		backends = append(backends, &backend)
 	}
 
 	for _, backend := range backends {
-		m.Backends[backend.Id] = &backend
+		m.Backends[backend.Id] = backend
 
 		hostPort := fmtHostPort(backend.Host, backend.BePort)
 		m.BackendHostPort2IdMap[hostPort] = backend.Id
@@ -465,7 +465,7 @@ func (m *Meta) UpdateBackends() error {
 
 func (m *Meta) GetBackends() ([]*base.Backend, error) {
 	if len(m.Backends) > 0 {
-		backends := make([]*base.Backend, len(m.Backends))
+		backends := make([]*base.Backend, 0, len(m.Backends))
 		for _, backend := range m.Backends {
 			backends = append(backends, backend)
 		}
@@ -695,6 +695,7 @@ func (m *Meta) updateReplica(index *IndexMeta) error {
 			index.TabletMetas.Set(tablet.Id, tablet)
 		}
 		replica.TabletMeta = tablet
+		tablet.ReplicaMetas.Set(replica.Id, replica)
 		index.ReplicaMetas.Set(replica.Id, replica)
 	}
 	return nil
@@ -798,6 +799,7 @@ func (m *Meta) GetTablets(tableName string, partitionId int64) (*btree.Map[int64
 	tablets := btree.NewMap[int64, *TabletMeta](degree)
 	for _, index := range indexes {
 		for _, tablet := range index.TabletMetas.Values() {
+			log.Infof("tablet: %d, replica len: %d", tablet.Id, tablet.ReplicaMetas.Len()) // TODO: remove it
 			tablets.Set(tablet.Id, tablet)
 		}
 	}

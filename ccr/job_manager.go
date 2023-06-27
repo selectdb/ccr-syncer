@@ -1,6 +1,7 @@
 package ccr
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -33,15 +34,26 @@ func (jm *JobManager) AddJob(job *Job) error {
 	jm.lock.Lock()
 	defer jm.lock.Unlock()
 
-	// check job exist
+	// Step 1: check job exist
 	if _, ok := jm.jobs[job.Name]; ok {
 		return fmt.Errorf("%s: %s", ErrJobExist, job.Name)
 	}
 
-	if err := job.FirstRunCheck(); err != nil {
+	// Step 2: check job first run, mostly for dest/src fe db/table info
+	if err := job.FirstRun(); err != nil {
 		return err
 	}
 
+	// Step 3: add job info to db
+	data, err := json.Marshal(job)
+	if err != nil {
+		return err
+	}
+	if err := jm.db.AddJob(job.Name, string(data)); err != nil {
+		return err
+	}
+
+	// Step 4: run job
 	jm.jobs[job.Name] = job
 	jm.runJob(job)
 
