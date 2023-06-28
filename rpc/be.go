@@ -37,6 +37,6 @@ func (beRpc *BeThriftRpc) IngestBinlog(req *bestruct.TIngestBinlogRequest) (*bes
 	log.Infof("IngestBinlog")
 	client := beRpc.client
 
-	log.Infof("IngestBinlog req: %+v", req)
+	log.Infof("IngestBinlog req: %+v, txnId: %d", req, req.GetTxnId())
 	return client.IngestBinlog(context.Background(), req)
 }

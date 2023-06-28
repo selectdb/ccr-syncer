@@ -11023,6 +11023,139 @@ func (p *TBackendsMetadataParams) field1Length() int {
 	return l
 }
 
+func (p *TFrontendsMetadataParams) FastRead(buf []byte) (int, error) {
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	_, l, err = bthrift.Binary.ReadStructBegin(buf)
+	offset += l
+	if err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, l, err = bthrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		l, err = bthrift.Binary.ReadFieldEnd(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	l, err = bthrift.Binary.ReadStructEnd(buf[offset:])
+	offset += l
+	if err != nil {
+		goto ReadStructEndError
+	}
+
+	return offset, nil
+ReadStructBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TFrontendsMetadataParams[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+ReadFieldEndError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TFrontendsMetadataParams) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.ClusterName = &v
+
+	}
+	return offset, nil
+}
+
+// for compatibility
+func (p *TFrontendsMetadataParams) FastWrite(buf []byte) int {
+	return 0
+}
+
+func (p *TFrontendsMetadataParams) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "TFrontendsMetadataParams")
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], binaryWriter)
+	}
+	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
+	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
+	return offset
+}
+
+func (p *TFrontendsMetadataParams) BLength() int {
+	l := 0
+	l += bthrift.Binary.StructBeginLength("TFrontendsMetadataParams")
+	if p != nil {
+		l += p.field1Length()
+	}
+	l += bthrift.Binary.FieldStopLength()
+	l += bthrift.Binary.StructEndLength()
+	return l
+}
+
+func (p *TFrontendsMetadataParams) fastWriteField1(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetClusterName() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "cluster_name", thrift.STRING, 1)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.ClusterName)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TFrontendsMetadataParams) field1Length() int {
+	l := 0
+	if p.IsSetClusterName() {
+		l += bthrift.Binary.FieldBeginLength("cluster_name", thrift.STRING, 1)
+		l += bthrift.Binary.StringLengthNocopy(*p.ClusterName)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
 func (p *TMetaScanRange) FastRead(buf []byte) (int, error) {
 	var err error
 	var offset int
@@ -11076,6 +11209,20 @@ func (p *TMetaScanRange) FastRead(buf []byte) (int, error) {
 		case 3:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField4(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -11163,6 +11310,19 @@ func (p *TMetaScanRange) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TMetaScanRange) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	tmp := NewTFrontendsMetadataParams()
+	if l, err := tmp.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.FrontendsParams = tmp
+	return offset, nil
+}
+
 // for compatibility
 func (p *TMetaScanRange) FastWrite(buf []byte) int {
 	return 0
@@ -11175,6 +11335,7 @@ func (p *TMetaScanRange) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binary
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
+		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -11188,6 +11349,7 @@ func (p *TMetaScanRange) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -11225,6 +11387,16 @@ func (p *TMetaScanRange) fastWriteField3(buf []byte, binaryWriter bthrift.Binary
 	return offset
 }
 
+func (p *TMetaScanRange) fastWriteField4(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetFrontendsParams() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "frontends_params", thrift.STRUCT, 4)
+		offset += p.FrontendsParams.FastWriteNocopy(buf[offset:], binaryWriter)
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TMetaScanRange) field1Length() int {
 	l := 0
 	if p.IsSetMetadataType() {
@@ -11251,6 +11423,16 @@ func (p *TMetaScanRange) field3Length() int {
 	if p.IsSetBackendsParams() {
 		l += bthrift.Binary.FieldBeginLength("backends_params", thrift.STRUCT, 3)
 		l += p.BackendsParams.BLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TMetaScanRange) field4Length() int {
+	l := 0
+	if p.IsSetFrontendsParams() {
+		l += bthrift.Binary.FieldBeginLength("frontends_params", thrift.STRUCT, 4)
+		l += p.FrontendsParams.BLength()
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l

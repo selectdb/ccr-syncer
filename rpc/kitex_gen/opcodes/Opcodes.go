@@ -41,50 +41,51 @@ const (
 	TExprOpcode_TIMESTAMP_HOUR             TExprOpcode = 27
 	TExprOpcode_TIMESTAMP_HOURS_ADD        TExprOpcode = 28
 	TExprOpcode_TIMESTAMP_HOURS_SUB        TExprOpcode = 29
-	TExprOpcode_TIMESTAMP_MICROSECONDS_ADD TExprOpcode = 30
-	TExprOpcode_TIMESTAMP_MICROSECONDS_SUB TExprOpcode = 31
-	TExprOpcode_TIMESTAMP_MINUTE           TExprOpcode = 32
-	TExprOpcode_TIMESTAMP_MINUTES_ADD      TExprOpcode = 33
-	TExprOpcode_TIMESTAMP_MINUTES_SUB      TExprOpcode = 34
-	TExprOpcode_TIMESTAMP_MONTH            TExprOpcode = 35
-	TExprOpcode_TIMESTAMP_MONTHS_ADD       TExprOpcode = 36
-	TExprOpcode_TIMESTAMP_MONTHS_SUB       TExprOpcode = 37
-	TExprOpcode_TIMESTAMP_MONT_NAME        TExprOpcode = 38
-	TExprOpcode_TIMESTAMP_NOW              TExprOpcode = 39
-	TExprOpcode_TIMESTAMP_SECOND           TExprOpcode = 40
-	TExprOpcode_TIMESTAMP_SECONDS_ADD      TExprOpcode = 41
-	TExprOpcode_TIMESTAMP_SECONDS_SUB      TExprOpcode = 42
-	TExprOpcode_TIMESTAMP_STR_TO_DATE      TExprOpcode = 43
-	TExprOpcode_TIMESTAMP_TO_DATE          TExprOpcode = 44
-	TExprOpcode_TIMESTAMP_TO_DAYS          TExprOpcode = 45
-	TExprOpcode_TIMESTAMP_WEEKOFYEAR       TExprOpcode = 46
-	TExprOpcode_TIMESTAMP_WEEKS_ADD        TExprOpcode = 47
-	TExprOpcode_TIMESTAMP_WEEKS_SUB        TExprOpcode = 48
-	TExprOpcode_TIMESTAMP_YEAR             TExprOpcode = 49
-	TExprOpcode_TIMESTAMP_YEARS_ADD        TExprOpcode = 50
-	TExprOpcode_TIMESTAMP_YEARS_SUB        TExprOpcode = 51
-	TExprOpcode_ADD                        TExprOpcode = 52
-	TExprOpcode_SUBTRACT                   TExprOpcode = 53
-	TExprOpcode_MULTIPLY                   TExprOpcode = 54
-	TExprOpcode_DIVIDE                     TExprOpcode = 55
-	TExprOpcode_INT_DIVIDE                 TExprOpcode = 56
-	TExprOpcode_MOD                        TExprOpcode = 57
-	TExprOpcode_BITAND                     TExprOpcode = 58
-	TExprOpcode_BITOR                      TExprOpcode = 59
-	TExprOpcode_BITXOR                     TExprOpcode = 60
-	TExprOpcode_BITNOT                     TExprOpcode = 61
-	TExprOpcode_FACTORIAL                  TExprOpcode = 62
-	TExprOpcode_LAST_OPCODE                TExprOpcode = 63
-	TExprOpcode_EQ_FOR_NULL                TExprOpcode = 64
-	TExprOpcode_RT_FILTER                  TExprOpcode = 65
-	TExprOpcode_MATCH_ANY                  TExprOpcode = 66
-	TExprOpcode_MATCH_ALL                  TExprOpcode = 67
-	TExprOpcode_MATCH_PHRASE               TExprOpcode = 68
-	TExprOpcode_MATCH_ELEMENT_EQ           TExprOpcode = 69
-	TExprOpcode_MATCH_ELEMENT_LT           TExprOpcode = 70
-	TExprOpcode_MATCH_ELEMENT_GT           TExprOpcode = 71
-	TExprOpcode_MATCH_ELEMENT_LE           TExprOpcode = 72
-	TExprOpcode_MATCH_ELEMENT_GE           TExprOpcode = 73
+	TExprOpcode_TIMESTAMP_MICROSECOND      TExprOpcode = 30
+	TExprOpcode_TIMESTAMP_MICROSECONDS_ADD TExprOpcode = 31
+	TExprOpcode_TIMESTAMP_MICROSECONDS_SUB TExprOpcode = 32
+	TExprOpcode_TIMESTAMP_MINUTE           TExprOpcode = 33
+	TExprOpcode_TIMESTAMP_MINUTES_ADD      TExprOpcode = 34
+	TExprOpcode_TIMESTAMP_MINUTES_SUB      TExprOpcode = 35
+	TExprOpcode_TIMESTAMP_MONTH            TExprOpcode = 36
+	TExprOpcode_TIMESTAMP_MONTHS_ADD       TExprOpcode = 37
+	TExprOpcode_TIMESTAMP_MONTHS_SUB       TExprOpcode = 38
+	TExprOpcode_TIMESTAMP_MONT_NAME        TExprOpcode = 39
+	TExprOpcode_TIMESTAMP_NOW              TExprOpcode = 40
+	TExprOpcode_TIMESTAMP_SECOND           TExprOpcode = 41
+	TExprOpcode_TIMESTAMP_SECONDS_ADD      TExprOpcode = 42
+	TExprOpcode_TIMESTAMP_SECONDS_SUB      TExprOpcode = 43
+	TExprOpcode_TIMESTAMP_STR_TO_DATE      TExprOpcode = 44
+	TExprOpcode_TIMESTAMP_TO_DATE          TExprOpcode = 45
+	TExprOpcode_TIMESTAMP_TO_DAYS          TExprOpcode = 46
+	TExprOpcode_TIMESTAMP_WEEKOFYEAR       TExprOpcode = 47
+	TExprOpcode_TIMESTAMP_WEEKS_ADD        TExprOpcode = 48
+	TExprOpcode_TIMESTAMP_WEEKS_SUB        TExprOpcode = 49
+	TExprOpcode_TIMESTAMP_YEAR             TExprOpcode = 50
+	TExprOpcode_TIMESTAMP_YEARS_ADD        TExprOpcode = 51
+	TExprOpcode_TIMESTAMP_YEARS_SUB        TExprOpcode = 52
+	TExprOpcode_ADD                        TExprOpcode = 53
+	TExprOpcode_SUBTRACT                   TExprOpcode = 54
+	TExprOpcode_MULTIPLY                   TExprOpcode = 55
+	TExprOpcode_DIVIDE                     TExprOpcode = 56
+	TExprOpcode_INT_DIVIDE                 TExprOpcode = 57
+	TExprOpcode_MOD                        TExprOpcode = 58
+	TExprOpcode_BITAND                     TExprOpcode = 59
+	TExprOpcode_BITOR                      TExprOpcode = 60
+	TExprOpcode_BITXOR                     TExprOpcode = 61
+	TExprOpcode_BITNOT                     TExprOpcode = 62
+	TExprOpcode_FACTORIAL                  TExprOpcode = 63
+	TExprOpcode_LAST_OPCODE                TExprOpcode = 64
+	TExprOpcode_EQ_FOR_NULL                TExprOpcode = 65
+	TExprOpcode_RT_FILTER                  TExprOpcode = 66
+	TExprOpcode_MATCH_ANY                  TExprOpcode = 67
+	TExprOpcode_MATCH_ALL                  TExprOpcode = 68
+	TExprOpcode_MATCH_PHRASE               TExprOpcode = 69
+	TExprOpcode_MATCH_ELEMENT_EQ           TExprOpcode = 70
+	TExprOpcode_MATCH_ELEMENT_LT           TExprOpcode = 71
+	TExprOpcode_MATCH_ELEMENT_GT           TExprOpcode = 72
+	TExprOpcode_MATCH_ELEMENT_LE           TExprOpcode = 73
+	TExprOpcode_MATCH_ELEMENT_GE           TExprOpcode = 74
 )
 
 func (p TExprOpcode) String() string {
@@ -149,6 +150,8 @@ func (p TExprOpcode) String() string {
 		return "TIMESTAMP_HOURS_ADD"
 	case TExprOpcode_TIMESTAMP_HOURS_SUB:
 		return "TIMESTAMP_HOURS_SUB"
+	case TExprOpcode_TIMESTAMP_MICROSECOND:
+		return "TIMESTAMP_MICROSECOND"
 	case TExprOpcode_TIMESTAMP_MICROSECONDS_ADD:
 		return "TIMESTAMP_MICROSECONDS_ADD"
 	case TExprOpcode_TIMESTAMP_MICROSECONDS_SUB:
@@ -303,6 +306,8 @@ func TExprOpcodeFromString(s string) (TExprOpcode, error) {
 		return TExprOpcode_TIMESTAMP_HOURS_ADD, nil
 	case "TIMESTAMP_HOURS_SUB":
 		return TExprOpcode_TIMESTAMP_HOURS_SUB, nil
+	case "TIMESTAMP_MICROSECOND":
+		return TExprOpcode_TIMESTAMP_MICROSECOND, nil
 	case "TIMESTAMP_MICROSECONDS_ADD":
 		return TExprOpcode_TIMESTAMP_MICROSECONDS_ADD, nil
 	case "TIMESTAMP_MICROSECONDS_SUB":

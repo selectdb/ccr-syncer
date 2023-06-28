@@ -35021,10 +35021,11 @@ func (p *TInitExternalCtlMetaResult_) Field2DeepEqual(src *string) bool {
 }
 
 type TMetadataTableRequestParams struct {
-	MetadataType           *types.TMetadataType               `thrift:"metadata_type,1,optional" frugal:"1,optional,TMetadataType" json:"metadata_type,omitempty"`
-	IcebergMetadataParams  *plannodes.TIcebergMetadataParams  `thrift:"iceberg_metadata_params,2,optional" frugal:"2,optional,plannodes.TIcebergMetadataParams" json:"iceberg_metadata_params,omitempty"`
-	BackendsMetadataParams *plannodes.TBackendsMetadataParams `thrift:"backends_metadata_params,3,optional" frugal:"3,optional,plannodes.TBackendsMetadataParams" json:"backends_metadata_params,omitempty"`
-	ColumnsName            []string                           `thrift:"columns_name,4,optional" frugal:"4,optional,list<string>" json:"columns_name,omitempty"`
+	MetadataType            *types.TMetadataType                `thrift:"metadata_type,1,optional" frugal:"1,optional,TMetadataType" json:"metadata_type,omitempty"`
+	IcebergMetadataParams   *plannodes.TIcebergMetadataParams   `thrift:"iceberg_metadata_params,2,optional" frugal:"2,optional,plannodes.TIcebergMetadataParams" json:"iceberg_metadata_params,omitempty"`
+	BackendsMetadataParams  *plannodes.TBackendsMetadataParams  `thrift:"backends_metadata_params,3,optional" frugal:"3,optional,plannodes.TBackendsMetadataParams" json:"backends_metadata_params,omitempty"`
+	ColumnsName             []string                            `thrift:"columns_name,4,optional" frugal:"4,optional,list<string>" json:"columns_name,omitempty"`
+	FrontendsMetadataParams *plannodes.TFrontendsMetadataParams `thrift:"frontends_metadata_params,5,optional" frugal:"5,optional,plannodes.TFrontendsMetadataParams" json:"frontends_metadata_params,omitempty"`
 }
 
 func NewTMetadataTableRequestParams() *TMetadataTableRequestParams {
@@ -35070,6 +35071,15 @@ func (p *TMetadataTableRequestParams) GetColumnsName() (v []string) {
 	}
 	return p.ColumnsName
 }
+
+var TMetadataTableRequestParams_FrontendsMetadataParams_DEFAULT *plannodes.TFrontendsMetadataParams
+
+func (p *TMetadataTableRequestParams) GetFrontendsMetadataParams() (v *plannodes.TFrontendsMetadataParams) {
+	if !p.IsSetFrontendsMetadataParams() {
+		return TMetadataTableRequestParams_FrontendsMetadataParams_DEFAULT
+	}
+	return p.FrontendsMetadataParams
+}
 func (p *TMetadataTableRequestParams) SetMetadataType(val *types.TMetadataType) {
 	p.MetadataType = val
 }
@@ -35082,12 +35092,16 @@ func (p *TMetadataTableRequestParams) SetBackendsMetadataParams(val *plannodes.T
 func (p *TMetadataTableRequestParams) SetColumnsName(val []string) {
 	p.ColumnsName = val
 }
+func (p *TMetadataTableRequestParams) SetFrontendsMetadataParams(val *plannodes.TFrontendsMetadataParams) {
+	p.FrontendsMetadataParams = val
+}
 
 var fieldIDToName_TMetadataTableRequestParams = map[int16]string{
 	1: "metadata_type",
 	2: "iceberg_metadata_params",
 	3: "backends_metadata_params",
 	4: "columns_name",
+	5: "frontends_metadata_params",
 }
 
 func (p *TMetadataTableRequestParams) IsSetMetadataType() bool {
@@ -35104,6 +35118,10 @@ func (p *TMetadataTableRequestParams) IsSetBackendsMetadataParams() bool {
 
 func (p *TMetadataTableRequestParams) IsSetColumnsName() bool {
 	return p.ColumnsName != nil
+}
+
+func (p *TMetadataTableRequestParams) IsSetFrontendsMetadataParams() bool {
+	return p.FrontendsMetadataParams != nil
 }
 
 func (p *TMetadataTableRequestParams) Read(iprot thrift.TProtocol) (err error) {
@@ -35158,6 +35176,16 @@ func (p *TMetadataTableRequestParams) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -35243,6 +35271,14 @@ func (p *TMetadataTableRequestParams) ReadField4(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TMetadataTableRequestParams) ReadField5(iprot thrift.TProtocol) error {
+	p.FrontendsMetadataParams = plannodes.NewTFrontendsMetadataParams()
+	if err := p.FrontendsMetadataParams.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *TMetadataTableRequestParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TMetadataTableRequestParams"); err != nil {
@@ -35263,6 +35299,10 @@ func (p *TMetadataTableRequestParams) Write(oprot thrift.TProtocol) (err error) 
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 
@@ -35368,6 +35408,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 
+func (p *TMetadataTableRequestParams) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFrontendsMetadataParams() {
+		if err = oprot.WriteFieldBegin("frontends_metadata_params", thrift.STRUCT, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.FrontendsMetadataParams.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
 func (p *TMetadataTableRequestParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -35391,6 +35450,9 @@ func (p *TMetadataTableRequestParams) DeepEqual(ano *TMetadataTableRequestParams
 		return false
 	}
 	if !p.Field4DeepEqual(ano.ColumnsName) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.FrontendsMetadataParams) {
 		return false
 	}
 	return true
@@ -35432,6 +35494,13 @@ func (p *TMetadataTableRequestParams) Field4DeepEqual(src []string) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *TMetadataTableRequestParams) Field5DeepEqual(src *plannodes.TFrontendsMetadataParams) bool {
+
+	if !p.FrontendsMetadataParams.DeepEqual(src) {
+		return false
 	}
 	return true
 }

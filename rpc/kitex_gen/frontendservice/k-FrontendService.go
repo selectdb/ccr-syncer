@@ -25731,6 +25731,20 @@ func (p *TMetadataTableRequestParams) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -25837,6 +25851,19 @@ func (p *TMetadataTableRequestParams) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TMetadataTableRequestParams) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	tmp := plannodes.NewTFrontendsMetadataParams()
+	if l, err := tmp.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.FrontendsMetadataParams = tmp
+	return offset, nil
+}
+
 // for compatibility
 func (p *TMetadataTableRequestParams) FastWrite(buf []byte) int {
 	return 0
@@ -25850,6 +25877,7 @@ func (p *TMetadataTableRequestParams) FastWriteNocopy(buf []byte, binaryWriter b
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
+		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -25864,6 +25892,7 @@ func (p *TMetadataTableRequestParams) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -25920,6 +25949,16 @@ func (p *TMetadataTableRequestParams) fastWriteField4(buf []byte, binaryWriter b
 	return offset
 }
 
+func (p *TMetadataTableRequestParams) fastWriteField5(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetFrontendsMetadataParams() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "frontends_metadata_params", thrift.STRUCT, 5)
+		offset += p.FrontendsMetadataParams.FastWriteNocopy(buf[offset:], binaryWriter)
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TMetadataTableRequestParams) field1Length() int {
 	l := 0
 	if p.IsSetMetadataType() {
@@ -25961,6 +26000,16 @@ func (p *TMetadataTableRequestParams) field4Length() int {
 
 		}
 		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TMetadataTableRequestParams) field5Length() int {
+	l := 0
+	if p.IsSetFrontendsMetadataParams() {
+		l += bthrift.Binary.FieldBeginLength("frontends_metadata_params", thrift.STRUCT, 5)
+		l += p.FrontendsMetadataParams.BLength()
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l

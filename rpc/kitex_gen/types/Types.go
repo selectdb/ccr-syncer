@@ -1875,6 +1875,7 @@ const (
 	TMetadataType_ICEBERG         TMetadataType = 0
 	TMetadataType_BACKENDS        TMetadataType = 1
 	TMetadataType_WORKLOAD_GROUPS TMetadataType = 2
+	TMetadataType_FRONTENDS       TMetadataType = 3
 )
 
 func (p TMetadataType) String() string {
@@ -1885,6 +1886,8 @@ func (p TMetadataType) String() string {
 		return "BACKENDS"
 	case TMetadataType_WORKLOAD_GROUPS:
 		return "WORKLOAD_GROUPS"
+	case TMetadataType_FRONTENDS:
+		return "FRONTENDS"
 	}
 	return "<UNSET>"
 }
@@ -1897,6 +1900,8 @@ func TMetadataTypeFromString(s string) (TMetadataType, error) {
 		return TMetadataType_BACKENDS, nil
 	case "WORKLOAD_GROUPS":
 		return TMetadataType_WORKLOAD_GROUPS, nil
+	case "FRONTENDS":
+		return TMetadataType_FRONTENDS, nil
 	}
 	return TMetadataType(0), fmt.Errorf("not a valid TMetadataType string")
 }
