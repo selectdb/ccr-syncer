@@ -38,6 +38,7 @@ PID_DIR="$(
 )"
 export PID_DIR
 
+LOG_DIR="${SYNCER_HOME}/log"
 
 pidfile="${PID_DIR}/syncer.pid"
 if [[ -f "${pidfile}" ]]; then
@@ -50,10 +51,10 @@ if [[ -f "${pidfile}" ]]; then
 fi
 
 chmod 755 "${SYNCER_HOME}/bin/ccr_syncer"
-echo "start time: $(date)" >>"${LOG_DIR}/ccr_syncer.out"
+echo "start time: $(date)" >>"${LOG_DIR}/ccr_syncer.log"
 
 if [[ "${RUN_DAEMON}" -eq 1 ]]; then
-    nohup "${SYNCER_HOME}/bin/ccr_syncer" "$@" >>"${LOG_DIR}/ccr_syncer.out" 2>&1 </dev/null &
+    nohup "${SYNCER_HOME}/bin/ccr_syncer" "$@" >>"${LOG_DIR}/ccr_syncer.log" 2>&1 </dev/null &
     echo $! > bin/syncer.pid
 else
     "${SYNCER_HOME}/bin/ccr_syncer" "$@" 2>&1 </dev/null
