@@ -9,12 +9,13 @@ import (
 	"github.com/selectdb/ccr_syncer/ccr/base"
 	"github.com/selectdb/ccr_syncer/ccr/record"
 	"github.com/selectdb/ccr_syncer/rpc"
-	bestruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/backendservice"
-	festruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/frontendservice"
-	"github.com/selectdb/ccr_syncer/rpc/kitex_gen/types"
-	festruct_types "github.com/selectdb/ccr_syncer/rpc/kitex_gen/types"
 	"github.com/selectdb/ccr_syncer/storage"
 	u "github.com/selectdb/ccr_syncer/utils"
+
+	bestruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/backendservice"
+	festruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/frontendservice"
+	tstatus "github.com/selectdb/ccr_syncer/rpc/kitex_gen/status"
+	ttypes "github.com/selectdb/ccr_syncer/rpc/kitex_gen/types"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -422,7 +423,7 @@ func new_label(t *base.Spec, commitSeq int64) string {
 
 // Table ingestBinlog
 // TODO: add check success, check ingestBinlog commitInfo
-func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) ([]*festruct_types.TTabletCommitInfo, error) {
+func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) ([]*ttypes.TTabletCommitInfo, error) {
 	log.Tracef("ingestBinlog, txnId: %d, upsert: %v", txnId, upsert)
 
 	srcTableId, err := j.srcMeta.GetTableId(j.Src.Table)
@@ -458,9 +459,9 @@ func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) ([]*festruct_type
 		defer lastErrLock.RUnlock()
 		return lastErr
 	}
-	commitInfos := make([]*festruct_types.TTabletCommitInfo, 0)
+	commitInfos := make([]*ttypes.TTabletCommitInfo, 0)
 	var commitInfosLock sync.Mutex
-	updateCommitInfos := func(commitInfo *festruct_types.TTabletCommitInfo) {
+	updateCommitInfos := func(commitInfo *ttypes.TTabletCommitInfo) {
 		commitInfosLock.Lock()
 		commitInfos = append(commitInfos, commitInfo)
 		commitInfosLock.Unlock()
@@ -520,7 +521,7 @@ func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) ([]*festruct_type
 					updateLastError(err)
 					return false
 				}
-				loadId := types.NewTUniqueId()
+				loadId := ttypes.NewTUniqueId()
 				loadId.SetHi(-1)
 				loadId.SetLo(-1)
 
@@ -547,7 +548,7 @@ func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) ([]*festruct_type
 					LocalTabletId:  u.ThriftValueWrapper[int64](destTabletId),
 					LoadId:         loadId,
 				}
-				commitInfo := &festruct_types.TTabletCommitInfo{
+				commitInfo := &ttypes.TTabletCommitInfo{
 					TabletId:  destTabletId,
 					BackendId: destBackend.Id,
 				}
@@ -561,7 +562,15 @@ func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) ([]*festruct_type
 						updateLastError(err)
 					}
 					log.Debugf("ingest resp: %v\n", resp)
-					updateCommitInfos(commitInfo)
+					if !resp.IsSetStatus() {
+						err = fmt.Errorf("ingest resp status not set")
+						updateLastError(err)
+					} else if resp.Status.StatusCode != tstatus.TStatusCode_OK {
+						err = fmt.Errorf("ingest resp status code: %v, msg: %v", resp.Status.StatusCode, resp.Status.ErrorMsgs)
+						updateLastError(err)
+					} else {
+						updateCommitInfos(commitInfo)
+					}
 				}()
 
 				return true
@@ -614,7 +623,7 @@ func (j *Job) dealUpsertBinlog(data string) error {
 	j.updateJobProgress()
 
 	// Step 3: ingest binlog
-	var commitInfos []*festruct_types.TTabletCommitInfo
+	var commitInfos []*ttypes.TTabletCommitInfo
 	commitInfos, err = j.ingestBinlog(txnId, upsert)
 	if err != nil {
 		return err
