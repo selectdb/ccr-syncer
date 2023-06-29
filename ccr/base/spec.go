@@ -227,8 +227,5 @@ func (s *Spec) CreateSnapshotAndWaitForDone() (string, error) {
 		return "", err
 	}
 
-	// TODO(impl): Add wait for done
-	time.Sleep(30 * time.Second)
-
 	return snapshotName, nil
 }
