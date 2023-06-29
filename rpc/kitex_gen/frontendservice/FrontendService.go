@@ -525,9 +525,11 @@ func (p *TQueryStatsType) Value() (driver.Value, error) {
 type TBinlogType int64
 
 const (
-	TBinlogType_UPSERT        TBinlogType = 0
-	TBinlogType_ADD_PARTITION TBinlogType = 1
-	TBinlogType_CREATE_TABLE  TBinlogType = 2
+	TBinlogType_UPSERT         TBinlogType = 0
+	TBinlogType_ADD_PARTITION  TBinlogType = 1
+	TBinlogType_CREATE_TABLE   TBinlogType = 2
+	TBinlogType_DROP_PARTITION TBinlogType = 3
+	TBinlogType_DROP_TABLE     TBinlogType = 4
 )
 
 func (p TBinlogType) String() string {
@@ -538,6 +540,10 @@ func (p TBinlogType) String() string {
 		return "ADD_PARTITION"
 	case TBinlogType_CREATE_TABLE:
 		return "CREATE_TABLE"
+	case TBinlogType_DROP_PARTITION:
+		return "DROP_PARTITION"
+	case TBinlogType_DROP_TABLE:
+		return "DROP_TABLE"
 	}
 	return "<UNSET>"
 }
@@ -550,6 +556,10 @@ func TBinlogTypeFromString(s string) (TBinlogType, error) {
 		return TBinlogType_ADD_PARTITION, nil
 	case "CREATE_TABLE":
 		return TBinlogType_CREATE_TABLE, nil
+	case "DROP_PARTITION":
+		return TBinlogType_DROP_PARTITION, nil
+	case "DROP_TABLE":
+		return TBinlogType_DROP_TABLE, nil
 	}
 	return TBinlogType(0), fmt.Errorf("not a valid TBinlogType string")
 }
