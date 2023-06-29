@@ -608,53 +608,79 @@ func (j *Job) dealDropPartitionBinlog(data string) error {
 }
 
 func (j *Job) tableIncrementalSync() error {
-	commitSeq := j.progress.CommitSeq
 	src := &j.Src
-	log.Tracef("src: %v, commitSeq: %d\n", src, commitSeq)
 
 	// Step 1: get binlog
 	srcRpc, err := rpc.NewThriftRpc(src)
 	if err != nil {
 		return nil
 	}
-	getBinlogResp, err := srcRpc.GetBinlog(src, commitSeq)
-	if err != nil {
-		return nil
-	}
-	log.Tracef("resp: %v\n", getBinlogResp)
 
-	// Step 2: deal binlog records
-	// TODO: handle binlog error, no new binlog
-	// TODO: deal more than 1 binlog
-	binlogs := getBinlogResp.GetBinlogs()
-	if len(binlogs) == 0 {
-		return fmt.Errorf("no binlog")
+	var hasJob bool = true
+
+	for hasJob {
+		commitSeq := j.progress.CommitSeq
+		log.Tracef("src: %v, CommitSeq: %v", src, commitSeq)
+
+		getBinlogResp, err := srcRpc.GetBinlog(src, commitSeq)
+		if err != nil {
+			return nil
+		}
+		log.Tracef("resp: %v\n", getBinlogResp)
+
+		// Step 2: check binlog status
+		status := getBinlogResp.GetStatus()
+		switch status.StatusCode {
+		case tstatus.TStatusCode_OK:
+		case tstatus.TStatusCode_BINLOG_TOO_OLD_COMMIT_SEQ:
+		case tstatus.TStatusCode_BINLOG_TOO_NEW_COMMIT_SEQ:
+			hasJob = false
+		case tstatus.TStatusCode_BINLOG_DISABLE:
+			return fmt.Errorf("binlog is disabled")
+		case tstatus.TStatusCode_BINLOG_NOT_FOUND_DB:
+			return fmt.Errorf("can't found db")
+		case tstatus.TStatusCode_BINLOG_NOT_FOUND_TABLE:
+			return fmt.Errorf("can't found table")
+		default:
+			return fmt.Errorf("invalid binlog status type: %v", status.StatusCode)
+		}
+
+		// Step 3: deal binlog records if has job
+		if hasJob {
+			binlogs := getBinlogResp.GetBinlogs()
+			if len(binlogs) == 0 {
+				return fmt.Errorf("no binlog, but status code is: %v", status.StatusCode)
+			}
+
+			for idx := range binlogs {
+				binlog := binlogs[idx]
+				switch binlog.GetType() {
+				case festruct.TBinlogType_UPSERT:
+					err = j.dealUpsertBinlog(binlog.GetData())
+					if err != nil {
+						return err
+					}
+				case festruct.TBinlogType_ADD_PARTITION:
+					err = j.dealAddPartitionBinlog(binlog.GetData())
+					if err != nil {
+						return err
+					}
+				case festruct.TBinlogType_DROP_PARTITION:
+					err = j.dealDropPartitionBinlog(binlog.GetData())
+					if err != nil {
+						return err
+					}
+				default:
+					return fmt.Errorf("unknown binlog type: %v", binlog.GetType())
+				}
+
+				// Step 4: update progress to db
+				j.progress.JobState = JobStateDone
+				j.updateJobProgress()
+			}
+		}
 	}
 
-	binlog := binlogs[0]
-	switch binlog.GetType() {
-	case festruct.TBinlogType_UPSERT:
-		err = j.dealUpsertBinlog(binlog.GetData())
-		if err != nil {
-			return err
-		}
-	case festruct.TBinlogType_ADD_PARTITION:
-		err = j.dealAddPartitionBinlog(binlog.GetData())
-		if err != nil {
-			return err
-		}
-	case festruct.TBinlogType_DROP_PARTITION:
-		err = j.dealDropPartitionBinlog(binlog.GetData())
-		if err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("unknown binlog type: %v", binlog.GetType())
-	}
-
-	// Step 3: update progress to db
-	j.progress.JobState = JobStateDone
-	j.updateJobProgress()
 	return nil
 }
 
