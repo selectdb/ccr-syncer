@@ -616,9 +616,7 @@ func (j *Job) tableIncrementalSync() error {
 		return nil
 	}
 
-	var hasJob bool = true
-
-	for hasJob {
+	for {
 		commitSeq := j.progress.CommitSeq
 		log.Tracef("src: %v, CommitSeq: %v", src, commitSeq)
 
@@ -634,7 +632,7 @@ func (j *Job) tableIncrementalSync() error {
 		case tstatus.TStatusCode_OK:
 		case tstatus.TStatusCode_BINLOG_TOO_OLD_COMMIT_SEQ:
 		case tstatus.TStatusCode_BINLOG_TOO_NEW_COMMIT_SEQ:
-			hasJob = false
+			return nil
 		case tstatus.TStatusCode_BINLOG_DISABLE:
 			return fmt.Errorf("binlog is disabled")
 		case tstatus.TStatusCode_BINLOG_NOT_FOUND_DB:
@@ -646,42 +644,38 @@ func (j *Job) tableIncrementalSync() error {
 		}
 
 		// Step 3: deal binlog records if has job
-		if hasJob {
-			binlogs := getBinlogResp.GetBinlogs()
-			if len(binlogs) == 0 {
-				return fmt.Errorf("no binlog, but status code is: %v", status.StatusCode)
-			}
+		binlogs := getBinlogResp.GetBinlogs()
+		if len(binlogs) == 0 {
+			return fmt.Errorf("no binlog, but status code is: %v", status.StatusCode)
+		}
 
-			for idx := range binlogs {
-				binlog := binlogs[idx]
-				switch binlog.GetType() {
-				case festruct.TBinlogType_UPSERT:
-					err = j.dealUpsertBinlog(binlog.GetData())
-					if err != nil {
-						return err
-					}
-				case festruct.TBinlogType_ADD_PARTITION:
-					err = j.dealAddPartitionBinlog(binlog.GetData())
-					if err != nil {
-						return err
-					}
-				case festruct.TBinlogType_DROP_PARTITION:
-					err = j.dealDropPartitionBinlog(binlog.GetData())
-					if err != nil {
-						return err
-					}
-				default:
-					return fmt.Errorf("unknown binlog type: %v", binlog.GetType())
+		for idx := range binlogs {
+			binlog := binlogs[idx]
+			switch binlog.GetType() {
+			case festruct.TBinlogType_UPSERT:
+				err = j.dealUpsertBinlog(binlog.GetData())
+				if err != nil {
+					return err
 				}
-
-				// Step 4: update progress to db
-				j.progress.JobState = JobStateDone
-				j.updateJobProgress()
+			case festruct.TBinlogType_ADD_PARTITION:
+				err = j.dealAddPartitionBinlog(binlog.GetData())
+				if err != nil {
+					return err
+				}
+			case festruct.TBinlogType_DROP_PARTITION:
+				err = j.dealDropPartitionBinlog(binlog.GetData())
+				if err != nil {
+					return err
+				}
+			default:
+				return fmt.Errorf("unknown binlog type: %v", binlog.GetType())
 			}
+
+			// Step 4: update progress to db
+			j.progress.JobState = JobStateDone
+			j.updateJobProgress()
 		}
 	}
-
-	return nil
 }
 
 func (j *Job) recoverJobProgress() error {
