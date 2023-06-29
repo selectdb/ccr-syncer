@@ -19,7 +19,8 @@ func test_init_meta(m *ccr.Meta) {
 		log.Infof("found db: %s, dbId: %d\n", m.Database, dbId)
 	}
 
-	if tableId, err := m.GetTableId(m.Table); err != nil {
+	tableId, err := m.GetTableId(m.Table)
+	if err != nil {
 		panic(err)
 	} else {
 		log.Infof("found table: %s, tableId: %d\n", m.Table, tableId)
@@ -71,6 +72,13 @@ func test_init_meta(m *ccr.Meta) {
 	} else {
 		log.Infof("partitionid: %d, found replicas: %v, len %d\n", partitionId, replicas, replicas.Len())
 	}
+
+	if tableName, err := m.GetTableNameById(tableId); err != nil {
+		panic(err)
+	} else {
+		log.Infof("tableId: %d, tableName: %s\n", tableId, tableName)
+	}
+
 }
 
 func main() {

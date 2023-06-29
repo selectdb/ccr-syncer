@@ -639,6 +639,29 @@ func (j *Job) dealUpsertBinlog(data string) error {
 	return nil
 }
 
+// dealAddPartitionBinlog
+func (j *Job) dealAddPartitionBinlog(data string) error {
+	addPartition, err := record.NewAddPartitionFromJson(data)
+	if err != nil {
+		return err
+	}
+
+	destDbName := j.Dest.Database
+	var destTableName string
+	if j.SyncType == TableSync {
+		destTableName = j.Dest.Table
+	} else if j.SyncType == DBSync {
+		destTableName, err = j.destMeta.GetTableNameById(addPartition.TableId)
+		if err != nil {
+			return err
+		}
+	}
+
+	// addPartitionSql = "ALTER TABLE " + sql
+	addPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s", destDbName, destTableName, addPartition.Sql)
+	return j.destMeta.Exec(addPartitionSql)
+}
+
 func (j *Job) tableIncrementalSync() error {
 	commitSeq := j.progress.CommitSeq
 	src := &j.Src
@@ -667,6 +690,11 @@ func (j *Job) tableIncrementalSync() error {
 	switch binlog.GetType() {
 	case festruct.TBinlogType_UPSERT:
 		err = j.dealUpsertBinlog(binlog.GetData())
+		if err != nil {
+			return err
+		}
+	case festruct.TBinlogType_ADD_PARTITION:
+		err = j.dealAddPartitionBinlog(binlog.GetData())
 		if err != nil {
 			return err
 		}

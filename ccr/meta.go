@@ -82,8 +82,10 @@ type Meta struct {
 
 func NewMeta(tableSpec *base.Spec) *Meta {
 	return &Meta{
-		Spec:                  *tableSpec,
-		DatabaseMeta:          DatabaseMeta{},
+		Spec: *tableSpec,
+		DatabaseMeta: DatabaseMeta{
+			Tables: make(map[int64]*TableMeta),
+		},
 		Backends:              make(map[int64]*base.Backend),
 		DatabaseName2IdMap:    make(map[string]int64),
 		TableName2IdMap:       make(map[string]int64),
@@ -199,9 +201,6 @@ func (m *Meta) UpdateTable(tableName string) error {
 		if parsedTableName == tableName {
 			log.Debugf("found table:%s, tableId:%d", fullTableName, tableId)
 			m.TableName2IdMap[fullTableName] = tableId
-			if m.Tables == nil {
-				m.Tables = make(map[int64]*TableMeta)
-			}
 			m.Tables[tableId] = &TableMeta{
 				DatabaseMeta: &m.DatabaseMeta,
 				Id:           tableId,
@@ -850,4 +849,52 @@ func (m *Meta) GetMasterToken() (string, error) {
 	}
 
 	return m.token, nil
+}
+
+func (m *Meta) GetTableNameById(tableId int64) (string, error) {
+	// mysql> show table 41034;
+	// +---------------------+-------------------+-------+
+	// | DbName              | TableName         | DbId  |
+	// +---------------------+-------------------+-------+
+	// | default_cluster:ccr | editlog_partition | 10116 |
+	// +---------------------+-------------------+-------+
+
+	db, err := m.Connect()
+	if err != nil {
+		log.Fatal(err)
+		return "", err
+	}
+
+	var _dbName string
+	var tableName string
+	var _dbId int64
+	sql := fmt.Sprintf("show table %d", tableId)
+	rows, err := db.Query(sql)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		if err := rows.Scan(&_dbName, &tableName, &_dbId); err != nil {
+			return "", err
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+
+	return tableName, nil
+}
+
+// Exec sql
+func (m *Meta) Exec(sql string) error {
+	db, err := m.Connect()
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(sql)
+	return err
 }
