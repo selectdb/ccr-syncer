@@ -580,8 +580,31 @@ func (j *Job) dealAddPartitionBinlog(data string) error {
 	}
 
 	// addPartitionSql = "ALTER TABLE " + sql
-	addPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s", destDbName, destTableName, addPartition.Sql)
+	addPartitionSql := fmt.Sprintf("ALTER TABLE `%s.%s` %s", destDbName, destTableName, addPartition.Sql)
 	return j.destMeta.Exec(addPartitionSql)
+}
+
+// dealDropPartitionBinlog
+func (j *Job) dealDropPartitionBinlog(data string) error {
+	dropPartition, err := record.NewDropPartitionFromJson(data)
+	if err != nil {
+		return err
+	}
+
+	destDbName := j.Dest.Database
+	var destTableName string
+	if j.SyncType == TableSync {
+		destTableName = j.Dest.Table
+	} else if j.SyncType == DBSync {
+		destTableName, err = j.destMeta.GetTableNameById(dropPartition.TableId)
+		if err != nil {
+			return err
+		}
+	}
+
+	// dropPartitionSql = "ALTER TABLE " + sql
+	dropPartitionSql := fmt.Sprintf("ALTER TABLE `%s.%s` %s", destDbName, destTableName, dropPartition.Sql)
+	return j.destMeta.Exec(dropPartitionSql)
 }
 
 func (j *Job) tableIncrementalSync() error {
@@ -617,6 +640,11 @@ func (j *Job) tableIncrementalSync() error {
 		}
 	case festruct.TBinlogType_ADD_PARTITION:
 		err = j.dealAddPartitionBinlog(binlog.GetData())
+		if err != nil {
+			return err
+		}
+	case festruct.TBinlogType_DROP_PARTITION:
+		err = j.dealDropPartitionBinlog(binlog.GetData())
 		if err != nil {
 			return err
 		}
