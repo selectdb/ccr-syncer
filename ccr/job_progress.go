@@ -2,6 +2,9 @@ package ccr
 
 import "encoding/json"
 
+// TODO: rewrite all progress by two level state machine
+// first one is sync state, second one is job state
+
 type JobState int
 
 const (
@@ -76,6 +79,16 @@ func (j *JobProgress) NewIncrementalSync() {
 	j.SyncState = IncrementalSync
 }
 
+func (j *JobProgress) StartDeal(commitSeq int64) {
+	j.JobState = JobStateDoing
+	j.CommitSeq = commitSeq
+	j.TransactionId = 0
+}
+
 func (j *JobProgress) Done() {
 	j.JobState = JobStateDone
+}
+
+func (j *JobProgress) BeginTransaction(txnId int64) {
+	j.TransactionId = txnId
 }

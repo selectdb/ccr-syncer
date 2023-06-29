@@ -182,21 +182,21 @@ func (j *Job) genExtraInfo() (*base.ExtraInfo, error) {
 	meta := j.srcMeta
 	masterToken, err := meta.GetMasterToken()
 	if err != nil {
-		log.Errorf("get master token failed: %v\n", err)
+		log.Errorf("get master token failed: %v", err)
 		return nil, err
 	}
 
 	backends, err := meta.GetBackends()
 	if err != nil {
-		log.Errorf("get backends failed: %v\n", err)
+		log.Errorf("get backends failed: %v", err)
 		return nil, err
 	} else {
-		log.Infof("found backends: %v\n", backends)
+		log.Infof("found backends: %v", backends)
 	}
 
 	beNetworkMap := make(map[int64]base.NetworkAddr)
 	for _, backend := range backends {
-		log.Infof("backend: %v\n", backend)
+		log.Infof("backend: %v", backend)
 		addr := base.NetworkAddr{
 			Ip:   backend.Host,
 			Port: backend.HttpPort,
@@ -237,7 +237,7 @@ func (j *Job) tableFullSync() error {
 	if err != nil {
 		return err
 	}
-	log.Debugf("job: %s\n", string(snapshotResp.GetJobInfo()))
+	log.Debugf("job: %s", string(snapshotResp.GetJobInfo()))
 
 	if !snapshotResp.IsSetJobInfo() {
 		return errors.New("jobInfo is not set")
@@ -261,13 +261,13 @@ func (j *Job) tableFullSync() error {
 		log.Errorf("unmarshal jobInfo failed, err: %v", err)
 		return err
 	}
-	log.Debugf("jobInfo: %v\n", jobInfoMap)
+	log.Debugf("jobInfo: %v", jobInfoMap)
 
 	extraInfo, err := j.genExtraInfo()
 	if err != nil {
 		return err
 	}
-	log.Infof("extraInfo: %v\n", extraInfo)
+	log.Infof("extraInfo: %v", extraInfo)
 
 	jobInfoMap["extra_info"] = extraInfo
 	jobInfoBytes, err := json.Marshal(jobInfoMap)
@@ -275,7 +275,7 @@ func (j *Job) tableFullSync() error {
 		log.Errorf("marshal jobInfo failed, err: %v", err)
 		return err
 	}
-	log.Infof("jobInfoBytes: %s\n", string(jobInfoBytes))
+	log.Infof("jobInfoBytes: %s", string(jobInfoBytes))
 	snapshotResp.SetJobInfo(jobInfoBytes)
 
 	// Step 4: start a new fullsync && persist
@@ -295,7 +295,7 @@ func (j *Job) tableFullSync() error {
 		log.Errorf("restore snapshot failed, err: %v", err)
 		return err
 	}
-	log.Infof("resp: %v\n", restoreResp)
+	log.Infof("resp: %v", restoreResp)
 	// TODO: impl wait for done, use show restore
 	restoreFinished, err := j.Dest.CheckRestoreFinished(snapshotName)
 	if err != nil {
@@ -483,7 +483,7 @@ func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) ([]*ttypes.TTable
 					if err != nil {
 						updateLastError(err)
 					}
-					log.Debugf("ingest resp: %v\n", resp)
+					log.Debugf("ingest resp: %v", resp)
 					if !resp.IsSetStatus() {
 						err = fmt.Errorf("ingest resp status not set")
 						updateLastError(err)
@@ -512,7 +512,10 @@ func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) ([]*ttypes.TTable
 }
 
 // TODO: deal error by abort txn
-func (j *Job) dealUpsertBinlog(data string) error {
+func (j *Job) dealUpsertBinlog(binlog *festruct.TBinlog) error {
+	log.Tracef("deal upsert binlog")
+
+	data := binlog.GetData()
 	upsert, err := record.NewUpsertFromJson(data)
 	if err != nil {
 		return err
@@ -522,7 +525,7 @@ func (j *Job) dealUpsertBinlog(data string) error {
 	commitSeq := upsert.CommitSeq
 
 	// Step 1: begin txn
-	log.Tracef("begin txn, dest: %v, commitSeq: %d\n", dest, commitSeq)
+	log.Tracef("begin txn, dest: %v, commitSeq: %d", dest, commitSeq)
 	destRpc, err := rpc.NewThriftRpc(dest)
 	if err != nil {
 		panic(err)
@@ -534,14 +537,12 @@ func (j *Job) dealUpsertBinlog(data string) error {
 	if err != nil {
 		panic(err)
 	}
-	log.Infof("resp: %v\n", beginTxnResp)
+	log.Infof("resp: %v", beginTxnResp)
 	txnId := beginTxnResp.GetTxnId()
-	log.Infof("TxnId: %d, DbId: %d\n", txnId, beginTxnResp.GetDbId())
+	log.Infof("TxnId: %d, DbId: %d", txnId, beginTxnResp.GetDbId())
 
 	// Step 2: update job progress
-	j.progress.JobState = JobStateDoing
-	j.progress.CommitSeq = commitSeq
-	j.progress.TransactionId = txnId
+	j.progress.BeginTransaction(txnId)
 	j.updateJobProgress()
 
 	// Step 3: ingest binlog
@@ -550,19 +551,22 @@ func (j *Job) dealUpsertBinlog(data string) error {
 	if err != nil {
 		return err
 	}
-	log.Tracef("commitInfos: %v\n", commitInfos)
+	log.Tracef("commitInfos: %v", commitInfos)
 
 	// Step 4: commit txn
 	resp, err := destRpc.CommitTransaction(dest, txnId, commitInfos)
 	if err != nil {
 		return err
 	}
-	log.Debugf("commit resp: %v\n", resp)
+	log.Debugf("commit resp: %v", resp)
 	return nil
 }
 
 // dealAddPartitionBinlog
-func (j *Job) dealAddPartitionBinlog(data string) error {
+func (j *Job) dealAddPartitionBinlog(binlog *festruct.TBinlog) error {
+	log.Tracef("deal add partition binlog")
+
+	data := binlog.GetData()
 	addPartition, err := record.NewAddPartitionFromJson(data)
 	if err != nil {
 		return err
@@ -580,12 +584,16 @@ func (j *Job) dealAddPartitionBinlog(data string) error {
 	}
 
 	// addPartitionSql = "ALTER TABLE " + sql
-	addPartitionSql := fmt.Sprintf("ALTER TABLE `%s.%s` %s", destDbName, destTableName, addPartition.Sql)
+	addPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s", destDbName, destTableName, addPartition.Sql)
+	log.Tracef("addPartitionSql: %s", addPartitionSql)
 	return j.destMeta.Exec(addPartitionSql)
 }
 
 // dealDropPartitionBinlog
-func (j *Job) dealDropPartitionBinlog(data string) error {
+func (j *Job) dealDropPartitionBinlog(binlog *festruct.TBinlog) error {
+	log.Tracef("deal drop partition binlog")
+
+	data := binlog.GetData()
 	dropPartition, err := record.NewDropPartitionFromJson(data)
 	if err != nil {
 		return err
@@ -603,8 +611,38 @@ func (j *Job) dealDropPartitionBinlog(data string) error {
 	}
 
 	// dropPartitionSql = "ALTER TABLE " + sql
-	dropPartitionSql := fmt.Sprintf("ALTER TABLE `%s.%s` %s", destDbName, destTableName, dropPartition.Sql)
+	dropPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s", destDbName, destTableName, dropPartition.Sql)
+	log.Tracef("dropPartitionSql: %s", dropPartitionSql)
 	return j.destMeta.Exec(dropPartitionSql)
+}
+
+func (j *Job) dealBinlog(binlog *festruct.TBinlog) error {
+	if binlog == nil || !binlog.IsSetCommitSeq() {
+		return fmt.Errorf("invalid binlog: %v", binlog)
+	}
+
+	// Step 2: update job progress
+	j.progress.StartDeal(binlog.GetCommitSeq())
+	j.updateJobProgress()
+
+	switch binlog.GetType() {
+	case festruct.TBinlogType_UPSERT:
+		if err := j.dealUpsertBinlog(binlog); err != nil {
+			return err
+		}
+	case festruct.TBinlogType_ADD_PARTITION:
+		if err := j.dealAddPartitionBinlog(binlog); err != nil {
+			return err
+		}
+	case festruct.TBinlogType_DROP_PARTITION:
+		if err := j.dealDropPartitionBinlog(binlog); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unknown binlog type: %v", binlog.GetType())
+	}
+
+	return nil
 }
 
 func (j *Job) tableIncrementalSync() error {
@@ -624,7 +662,7 @@ func (j *Job) tableIncrementalSync() error {
 		if err != nil {
 			return nil
 		}
-		log.Tracef("resp: %v\n", getBinlogResp)
+		log.Tracef("resp: %v", getBinlogResp)
 
 		// Step 2: check binlog status
 		status := getBinlogResp.GetStatus()
@@ -649,30 +687,13 @@ func (j *Job) tableIncrementalSync() error {
 			return fmt.Errorf("no binlog, but status code is: %v", status.StatusCode)
 		}
 
-		for idx := range binlogs {
-			binlog := binlogs[idx]
-			switch binlog.GetType() {
-			case festruct.TBinlogType_UPSERT:
-				err = j.dealUpsertBinlog(binlog.GetData())
-				if err != nil {
-					return err
-				}
-			case festruct.TBinlogType_ADD_PARTITION:
-				err = j.dealAddPartitionBinlog(binlog.GetData())
-				if err != nil {
-					return err
-				}
-			case festruct.TBinlogType_DROP_PARTITION:
-				err = j.dealDropPartitionBinlog(binlog.GetData())
-				if err != nil {
-					return err
-				}
-			default:
-				return fmt.Errorf("unknown binlog type: %v", binlog.GetType())
+		for _, binlog := range binlogs {
+			if err := j.dealBinlog(binlog); err != nil {
+				return err
 			}
 
 			// Step 4: update progress to db
-			j.progress.JobState = JobStateDone
+			j.progress.Done()
 			j.updateJobProgress()
 		}
 	}
@@ -706,7 +727,7 @@ func (j *Job) recoverJobProgress() error {
 
 // write progress to db, busy loop until success
 func (j *Job) updateJobProgress() {
-	log.Tracef("update job progress: %v\n", j.progress)
+	log.Tracef("update job progress: %v", j.progress)
 	for {
 		// Step 1: to json
 		// TODO: fix to json error
@@ -727,7 +748,7 @@ func (j *Job) updateJobProgress() {
 
 		break
 	}
-	log.Tracef("update job progress done: %v\n", j.progress)
+	log.Tracef("update job progress done: %v", j.progress)
 }
 
 func (j *Job) tableSync() error {

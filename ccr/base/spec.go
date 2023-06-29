@@ -15,7 +15,7 @@ import (
 const (
 	BACKUP_CHECK_DURATION  = time.Second * 3
 	RESTORE_CHECK_DURATION = time.Second * 3
-	MAX_CHECK_RETRY_TIMES  = 20
+	MAX_CHECK_RETRY_TIMES  = 86400 // 3 day
 )
 
 type BackupState int
