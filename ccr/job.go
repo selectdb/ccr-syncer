@@ -1,5 +1,7 @@
 package ccr
 
+// TODO: rewrite by state machine, such as first sync, full/incremental sync
+
 import (
 	"encoding/json"
 	"fmt"
@@ -24,17 +26,28 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+const (
+	SYNC_DURATION                = time.Second * 5
+	UPDATE_JOB_PROGRESS_DURATION = time.Second * 3
+)
+
 type SyncType int
 
 const (
 	DBSync    SyncType = 0
 	TableSync SyncType = 1
-
-	SYNC_DURATION                = time.Second * 5
-	UPDATE_JOB_PROGRESS_DURATION = time.Second * 3
 )
 
-// TODO: rewrite by state machine, such as first sync, full/incremental sync
+func (s SyncType) String() string {
+	switch s {
+	case DBSync:
+		return "db_sync"
+	case TableSync:
+		return "table_sync"
+	default:
+		return "unknown_sync"
+	}
+}
 
 type Job struct {
 	SyncType    SyncType      `json:"sync_type"`
@@ -138,109 +151,6 @@ func (j *Job) valid() error {
 	}
 
 	return nil
-}
-
-// create database by dest table spec
-func (j *Job) DestCreateDatabase() error {
-	log.Trace("create database by dest table spec")
-
-	db, err := j.Dest.Connect()
-	if err != nil {
-		return nil
-	}
-	defer db.Close()
-
-	_, err = db.Exec("CREATE DATABASE IF NOT EXISTS " + j.Dest.Database)
-	return err
-}
-
-// create table by replace remote create table stmt
-func (j *Job) DestCreateTable(stmt string) error {
-	db, err := j.Dest.Connect()
-	if err != nil {
-		return nil
-	}
-	defer db.Close()
-
-	_, err = db.Exec(stmt)
-	return err
-}
-
-// check database exist by spec
-func checkDatabaseExists(spec *base.Spec) (bool, error) {
-	log.Trace("check database exist by spec", zap.String("spec", spec.String()))
-	db, err := spec.Connect()
-	if err != nil {
-		return false, err
-	}
-	defer db.Close()
-
-	rows, err := db.Query("SHOW DATABASES LIKE '" + spec.Database + "'")
-	if err != nil {
-		return false, err
-	}
-	defer rows.Close()
-
-	var database string
-	for rows.Next() {
-		if err := rows.Scan(&database); err != nil {
-			return false, err
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return false, err
-	}
-
-	return database != "", nil
-}
-
-// check table exits in database dir by spec
-func checkTableExists(spec *base.Spec) (bool, error) {
-	log.Trace("check table exists", zap.String("table", spec.Table))
-
-	db, err := spec.Connect()
-	if err != nil {
-		return false, err
-	}
-	defer db.Close()
-
-	rows, err := db.Query("SHOW TABLES FROM " + spec.Database + " LIKE '" + spec.Table + "'")
-	if err != nil {
-		return false, err
-	}
-	defer rows.Close()
-
-	var table string
-	for rows.Next() {
-		if err := rows.Scan(&table); err != nil {
-			return false, err
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return false, err
-	}
-
-	return table != "", nil
-}
-
-// check dest table exits in database dir
-func (c *Job) CheckDestTableExists() (bool, error) {
-	return checkTableExists(&c.Dest)
-}
-
-// check src database && table exists
-func (c *Job) CheckSrcTableExists() (bool, error) {
-	return checkTableExists(&c.Src)
-}
-
-// check dest database exists
-func (j *Job) CheckDestDatabaseExists() (bool, error) {
-	return checkDatabaseExists(&j.Dest)
-}
-
-// check src database exists
-func (j *Job) CheckSrcDatabaseExists() (bool, error) {
-	return checkDatabaseExists(&j.Src)
 }
 
 func (j *Job) RecoverDatabaseSync() error {
@@ -420,10 +330,17 @@ func (j *Job) tableFullSync() error {
 	return nil
 }
 
-// TODO: rewrite by another format
-func new_label(t *base.Spec, commitSeq int64) string {
-	// label "ccr_sync_job:${db}:${table}:${commit_seq}"
-	return fmt.Sprintf("ccr_sync_job:%s:%s:%d", t.Database, t.Table, commitSeq)
+func (j *Job) newLabel(commitSeq int64) string {
+	src := &j.Src
+	dest := &j.Dest
+	if j.SyncType == DBSync {
+		// label "ccr_sync_job:${sync_type}:${src_db_id}:${dest_db_id}:${commit_seq}"
+		return fmt.Sprintf("ccr_sync_job:%s:%d:%d:%d", j.SyncType, src.DbId, dest.DbId, commitSeq)
+	} else {
+		// TableSync
+		// label "ccr_sync_job:${sync_type}:${src_db_id}_${src_table_id}:${dest_db_id}_${dest_table_id}:${commit_seq}"
+		return fmt.Sprintf("ccr_sync_job:%s:%d_%d:%d_%d:%d", j.SyncType, src.DbId, src.TableId, dest.DbId, dest.TableId, commitSeq)
+	}
 }
 
 // Table ingestBinlog
@@ -611,7 +528,7 @@ func (j *Job) dealUpsertBinlog(data string) error {
 		panic(err)
 	}
 
-	label := new_label(dest, commitSeq)
+	label := j.newLabel(commitSeq)
 
 	beginTxnResp, err := destRpc.BeginTransaction(dest, label)
 	if err != nil {
@@ -824,7 +741,7 @@ func (j *Job) FirstRun() error {
 	log.Info("first run check job", zap.String("src", j.Src.String()), zap.String("dest", j.Dest.String()))
 
 	// Step 1: check src database
-	if src_db_exists, err := j.CheckSrcDatabaseExists(); err != nil {
+	if src_db_exists, err := j.Src.CheckDatabaseExists(); err != nil {
 		return err
 	} else if !src_db_exists {
 		return fmt.Errorf("src database %s not exists", j.Src.Database)
@@ -844,7 +761,7 @@ func (j *Job) FirstRun() error {
 
 	// Step 2: check src table exists, if not exists, return err
 	if j.SyncType == TableSync {
-		if src_table_exists, err := j.CheckSrcTableExists(); err != nil {
+		if src_table_exists, err := j.Src.CheckTableExists(); err != nil {
 			return err
 		} else if !src_table_exists {
 			return fmt.Errorf("src table %s.%s not exists", j.Src.Database, j.Src.Table)
@@ -865,12 +782,12 @@ func (j *Job) FirstRun() error {
 
 	// Step 3: check dest database && table exists
 	// if dest database && table exists, return err
-	dest_db_exists, err := j.CheckDestDatabaseExists()
+	dest_db_exists, err := j.Dest.CheckDatabaseExists()
 	if err != nil {
 		return err
 	}
 	if !dest_db_exists {
-		if err := j.DestCreateDatabase(); err != nil {
+		if err := j.Dest.CreateDatabase(); err != nil {
 			return err
 		}
 	}
@@ -880,7 +797,7 @@ func (j *Job) FirstRun() error {
 		j.Dest.DbId = destDbId
 	}
 	if j.SyncType == TableSync {
-		dest_table_exists, err := j.CheckDestTableExists()
+		dest_table_exists, err := j.Dest.CheckTableExists()
 		if err != nil {
 			return err
 		}

@@ -287,6 +287,86 @@ func (s *Spec) ClearDB() error {
 	return err
 }
 
+func (s *Spec) CreateDatabase() error {
+	log.Trace("create database")
+
+	db, err := s.Connect()
+	if err != nil {
+		return nil
+	}
+	defer db.Close()
+
+	_, err = db.Exec("CREATE DATABASE IF NOT EXISTS " + s.Database)
+	return err
+}
+
+func (s *Spec) CreateTable(stmt string) error {
+	db, err := s.Connect()
+	if err != nil {
+		return nil
+	}
+	defer db.Close()
+
+	_, err = db.Exec(stmt)
+	return err
+}
+
+func (s *Spec) CheckDatabaseExists() (bool, error) {
+	log.Trace("check database exist by spec", zap.String("spec", s.String()))
+	db, err := s.Connect()
+	if err != nil {
+		return false, err
+	}
+	defer db.Close()
+
+	rows, err := db.Query("SHOW DATABASES LIKE '" + s.Database + "'")
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+
+	var database string
+	for rows.Next() {
+		if err := rows.Scan(&database); err != nil {
+			return false, err
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return false, err
+	}
+
+	return database != "", nil
+}
+
+// check table exits in database dir by spec
+func (s *Spec) CheckTableExists() (bool, error) {
+	log.Trace("check table exists", zap.String("table", s.Table))
+
+	db, err := s.Connect()
+	if err != nil {
+		return false, err
+	}
+	defer db.Close()
+
+	rows, err := db.Query("SHOW TABLES FROM " + s.Database + " LIKE '" + s.Table + "'")
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+
+	var table string
+	for rows.Next() {
+		if err := rows.Scan(&table); err != nil {
+			return false, err
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return false, err
+	}
+
+	return table != "", nil
+}
+
 // mysql> BACKUP SNAPSHOT ccr.snapshot_20230605 TO `__keep_on_local__` ON (      src_1 ) PROPERTIES ("type" = "full");
 func (s *Spec) CreateSnapshotAndWaitForDone() (string, error) {
 	// snapshot name format "ccr_snapshot_${db}_${table}_${timestamp}"
