@@ -9,7 +9,88 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
+
+const (
+	BACKUP_CHECK_DURATION  = time.Second * 3
+	RESTORE_CHECK_DURATION = time.Second * 3
+	MAX_CHECK_RETRY_TIMES  = 20
+)
+
+type BackupState int
+
+const (
+	BackupStateUnknown   BackupState = iota
+	BackupStatePending   BackupState = iota
+	BackupStateFinished  BackupState = iota
+	BackupStateCancelled BackupState = iota
+)
+
+func (s BackupState) String() string {
+	switch s {
+	case BackupStateUnknown:
+		return "unknown"
+	case BackupStatePending:
+		return "pending"
+	case BackupStateFinished:
+		return "finished"
+	case BackupStateCancelled:
+		return "cancelled"
+	default:
+		return "unknown"
+	}
+}
+
+func ParseBackupState(state string) BackupState {
+	switch state {
+	case "PENDING":
+		return BackupStatePending
+	case "FINISHED":
+		return BackupStateFinished
+	case "CANCELLED":
+		return BackupStateCancelled
+	default:
+		return BackupStateUnknown
+	}
+}
+
+type RestoreState int
+
+const (
+	RestoreStateUnknown   RestoreState = iota
+	RestoreStatePending   RestoreState = iota
+	RestoreStateFinished  RestoreState = iota
+	RestoreStateCancelled RestoreState = iota
+)
+
+func (s RestoreState) String() string {
+	switch s {
+	case RestoreStateUnknown:
+		return "unknown"
+	case RestoreStatePending:
+		return "pending"
+	case RestoreStateFinished:
+		return "finished"
+	case RestoreStateCancelled:
+		return "cancelled"
+	default:
+		return "unknown"
+	}
+}
+
+func ParseRestoreState(state string) RestoreState {
+	switch state {
+	case "PENDING":
+		return RestoreStatePending
+	case "FINISHED":
+		return RestoreStateFinished
+	case "CANCELLED":
+		return RestoreStateCancelled
+	default:
+		return RestoreStateUnknown
+	}
+}
 
 // TODO(Drogon): timeout config
 type Spec struct {
@@ -227,5 +308,137 @@ func (s *Spec) CreateSnapshotAndWaitForDone() (string, error) {
 		return "", err
 	}
 
+	backupFinished, err := s.CheckBackupFinished(snapshotName)
+	if err != nil {
+		log.Errorf("check backup state failed, err: %v", err)
+		return "", err
+	}
+	if !backupFinished {
+		err = fmt.Errorf("check backup state timeout, max try times: %d", MAX_CHECK_RETRY_TIMES)
+		return "", err
+	}
+
 	return snapshotName, nil
+}
+
+func makeSingleColScanArgs[T interface{}](prefix int, col *T, suffix int) []interface{} {
+	prefixCols := make([]sql.RawBytes, prefix)
+	suffixCols := make([]sql.RawBytes, suffix)
+	scanArgs := make([]interface{}, 0, prefix+suffix+1)
+	for i := range prefixCols {
+		scanArgs = append(scanArgs, &prefixCols[i])
+	}
+	scanArgs = append(scanArgs, col)
+	for i := range suffixCols {
+		scanArgs = append(scanArgs, &suffixCols[i])
+	}
+
+	return scanArgs
+}
+
+// TODO: Add TaskErrMsg
+func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, error) {
+	log.Infof("check backup state of snapshot %s", snapshotName)
+
+	db, err := s.Connect()
+	if err != nil {
+		return BackupStateUnknown, err
+	}
+	defer db.Close()
+
+	var backupStateStr string
+	scanArgs := makeSingleColScanArgs(3, &backupStateStr, 10)
+
+	sql := fmt.Sprintf("SHOW BACKUP FROM %s WHERE SnapshotName = \"%s\"", s.Database, snapshotName)
+	log.Tracef("check backup state sql: %s", sql)
+	rows, err := db.Query(sql)
+	if err != nil {
+		return BackupStateUnknown, err
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		if err := rows.Scan(scanArgs...); err != nil {
+			log.Fatal(err)
+			return BackupStateUnknown, err
+		}
+
+		log.Tracef("check backup state: %v", backupStateStr)
+
+		return ParseBackupState(backupStateStr), nil
+	}
+	return BackupStateUnknown, fmt.Errorf("no backup state found")
+}
+
+func (s *Spec) CheckBackupFinished(snapshotName string) (bool, error) {
+	log.Trace("check backup state", zap.String("database", s.Database))
+
+	for i := 0; i < MAX_CHECK_RETRY_TIMES; i++ {
+		if backupState, err := s.checkBackupFinished(snapshotName); err != nil {
+			return false, err
+		} else if backupState == BackupStateFinished {
+			return true, nil
+		} else if backupState == BackupStateCancelled {
+			return false, fmt.Errorf("backup failed or canceled")
+		} else {
+			// BackupStatePending, BackupStateUnknown
+			time.Sleep(BACKUP_CHECK_DURATION)
+		}
+	}
+
+	return false, fmt.Errorf("check backup state timeout, max try times: %d", MAX_CHECK_RETRY_TIMES)
+}
+
+// TODO: Add TaskErrMsg
+func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, error) {
+	log.Tracef("check restore state %s", snapshotName)
+
+	db, err := s.Connect()
+	if err != nil {
+		return RestoreStateUnknown, err
+	}
+	defer db.Close()
+
+	var restoreStateStr string
+	scanArgs := makeSingleColScanArgs(4, &restoreStateStr, 16)
+
+	sql := fmt.Sprintf("SHOW RESTORE FROM %s WHERE Label = \"%s\"", s.Database, snapshotName)
+
+	log.Tracef("check restore state sql: %s", sql)
+	rows, err := db.Query(sql)
+	if err != nil {
+		return RestoreStateUnknown, err
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		if err := rows.Scan(scanArgs...); err != nil {
+			log.Fatal(err)
+			return RestoreStateUnknown, err
+		}
+
+		log.Tracef("check restore state: %v", restoreStateStr)
+
+		return ParseRestoreState(restoreStateStr), nil
+	}
+	return RestoreStateUnknown, fmt.Errorf("no restore state found")
+}
+
+func (s *Spec) CheckRestoreFinished(snapshotName string) (bool, error) {
+	log.Trace("check restore isfinished", zap.String("database", s.Database))
+
+	for i := 0; i < MAX_CHECK_RETRY_TIMES; i++ {
+		if backupState, err := s.checkRestoreFinished(snapshotName); err != nil {
+			return false, err
+		} else if backupState == RestoreStateFinished {
+			return true, nil
+		} else if backupState == RestoreStateCancelled {
+			return false, fmt.Errorf("backup failed or canceled")
+		} else {
+			// RestoreStatePending, RestoreStateUnknown
+			time.Sleep(RESTORE_CHECK_DURATION)
+		}
+	}
+
+	return false, fmt.Errorf("check restore state timeout, max try times: %d", MAX_CHECK_RETRY_TIMES)
 }

@@ -1,7 +1,6 @@
 package ccr
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -33,8 +32,6 @@ const (
 
 	SYNC_DURATION                = time.Second * 5
 	UPDATE_JOB_PROGRESS_DURATION = time.Second * 3
-	RESTORE_CHECK_DURATION       = time.Second * 3
-	MAX_CHECK_RETRY_TIMES        = 20
 )
 
 // TODO: rewrite by state machine, such as first sync, full/incremental sync
@@ -226,115 +223,6 @@ func checkTableExists(spec *base.Spec) (bool, error) {
 	return table != "", nil
 }
 
-func makeSingleColScanArgs[T interface{}](prefix int, col *T, suffix int) []interface{} {
-	prefixCols := make([]sql.RawBytes, prefix)
-	suffixCols := make([]sql.RawBytes, suffix)
-	scanArgs := make([]interface{}, 0, prefix + suffix + 1)
-	for i := range prefixCols {
-		scanArgs = append(scanArgs, &prefixCols[i])
-	}
-	scanArgs = append(scanArgs, col)
-	for i := range suffixCols {
-		scanArgs = append(scanArgs, &suffixCols[i])
-	}
-
-	return scanArgs
-}
-
-func checkBackupFinished(sepc *base.Spec, snapshotName string) (bool, error) {
-	log.Trace("check backup state", zap.String("database", sepc.Database))
-
-	db, err := sepc.Connect()
-	if err != nil {
-		return false, err
-	}
-	defer db.Close()
-
-	var retry int = 0
-	var found bool = false
-
-	var state string
-	scanArgs := makeSingleColScanArgs(3, &state, 10)
-	
-	for !found && retry < MAX_CHECK_RETRY_TIMES {
-		rows, err := db.Query("SHOW BACKUP FROM " + sepc.Database +
-			" WHERE SnapshotName = \"" + snapshotName + "\"")
-		if err != nil {
-			return false, err
-		}
-
-		if rows.Next() {
-			if err := rows.Scan(scanArgs...); err != nil {
-				log.Fatal(err)
-				rows.Close()
-				return false, err
-			}
-
-			log.Printf("[deadlinefen] check backup try times: %v, state: %v", retry, state)
-
-			if state == "FINISHED" {
-				found = true
-			}
-		}
-
-		if !found {
-			time.Sleep(RESTORE_CHECK_DURATION)
-			retry += 1
-		}
-
-		rows.Close()
-	}
-
-	return found, nil
-}
-
-func checkRestoreFinished(sepc *base.Spec, snapshotName string) (bool, error) {
-	log.Trace("check restore is finished", zap.String("database", sepc.Database))
-
-	db, err := sepc.Connect()
-	if err != nil {
-		return false, err
-	}
-	defer db.Close()
-
-	var retry int = 0
-	var found bool = false
-
-	var state string
-	scanArgs := makeSingleColScanArgs(4, &state, 16)
-
-	for !found && retry < MAX_CHECK_RETRY_TIMES {
-		rows, err := db.Query("SHOW RESTORE FROM " + sepc.Database +
-			" WHERE Label = \"" + snapshotName + "\"")
-		if err != nil {
-			return false, err
-		}
-
-		if rows.Next() {
-			if err := rows.Scan(scanArgs...); err != nil {
-				log.Fatal(err)
-				rows.Close()
-				return false, err
-			}
-
-			log.Printf("[deadlinefen] check restore try times: %v, state: %v", retry, state)
-
-			if state == "FINISHED" {
-				found = true
-			}
-		}
-
-		if !found {
-			time.Sleep(RESTORE_CHECK_DURATION)
-			retry += 1
-		}
-
-		rows.Close()
-	}
-
-	return found, nil
-}
-
 // check dest table exits in database dir
 func (c *Job) CheckDestTableExists() (bool, error) {
 	return checkTableExists(&c.Dest)
@@ -353,16 +241,6 @@ func (j *Job) CheckDestDatabaseExists() (bool, error) {
 // check src database exists
 func (j *Job) CheckSrcDatabaseExists() (bool, error) {
 	return checkDatabaseExists(&j.Src)
-}
-
-// check dest backup job done
-func (j *Job) CheckSrcBackupFinished(snapshotName string) (bool, error) {
-	return checkBackupFinished(&j.Src, snapshotName)
-}
-
-// check dest restore job done
-func (j *Job) CheckDestRestoreFinished(snapshotName string) (bool, error) {
-	return checkRestoreFinished(&j.Dest, snapshotName)
 }
 
 func (j *Job) RecoverDatabaseSync() error {
@@ -434,15 +312,6 @@ func (j *Job) tableFullSync() error {
 	if err != nil {
 		return err
 	}
-	backupFinished, err := j.CheckSrcBackupFinished(snapshotName)
-	if err != nil {
-		log.Errorf("check backup state failed, err: %v", err)
-		return nil
-	}
-	if !backupFinished {
-		log.Errorf("check backup state timeout, max try times: %d", MAX_CHECK_RETRY_TIMES)
-		return nil
-	}
 	j.progress.DoneCreateSnapshot(snapshotName)
 	j.updateJobProgress()
 
@@ -450,14 +319,12 @@ func (j *Job) tableFullSync() error {
 	src := &j.Src
 	srcRpc, err := rpc.NewThriftRpc(src)
 	if err != nil {
-		log.Errorf("new thrift rpc failed, err: %v", err)
-		return nil
+		return err
 	}
 
 	log.Debugf("begin get snapshot %s", snapshotName)
 	snapshotResp, err := srcRpc.GetSnapshot(src, snapshotName)
 	if err != nil {
-		log.Errorf("get snapshot failed, err: %v", err)
 		return err
 	}
 	log.Debugf("job: %s\n", string(snapshotResp.GetJobInfo()))
@@ -510,25 +377,24 @@ func (j *Job) tableFullSync() error {
 	dest := &j.Dest
 	destRpc, err := rpc.NewThriftRpc(dest)
 	if err != nil {
-		log.Errorf("new thrift rpc failed, err: %v", err)
-		return nil
+		return err
 	}
 	log.Debugf("begin restore snapshot %s", snapshotName)
 	restoreResp, err := destRpc.RestoreSnapshot(dest, snapshotName, snapshotResp)
 	if err != nil {
 		log.Errorf("restore snapshot failed, err: %v", err)
-		return nil
+		return err
 	}
 	log.Infof("resp: %v\n", restoreResp)
 	// TODO: impl wait for done, use show restore
-	restoreFinished, err := j.CheckDestRestoreFinished(snapshotName)
+	restoreFinished, err := j.Dest.CheckRestoreFinished(snapshotName)
 	if err != nil {
 		log.Errorf("check restore state failed, err: %v", err)
-		return nil
+		return err
 	}
 	if !restoreFinished {
-		log.Errorf("check restore state timeout, max try times: %d", MAX_CHECK_RETRY_TIMES)
-		return nil
+		err = fmt.Errorf("check restore state timeout, max try times: %d", base.MAX_CHECK_RETRY_TIMES)
+		return err
 	}
 
 	// Step 6: Update job progress && dest table id
