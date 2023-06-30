@@ -35,13 +35,14 @@ const (
 )
 
 type JobProgress struct {
-	JobName       string     `json:"job_name"`
-	SyncState     SyncState  `json:"sync_state"`
-	JobState      JobState   `json:"state"`
-	CommitSeq     int64      `json:"commit_seq"`
-	TransactionId int64      `json:"transaction_id"`
-	Data          string     `json:"data"` // this often for binlog or snapshot info
-	db            storage.DB `json:"-"`
+	JobName             string          `json:"job_name"`
+	SyncState           SyncState       `json:"sync_state"`
+	JobState            JobState        `json:"state"`
+	CommitSeq           int64           `json:"commit_seq"`
+	TransactionId       int64           `json:"transaction_id"`
+	Data                string          `json:"data"`                 // this often for binlog or snapshot info
+	DbTableCommitSeqMap map[int64]int64 `json:"table_commit_seq_map"` // this often for table commit seq
+	db                  storage.DB      `json:"-"`
 }
 
 func NewJobProgress(jobName string, db storage.DB) *JobProgress {
@@ -104,9 +105,29 @@ func (j *JobProgress) DoneCreateSnapshot(snapshotName string) {
 	j.persist()
 }
 
-func (j *JobProgress) BeginRestore(commitSeq int64) {
+func (j *JobProgress) BeginTableRestore(commitSeq int64) {
 	j.JobState = JobStateFullSync_BeginRestore
 	j.CommitSeq = commitSeq
+
+	j.persist()
+}
+
+func (j *JobProgress) BeginDbRestore(DbTableCommitSeqMap map[int64]int64) {
+	j.JobState = JobStateFullSync_BeginRestore
+	commitSeq := int64(0)
+	for _, seq := range DbTableCommitSeqMap {
+		if commitSeq < seq {
+			commitSeq = seq
+		}
+	}
+	j.CommitSeq = commitSeq
+	j.DbTableCommitSeqMap = DbTableCommitSeqMap
+
+	j.persist()
+}
+
+func (j *JobProgress) DoneDbRestore(DbTableCommitSeqMap map[int64]int64) {
+	j.JobState = JobStateDone
 
 	j.persist()
 }

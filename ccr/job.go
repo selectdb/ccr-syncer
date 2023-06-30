@@ -209,14 +209,28 @@ func (j *Job) genExtraInfo() (*base.ExtraInfo, error) {
 	}, nil
 }
 
-// TODO: check snapshot state
-func (j *Job) tableFullSync() error {
+func (j *Job) fullSync() error {
 	// TODO: snapshot machine, not need create snapshot each time
 	// Step 1: Create snapshot
 	// TODO(Drogon): check last snapshot commitSeq > first commitSeq, maybe we can reuse this snapshot
 	log.Debugf("begin create snapshot")
 	j.progress.BeginCreateSnapshot()
-	snapshotName, err := j.Src.CreateSnapshotAndWaitForDone(nil)
+	backupTableList := make([]string, 0)
+	switch j.SyncType {
+	case DBSync:
+		tables, err := j.srcMeta.GetTables()
+		if err != nil {
+			return err
+		}
+		for _, table := range tables {
+			backupTableList = append(backupTableList, table.Name)
+		}
+	case TableSync:
+		backupTableList = append(backupTableList, j.Src.Table)
+	default:
+		return errors.Errorf("invalid sync type %s", j.SyncType)
+	}
+	snapshotName, err := j.Src.CreateSnapshotAndWaitForDone(backupTableList)
 	if err != nil {
 		return err
 	}
@@ -246,9 +260,10 @@ func (j *Job) tableFullSync() error {
 		log.Errorf("extract table commit seq map failed, err: %v", err)
 		return err
 	}
-	commitSeq, ok := tableCommitSeqMap[j.Src.TableId]
-	if !ok {
-		return errors.New("table commit seq not found")
+	if j.SyncType == TableSync {
+		if _, ok := tableCommitSeqMap[j.Src.TableId]; !ok {
+			return errors.New("table commit seq not found")
+		}
 	}
 
 	// Step 3: Add extra info
@@ -276,7 +291,13 @@ func (j *Job) tableFullSync() error {
 	snapshotResp.SetJobInfo(jobInfoBytes)
 
 	// Step 4: start a new fullsync && persist
-	j.progress.BeginRestore(commitSeq)
+	switch j.SyncType {
+	case DBSync:
+		j.progress.BeginDbRestore(tableCommitSeqMap)
+	case TableSync:
+		commitSeq := tableCommitSeqMap[j.Src.TableId]
+		j.progress.BeginTableRestore(commitSeq)
+	}
 
 	// Step 5: restore snapshot
 	// Restore snapshot to dest
@@ -306,10 +327,12 @@ func (j *Job) tableFullSync() error {
 	// Step 6: Update job progress && dest table id
 	// update job info, only for dest table id
 	// TODO: retry && mark it for not start a new full sync
-	if destTableId, err := j.destMeta.GetTableId(j.Dest.Table); err != nil {
-		return err
-	} else {
-		j.Dest.TableId = destTableId
+	if j.SyncType == DBSync {
+		if destTableId, err := j.destMeta.GetTableId(j.Dest.Table); err != nil {
+			return err
+		} else {
+			j.Dest.TableId = destTableId
+		}
 	}
 	j.progress.Done()
 	// TODO: reload check job table id
@@ -323,6 +346,13 @@ func (j *Job) tableFullSync() error {
 
 	j.isFirstSync = false
 	return nil
+}
+
+// TODO: check snapshot state
+func (j *Job) tableFullSync() error {
+	log.Tracef("begin table full sync")
+
+	return j.fullSync()
 }
 
 func (j *Job) newLabel(commitSeq int64) string {
@@ -737,6 +767,9 @@ func (j *Job) recoverJobProgress() error {
 	}
 }
 
+// tableSync is a function that synchronizes a table between the source and destination databases.
+// If it is the first synchronization, it performs a full sync of the table.
+// If it is not the first synchronization, it recovers the job progress and performs an incremental sync.
 func (j *Job) tableSync() error {
 	if j.isFirstSync {
 		return j.tableFullSync()
@@ -753,9 +786,9 @@ func (j *Job) tableSync() error {
 }
 
 func (j *Job) dbFullSync() error {
-	// TODO(Drogon): impl
-	// Step 1: Get All Tables
-	return nil
+	log.Tracef("begin db full sync")
+
+	return j.fullSync()
 }
 
 func (j *Job) dbSync() error {
