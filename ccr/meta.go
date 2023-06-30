@@ -892,8 +892,69 @@ func (m *Meta) GetTableNameById(tableId int64) (string, error) {
 }
 
 // this method not called frequently, so it behaves like update, get and cache it every time
-func (m *Meta) GetTables(sql string) error {
-	return nil
+func (m *Meta) GetTables() (map[int64]*TableMeta, error) {
+	dbId, err := m.GetDbId()
+	if err != nil {
+		return nil, err
+	}
+
+	// mysql> show proc '/dbs/{dbId}';
+	// 	mysql> show proc '/dbs/10116/';
+	// +---------+---------------+----------+---------------------+--------------+--------+------+--------------------------+--------------+
+	// | TableId | TableName     | IndexNum | PartitionColumnName | PartitionNum | State  | Type | LastConsistencyCheckTime | ReplicaCount |
+	// +---------+---------------+----------+---------------------+--------------+--------+------+--------------------------+--------------+
+	// | 10118   | enable_binlog | 1        | NULL                | 1            | NORMAL | OLAP | NULL                     | 3            |
+	// | 13004   | tbl_time      | 1        | k1                  | 3            | NORMAL | OLAP | NULL                     | 24           |
+	// +---------+---------------+----------+---------------------+--------------+--------+------+--------------------------+--------------+
+	db, err := m.Connect()
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	var tableId int64
+	var tableName string
+	discardCols := make([]sql.RawBytes, 7)
+	scanArgs := []interface{}{&tableId, &tableName}
+	for i := range discardCols {
+		scanArgs = append(scanArgs, &discardCols[i])
+	}
+	query := fmt.Sprintf("show proc '/dbs/%d/'", dbId)
+	rows, err := db.Query(query)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	tableName2IdMap := make(map[string]int64)
+	tables := make(map[int64]*TableMeta) // tableId -> table
+	defer rows.Close()
+	for rows.Next() {
+		if err := rows.Scan(scanArgs...); err != nil {
+			log.Fatal(err)
+			return nil, err
+		}
+
+		// match parsedDbname == dbname, return dbId
+		fullTableName := m.GetFullTableName(tableName)
+		log.Debugf("found table:%s, tableId:%d", fullTableName, tableId)
+		tableName2IdMap[fullTableName] = tableId
+		tables[tableId] = &TableMeta{
+			DatabaseMeta: &m.DatabaseMeta,
+			Id:           tableId,
+			Name:         tableName,
+			Partitions:   make(map[int64]*PartitionMeta),
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	m.TableName2IdMap = tableName2IdMap
+	m.Tables = tables
+	return tables, nil
 }
 
 // Exec sql

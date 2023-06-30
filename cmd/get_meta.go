@@ -79,6 +79,13 @@ func test_init_meta(m *ccr.Meta) {
 		log.Infof("tableId: %d, tableName: %s", tableId, tableName)
 	}
 
+	if tables, err := m.GetTables(); err != nil {
+		panic(err)
+	} else {
+		for _, table := range tables {
+			log.Infof("table: %v", table)
+		}
+	}
 }
 
 func main() {
