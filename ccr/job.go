@@ -27,8 +27,7 @@ import (
 )
 
 const (
-	SYNC_DURATION                = time.Second * 5
-	UPDATE_JOB_PROGRESS_DURATION = time.Second * 3
+	SYNC_DURATION = time.Second * 5
 )
 
 type SyncType int
@@ -71,7 +70,7 @@ func NewJobFromService(name string, src, dest base.Spec, db storage.DB) (*Job, e
 		Dest:        dest,
 		destMeta:    NewMeta(&dest),
 		isFirstSync: true,
-		progress:    NewJobProgress(),
+		progress:    NewJobProgress(name, db),
 		db:          db,
 		stop:        make(chan struct{}),
 	}
@@ -117,7 +116,7 @@ func NewJobFromJson(jsonData string, db storage.DB) (*Job, error) {
 		job.isFirstSync = false
 	} else {
 		job.isFirstSync = true
-		job.progress = NewJobProgress()
+		job.progress = NewJobProgress(job.Name, db)
 	}
 	job.db = db
 	job.stop = make(chan struct{})
@@ -217,13 +216,11 @@ func (j *Job) tableFullSync() error {
 	// TODO(Drogon): check last snapshot commitSeq > first commitSeq, maybe we can reuse this snapshot
 	log.Debugf("begin create snapshot")
 	j.progress.BeginCreateSnapshot()
-	j.updateJobProgress()
 	snapshotName, err := j.Src.CreateSnapshotAndWaitForDone()
 	if err != nil {
 		return err
 	}
 	j.progress.DoneCreateSnapshot(snapshotName)
-	j.updateJobProgress()
 
 	// Step 2: Get snapshot info
 	src := &j.Src
@@ -280,7 +277,6 @@ func (j *Job) tableFullSync() error {
 
 	// Step 4: start a new fullsync && persist
 	j.progress.BeginRestore(commitSeq)
-	j.updateJobProgress()
 
 	// Step 5: restore snapshot
 	// Restore snapshot to dest
@@ -316,7 +312,6 @@ func (j *Job) tableFullSync() error {
 		j.Dest.TableId = destTableId
 	}
 	j.progress.Done()
-	j.updateJobProgress()
 	// TODO: reload check job table id
 	data, err := json.Marshal(j)
 	if err != nil {
@@ -543,7 +538,6 @@ func (j *Job) dealUpsertBinlog(binlog *festruct.TBinlog) error {
 
 	// Step 2: update job progress
 	j.progress.BeginTransaction(txnId)
-	j.updateJobProgress()
 
 	// Step 3: ingest binlog
 	var commitInfos []*ttypes.TTabletCommitInfo
@@ -623,7 +617,6 @@ func (j *Job) dealBinlog(binlog *festruct.TBinlog) error {
 
 	// Step 2: update job progress
 	j.progress.StartDeal(binlog.GetCommitSeq())
-	j.updateJobProgress()
 
 	switch binlog.GetType() {
 	case festruct.TBinlogType_UPSERT:
@@ -694,61 +687,19 @@ func (j *Job) tableIncrementalSync() error {
 
 			// Step 4: update progress to db
 			j.progress.Done()
-			j.updateJobProgress()
 		}
 	}
 }
 
 func (j *Job) recoverJobProgress() error {
-	// get progress from db, retry 3 times
-	var err error
-	var progressJson string
-	for i := 0; i < 3; i++ {
-		progressJson, err = j.db.GetProgress(j.Name)
-		if err != nil {
-			log.Error("get job progress failed", zap.String("job", j.Name), zap.Error(err))
-			continue
-		}
-		break
-	}
-	if err != nil {
-		return err
-	}
-
 	// parse progress
-	if progress, err := NewJobProgressFromJson(progressJson); err != nil {
+	if progress, err := NewJobProgressFromJson(j.Name, j.db); err != nil {
 		log.Error("parse job progress failed", zap.String("job", j.Name), zap.Error(err))
 		return err
 	} else {
 		j.progress = progress
 		return nil
 	}
-}
-
-// write progress to db, busy loop until success
-func (j *Job) updateJobProgress() {
-	log.Tracef("update job progress: %v", j.progress)
-	for {
-		// Step 1: to json
-		// TODO: fix to json error
-		progressJson, err := j.progress.ToJson()
-		if err != nil {
-			log.Error("parse job progress failed", zap.String("job", j.Name), zap.Error(err))
-			time.Sleep(UPDATE_JOB_PROGRESS_DURATION)
-			continue
-		}
-
-		// Step 2: write to db
-		err = j.db.UpdateProgress(j.Name, progressJson)
-		if err != nil {
-			log.Error("update job progress failed", zap.String("job", j.Name), zap.Error(err))
-			time.Sleep(UPDATE_JOB_PROGRESS_DURATION)
-			continue
-		}
-
-		break
-	}
-	log.Tracef("update job progress done: %v", j.progress)
 }
 
 func (j *Job) tableSync() error {
