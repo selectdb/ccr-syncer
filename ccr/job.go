@@ -343,17 +343,25 @@ func (j *Job) newLabel(commitSeq int64) string {
 func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) ([]*ttypes.TTabletCommitInfo, error) {
 	log.Tracef("ingestBinlog, txnId: %d, upsert: %v", txnId, upsert)
 
-	srcTableId, err := j.srcMeta.GetTableId(j.Src.Table)
-	if err != nil {
-		return nil, err
-	}
-	tableRecord, ok := upsert.TableRecords[srcTableId]
-	if !ok {
-		return nil, fmt.Errorf("table record not found, table: %s", j.Src.Table)
+	tableRecords := make([]*record.TableRecord, 0, len(upsert.TableRecords))
+	switch j.SyncType {
+	case DBSync:
+		for _, tableRecord := range upsert.TableRecords {
+			tableRecords = append(tableRecords, &tableRecord)
+		}
+	case TableSync:
+		tableRecord, ok := upsert.TableRecords[j.Src.TableId]
+		if !ok {
+			return nil, fmt.Errorf("table record not found, table: %s", j.Src.Table)
+		}
+		tableRecords = append(tableRecords, &tableRecord)
+	default:
+		return nil, fmt.Errorf("invalid sync type: %s", j.SyncType)
 	}
 
 	var wg sync.WaitGroup
 	var srcBackendMap map[int64]*base.Backend
+	var err error
 	srcBackendMap, err = j.srcMeta.GetBackendMap()
 	if err != nil {
 		return nil, err
@@ -383,117 +391,120 @@ func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) ([]*ttypes.TTable
 		commitInfos = append(commitInfos, commitInfo)
 		commitInfosLock.Unlock()
 	}
-	log.Infof("tableRecord: %v", tableRecord) // TODO: remove it
-	for _, partitionRecord := range tableRecord.PartitionRecords {
-		log.Infof("partitionRecord: %v", partitionRecord) // TODO: remove it
-		binlogVersion := partitionRecord.Version
 
-		srcPartitionId := partitionRecord.PartitionID
-		var srcPartitionName string
-		srcPartitionName, err = j.srcMeta.GetPartitionName(j.Src.Table, srcPartitionId)
-		if err != nil {
-			updateLastError(err)
-			break
-		}
-		var destPartitionId int64
-		destPartitionId, err = j.destMeta.GetPartitionIdByName(j.Dest.Table, srcPartitionName)
-		if err != nil {
-			updateLastError(err)
-			break
-		}
+	for _, tableRecord := range tableRecords {
+		log.Infof("tableRecord: %v", tableRecord) // TODO: remove it
+		for _, partitionRecord := range tableRecord.PartitionRecords {
+			log.Infof("partitionRecord: %v", partitionRecord) // TODO: remove it
+			binlogVersion := partitionRecord.Version
 
-		var srcTablets []*TabletMeta
-		srcTablets, err = j.srcMeta.GetTabletList(j.Src.Table, srcPartitionId)
-		if err != nil {
-			updateLastError(err)
-			break
-		}
-		var destTablets []*TabletMeta
-		destTablets, err = j.destMeta.GetTabletList(j.Dest.Table, destPartitionId)
-		if err != nil {
-			updateLastError(err)
-			break
-		}
-		if len(srcTablets) != len(destTablets) {
-			updateLastError(fmt.Errorf("tablet count not match, src: %d, dest: %d", len(srcTablets), len(destTablets)))
-			break
-		}
+			srcPartitionId := partitionRecord.PartitionID
+			var srcPartitionName string
+			srcPartitionName, err = j.srcMeta.GetPartitionName(j.Src.Table, srcPartitionId)
+			if err != nil {
+				updateLastError(err)
+				break
+			}
+			var destPartitionId int64
+			destPartitionId, err = j.destMeta.GetPartitionIdByName(j.Dest.Table, srcPartitionName)
+			if err != nil {
+				updateLastError(err)
+				break
+			}
 
-		for tabletIndex, destTablet := range destTablets {
-			srcTablet := srcTablets[tabletIndex]
-			log.Debugf("handle tablet index: %v, src tablet: %v, dest tablet: %v, dest replicas length: %d", tabletIndex, srcTablet, destTablet, destTablet.ReplicaMetas.Len()) // TODO: remove it
+			var srcTablets []*TabletMeta
+			srcTablets, err = j.srcMeta.GetTabletList(j.Src.Table, srcPartitionId)
+			if err != nil {
+				updateLastError(err)
+				break
+			}
+			var destTablets []*TabletMeta
+			destTablets, err = j.destMeta.GetTabletList(j.Dest.Table, destPartitionId)
+			if err != nil {
+				updateLastError(err)
+				break
+			}
+			if len(srcTablets) != len(destTablets) {
+				updateLastError(fmt.Errorf("tablet count not match, src: %d, dest: %d", len(srcTablets), len(destTablets)))
+				break
+			}
 
-			// iterate dest replicas
-			destTablet.ReplicaMetas.Scan(func(destReplicaId int64, destReplica *ReplicaMeta) bool {
-				log.Debugf("handle dest replica id: %v", destReplicaId)
-				destBackend, ok := destBackendMap[destReplica.BackendId]
-				if !ok {
-					lastErr = fmt.Errorf("backend not found, backend id: %d", destReplica.BackendId)
-					return false
-				}
-				destTabletId := destReplica.TabletId
+			for tabletIndex, destTablet := range destTablets {
+				srcTablet := srcTablets[tabletIndex]
+				log.Debugf("handle tablet index: %v, src tablet: %v, dest tablet: %v, dest replicas length: %d", tabletIndex, srcTablet, destTablet, destTablet.ReplicaMetas.Len()) // TODO: remove it
 
-				destRpc, err := rpc.NewBeThriftRpc(destBackend)
-				if err != nil {
-					updateLastError(err)
-					return false
-				}
-				loadId := ttypes.NewTUniqueId()
-				loadId.SetHi(-1)
-				loadId.SetLo(-1)
+				// iterate dest replicas
+				destTablet.ReplicaMetas.Scan(func(destReplicaId int64, destReplica *ReplicaMeta) bool {
+					log.Debugf("handle dest replica id: %v", destReplicaId)
+					destBackend, ok := destBackendMap[destReplica.BackendId]
+					if !ok {
+						lastErr = fmt.Errorf("backend not found, backend id: %d", destReplica.BackendId)
+						return false
+					}
+					destTabletId := destReplica.TabletId
 
-				srcReplicas := srcTablet.ReplicaMetas
-				iter := srcReplicas.Iter()
-				if ok := iter.First(); !ok {
-					updateLastError(fmt.Errorf("src replicas is empty"))
-					return false
-				}
-				srcBackendId := iter.Value().BackendId
-				var srcBackend *base.Backend
-				srcBackend, ok = srcBackendMap[srcBackendId]
-				if !ok {
-					updateLastError(fmt.Errorf("backend not found, backend id: %d", srcBackendId))
-					return false
-				}
-				req := &bestruct.TIngestBinlogRequest{
-					TxnId:          u.ThriftValueWrapper(txnId),
-					RemoteTabletId: u.ThriftValueWrapper[int64](srcTablet.Id),
-					BinlogVersion:  u.ThriftValueWrapper(binlogVersion),
-					RemoteHost:     u.ThriftValueWrapper(srcBackend.Host),
-					RemotePort:     u.ThriftValueWrapper(srcBackend.GetHttpPortStr()),
-					PartitionId:    u.ThriftValueWrapper[int64](destPartitionId),
-					LocalTabletId:  u.ThriftValueWrapper[int64](destTabletId),
-					LoadId:         loadId,
-				}
-				commitInfo := &ttypes.TTabletCommitInfo{
-					TabletId:  destTabletId,
-					BackendId: destBackend.Id,
-				}
-
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-
-					resp, err := destRpc.IngestBinlog(req)
+					destRpc, err := rpc.NewBeThriftRpc(destBackend)
 					if err != nil {
 						updateLastError(err)
+						return false
 					}
-					log.Debugf("ingest resp: %v", resp)
-					if !resp.IsSetStatus() {
-						err = fmt.Errorf("ingest resp status not set")
-						updateLastError(err)
-					} else if resp.Status.StatusCode != tstatus.TStatusCode_OK {
-						err = fmt.Errorf("ingest resp status code: %v, msg: %v", resp.Status.StatusCode, resp.Status.ErrorMsgs)
-						updateLastError(err)
-					} else {
-						updateCommitInfos(commitInfo)
-					}
-				}()
+					loadId := ttypes.NewTUniqueId()
+					loadId.SetHi(-1)
+					loadId.SetLo(-1)
 
-				return true
-			})
-			if getLastError() != nil {
-				break
+					srcReplicas := srcTablet.ReplicaMetas
+					iter := srcReplicas.Iter()
+					if ok := iter.First(); !ok {
+						updateLastError(fmt.Errorf("src replicas is empty"))
+						return false
+					}
+					srcBackendId := iter.Value().BackendId
+					var srcBackend *base.Backend
+					srcBackend, ok = srcBackendMap[srcBackendId]
+					if !ok {
+						updateLastError(fmt.Errorf("backend not found, backend id: %d", srcBackendId))
+						return false
+					}
+					req := &bestruct.TIngestBinlogRequest{
+						TxnId:          u.ThriftValueWrapper(txnId),
+						RemoteTabletId: u.ThriftValueWrapper[int64](srcTablet.Id),
+						BinlogVersion:  u.ThriftValueWrapper(binlogVersion),
+						RemoteHost:     u.ThriftValueWrapper(srcBackend.Host),
+						RemotePort:     u.ThriftValueWrapper(srcBackend.GetHttpPortStr()),
+						PartitionId:    u.ThriftValueWrapper[int64](destPartitionId),
+						LocalTabletId:  u.ThriftValueWrapper[int64](destTabletId),
+						LoadId:         loadId,
+					}
+					commitInfo := &ttypes.TTabletCommitInfo{
+						TabletId:  destTabletId,
+						BackendId: destBackend.Id,
+					}
+
+					wg.Add(1)
+					go func() {
+						defer wg.Done()
+
+						resp, err := destRpc.IngestBinlog(req)
+						if err != nil {
+							updateLastError(err)
+						}
+						log.Debugf("ingest resp: %v", resp)
+						if !resp.IsSetStatus() {
+							err = fmt.Errorf("ingest resp status not set")
+							updateLastError(err)
+						} else if resp.Status.StatusCode != tstatus.TStatusCode_OK {
+							err = fmt.Errorf("ingest resp status code: %v, msg: %v", resp.Status.StatusCode, resp.Status.ErrorMsgs)
+							updateLastError(err)
+						} else {
+							updateCommitInfos(commitInfo)
+						}
+					}()
+
+					return true
+				})
+				if getLastError() != nil {
+					break
+				}
 			}
 		}
 	}
@@ -610,6 +621,25 @@ func (j *Job) dealDropPartitionBinlog(binlog *festruct.TBinlog) error {
 	return j.destMeta.Exec(dropPartitionSql)
 }
 
+// dealCreateTableBinlog
+func (j *Job) dealCreateTableBinlog(binlog *festruct.TBinlog) error {
+	log.Tracef("deal create table binlog")
+
+	data := binlog.GetData()
+	createTable, err := record.NewCreateTableFromJson(data)
+	if err != nil {
+		return err
+	}
+
+	if j.SyncType != DBSync {
+		return fmt.Errorf("invalid sync type: %v", j.SyncType)
+	}
+
+	sql := createTable.Sql
+	log.Tracef("createTableSql: %s", sql)
+	return j.destMeta.Exec(sql)
+}
+
 func (j *Job) dealBinlog(binlog *festruct.TBinlog) error {
 	if binlog == nil || !binlog.IsSetCommitSeq() {
 		return fmt.Errorf("invalid binlog: %v", binlog)
@@ -618,6 +648,7 @@ func (j *Job) dealBinlog(binlog *festruct.TBinlog) error {
 	// Step 2: update job progress
 	j.progress.StartDeal(binlog.GetCommitSeq())
 
+	// TODO: use table driven
 	switch binlog.GetType() {
 	case festruct.TBinlogType_UPSERT:
 		if err := j.dealUpsertBinlog(binlog); err != nil {
@@ -631,6 +662,10 @@ func (j *Job) dealBinlog(binlog *festruct.TBinlog) error {
 		if err := j.dealDropPartitionBinlog(binlog); err != nil {
 			return err
 		}
+	case festruct.TBinlogType_CREATE_TABLE:
+		if err := j.dealCreateTableBinlog(binlog); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("unknown binlog type: %v", binlog.GetType())
 	}
@@ -638,7 +673,7 @@ func (j *Job) dealBinlog(binlog *festruct.TBinlog) error {
 	return nil
 }
 
-func (j *Job) tableIncrementalSync() error {
+func (j *Job) incrementalSync() error {
 	src := &j.Src
 
 	// Step 1: get binlog
@@ -714,12 +749,28 @@ func (j *Job) tableSync() error {
 			return err
 		}
 	}
-	return j.tableIncrementalSync()
+	return j.incrementalSync()
+}
+
+func (j *Job) dbFullSync() error {
+	// TODO(Drogon): impl
+	// Step 1: Get All Tables
+	return nil
 }
 
 func (j *Job) dbSync() error {
-	// TODO(Drogon): impl
-	return nil
+	if j.isFirstSync {
+		return j.dbFullSync()
+	}
+
+	/// Continue sync
+	if j.progress == nil {
+		err := j.recoverJobProgress()
+		if err != nil {
+			return err
+		}
+	}
+	return j.incrementalSync()
 }
 
 func (j *Job) Sync() error {

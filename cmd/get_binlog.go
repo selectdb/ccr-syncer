@@ -63,10 +63,16 @@ func test_get_binlog(spec *base.Spec) {
 			log.Infof("sql: %s, type: %T", info["sql"], info["sql"])
 			log.Infof("tableId: %v", info["tableId"])
 			if tableId, ok := info["tableId"].(int64); !ok {
-				log.Fatalf("table_id not int64: %v", info["table_id"])
+				log.Fatalf("table_id not int64: %v, type: %T", info["tableId"], info["tableId"])
 			} else {
 				log.Infof("table_id: %v", tableId)
 			}
+		}
+	case festruct.TBinlogType_CREATE_TABLE:
+		if createTableRecord, err := record.NewCreateTableFromJson(jsonData); err != nil {
+			panic(err)
+		} else {
+			log.Infof("createTableRecord: %s", createTableRecord)
 		}
 	}
 }

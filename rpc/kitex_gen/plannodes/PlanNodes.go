@@ -328,6 +328,7 @@ const (
 	TFileFormatType_FORMAT_JSON         TFileFormatType = 9
 	TFileFormatType_FORMAT_PROTO        TFileFormatType = 10
 	TFileFormatType_FORMAT_JNI          TFileFormatType = 11
+	TFileFormatType_FORMAT_AVRO         TFileFormatType = 12
 )
 
 func (p TFileFormatType) String() string {
@@ -358,6 +359,8 @@ func (p TFileFormatType) String() string {
 		return "FORMAT_PROTO"
 	case TFileFormatType_FORMAT_JNI:
 		return "FORMAT_JNI"
+	case TFileFormatType_FORMAT_AVRO:
+		return "FORMAT_AVRO"
 	}
 	return "<UNSET>"
 }
@@ -390,6 +393,8 @@ func TFileFormatTypeFromString(s string) (TFileFormatType, error) {
 		return TFileFormatType_FORMAT_PROTO, nil
 	case "FORMAT_JNI":
 		return TFileFormatType_FORMAT_JNI, nil
+	case "FORMAT_AVRO":
+		return TFileFormatType_FORMAT_AVRO, nil
 	}
 	return TFileFormatType(0), fmt.Errorf("not a valid TFileFormatType string")
 }
