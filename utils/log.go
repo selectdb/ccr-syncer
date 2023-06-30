@@ -1,28 +1,63 @@
 package utils
 
 import (
+	"flag"
+	"fmt"
+	"io"
 	"os"
 
+	filename "github.com/keepeye/logrus-filename"
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
+var (
+	logLevel        string
+	logFilename     string
+	logAlsoToStderr bool
+)
+
+func init() {
+	flag.StringVar(&logLevel, "log_level", "trace", "log level")
+	flag.StringVar(&logFilename, "log_filename", "", "log filename")
+	flag.BoolVar(&logAlsoToStderr, "log_also_to_stderr", false, "log also to stderr")
+	flag.Parse()
+}
+
 func InitLog() {
-	// TODO(Drogon): config logrus
-	// init logrus
-	// Log as JSON instead of the default ASCII formatter.
-	// log.SetFormatter(&log.JSONFormatter{})
+	// log.SetReportCaller(true), caller by filename
+	filenameHook := filename.NewHook()
+	filenameHook.Field = "line"
+	log.AddHook(filenameHook)
+	// TODO: Add write permission check
+	if logFilename != "" {
+		output := &lumberjack.Logger{
+			Filename:   logFilename,
+			MaxSize:    100,
+			MaxAge:     7,
+			MaxBackups: 30,
+			LocalTime:  true,
+			Compress:   false,
+		}
+		if logAlsoToStderr {
+			writer := io.MultiWriter(output, os.Stderr)
+			log.SetOutput(writer)
+		} else {
+			log.SetOutput(output)
+		}
+	} else {
+		log.SetOutput(os.Stdout)
+	}
+
+	level, err := log.ParseLevel(logLevel)
+	if err != nil {
+		fmt.Printf("parse log level %v failed: %v\n", logLevel, err)
+		os.Exit(1)
+	}
+	log.SetLevel(level)
 	log.SetFormatter(&log.TextFormatter{
 		FullTimestamp:   true,
 		TimestampFormat: "2006-01-02 15:04:05",
+		DisableQuote:    true,
 	})
-
-	// Output to stdout instead of the default stderr
-	// Can be any io.Writer, see below for File example
-	log.SetOutput(os.Stdout)
-
-	// log the debug severity or above.
-	log.SetLevel(log.TraceLevel)
-
-	// log filename linenumber func
-	log.SetReportCaller(true)
 }
