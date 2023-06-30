@@ -32,6 +32,7 @@ type DatabaseMeta struct {
 type TableMeta struct {
 	DatabaseMeta *DatabaseMeta
 	Id           int64
+	Name         string                   // maybe dirty, such after rename
 	Partitions   map[int64]*PartitionMeta // partitionId -> partition
 }
 
@@ -204,6 +205,8 @@ func (m *Meta) UpdateTable(tableName string) error {
 			m.Tables[tableId] = &TableMeta{
 				DatabaseMeta: &m.DatabaseMeta,
 				Id:           tableId,
+				Name:         tableName,
+				Partitions:   make(map[int64]*PartitionMeta),
 			}
 			return nil
 		}
@@ -289,7 +292,7 @@ func (m *Meta) UpdatePartitions(tableName string) error {
 		scanArgs = append(scanArgs, &discardCols[i])
 	}
 	query := fmt.Sprintf("show proc '/dbs/%d/%d/partitions'", dbId, table.Id)
-	log.Info(query)
+	log.Trace(query)
 	rows, err := db.Query(query)
 	if err != nil {
 		log.Error(err)
@@ -427,7 +430,7 @@ func (m *Meta) UpdateBackends() error {
 
 	backends := make([]*base.Backend, 0)
 	query := "show proc '/backends'"
-	log.Info(query)
+	log.Trace(query)
 	rows, err := db.Query(query)
 	if err != nil {
 		log.Fatal(err)
@@ -564,7 +567,7 @@ func (m *Meta) UpdateIndexes(tableName string, partitionId int64) error {
 		scanArgs = append(scanArgs, &discardCols[i])
 	}
 	query := fmt.Sprintf("show proc '/dbs/%d/%d/partitions/%d'", dbId, table.Id, partition.Id)
-	log.Info(query)
+	log.Trace(query)
 	rows, err := db.Query(query)
 	if err != nil {
 		log.Error(err)
@@ -656,7 +659,7 @@ func (m *Meta) updateReplica(index *IndexMeta) error {
 		scanArgs = append(scanArgs, &discardCols[i])
 	}
 	query := fmt.Sprintf("show proc '/dbs/%d/%d/partitions/%d/%d'", dbId, tableId, partitionId, indexId)
-	log.Info(query)
+	log.Trace(query)
 	rows, err := db.Query(query)
 	if err != nil {
 		log.Fatal(err)
@@ -798,7 +801,7 @@ func (m *Meta) GetTablets(tableName string, partitionId int64) (*btree.Map[int64
 	tablets := btree.NewMap[int64, *TabletMeta](degree)
 	for _, index := range indexes {
 		for _, tablet := range index.TabletMetas.Values() {
-			log.Infof("tablet: %d, replica len: %d", tablet.Id, tablet.ReplicaMetas.Len()) // TODO: remove it
+			log.Tracef("tablet: %d, replica len: %d", tablet.Id, tablet.ReplicaMetas.Len()) // TODO: remove it
 			tablets.Set(tablet.Id, tablet)
 		}
 	}
@@ -886,6 +889,11 @@ func (m *Meta) GetTableNameById(tableId int64) (string, error) {
 	}
 
 	return tableName, nil
+}
+
+// this method not called frequently, so it behaves like update, get and cache it every time
+func (m *Meta) GetTables(sql string) error {
+	return nil
 }
 
 // Exec sql

@@ -368,10 +368,27 @@ func (s *Spec) CheckTableExists() (bool, error) {
 }
 
 // mysql> BACKUP SNAPSHOT ccr.snapshot_20230605 TO `__keep_on_local__` ON (      src_1 ) PROPERTIES ("type" = "full");
-func (s *Spec) CreateSnapshotAndWaitForDone() (string, error) {
-	// snapshot name format "ccr_snapshot_${db}_${table}_${timestamp}"
-	snapshotName := fmt.Sprintf("ccr_snapshot_%s_%s_%d", s.Database, s.Table, time.Now().UnixNano())
-	table := s.Table
+func (s *Spec) CreateSnapshotAndWaitForDone(tables []string) (string, error) {
+	if tables == nil {
+		tables = make([]string, 0)
+	}
+	if len(tables) == 0 {
+		tables = append(tables, s.Table)
+	}
+
+	var snapshotName string
+	var tableRefs string
+	if len(tables) == 1 {
+		// snapshot name format "ccr_snapshot_${db}_${table}_${timestamp}"
+		// table refs = table
+		snapshotName = fmt.Sprintf("ccr_snapshot_%s_%s_%d", s.Database, s.Table, time.Now().UnixNano())
+		tableRefs = tables[0]
+	} else {
+		// snapshot name format "ccr_snapshot_${db}_${timestamp}"
+		// table refs = tables.join(", ")
+		snapshotName = fmt.Sprintf("ccr_snapshot_%s_%d", s.Database, time.Now().UnixNano())
+		tableRefs = strings.Join(tables, ", ")
+	}
 
 	log.Infof("create snapshot %s.%s", s.Database, snapshotName)
 
@@ -381,7 +398,7 @@ func (s *Spec) CreateSnapshotAndWaitForDone() (string, error) {
 	}
 	defer db.Close()
 
-	backupSnapshotSql := fmt.Sprintf("BACKUP SNAPSHOT %s.%s TO `__keep_on_local__` ON ( %s ) PROPERTIES (\"type\" = \"full\")", s.Database, snapshotName, table)
+	backupSnapshotSql := fmt.Sprintf("BACKUP SNAPSHOT %s.%s TO `__keep_on_local__` ON ( %s ) PROPERTIES (\"type\" = \"full\")", s.Database, snapshotName, tableRefs)
 	log.Debugf("backup snapshot sql: %s", backupSnapshotSql)
 	_, err = db.Exec(backupSnapshotSql)
 	if err != nil {

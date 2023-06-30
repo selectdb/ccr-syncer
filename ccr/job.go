@@ -216,7 +216,7 @@ func (j *Job) tableFullSync() error {
 	// TODO(Drogon): check last snapshot commitSeq > first commitSeq, maybe we can reuse this snapshot
 	log.Debugf("begin create snapshot")
 	j.progress.BeginCreateSnapshot()
-	snapshotName, err := j.Src.CreateSnapshotAndWaitForDone()
+	snapshotName, err := j.Src.CreateSnapshotAndWaitForDone(nil)
 	if err != nil {
 		return err
 	}
