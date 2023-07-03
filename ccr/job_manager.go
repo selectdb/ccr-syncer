@@ -6,6 +6,9 @@ import (
 	"sync"
 
 	"github.com/selectdb/ccr_syncer/storage"
+
+	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 const (
@@ -110,7 +113,10 @@ func (jm *JobManager) runJob(job *Job) {
 	jm.wg.Add(1)
 
 	go func() {
-		job.Run()
+		err := job.Run()
+		if err != nil {
+			log.Error("job run failed", zap.String("job", job.Name), zap.Error(err))
+		}
 		jm.wg.Done()
 	}()
 }

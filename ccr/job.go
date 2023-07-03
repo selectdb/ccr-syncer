@@ -49,30 +49,28 @@ func (s SyncType) String() string {
 }
 
 type Job struct {
-	SyncType    SyncType      `json:"sync_type"`
-	Name        string        `json:"name"`
-	Src         base.Spec     `json:"src"`
-	srcMeta     *Meta         `json:"-"`
-	Dest        base.Spec     `json:"dest"`
-	destMeta    *Meta         `json:"-"`
-	isFirstSync bool          `json:"-"`
-	progress    *JobProgress  `json:"-"`
-	db          storage.DB    `json:"-"`
-	stop        chan struct{} `json:"-"`
+	SyncType SyncType      `json:"sync_type"`
+	Name     string        `json:"name"`
+	Src      base.Spec     `json:"src"`
+	srcMeta  *Meta         `json:"-"`
+	Dest     base.Spec     `json:"dest"`
+	destMeta *Meta         `json:"-"`
+	progress *JobProgress  `json:"-"`
+	db       storage.DB    `json:"-"`
+	stop     chan struct{} `json:"-"`
 }
 
 // new job
 func NewJobFromService(name string, src, dest base.Spec, db storage.DB) (*Job, error) {
 	job := &Job{
-		Name:        name,
-		Src:         src,
-		srcMeta:     NewMeta(&src),
-		Dest:        dest,
-		destMeta:    NewMeta(&dest),
-		isFirstSync: true,
-		progress:    NewJobProgress(name, db),
-		db:          db,
-		stop:        make(chan struct{}),
+		Name:     name,
+		Src:      src,
+		srcMeta:  NewMeta(&src),
+		Dest:     dest,
+		destMeta: NewMeta(&dest),
+		progress: nil,
+		db:       db,
+		stop:     make(chan struct{}),
 	}
 
 	if err := job.valid(); err != nil {
@@ -96,28 +94,7 @@ func NewJobFromJson(jsonData string, db storage.DB) (*Job, error) {
 	}
 	job.srcMeta = NewMeta(&job.Src)
 	job.destMeta = NewMeta(&job.Dest)
-
-	// retry 3 times to check IsProgressExist
-	var isProgressExist bool
-	for i := 0; i < 3; i++ {
-		isProgressExist, err = db.IsProgressExist(job.Name)
-		if err != nil {
-			log.Error("check progress exist failed", zap.Error(err))
-			continue
-		}
-		break
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	if isProgressExist {
-		job.isFirstSync = false
-	} else {
-		job.isFirstSync = true
-		job.progress = NewJobProgress(job.Name, db)
-	}
+	job.progress = nil
 	job.db = db
 	job.stop = make(chan struct{})
 	return &job, nil
@@ -128,7 +105,7 @@ func (j *Job) valid() error {
 	if exist, err := j.db.IsJobExist(j.Name); err != nil {
 		return errors.Wrap(err, "check job exist failed")
 	} else if exist {
-		return fmt.Errorf("job %s already exist", j.Name)
+		return errors.Errorf("job %s already exist", j.Name)
 	}
 
 	if j.Name == "" {
@@ -210,147 +187,191 @@ func (j *Job) genExtraInfo() (*base.ExtraInfo, error) {
 }
 
 func (j *Job) fullSync() error {
+	type inMemoryData struct {
+		SnapshotName      string                        `json:"snapshot_name"`
+		SnapshotResp      *festruct.TGetSnapshotResult_ `json:"snapshot_resp"`
+		TableCommitSeqMap map[int64]int64               `json:"table_commit_seq_map"`
+	}
+
 	// TODO: snapshot machine, not need create snapshot each time
-	// Step 1: Create snapshot
 	// TODO(Drogon): check last snapshot commitSeq > first commitSeq, maybe we can reuse this snapshot
-	log.Debugf("begin create snapshot")
-	j.progress.BeginCreateSnapshot()
-	backupTableList := make([]string, 0)
-	switch j.SyncType {
-	case DBSync:
-		tables, err := j.srcMeta.GetTables()
+	switch j.progress.SubSyncState {
+	case BeginCreateSnapshot:
+		// Step 1: Create snapshot
+		log.Debugf("begin create snapshot")
+		// j.progress.BeginCreateSnapshot()
+		backupTableList := make([]string, 0)
+		switch j.SyncType {
+		case DBSync:
+			tables, err := j.srcMeta.GetTables()
+			if err != nil {
+				return err
+			}
+			for _, table := range tables {
+				backupTableList = append(backupTableList, table.Name)
+			}
+		case TableSync:
+			backupTableList = append(backupTableList, j.Src.Table)
+		default:
+			return errors.Errorf("invalid sync type %s", j.SyncType)
+		}
+		snapshotName, err := j.Src.CreateSnapshotAndWaitForDone(backupTableList)
 		if err != nil {
 			return err
 		}
-		for _, table := range tables {
-			backupTableList = append(backupTableList, table.Name)
-		}
-	case TableSync:
-		backupTableList = append(backupTableList, j.Src.Table)
-	default:
-		return errors.Errorf("invalid sync type %s", j.SyncType)
-	}
-	snapshotName, err := j.Src.CreateSnapshotAndWaitForDone(backupTableList)
-	if err != nil {
-		return err
-	}
-	j.progress.DoneCreateSnapshot(snapshotName)
 
-	// Step 2: Get snapshot info
-	src := &j.Src
-	srcRpc, err := rpc.NewThriftRpc(src)
-	if err != nil {
-		return err
-	}
+		j.progress.NextSubWithPersist(GetSnapshotInfo, snapshotName)
 
-	log.Debugf("begin get snapshot %s", snapshotName)
-	snapshotResp, err := srcRpc.GetSnapshot(src, snapshotName)
-	if err != nil {
-		return err
-	}
-	log.Debugf("job: %s", string(snapshotResp.GetJobInfo()))
-
-	if !snapshotResp.IsSetJobInfo() {
-		return errors.New("jobInfo is not set")
-	}
-
-	jobInfo := snapshotResp.GetJobInfo()
-	tableCommitSeqMap, err := ExtractTableCommitSeqMap(jobInfo)
-	if err != nil {
-		log.Errorf("extract table commit seq map failed, err: %v", err)
-		return err
-	}
-	if j.SyncType == TableSync {
-		if _, ok := tableCommitSeqMap[j.Src.TableId]; !ok {
-			return errors.New("table commit seq not found")
-		}
-	}
-
-	// Step 3: Add extra info
-	var jobInfoMap map[string]interface{}
-	err = json.Unmarshal(jobInfo, &jobInfoMap)
-	if err != nil {
-		log.Errorf("unmarshal jobInfo failed, err: %v", err)
-		return err
-	}
-	log.Debugf("jobInfo: %v", jobInfoMap)
-
-	extraInfo, err := j.genExtraInfo()
-	if err != nil {
-		return err
-	}
-	log.Infof("extraInfo: %v", extraInfo)
-
-	jobInfoMap["extra_info"] = extraInfo
-	jobInfoBytes, err := json.Marshal(jobInfoMap)
-	if err != nil {
-		log.Errorf("marshal jobInfo failed, err: %v", err)
-		return err
-	}
-	log.Infof("jobInfoBytes: %s", string(jobInfoBytes))
-	snapshotResp.SetJobInfo(jobInfoBytes)
-
-	// Step 4: start a new fullsync && persist
-	switch j.SyncType {
-	case DBSync:
-		j.progress.BeginDbRestore(tableCommitSeqMap)
-	case TableSync:
-		commitSeq := tableCommitSeqMap[j.Src.TableId]
-		j.progress.BeginTableRestore(commitSeq)
-	}
-
-	// Step 5: restore snapshot
-	// Restore snapshot to dest
-	dest := &j.Dest
-	destRpc, err := rpc.NewThriftRpc(dest)
-	if err != nil {
-		return err
-	}
-	log.Debugf("begin restore snapshot %s", snapshotName)
-	restoreResp, err := destRpc.RestoreSnapshot(dest, snapshotName, snapshotResp)
-	if err != nil {
-		log.Errorf("restore snapshot failed, err: %v", err)
-		return err
-	}
-	log.Infof("resp: %v", restoreResp)
-	// TODO: impl wait for done, use show restore
-	restoreFinished, err := j.Dest.CheckRestoreFinished(snapshotName)
-	if err != nil {
-		log.Errorf("check restore state failed, err: %v", err)
-		return err
-	}
-	if !restoreFinished {
-		err = fmt.Errorf("check restore state timeout, max try times: %d", base.MAX_CHECK_RETRY_TIMES)
-		return err
-	}
-
-	// Step 6: Update job progress && dest table id
-	// update job info, only for dest table id
-	// TODO: retry && mark it for not start a new full sync
-	if j.SyncType == DBSync {
-		if destTableId, err := j.destMeta.GetTableId(j.Dest.Table); err != nil {
+	case GetSnapshotInfo:
+		// Step 2: Get snapshot info
+		snapshotName := j.progress.PersistData
+		src := &j.Src
+		srcRpc, err := rpc.NewThriftRpc(src)
+		if err != nil {
 			return err
-		} else {
-			j.Dest.TableId = destTableId
 		}
-	}
-	j.progress.Done()
-	// TODO: reload check job table id
-	data, err := json.Marshal(j)
-	if err != nil {
-		return err
-	}
-	if err := j.db.UpdateJob(j.Name, string(data)); err != nil {
-		return err
-	}
 
-	j.isFirstSync = false
-	return nil
-}
+		log.Debugf("begin get snapshot %s", snapshotName)
+		snapshotResp, err := srcRpc.GetSnapshot(src, snapshotName)
+		if err != nil {
+			return err
+		}
+		log.Debugf("job: %s", string(snapshotResp.GetJobInfo()))
 
-// TODO: check snapshot state
-func (j *Job) tableFullSync() error {
-	log.Tracef("begin table full sync")
+		if !snapshotResp.IsSetJobInfo() {
+			return errors.New("jobInfo is not set")
+		}
+
+		tableCommitSeqMap, err := ExtractTableCommitSeqMap(snapshotResp.GetJobInfo())
+		if err != nil {
+			log.Errorf("extract table commit seq map failed, err: %v", err)
+			return err
+		}
+
+		if j.SyncType == TableSync {
+			if _, ok := tableCommitSeqMap[j.Src.TableId]; !ok {
+				return errors.New("table commit seq not found")
+			}
+		}
+
+		inMemoryData := &inMemoryData{
+			SnapshotName:      snapshotName,
+			SnapshotResp:      snapshotResp,
+			TableCommitSeqMap: tableCommitSeqMap,
+		}
+		j.progress.NextSub(AddExtraInfo, inMemoryData)
+
+	case AddExtraInfo:
+		// Step 3: Add extra info
+		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
+		snapshotResp := inMemoryData.SnapshotResp
+		jobInfo := snapshotResp.GetJobInfo()
+		tableCommitSeqMap := inMemoryData.TableCommitSeqMap
+
+		var jobInfoMap map[string]interface{}
+		err := json.Unmarshal(jobInfo, &jobInfoMap)
+		if err != nil {
+			log.Errorf("unmarshal jobInfo failed, err: %v", err)
+			return err
+		}
+		log.Debugf("jobInfo: %v", jobInfoMap)
+
+		extraInfo, err := j.genExtraInfo()
+		if err != nil {
+			return err
+		}
+		log.Infof("extraInfo: %v", extraInfo)
+
+		jobInfoMap["extra_info"] = extraInfo
+		jobInfoBytes, err := json.Marshal(jobInfoMap)
+		if err != nil {
+			log.Errorf("marshal jobInfo failed, err: %v", err)
+			return err
+		}
+		log.Infof("jobInfoBytes: %s", string(jobInfoBytes))
+		snapshotResp.SetJobInfo(jobInfoBytes)
+
+		commitSeq := int64(0)
+		switch j.SyncType {
+		case DBSync:
+			for _, seq := range tableCommitSeqMap {
+				if commitSeq < seq {
+					commitSeq = seq
+				}
+			}
+		case TableSync:
+			commitSeq = tableCommitSeqMap[j.Src.TableId]
+		}
+		j.progress.CommitNextSubWithPersist(commitSeq, RestoreSnapshot, inMemoryData)
+
+	case RestoreSnapshot:
+		if j.progress.InMemoryData == nil {
+			persistData := j.progress.PersistData
+			inMemoryData := &inMemoryData{}
+			if err := json.Unmarshal([]byte(persistData), inMemoryData); err != nil {
+				// TODO: return to snapshot
+				return err
+			}
+			j.progress.InMemoryData = inMemoryData
+		}
+
+		// Step 4: start a new fullsync && persist
+		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
+		snapshotName := inMemoryData.SnapshotName
+		snapshotResp := inMemoryData.SnapshotResp
+
+		// Step 5: restore snapshot
+		// Restore snapshot to dest
+		dest := &j.Dest
+		destRpc, err := rpc.NewThriftRpc(dest)
+		if err != nil {
+			return err
+		}
+		log.Debugf("begin restore snapshot %s", snapshotName)
+		restoreResp, err := destRpc.RestoreSnapshot(dest, snapshotName, snapshotResp)
+		if err != nil {
+			log.Errorf("restore snapshot failed, err: %v", err)
+			return err
+		}
+		log.Infof("resp: %v", restoreResp)
+		// TODO: impl wait for done, use show restore
+		restoreFinished, err := j.Dest.CheckRestoreFinished(snapshotName)
+		if err != nil {
+			log.Errorf("check restore state failed, err: %v", err)
+			return err
+		}
+		if !restoreFinished {
+			err = errors.Errorf("check restore state timeout, max try times: %d", base.MAX_CHECK_RETRY_TIMES)
+			return err
+		}
+		j.progress.NextSubWithPersist(PersistRestoreInfo, snapshotName)
+
+	case PersistRestoreInfo:
+		// Step 6: Update job progress && dest table id
+		// update job info, only for dest table id
+		// TODO: retry && mark it for not start a new full sync
+		if j.SyncType == TableSync {
+			if destTableId, err := j.destMeta.GetTableId(j.Dest.Table); err != nil {
+				return err
+			} else {
+				j.Dest.TableId = destTableId
+			}
+
+			// TODO: reload check job table id
+			data, err := json.Marshal(j)
+			if err != nil {
+				return err
+			}
+			if err := j.db.UpdateJob(j.Name, string(data)); err != nil {
+				return err
+			}
+		}
+
+		return nil
+
+	default:
+		return errors.Errorf("invalid job sub sync state %d", j.progress.SubSyncState)
+	}
 
 	return j.fullSync()
 }
@@ -382,11 +403,11 @@ func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) ([]*ttypes.TTable
 	case TableSync:
 		tableRecord, ok := upsert.TableRecords[j.Src.TableId]
 		if !ok {
-			return nil, fmt.Errorf("table record not found, table: %s", j.Src.Table)
+			return nil, errors.Errorf("table record not found, table: %s", j.Src.Table)
 		}
 		tableRecords = append(tableRecords, &tableRecord)
 	default:
-		return nil, fmt.Errorf("invalid sync type: %s", j.SyncType)
+		return nil, errors.Errorf("invalid sync type: %s", j.SyncType)
 	}
 
 	var wg sync.WaitGroup
@@ -455,7 +476,7 @@ func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) ([]*ttypes.TTable
 				break
 			}
 			if len(srcTablets) != len(destTablets) {
-				updateLastError(fmt.Errorf("tablet count not match, src: %d, dest: %d", len(srcTablets), len(destTablets)))
+				updateLastError(errors.Errorf("tablet count not match, src: %d, dest: %d", len(srcTablets), len(destTablets)))
 				break
 			}
 
@@ -468,7 +489,7 @@ func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) ([]*ttypes.TTable
 					log.Debugf("handle dest replica id: %v", destReplicaId)
 					destBackend, ok := destBackendMap[destReplica.BackendId]
 					if !ok {
-						lastErr = fmt.Errorf("backend not found, backend id: %d", destReplica.BackendId)
+						lastErr = errors.Errorf("backend not found, backend id: %d", destReplica.BackendId)
 						return false
 					}
 					destTabletId := destReplica.TabletId
@@ -485,14 +506,14 @@ func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) ([]*ttypes.TTable
 					srcReplicas := srcTablet.ReplicaMetas
 					iter := srcReplicas.Iter()
 					if ok := iter.First(); !ok {
-						updateLastError(fmt.Errorf("src replicas is empty"))
+						updateLastError(errors.Errorf("src replicas is empty"))
 						return false
 					}
 					srcBackendId := iter.Value().BackendId
 					var srcBackend *base.Backend
 					srcBackend, ok = srcBackendMap[srcBackendId]
 					if !ok {
-						updateLastError(fmt.Errorf("backend not found, backend id: %d", srcBackendId))
+						updateLastError(errors.Errorf("backend not found, backend id: %d", srcBackendId))
 						return false
 					}
 					req := &bestruct.TIngestBinlogRequest{
@@ -520,10 +541,10 @@ func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) ([]*ttypes.TTable
 						}
 						log.Debugf("ingest resp: %v", resp)
 						if !resp.IsSetStatus() {
-							err = fmt.Errorf("ingest resp status not set")
+							err = errors.Errorf("ingest resp status not set")
 							updateLastError(err)
 						} else if resp.Status.StatusCode != tstatus.TStatusCode_OK {
-							err = fmt.Errorf("ingest resp status code: %v, msg: %v", resp.Status.StatusCode, resp.Status.ErrorMsgs)
+							err = errors.Errorf("ingest resp status code: %v, msg: %v", resp.Status.StatusCode, resp.Status.ErrorMsgs)
 							updateLastError(err)
 						} else {
 							updateCommitInfos(commitInfo)
@@ -662,7 +683,7 @@ func (j *Job) handleCreateTableBinlog(binlog *festruct.TBinlog) error {
 	}
 
 	if j.SyncType != DBSync {
-		return fmt.Errorf("invalid sync type: %v", j.SyncType)
+		return errors.Errorf("invalid sync type: %v", j.SyncType)
 	}
 
 	sql := createTable.Sql
@@ -672,7 +693,7 @@ func (j *Job) handleCreateTableBinlog(binlog *festruct.TBinlog) error {
 
 func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 	if binlog == nil || !binlog.IsSetCommitSeq() {
-		return fmt.Errorf("invalid binlog: %v", binlog)
+		return errors.Errorf("invalid binlog: %v", binlog)
 	}
 
 	// Step 2: update job progress
@@ -697,7 +718,7 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 			return err
 		}
 	default:
-		return fmt.Errorf("unknown binlog type: %v", binlog.GetType())
+		return errors.Errorf("unknown binlog type: %v", binlog.GetType())
 	}
 
 	return nil
@@ -730,19 +751,19 @@ func (j *Job) incrementalSync() error {
 		case tstatus.TStatusCode_BINLOG_TOO_NEW_COMMIT_SEQ:
 			return nil
 		case tstatus.TStatusCode_BINLOG_DISABLE:
-			return fmt.Errorf("binlog is disabled")
+			return errors.Errorf("binlog is disabled")
 		case tstatus.TStatusCode_BINLOG_NOT_FOUND_DB:
-			return fmt.Errorf("can't found db")
+			return errors.Errorf("can't found db")
 		case tstatus.TStatusCode_BINLOG_NOT_FOUND_TABLE:
-			return fmt.Errorf("can't found table")
+			return errors.Errorf("can't found table")
 		default:
-			return fmt.Errorf("invalid binlog status type: %v", status.StatusCode)
+			return errors.Errorf("invalid binlog status type: %v", status.StatusCode)
 		}
 
 		// Step 3: handle binlog records if has job
 		binlogs := getBinlogResp.GetBinlogs()
 		if len(binlogs) == 0 {
-			return fmt.Errorf("no binlog, but status code is: %v", status.StatusCode)
+			return errors.Errorf("no binlog, but status code is: %v", status.StatusCode)
 		}
 
 		for _, binlog := range binlogs {
@@ -771,18 +792,16 @@ func (j *Job) recoverJobProgress() error {
 // If it is the first synchronization, it performs a full sync of the table.
 // If it is not the first synchronization, it recovers the job progress and performs an incremental sync.
 func (j *Job) tableSync() error {
-	if j.isFirstSync {
-		return j.tableFullSync()
+	switch j.progress.SyncState {
+	case TableFullSync:
+		log.Tracef("begin table full sync")
+		return j.fullSync()
+	case TableIncrementalSync:
+		log.Tracef("begin table incremental sync")
+		return j.incrementalSync()
+	default:
+		return errors.Errorf("unknown sync state: %v", j.progress.SyncState)
 	}
-
-	/// Continue sync
-	if j.progress == nil {
-		err := j.recoverJobProgress()
-		if err != nil {
-			return err
-		}
-	}
-	return j.incrementalSync()
 }
 
 func (j *Job) dbFullSync() error {
@@ -791,35 +810,49 @@ func (j *Job) dbFullSync() error {
 	return j.fullSync()
 }
 
-func (j *Job) dbSync() error {
-	if j.isFirstSync {
-		return j.dbFullSync()
-	}
+// TODO(Drogon): impl
+func (j *Job) dbTablesIncrementalSync() error {
+	log.Tracef("begin db tables incremental sync")
 
-	/// Continue sync
-	if j.progress == nil {
-		err := j.recoverJobProgress()
-		if err != nil {
-			return err
-		}
-	}
-	return j.incrementalSync()
+	return nil
 }
 
-func (j *Job) Sync() error {
+// TODO(Drogon): impl DBSpecificTableFullSync
+func (j *Job) dbSpecificTableFullSync() error {
+	log.Tracef("begin db specific table full sync")
+
+	return nil
+}
+
+func (j *Job) dbSync() error {
+	switch j.progress.SyncState {
+	case DBFullSync:
+		log.Tracef("begin db full sync")
+		return j.fullSync()
+	case DBTablesIncrementalSync:
+		return j.dbTablesIncrementalSync()
+	case DBSpecificTableFullSync:
+		return j.dbSpecificTableFullSync()
+	case DBIncrementalSync:
+		log.Tracef("begin db incremental sync")
+		return j.incrementalSync()
+	default:
+		return errors.Errorf("unknown db sync state: %v", j.progress.SyncState)
+	}
+}
+
+func (j *Job) sync() error {
 	switch j.SyncType {
 	case TableSync:
 		return j.tableSync()
 	case DBSync:
 		return j.dbSync()
 	default:
-		return fmt.Errorf("unknown sync type: %v", j.SyncType)
+		return errors.Errorf("unknown table sync type: %v", j.SyncType)
 	}
 }
 
-// run job
-func (j *Job) Run() error {
-	// 5s check once
+func (j *Job) run() error {
 	ticker := time.NewTicker(SYNC_DURATION)
 	defer ticker.Stop()
 
@@ -828,11 +861,41 @@ func (j *Job) Run() error {
 		case <-j.stop:
 			return nil
 		case <-ticker.C:
-			if err := j.Sync(); err != nil {
+			if err := j.sync(); err != nil {
 				log.Error("job sync failed", zap.String("job", j.Name), zap.Error(err))
 			}
 		}
 	}
+}
+
+// run job
+func (j *Job) Run() error {
+	// retry 3 times to check IsProgressExist
+	var isProgressExist bool
+	var err error
+	for i := 0; i < 3; i++ {
+		isProgressExist, err = j.db.IsProgressExist(j.Name)
+		if err != nil {
+			log.Error("check progress exist failed", zap.Error(err))
+			continue
+		}
+		break
+	}
+	if err != nil {
+		return err
+	}
+
+	if isProgressExist {
+		if err := j.recoverJobProgress(); err != nil {
+			log.Fatalf("recover job %s progress failed: %v", j.Name, err)
+			return err
+		}
+	} else {
+		j.progress = NewJobProgress(j.Name, j.SyncType, j.db)
+		j.progress.NextWithPersist(TableFullSync, BeginCreateSnapshot, "")
+	}
+
+	return j.run()
 }
 
 // stop job
@@ -848,13 +911,13 @@ func (j *Job) FirstRun() error {
 	if src_db_exists, err := j.Src.CheckDatabaseExists(); err != nil {
 		return err
 	} else if !src_db_exists {
-		return fmt.Errorf("src database %s not exists", j.Src.Database)
+		return errors.Errorf("src database %s not exists", j.Src.Database)
 	}
 	if j.SyncType == DBSync {
 		if enable, err := j.Src.IsDatabaseEnableBinlog(); err != nil {
 			return err
 		} else if !enable {
-			return fmt.Errorf("src database %s not enable binlog", j.Src.Database)
+			return errors.Errorf("src database %s not enable binlog", j.Src.Database)
 		}
 	}
 	if srcDbId, err := j.srcMeta.GetDbId(); err != nil {
@@ -868,13 +931,13 @@ func (j *Job) FirstRun() error {
 		if src_table_exists, err := j.Src.CheckTableExists(); err != nil {
 			return err
 		} else if !src_table_exists {
-			return fmt.Errorf("src table %s.%s not exists", j.Src.Database, j.Src.Table)
+			return errors.Errorf("src table %s.%s not exists", j.Src.Database, j.Src.Table)
 		}
 
 		if enable, err := j.Src.IsTableEnableBinlog(); err != nil {
 			return err
 		} else if !enable {
-			return fmt.Errorf("src table %s.%s not enable binlog", j.Src.Database, j.Src.Table)
+			return errors.Errorf("src table %s.%s not enable binlog", j.Src.Database, j.Src.Table)
 		}
 
 		if srcTableId, err := j.srcMeta.GetTableId(j.Src.Table); err != nil {
@@ -906,7 +969,7 @@ func (j *Job) FirstRun() error {
 			return err
 		}
 		if dest_table_exists {
-			return fmt.Errorf("dest table %s.%s already exists", j.Dest.Database, j.Dest.Table)
+			return errors.Errorf("dest table %s.%s already exists", j.Dest.Database, j.Dest.Table)
 		}
 	}
 
