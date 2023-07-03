@@ -547,9 +547,9 @@ func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) ([]*ttypes.TTable
 	return commitInfos, nil
 }
 
-// TODO: deal error by abort txn
-func (j *Job) dealUpsertBinlog(binlog *festruct.TBinlog) error {
-	log.Tracef("deal upsert binlog")
+// TODO: handle error by abort txn
+func (j *Job) handleUpsertBinlog(binlog *festruct.TBinlog) error {
+	log.Tracef("handle upsert binlog")
 
 	data := binlog.GetData()
 	upsert, err := record.NewUpsertFromJson(data)
@@ -597,9 +597,9 @@ func (j *Job) dealUpsertBinlog(binlog *festruct.TBinlog) error {
 	return nil
 }
 
-// dealAddPartitionBinlog
-func (j *Job) dealAddPartitionBinlog(binlog *festruct.TBinlog) error {
-	log.Tracef("deal add partition binlog")
+// handleAddPartitionBinlog
+func (j *Job) handleAddPartitionBinlog(binlog *festruct.TBinlog) error {
+	log.Tracef("handle add partition binlog")
 
 	data := binlog.GetData()
 	addPartition, err := record.NewAddPartitionFromJson(data)
@@ -624,9 +624,9 @@ func (j *Job) dealAddPartitionBinlog(binlog *festruct.TBinlog) error {
 	return j.destMeta.Exec(addPartitionSql)
 }
 
-// dealDropPartitionBinlog
-func (j *Job) dealDropPartitionBinlog(binlog *festruct.TBinlog) error {
-	log.Tracef("deal drop partition binlog")
+// handleDropPartitionBinlog
+func (j *Job) handleDropPartitionBinlog(binlog *festruct.TBinlog) error {
+	log.Tracef("handle drop partition binlog")
 
 	data := binlog.GetData()
 	dropPartition, err := record.NewDropPartitionFromJson(data)
@@ -651,9 +651,9 @@ func (j *Job) dealDropPartitionBinlog(binlog *festruct.TBinlog) error {
 	return j.destMeta.Exec(dropPartitionSql)
 }
 
-// dealCreateTableBinlog
-func (j *Job) dealCreateTableBinlog(binlog *festruct.TBinlog) error {
-	log.Tracef("deal create table binlog")
+// handleCreateTableBinlog
+func (j *Job) handleCreateTableBinlog(binlog *festruct.TBinlog) error {
+	log.Tracef("handle create table binlog")
 
 	data := binlog.GetData()
 	createTable, err := record.NewCreateTableFromJson(data)
@@ -670,30 +670,30 @@ func (j *Job) dealCreateTableBinlog(binlog *festruct.TBinlog) error {
 	return j.destMeta.Exec(sql)
 }
 
-func (j *Job) dealBinlog(binlog *festruct.TBinlog) error {
+func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 	if binlog == nil || !binlog.IsSetCommitSeq() {
 		return fmt.Errorf("invalid binlog: %v", binlog)
 	}
 
 	// Step 2: update job progress
-	j.progress.StartDeal(binlog.GetCommitSeq())
+	j.progress.StartHandle(binlog.GetCommitSeq())
 
 	// TODO: use table driven
 	switch binlog.GetType() {
 	case festruct.TBinlogType_UPSERT:
-		if err := j.dealUpsertBinlog(binlog); err != nil {
+		if err := j.handleUpsertBinlog(binlog); err != nil {
 			return err
 		}
 	case festruct.TBinlogType_ADD_PARTITION:
-		if err := j.dealAddPartitionBinlog(binlog); err != nil {
+		if err := j.handleAddPartitionBinlog(binlog); err != nil {
 			return err
 		}
 	case festruct.TBinlogType_DROP_PARTITION:
-		if err := j.dealDropPartitionBinlog(binlog); err != nil {
+		if err := j.handleDropPartitionBinlog(binlog); err != nil {
 			return err
 		}
 	case festruct.TBinlogType_CREATE_TABLE:
-		if err := j.dealCreateTableBinlog(binlog); err != nil {
+		if err := j.handleCreateTableBinlog(binlog); err != nil {
 			return err
 		}
 	default:
@@ -739,14 +739,14 @@ func (j *Job) incrementalSync() error {
 			return fmt.Errorf("invalid binlog status type: %v", status.StatusCode)
 		}
 
-		// Step 3: deal binlog records if has job
+		// Step 3: handle binlog records if has job
 		binlogs := getBinlogResp.GetBinlogs()
 		if len(binlogs) == 0 {
 			return fmt.Errorf("no binlog, but status code is: %v", status.StatusCode)
 		}
 
 		for _, binlog := range binlogs {
-			if err := j.dealBinlog(binlog); err != nil {
+			if err := j.handleBinlog(binlog); err != nil {
 				return err
 			}
 

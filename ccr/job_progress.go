@@ -30,29 +30,42 @@ const (
 type SyncState int
 
 const (
-	FullSync        SyncState = 0
-	IncrementalSync SyncState = 1
+	// Database sync state machine states
+	DBFullSync              SyncState = 0
+	DBTablesIncrementalSync SyncState = 1
+	DBSpecificTableFullSync SyncState = 2
+	DBIncrementalSync       SyncState = 3
+
+	// Table sync state machine states
+	TableFullSync        SyncState = 100
+	TableIncrementalSync SyncState = 101
+	// Table sync sub states
+	TableFullSync_
 )
 
 type JobProgress struct {
-	JobName             string          `json:"job_name"`
-	SyncState           SyncState       `json:"sync_state"`
-	JobState            JobState        `json:"state"`
-	CommitSeq           int64           `json:"commit_seq"`
-	TransactionId       int64           `json:"transaction_id"`
-	Data                string          `json:"data"`                 // this often for binlog or snapshot info
+	JobName string     `json:"job_name"`
+	db      storage.DB `json:"-"`
+
+	JobState      JobState  `json:"state"`
+	SyncState     SyncState `json:"sync_state"`
+	CommitSeq     int64     `json:"commit_seq"`
+	TransactionId int64     `json:"transaction_id"`
+	Data          string    `json:"data"` // this often for binlog or snapshot info
+
+	// Only for TablesIncrementalSync
 	DbTableCommitSeqMap map[int64]int64 `json:"table_commit_seq_map"` // this often for table commit seq
-	db                  storage.DB      `json:"-"`
 }
 
 func NewJobProgress(jobName string, db storage.DB) *JobProgress {
 	return &JobProgress{
-		JobName:       jobName,
-		SyncState:     FullSync,
+		JobName: jobName,
+		db:      db,
+
+		SyncState:     DBFullSync,
 		JobState:      JobStateDone,
 		CommitSeq:     0,
 		TransactionId: 0,
-		db:            db,
 	}
 }
 
@@ -77,6 +90,7 @@ func NewJobProgressFromJson(jobName string, db storage.DB) (*JobProgress, error)
 	if err := json.Unmarshal([]byte(jsonData), &jobProgress); err != nil {
 		return nil, err
 	} else {
+		jobProgress.db = db
 		return &jobProgress, nil
 	}
 }
@@ -90,8 +104,10 @@ func (j *JobProgress) ToJson() (string, error) {
 	}
 }
 
+// TODO: Add api, begin/commit/abort
+
 func (j *JobProgress) BeginCreateSnapshot() {
-	j.SyncState = FullSync
+	j.SyncState = DBFullSync
 	j.JobState = JobStateFullSync_BeginCreateSnapshot
 	j.CommitSeq = 0
 
@@ -133,12 +149,12 @@ func (j *JobProgress) DoneDbRestore(DbTableCommitSeqMap map[int64]int64) {
 }
 
 func (j *JobProgress) NewIncrementalSync() {
-	j.SyncState = IncrementalSync
+	j.SyncState = TableIncrementalSync
 
 	j.persist()
 }
 
-func (j *JobProgress) StartDeal(commitSeq int64) {
+func (j *JobProgress) StartHandle(commitSeq int64) {
 	j.JobState = JobStateDoing
 	j.CommitSeq = commitSeq
 	j.TransactionId = 0

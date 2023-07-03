@@ -20,7 +20,7 @@ func NewCreateTableFromJson(data string) (*CreateTable, error) {
 
 	if createTable.Sql == "" {
 		// TODO: fallback to create sql from other fields
-		return nil, fmt.Errorf("add partition sql is empty")
+		return nil, fmt.Errorf("create table sql is empty")
 	}
 
 	if createTable.TableId == 0 {
