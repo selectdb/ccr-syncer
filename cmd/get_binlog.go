@@ -85,7 +85,7 @@ func main() {
 		User:       "root",
 		Password:   "",
 		Database:   "ccr",
-		Table:      "enable_binlog",
+		Table:      "src_1",
 	}
 
 	test_get_binlog(src)

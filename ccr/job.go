@@ -198,8 +198,8 @@ func (j *Job) fullSync() error {
 	switch j.progress.SubSyncState {
 	case BeginCreateSnapshot:
 		// Step 1: Create snapshot
-		log.Debugf("begin create snapshot")
-		// j.progress.BeginCreateSnapshot()
+		log.Debugf("create snapshot")
+
 		backupTableList := make([]string, 0)
 		switch j.SyncType {
 		case DBSync:
@@ -224,6 +224,8 @@ func (j *Job) fullSync() error {
 
 	case GetSnapshotInfo:
 		// Step 2: Get snapshot info
+		log.Tracef("get snapshot info")
+
 		snapshotName := j.progress.PersistData
 		src := &j.Src
 		srcRpc, err := rpc.NewThriftRpc(src)
@@ -263,6 +265,8 @@ func (j *Job) fullSync() error {
 
 	case AddExtraInfo:
 		// Step 3: Add extra info
+		log.Tracef("add extra info")
+
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
 		snapshotResp := inMemoryData.SnapshotResp
 		jobInfo := snapshotResp.GetJobInfo()
@@ -305,6 +309,9 @@ func (j *Job) fullSync() error {
 		j.progress.CommitNextSubWithPersist(commitSeq, RestoreSnapshot, inMemoryData)
 
 	case RestoreSnapshot:
+		// Step : Restore snapshot
+		log.Tracef("restore snapshot")
+
 		if j.progress.InMemoryData == nil {
 			persistData := j.progress.PersistData
 			inMemoryData := &inMemoryData{}
@@ -349,8 +356,13 @@ func (j *Job) fullSync() error {
 	case PersistRestoreInfo:
 		// Step 6: Update job progress && dest table id
 		// update job info, only for dest table id
+		log.Tracef("persist restore info")
+
 		// TODO: retry && mark it for not start a new full sync
-		if j.SyncType == TableSync {
+		switch j.SyncType {
+		case DBSync:
+			j.progress.NextWithPersist(j.progress.CommitSeq, DBTablesIncrementalSync, DB_1, "")
+		case TableSync:
 			if destTableId, err := j.destMeta.GetTableId(j.Dest.Table); err != nil {
 				return err
 			} else {
@@ -365,6 +377,8 @@ func (j *Job) fullSync() error {
 			if err := j.db.UpdateJob(j.Name, string(data)); err != nil {
 				return err
 			}
+
+			j.progress.NextWithPersist(j.progress.CommitSeq, TableIncrementalSync, DB_1, "")
 		}
 
 		return nil
@@ -380,12 +394,12 @@ func (j *Job) newLabel(commitSeq int64) string {
 	src := &j.Src
 	dest := &j.Dest
 	if j.SyncType == DBSync {
-		// label "ccr_sync_job:${sync_type}:${src_db_id}:${dest_db_id}:${commit_seq}"
-		return fmt.Sprintf("ccr_sync_job:%s:%d:%d:%d", j.SyncType, src.DbId, dest.DbId, commitSeq)
+		// label "ccrj:${sync_type}:${src_db_id}:${dest_db_id}:${commit_seq}"
+		return fmt.Sprintf("ccrj:%s:%d:%d:%d", j.SyncType, src.DbId, dest.DbId, commitSeq)
 	} else {
 		// TableSync
-		// label "ccr_sync_job:${sync_type}:${src_db_id}_${src_table_id}:${dest_db_id}_${dest_table_id}:${commit_seq}"
-		return fmt.Sprintf("ccr_sync_job:%s:%d_%d:%d_%d:%d", j.SyncType, src.DbId, src.TableId, dest.DbId, dest.TableId, commitSeq)
+		// label "ccrj:${sync_type}:${src_db_id}_${src_table_id}:${dest_db_id}_${dest_table_id}:${commit_seq}"
+		return fmt.Sprintf("ccrj:%s:%d_%d:%d_%d:%d", j.SyncType, src.DbId, src.TableId, dest.DbId, dest.TableId, commitSeq)
 	}
 }
 
@@ -735,7 +749,7 @@ func (j *Job) incrementalSync() error {
 
 	for {
 		commitSeq := j.progress.CommitSeq
-		log.Tracef("src: %v, CommitSeq: %v", src, commitSeq)
+		log.Tracef("src: %s, CommitSeq: %v", src, commitSeq)
 
 		getBinlogResp, err := srcRpc.GetBinlog(src, commitSeq)
 		if err != nil {
@@ -802,12 +816,6 @@ func (j *Job) tableSync() error {
 	default:
 		return errors.Errorf("unknown sync state: %v", j.progress.SyncState)
 	}
-}
-
-func (j *Job) dbFullSync() error {
-	log.Tracef("begin db full sync")
-
-	return j.fullSync()
 }
 
 // TODO(Drogon): impl
@@ -892,7 +900,7 @@ func (j *Job) Run() error {
 		}
 	} else {
 		j.progress = NewJobProgress(j.Name, j.SyncType, j.db)
-		j.progress.NextWithPersist(TableFullSync, BeginCreateSnapshot, "")
+		j.progress.NextWithPersist(0, TableFullSync, BeginCreateSnapshot, "")
 	}
 
 	return j.run()

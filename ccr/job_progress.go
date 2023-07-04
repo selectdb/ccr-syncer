@@ -48,11 +48,13 @@ type SubSyncState int
 const (
 	/// Sub Sync States
 	// DB/Table FullSync state machine states
-	BeginCreateSnapshot SubSyncState = 20
-	GetSnapshotInfo     SubSyncState = 21
-	AddExtraInfo        SubSyncState = 22
-	RestoreSnapshot     SubSyncState = 23
-	PersistRestoreInfo  SubSyncState = 24
+	BeginCreateSnapshot SubSyncState = 0
+	GetSnapshotInfo     SubSyncState = 1
+	AddExtraInfo        SubSyncState = 2
+	RestoreSnapshot     SubSyncState = 3
+	PersistRestoreInfo  SubSyncState = 4
+
+	DB_1 SubSyncState = 10
 )
 
 type JobProgress struct {
@@ -239,7 +241,7 @@ func (j *JobProgress) CommitNextSubWithPersist(commitSeq int64, subSyncState Sub
 	j.Persist()
 }
 
-func (j *JobProgress) NextWithPersist(syncState SyncState, subSyncState SubSyncState, persistData string) {
+func (j *JobProgress) NextWithPersist(commitSeq int64, syncState SyncState, subSyncState SubSyncState, persistData string) {
 	j.SyncState = syncState
 	j.SubSyncState = subSyncState
 	j.PersistData = persistData

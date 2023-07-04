@@ -21,7 +21,6 @@ func init() {
 	flag.StringVar(&logLevel, "log_level", "trace", "log level")
 	flag.StringVar(&logFilename, "log_filename", "", "log filename")
 	flag.BoolVar(&logAlsoToStderr, "log_also_to_stderr", false, "log also to stderr")
-	flag.Parse()
 }
 
 func InitLog() {

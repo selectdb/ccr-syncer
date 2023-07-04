@@ -142,12 +142,14 @@ func (s *Spec) Valid() error {
 }
 
 func (s *Spec) String() string {
-	return fmt.Sprintf("%s:%s@tcp(%s:%s)/", s.User, s.Password, s.Host, s.Port)
+	return fmt.Sprintf("host: %s, port: %s, thrift_port: %s, user: %s, password: %s, cluster: %s, database: %s, table: %s",
+		s.Host, s.Port, s.ThriftPort, s.User, s.Password, s.Cluster, s.Database, s.Table)
 }
 
 // create mysql connection from spec
 func (s *Spec) Connect() (*sql.DB, error) {
-	return sql.Open("mysql", s.String())
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/", s.User, s.Password, s.Host, s.Port)
+	return sql.Open("mysql", dsn)
 }
 
 func (s *Spec) ConnectDB() (*sql.DB, error) {
@@ -379,14 +381,14 @@ func (s *Spec) CreateSnapshotAndWaitForDone(tables []string) (string, error) {
 	var snapshotName string
 	var tableRefs string
 	if len(tables) == 1 {
-		// snapshot name format "ccr_snapshot_${db}_${table}_${timestamp}"
+		// snapshot name format "ccrs_${table}_${timestamp}"
 		// table refs = table
-		snapshotName = fmt.Sprintf("ccr_snapshot_%s_%s_%d", s.Database, s.Table, time.Now().UnixNano())
+		snapshotName = fmt.Sprintf("ccrs_%s_%s_%d", s.Database, s.Table, time.Now().Unix())
 		tableRefs = tables[0]
 	} else {
-		// snapshot name format "ccr_snapshot_${db}_${timestamp}"
+		// snapshot name format "ccrs_${db}_${timestamp}"
 		// table refs = tables.join(", ")
-		snapshotName = fmt.Sprintf("ccr_snapshot_%s_%d", s.Database, time.Now().UnixNano())
+		snapshotName = fmt.Sprintf("ccrs_%s_%d", s.Database, time.Now().Unix())
 		tableRefs = strings.Join(tables, ", ")
 	}
 

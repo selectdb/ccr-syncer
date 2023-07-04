@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"sync"
 
 	"github.com/selectdb/ccr_syncer/ccr"
@@ -10,6 +11,7 @@ import (
 )
 
 func init() {
+	flag.Parse()
 	utils.InitLog()
 }
 
