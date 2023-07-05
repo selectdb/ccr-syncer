@@ -252,7 +252,7 @@ func (j *Job) fullSync() error {
 
 		if j.SyncType == TableSync {
 			if _, ok := tableCommitSeqMap[j.Src.TableId]; !ok {
-				return errors.New("table commit seq not found")
+				return errors.Errorf("tableid %d, commit seq not found", j.Src.TableId)
 			}
 		}
 
@@ -370,11 +370,7 @@ func (j *Job) fullSync() error {
 			}
 
 			// TODO: reload check job table id
-			data, err := json.Marshal(j)
-			if err != nil {
-				return err
-			}
-			if err := j.db.UpdateJob(j.Name, string(data)); err != nil {
+			if err := j.persistJob(); err != nil {
 				return err
 			}
 
@@ -388,6 +384,19 @@ func (j *Job) fullSync() error {
 	}
 
 	return j.fullSync()
+}
+
+func (j *Job) persistJob() error {
+	data, err := json.Marshal(j)
+	if err != nil {
+		return err
+	}
+
+	if err := j.db.UpdateJob(j.Name, string(data)); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (j *Job) newLabel(commitSeq int64) string {
@@ -952,6 +961,9 @@ func (j *Job) FirstRun() error {
 			return err
 		} else {
 			j.Src.TableId = srcTableId
+			if err := j.persistJob(); err != nil {
+				return err
+			}
 		}
 	}
 
