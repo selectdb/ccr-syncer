@@ -961,9 +961,6 @@ func (j *Job) FirstRun() error {
 			return err
 		} else {
 			j.Src.TableId = srcTableId
-			if err := j.persistJob(); err != nil {
-				return err
-			}
 		}
 	}
 
