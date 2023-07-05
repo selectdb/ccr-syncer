@@ -74,6 +74,12 @@ func test_get_binlog(spec *base.Spec) {
 		} else {
 			log.Infof("createTableRecord: %s", createTableRecord)
 		}
+	case festruct.TBinlogType_ALTER_JOB:
+		if alterJobRecord, err := record.NewAlterJobV2FromJson(jsonData); err != nil {
+			panic(err)
+		} else {
+			log.Infof("alterJobRecord: %s", alterJobRecord)
+		}
 	}
 }
 
