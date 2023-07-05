@@ -80,8 +80,8 @@ func (rpc *ThriftRpc) BeginTransaction(spec *base.Spec, label string) (*festruct
 		Label: &label,
 	}
 	setAuthInfo(req, spec)
-	tables := make([]string, 0, 1)
-	req.Tables = append(tables, spec.Table)
+	tableIds := make([]int64, 0, 1)
+	req.TableIds = append(tableIds, spec.TableId)
 
 	log.Infof("BeginTransaction req: %+v", req)
 	return client.BeginTxn(context.Background(), req)
@@ -135,6 +135,7 @@ func (rpc *ThriftRpc) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGe
 
 	if spec.Table != "" {
 		req.Table = &spec.Table
+		req.TableId = &spec.TableId
 	}
 
 	log.Infof("GetBinlog req: %+v", req)
