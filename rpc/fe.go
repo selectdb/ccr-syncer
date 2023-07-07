@@ -135,7 +135,9 @@ func (rpc *ThriftRpc) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGe
 
 	if spec.Table != "" {
 		req.Table = &spec.Table
-		req.TableId = &spec.TableId
+		if spec.TableId != 0 {
+			req.TableId = &spec.TableId
+		}
 	}
 
 	log.Infof("GetBinlog req: %+v", req)
@@ -144,6 +146,33 @@ func (rpc *ThriftRpc) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGe
 		return nil, err
 	} else {
 		log.Infof("GetBinlog resp: %+v", resp)
+		return resp, nil
+	}
+}
+
+func (rpc *ThriftRpc) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogLagResult_, error) {
+	log.Tracef("GetBinlogLag: %d", commitSeq)
+
+	client := rpc.client
+	req := &festruct.TGetBinlogRequest{
+		PrevCommitSeq: &commitSeq,
+	}
+	setAuthInfo(req, spec)
+
+	if spec.Table != "" {
+		req.Table = &spec.Table
+		req.TableId = &spec.TableId
+		if spec.TableId != 0 {
+			req.TableId = &spec.TableId
+		}
+	}
+
+	log.Infof("GetBinlogLag req: %+v", req)
+	if resp, err := client.GetBinlogLag(context.Background(), req); err != nil {
+		log.Fatal(err)
+		return nil, err
+	} else {
+		log.Infof("GetBinlogLag resp: %+v", resp)
 		return resp, nil
 	}
 }

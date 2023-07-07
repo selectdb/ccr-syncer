@@ -11489,6 +11489,20 @@ func (p *TSnapshotRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 13:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField13(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -11711,6 +11725,19 @@ func (p *TSnapshotRequest) FastReadField12(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TSnapshotRequest) FastReadField13(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.IsCopyBinlog = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TSnapshotRequest) FastWrite(buf []byte) int {
 	return 0
@@ -11731,6 +11758,7 @@ func (p *TSnapshotRequest) FastWriteNocopy(buf []byte, binaryWriter bthrift.Bina
 		offset += p.fastWriteField10(buf[offset:], binaryWriter)
 		offset += p.fastWriteField11(buf[offset:], binaryWriter)
 		offset += p.fastWriteField12(buf[offset:], binaryWriter)
+		offset += p.fastWriteField13(buf[offset:], binaryWriter)
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
@@ -11754,6 +11782,7 @@ func (p *TSnapshotRequest) BLength() int {
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field12Length()
+		l += p.field13Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -11896,6 +11925,17 @@ func (p *TSnapshotRequest) fastWriteField12(buf []byte, binaryWriter bthrift.Bin
 	return offset
 }
 
+func (p *TSnapshotRequest) fastWriteField13(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetIsCopyBinlog() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "is_copy_binlog", thrift.BOOL, 13)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.IsCopyBinlog)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TSnapshotRequest) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("tablet_id", thrift.I64, 1)
@@ -12020,6 +12060,17 @@ func (p *TSnapshotRequest) field12Length() int {
 	if p.IsSetEndVersion() {
 		l += bthrift.Binary.FieldBeginLength("end_version", thrift.I64, 12)
 		l += bthrift.Binary.I64Length(*p.EndVersion)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TSnapshotRequest) field13Length() int {
+	l := 0
+	if p.IsSetIsCopyBinlog() {
+		l += bthrift.Binary.FieldBeginLength("is_copy_binlog", thrift.BOOL, 13)
+		l += bthrift.Binary.BoolLength(*p.IsCopyBinlog)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

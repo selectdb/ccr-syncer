@@ -53,6 +53,7 @@ type Client interface {
 	GetQueryStats(ctx context.Context, request *frontendservice.TGetQueryStatsRequest, callOptions ...callopt.Option) (r *frontendservice.TQueryStatsResult_, err error)
 	GetTabletReplicaInfos(ctx context.Context, request *frontendservice.TGetTabletReplicaInfosRequest, callOptions ...callopt.Option) (r *frontendservice.TGetTabletReplicaInfosResult_, err error)
 	GetMasterToken(ctx context.Context, request *frontendservice.TGetMasterTokenRequest, callOptions ...callopt.Option) (r *frontendservice.TGetMasterTokenResult_, err error)
+	GetBinlogLag(ctx context.Context, request *frontendservice.TGetBinlogLagRequest, callOptions ...callopt.Option) (r *frontendservice.TGetBinlogLagResult_, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -282,4 +283,9 @@ func (p *kFrontendServiceClient) GetTabletReplicaInfos(ctx context.Context, requ
 func (p *kFrontendServiceClient) GetMasterToken(ctx context.Context, request *frontendservice.TGetMasterTokenRequest, callOptions ...callopt.Option) (r *frontendservice.TGetMasterTokenResult_, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetMasterToken(ctx, request)
+}
+
+func (p *kFrontendServiceClient) GetBinlogLag(ctx context.Context, request *frontendservice.TGetBinlogLagRequest, callOptions ...callopt.Option) (r *frontendservice.TGetBinlogLagResult_, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetBinlogLag(ctx, request)
 }

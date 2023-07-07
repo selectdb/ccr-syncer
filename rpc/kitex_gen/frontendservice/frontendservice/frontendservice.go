@@ -61,6 +61,7 @@ func NewServiceInfo() *kitex.ServiceInfo {
 		"getQueryStats":             kitex.NewMethodInfo(getQueryStatsHandler, newFrontendServiceGetQueryStatsArgs, newFrontendServiceGetQueryStatsResult, false),
 		"getTabletReplicaInfos":     kitex.NewMethodInfo(getTabletReplicaInfosHandler, newFrontendServiceGetTabletReplicaInfosArgs, newFrontendServiceGetTabletReplicaInfosResult, false),
 		"getMasterToken":            kitex.NewMethodInfo(getMasterTokenHandler, newFrontendServiceGetMasterTokenArgs, newFrontendServiceGetMasterTokenResult, false),
+		"getBinlogLag":              kitex.NewMethodInfo(getBinlogLagHandler, newFrontendServiceGetBinlogLagArgs, newFrontendServiceGetBinlogLagResult, false),
 	}
 	extra := map[string]interface{}{
 		"PackageName": "frontendservice",
@@ -796,6 +797,24 @@ func newFrontendServiceGetMasterTokenResult() interface{} {
 	return frontendservice.NewFrontendServiceGetMasterTokenResult()
 }
 
+func getBinlogLagHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*frontendservice.FrontendServiceGetBinlogLagArgs)
+	realResult := result.(*frontendservice.FrontendServiceGetBinlogLagResult)
+	success, err := handler.(frontendservice.FrontendService).GetBinlogLag(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newFrontendServiceGetBinlogLagArgs() interface{} {
+	return frontendservice.NewFrontendServiceGetBinlogLagArgs()
+}
+
+func newFrontendServiceGetBinlogLagResult() interface{} {
+	return frontendservice.NewFrontendServiceGetBinlogLagResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -1199,6 +1218,16 @@ func (p *kClient) GetMasterToken(ctx context.Context, request *frontendservice.T
 	_args.Request = request
 	var _result frontendservice.FrontendServiceGetMasterTokenResult
 	if err = p.c.Call(ctx, "getMasterToken", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetBinlogLag(ctx context.Context, request *frontendservice.TGetBinlogLagRequest) (r *frontendservice.TGetBinlogLagResult_, err error) {
+	var _args frontendservice.FrontendServiceGetBinlogLagArgs
+	_args.Request = request
+	var _result frontendservice.FrontendServiceGetBinlogLagResult
+	if err = p.c.Call(ctx, "getBinlogLag", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

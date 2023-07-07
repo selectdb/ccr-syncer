@@ -82,3 +82,8 @@ get_master_token: bin
 ## spec_checker : Build spec_checker binary
 spec_checker: bin
 	$(V)go build -o bin/spec_checker cmd/spec_checker.go
+
+.PHONY: get_lag
+## get_lag : Build get_lag binary
+get_lag: bin
+	$(V)go build -o bin/get_lag cmd/get_lag.go

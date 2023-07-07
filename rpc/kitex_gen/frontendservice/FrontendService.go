@@ -525,13 +525,11 @@ func (p *TQueryStatsType) Value() (driver.Value, error) {
 type TBinlogType int64
 
 const (
-	TBinlogType_UPSERT                           TBinlogType = 0
-	TBinlogType_ADD_PARTITION                    TBinlogType = 1
-	TBinlogType_CREATE_TABLE                     TBinlogType = 2
-	TBinlogType_DROP_PARTITION                   TBinlogType = 3
-	TBinlogType_DROP_TABLE                       TBinlogType = 4
-	TBinlogType_ALTER_JOB                        TBinlogType = 5
-	TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS TBinlogType = 6
+	TBinlogType_UPSERT         TBinlogType = 0
+	TBinlogType_ADD_PARTITION  TBinlogType = 1
+	TBinlogType_CREATE_TABLE   TBinlogType = 2
+	TBinlogType_DROP_PARTITION TBinlogType = 3
+	TBinlogType_DROP_TABLE     TBinlogType = 4
 )
 
 func (p TBinlogType) String() string {
@@ -546,10 +544,6 @@ func (p TBinlogType) String() string {
 		return "DROP_PARTITION"
 	case TBinlogType_DROP_TABLE:
 		return "DROP_TABLE"
-	case TBinlogType_ALTER_JOB:
-		return "ALTER_JOB"
-	case TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS:
-		return "MODIFY_TABLE_ADD_OR_DROP_COLUMNS"
 	}
 	return "<UNSET>"
 }
@@ -566,10 +560,6 @@ func TBinlogTypeFromString(s string) (TBinlogType, error) {
 		return TBinlogType_DROP_PARTITION, nil
 	case "DROP_TABLE":
 		return TBinlogType_DROP_TABLE, nil
-	case "ALTER_JOB":
-		return TBinlogType_ALTER_JOB, nil
-	case "MODIFY_TABLE_ADD_OR_DROP_COLUMNS":
-		return TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS, nil
 	}
 	return TBinlogType(0), fmt.Errorf("not a valid TBinlogType string")
 }
@@ -629,6 +619,12 @@ func (p *TSnapshotType) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return int64(*p), nil
+}
+
+type TGetBinlogLagRequest = TGetBinlogRequest
+
+func NewTGetBinlogLagRequest() *TGetBinlogLagRequest {
+	return NewTGetBinlogRequest()
 }
 
 type TSetSessionParams struct {
@@ -14683,6 +14679,7 @@ type TMasterOpRequest struct {
 	TraceCarrier           map[string]string                  `thrift:"trace_carrier,21,optional" frugal:"21,optional,map<string:string>" json:"trace_carrier,omitempty"`
 	ClientNodeHost         *string                            `thrift:"clientNodeHost,22,optional" frugal:"22,optional,string" json:"clientNodeHost,omitempty"`
 	ClientNodePort         *int32                             `thrift:"clientNodePort,23,optional" frugal:"23,optional,i32" json:"clientNodePort,omitempty"`
+	SyncJournalOnly        *bool                              `thrift:"syncJournalOnly,24,optional" frugal:"24,optional,bool" json:"syncJournalOnly,omitempty"`
 }
 
 func NewTMasterOpRequest() *TMasterOpRequest {
@@ -14884,6 +14881,15 @@ func (p *TMasterOpRequest) GetClientNodePort() (v int32) {
 	}
 	return *p.ClientNodePort
 }
+
+var TMasterOpRequest_SyncJournalOnly_DEFAULT bool
+
+func (p *TMasterOpRequest) GetSyncJournalOnly() (v bool) {
+	if !p.IsSetSyncJournalOnly() {
+		return TMasterOpRequest_SyncJournalOnly_DEFAULT
+	}
+	return *p.SyncJournalOnly
+}
 func (p *TMasterOpRequest) SetUser(val string) {
 	p.User = val
 }
@@ -14953,6 +14959,9 @@ func (p *TMasterOpRequest) SetClientNodeHost(val *string) {
 func (p *TMasterOpRequest) SetClientNodePort(val *int32) {
 	p.ClientNodePort = val
 }
+func (p *TMasterOpRequest) SetSyncJournalOnly(val *bool) {
+	p.SyncJournalOnly = val
+}
 
 var fieldIDToName_TMasterOpRequest = map[int16]string{
 	1:  "user",
@@ -14978,6 +14987,7 @@ var fieldIDToName_TMasterOpRequest = map[int16]string{
 	21: "trace_carrier",
 	22: "clientNodeHost",
 	23: "clientNodePort",
+	24: "syncJournalOnly",
 }
 
 func (p *TMasterOpRequest) IsSetResourceInfo() bool {
@@ -15058,6 +15068,10 @@ func (p *TMasterOpRequest) IsSetClientNodeHost() bool {
 
 func (p *TMasterOpRequest) IsSetClientNodePort() bool {
 	return p.ClientNodePort != nil
+}
+
+func (p *TMasterOpRequest) IsSetSyncJournalOnly() bool {
+	return p.SyncJournalOnly != nil
 }
 
 func (p *TMasterOpRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -15308,6 +15322,16 @@ func (p *TMasterOpRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 23:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField23(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 24:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField24(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -15604,6 +15628,15 @@ func (p *TMasterOpRequest) ReadField23(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TMasterOpRequest) ReadField24(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.SyncJournalOnly = &v
+	}
+	return nil
+}
+
 func (p *TMasterOpRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TMasterOpRequest"); err != nil {
@@ -15700,6 +15733,10 @@ func (p *TMasterOpRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField23(oprot); err != nil {
 			fieldId = 23
+			goto WriteFieldError
+		}
+		if err = p.writeField24(oprot); err != nil {
+			fieldId = 24
 			goto WriteFieldError
 		}
 
@@ -16178,6 +16215,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
 }
 
+func (p *TMasterOpRequest) writeField24(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSyncJournalOnly() {
+		if err = oprot.WriteFieldBegin("syncJournalOnly", thrift.BOOL, 24); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.SyncJournalOnly); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 24 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 24 end error: ", p), err)
+}
+
 func (p *TMasterOpRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -16258,6 +16314,9 @@ func (p *TMasterOpRequest) DeepEqual(ano *TMasterOpRequest) bool {
 		return false
 	}
 	if !p.Field23DeepEqual(ano.ClientNodePort) {
+		return false
+	}
+	if !p.Field24DeepEqual(ano.SyncJournalOnly) {
 		return false
 	}
 	return true
@@ -16502,6 +16561,18 @@ func (p *TMasterOpRequest) Field23DeepEqual(src *int32) bool {
 		return false
 	}
 	if *p.ClientNodePort != *src {
+		return false
+	}
+	return true
+}
+func (p *TMasterOpRequest) Field24DeepEqual(src *bool) bool {
+
+	if p.SyncJournalOnly == src {
+		return true
+	} else if p.SyncJournalOnly == nil || src == nil {
+		return false
+	}
+	if *p.SyncJournalOnly != *src {
 		return false
 	}
 	return true
@@ -46732,6 +46803,255 @@ func (p *TGetMasterTokenResult_) Field2DeepEqual(src *string) bool {
 	return true
 }
 
+type TGetBinlogLagResult_ struct {
+	Status *status.TStatus `thrift:"status,1,optional" frugal:"1,optional,status.TStatus" json:"status,omitempty"`
+	Lag    *int64          `thrift:"lag,2,optional" frugal:"2,optional,i64" json:"lag,omitempty"`
+}
+
+func NewTGetBinlogLagResult_() *TGetBinlogLagResult_ {
+	return &TGetBinlogLagResult_{}
+}
+
+func (p *TGetBinlogLagResult_) InitDefault() {
+	*p = TGetBinlogLagResult_{}
+}
+
+var TGetBinlogLagResult__Status_DEFAULT *status.TStatus
+
+func (p *TGetBinlogLagResult_) GetStatus() (v *status.TStatus) {
+	if !p.IsSetStatus() {
+		return TGetBinlogLagResult__Status_DEFAULT
+	}
+	return p.Status
+}
+
+var TGetBinlogLagResult__Lag_DEFAULT int64
+
+func (p *TGetBinlogLagResult_) GetLag() (v int64) {
+	if !p.IsSetLag() {
+		return TGetBinlogLagResult__Lag_DEFAULT
+	}
+	return *p.Lag
+}
+func (p *TGetBinlogLagResult_) SetStatus(val *status.TStatus) {
+	p.Status = val
+}
+func (p *TGetBinlogLagResult_) SetLag(val *int64) {
+	p.Lag = val
+}
+
+var fieldIDToName_TGetBinlogLagResult_ = map[int16]string{
+	1: "status",
+	2: "lag",
+}
+
+func (p *TGetBinlogLagResult_) IsSetStatus() bool {
+	return p.Status != nil
+}
+
+func (p *TGetBinlogLagResult_) IsSetLag() bool {
+	return p.Lag != nil
+}
+
+func (p *TGetBinlogLagResult_) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TGetBinlogLagResult_[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TGetBinlogLagResult_) ReadField1(iprot thrift.TProtocol) error {
+	p.Status = status.NewTStatus()
+	if err := p.Status.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *TGetBinlogLagResult_) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.Lag = &v
+	}
+	return nil
+}
+
+func (p *TGetBinlogLagResult_) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TGetBinlogLagResult"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TGetBinlogLagResult_) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStatus() {
+		if err = oprot.WriteFieldBegin("status", thrift.STRUCT, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Status.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TGetBinlogLagResult_) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLag() {
+		if err = oprot.WriteFieldBegin("lag", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Lag); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TGetBinlogLagResult_) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TGetBinlogLagResult_(%+v)", *p)
+}
+
+func (p *TGetBinlogLagResult_) DeepEqual(ano *TGetBinlogLagResult_) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Status) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Lag) {
+		return false
+	}
+	return true
+}
+
+func (p *TGetBinlogLagResult_) Field1DeepEqual(src *status.TStatus) bool {
+
+	if !p.Status.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TGetBinlogLagResult_) Field2DeepEqual(src *int64) bool {
+
+	if p.Lag == src {
+		return true
+	} else if p.Lag == nil || src == nil {
+		return false
+	}
+	if *p.Lag != *src {
+		return false
+	}
+	return true
+}
+
 type FrontendService interface {
 	GetDbNames(ctx context.Context, params *TGetDbsParams) (r *TGetDbsResult_, err error)
 
@@ -46812,6 +47132,8 @@ type FrontendService interface {
 	GetTabletReplicaInfos(ctx context.Context, request *TGetTabletReplicaInfosRequest) (r *TGetTabletReplicaInfosResult_, err error)
 
 	GetMasterToken(ctx context.Context, request *TGetMasterTokenRequest) (r *TGetMasterTokenResult_, err error)
+
+	GetBinlogLag(ctx context.Context, request *TGetBinlogLagRequest) (r *TGetBinlogLagResult_, err error)
 }
 
 type FrontendServiceClient struct {
@@ -47198,6 +47520,15 @@ func (p *FrontendServiceClient) GetMasterToken(ctx context.Context, request *TGe
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *FrontendServiceClient) GetBinlogLag(ctx context.Context, request *TGetBinlogLagRequest) (r *TGetBinlogLagResult_, err error) {
+	var _args FrontendServiceGetBinlogLagArgs
+	_args.Request = request
+	var _result FrontendServiceGetBinlogLagResult
+	if err = p.Client_().Call(ctx, "getBinlogLag", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 
 type FrontendServiceProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
@@ -47259,6 +47590,7 @@ func NewFrontendServiceProcessor(handler FrontendService) *FrontendServiceProces
 	self.AddToProcessorMap("getQueryStats", &frontendServiceProcessorGetQueryStats{handler: handler})
 	self.AddToProcessorMap("getTabletReplicaInfos", &frontendServiceProcessorGetTabletReplicaInfos{handler: handler})
 	self.AddToProcessorMap("getMasterToken", &frontendServiceProcessorGetMasterToken{handler: handler})
+	self.AddToProcessorMap("getBinlogLag", &frontendServiceProcessorGetBinlogLag{handler: handler})
 	return self
 }
 func (p *FrontendServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -49182,6 +49514,54 @@ func (p *frontendServiceProcessorGetMasterToken) Process(ctx context.Context, se
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("getMasterToken", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type frontendServiceProcessorGetBinlogLag struct {
+	handler FrontendService
+}
+
+func (p *frontendServiceProcessorGetBinlogLag) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := FrontendServiceGetBinlogLagArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("getBinlogLag", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := FrontendServiceGetBinlogLagResult{}
+	var retval *TGetBinlogLagResult_
+	if retval, err2 = p.handler.GetBinlogLag(ctx, args.Request); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getBinlogLag: "+err2.Error())
+		oprot.WriteMessageBegin("getBinlogLag", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("getBinlogLag", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -62876,6 +63256,352 @@ func (p *FrontendServiceGetMasterTokenResult) DeepEqual(ano *FrontendServiceGetM
 }
 
 func (p *FrontendServiceGetMasterTokenResult) Field0DeepEqual(src *TGetMasterTokenResult_) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type FrontendServiceGetBinlogLagArgs struct {
+	Request *TGetBinlogLagRequest `thrift:"request,1" frugal:"1,default,TGetBinlogRequest" json:"request"`
+}
+
+func NewFrontendServiceGetBinlogLagArgs() *FrontendServiceGetBinlogLagArgs {
+	return &FrontendServiceGetBinlogLagArgs{}
+}
+
+func (p *FrontendServiceGetBinlogLagArgs) InitDefault() {
+	*p = FrontendServiceGetBinlogLagArgs{}
+}
+
+var FrontendServiceGetBinlogLagArgs_Request_DEFAULT *TGetBinlogLagRequest
+
+func (p *FrontendServiceGetBinlogLagArgs) GetRequest() (v *TGetBinlogLagRequest) {
+	if !p.IsSetRequest() {
+		return FrontendServiceGetBinlogLagArgs_Request_DEFAULT
+	}
+	return p.Request
+}
+func (p *FrontendServiceGetBinlogLagArgs) SetRequest(val *TGetBinlogLagRequest) {
+	p.Request = val
+}
+
+var fieldIDToName_FrontendServiceGetBinlogLagArgs = map[int16]string{
+	1: "request",
+}
+
+func (p *FrontendServiceGetBinlogLagArgs) IsSetRequest() bool {
+	return p.Request != nil
+}
+
+func (p *FrontendServiceGetBinlogLagArgs) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FrontendServiceGetBinlogLagArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetBinlogLagArgs) ReadField1(iprot thrift.TProtocol) error {
+	p.Request = NewTGetBinlogLagRequest()
+	if err := p.Request.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *FrontendServiceGetBinlogLagArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("getBinlogLag_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetBinlogLagArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Request.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *FrontendServiceGetBinlogLagArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("FrontendServiceGetBinlogLagArgs(%+v)", *p)
+}
+
+func (p *FrontendServiceGetBinlogLagArgs) DeepEqual(ano *FrontendServiceGetBinlogLagArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Request) {
+		return false
+	}
+	return true
+}
+
+func (p *FrontendServiceGetBinlogLagArgs) Field1DeepEqual(src *TGetBinlogLagRequest) bool {
+
+	if !p.Request.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type FrontendServiceGetBinlogLagResult struct {
+	Success *TGetBinlogLagResult_ `thrift:"success,0,optional" frugal:"0,optional,TGetBinlogLagResult_" json:"success,omitempty"`
+}
+
+func NewFrontendServiceGetBinlogLagResult() *FrontendServiceGetBinlogLagResult {
+	return &FrontendServiceGetBinlogLagResult{}
+}
+
+func (p *FrontendServiceGetBinlogLagResult) InitDefault() {
+	*p = FrontendServiceGetBinlogLagResult{}
+}
+
+var FrontendServiceGetBinlogLagResult_Success_DEFAULT *TGetBinlogLagResult_
+
+func (p *FrontendServiceGetBinlogLagResult) GetSuccess() (v *TGetBinlogLagResult_) {
+	if !p.IsSetSuccess() {
+		return FrontendServiceGetBinlogLagResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *FrontendServiceGetBinlogLagResult) SetSuccess(x interface{}) {
+	p.Success = x.(*TGetBinlogLagResult_)
+}
+
+var fieldIDToName_FrontendServiceGetBinlogLagResult = map[int16]string{
+	0: "success",
+}
+
+func (p *FrontendServiceGetBinlogLagResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *FrontendServiceGetBinlogLagResult) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FrontendServiceGetBinlogLagResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetBinlogLagResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = NewTGetBinlogLagResult_()
+	if err := p.Success.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *FrontendServiceGetBinlogLagResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("getBinlogLag_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetBinlogLagResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *FrontendServiceGetBinlogLagResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("FrontendServiceGetBinlogLagResult(%+v)", *p)
+}
+
+func (p *FrontendServiceGetBinlogLagResult) DeepEqual(ano *FrontendServiceGetBinlogLagResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *FrontendServiceGetBinlogLagResult) Field0DeepEqual(src *TGetBinlogLagResult_) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

@@ -10,6 +10,8 @@ import (
 	"github.com/selectdb/ccr_syncer/utils"
 )
 
+var ()
+
 func init() {
 	flag.Parse()
 	utils.InitLog()
