@@ -608,16 +608,22 @@ func (j *Job) handleUpsertBinlog(binlog *festruct.TBinlog) error {
 	log.Tracef("begin txn, dest: %v, commitSeq: %d", dest, commitSeq)
 	destRpc, err := rpc.NewThriftRpc(dest)
 	if err != nil {
-		panic(err)
+		log.Errorf("new thrift rpc failed, err: %v", err)
+		return err
 	}
 
 	label := j.newLabel(commitSeq)
 
 	beginTxnResp, err := destRpc.BeginTransaction(dest, label)
 	if err != nil {
-		panic(err)
+		log.Errorf("begin txn failed, err: %v", err)
+		return err
 	}
 	log.Infof("resp: %v", beginTxnResp)
+	if beginTxnResp.GetStatus().GetStatusCode() != tstatus.TStatusCode_OK {
+		log.Errorf("begin txn failed, status: %v", beginTxnResp.GetStatus())
+		return errors.Errorf("begin txn failed, status: %v", beginTxnResp.GetStatus())
+	}
 	txnId := beginTxnResp.GetTxnId()
 	log.Infof("TxnId: %d, DbId: %d", txnId, beginTxnResp.GetDbId())
 
