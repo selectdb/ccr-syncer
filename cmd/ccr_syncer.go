@@ -10,10 +10,14 @@ import (
 	"github.com/selectdb/ccr_syncer/utils"
 )
 
-var ()
+var (
+	db string
+)
 
 func init() {
+	flag.StringVar(&db, "db", "ccr.db", "sqlite3 db file")
 	flag.Parse()
+
 	utils.InitLog()
 }
 
