@@ -3212,6 +3212,20 @@ func (p *TReportRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 12:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField12(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -3527,6 +3541,20 @@ func (p *TReportRequest) FastReadField11(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TReportRequest) FastReadField12(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.PipelineExecutorSize = v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TReportRequest) FastWrite(buf []byte) int {
 	return 0
@@ -3540,6 +3568,7 @@ func (p *TReportRequest) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binary
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 		offset += p.fastWriteField8(buf[offset:], binaryWriter)
 		offset += p.fastWriteField11(buf[offset:], binaryWriter)
+		offset += p.fastWriteField12(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
@@ -3568,6 +3597,7 @@ func (p *TReportRequest) BLength() int {
 		l += p.field9Length()
 		l += p.field10Length()
 		l += p.field11Length()
+		l += p.field12Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -3763,6 +3793,15 @@ func (p *TReportRequest) fastWriteField11(buf []byte, binaryWriter bthrift.Binar
 	return offset
 }
 
+func (p *TReportRequest) fastWriteField12(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "pipeline_executor_size", thrift.I32, 12)
+	offset += bthrift.Binary.WriteI32(buf[offset:], p.PipelineExecutorSize)
+
+	offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	return offset
+}
+
 func (p *TReportRequest) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("backend", thrift.STRUCT, 1)
@@ -3917,6 +3956,15 @@ func (p *TReportRequest) field11Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("num_cores", thrift.I32, 11)
 	l += bthrift.Binary.I32Length(p.NumCores)
+
+	l += bthrift.Binary.FieldEndLength()
+	return l
+}
+
+func (p *TReportRequest) field12Length() int {
+	l := 0
+	l += bthrift.Binary.FieldBeginLength("pipeline_executor_size", thrift.I32, 12)
+	l += bthrift.Binary.I32Length(p.PipelineExecutorSize)
 
 	l += bthrift.Binary.FieldEndLength()
 	return l

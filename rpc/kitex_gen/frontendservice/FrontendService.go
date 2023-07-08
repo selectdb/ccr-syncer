@@ -525,11 +525,13 @@ func (p *TQueryStatsType) Value() (driver.Value, error) {
 type TBinlogType int64
 
 const (
-	TBinlogType_UPSERT         TBinlogType = 0
-	TBinlogType_ADD_PARTITION  TBinlogType = 1
-	TBinlogType_CREATE_TABLE   TBinlogType = 2
-	TBinlogType_DROP_PARTITION TBinlogType = 3
-	TBinlogType_DROP_TABLE     TBinlogType = 4
+	TBinlogType_UPSERT                           TBinlogType = 0
+	TBinlogType_ADD_PARTITION                    TBinlogType = 1
+	TBinlogType_CREATE_TABLE                     TBinlogType = 2
+	TBinlogType_DROP_PARTITION                   TBinlogType = 3
+	TBinlogType_DROP_TABLE                       TBinlogType = 4
+	TBinlogType_ALTER_JOB                        TBinlogType = 5
+	TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS TBinlogType = 6
 )
 
 func (p TBinlogType) String() string {
@@ -544,6 +546,10 @@ func (p TBinlogType) String() string {
 		return "DROP_PARTITION"
 	case TBinlogType_DROP_TABLE:
 		return "DROP_TABLE"
+	case TBinlogType_ALTER_JOB:
+		return "ALTER_JOB"
+	case TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS:
+		return "MODIFY_TABLE_ADD_OR_DROP_COLUMNS"
 	}
 	return "<UNSET>"
 }
@@ -560,6 +566,10 @@ func TBinlogTypeFromString(s string) (TBinlogType, error) {
 		return TBinlogType_DROP_PARTITION, nil
 	case "DROP_TABLE":
 		return TBinlogType_DROP_TABLE, nil
+	case "ALTER_JOB":
+		return TBinlogType_ALTER_JOB, nil
+	case "MODIFY_TABLE_ADD_OR_DROP_COLUMNS":
+		return TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS, nil
 	}
 	return TBinlogType(0), fmt.Errorf("not a valid TBinlogType string")
 }

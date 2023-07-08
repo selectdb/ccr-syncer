@@ -4064,6 +4064,7 @@ type TReportRequest struct {
 	StoragePolicy            []*agentservice.TStoragePolicy   `thrift:"storage_policy,9,optional" frugal:"9,optional,list<agentservice.TStoragePolicy>" json:"storage_policy,omitempty"`
 	Resource                 []*agentservice.TStorageResource `thrift:"resource,10,optional" frugal:"10,optional,list<agentservice.TStorageResource>" json:"resource,omitempty"`
 	NumCores                 int32                            `thrift:"num_cores,11" frugal:"11,default,i32" json:"num_cores"`
+	PipelineExecutorSize     int32                            `thrift:"pipeline_executor_size,12" frugal:"12,default,i32" json:"pipeline_executor_size"`
 }
 
 func NewTReportRequest() *TReportRequest {
@@ -4167,6 +4168,10 @@ func (p *TReportRequest) GetResource() (v []*agentservice.TStorageResource) {
 func (p *TReportRequest) GetNumCores() (v int32) {
 	return p.NumCores
 }
+
+func (p *TReportRequest) GetPipelineExecutorSize() (v int32) {
+	return p.PipelineExecutorSize
+}
 func (p *TReportRequest) SetBackend(val *types.TBackend) {
 	p.Backend = val
 }
@@ -4200,6 +4205,9 @@ func (p *TReportRequest) SetResource(val []*agentservice.TStorageResource) {
 func (p *TReportRequest) SetNumCores(val int32) {
 	p.NumCores = val
 }
+func (p *TReportRequest) SetPipelineExecutorSize(val int32) {
+	p.PipelineExecutorSize = val
+}
 
 var fieldIDToName_TReportRequest = map[int16]string{
 	1:  "backend",
@@ -4213,6 +4221,7 @@ var fieldIDToName_TReportRequest = map[int16]string{
 	9:  "storage_policy",
 	10: "resource",
 	11: "num_cores",
+	12: "pipeline_executor_size",
 }
 
 func (p *TReportRequest) IsSetBackend() bool {
@@ -4379,6 +4388,16 @@ func (p *TReportRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 11:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 12:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -4619,6 +4638,15 @@ func (p *TReportRequest) ReadField11(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TReportRequest) ReadField12(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		p.PipelineExecutorSize = v
+	}
+	return nil
+}
+
 func (p *TReportRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TReportRequest"); err != nil {
@@ -4667,6 +4695,10 @@ func (p *TReportRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 
@@ -4976,6 +5008,23 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
 
+func (p *TReportRequest) writeField12(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("pipeline_executor_size", thrift.I32, 12); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI32(p.PipelineExecutorSize); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
+
 func (p *TReportRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -5020,6 +5069,9 @@ func (p *TReportRequest) DeepEqual(ano *TReportRequest) bool {
 		return false
 	}
 	if !p.Field11DeepEqual(ano.NumCores) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.PipelineExecutorSize) {
 		return false
 	}
 	return true
@@ -5155,6 +5207,13 @@ func (p *TReportRequest) Field10DeepEqual(src []*agentservice.TStorageResource) 
 func (p *TReportRequest) Field11DeepEqual(src int32) bool {
 
 	if p.NumCores != src {
+		return false
+	}
+	return true
+}
+func (p *TReportRequest) Field12DeepEqual(src int32) bool {
+
+	if p.PipelineExecutorSize != src {
 		return false
 	}
 	return true
