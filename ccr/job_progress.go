@@ -61,13 +61,14 @@ type JobProgress struct {
 	JobName string     `json:"job_name"`
 	db      storage.DB `json:"-"`
 
-	JobState      JobState     `json:"state"`
-	SyncState     SyncState    `json:"sync_state"`
-	SubSyncState  SubSyncState `json:"sub_sync_state"`
-	CommitSeq     int64        `json:"commit_seq"`
-	TransactionId int64        `json:"transaction_id"`
-	InMemoryData  any          `json:"-"`
-	PersistData   string       `json:"data"` // this often for binlog or snapshot info
+	JobState          JobState        `json:"state"`
+	SyncState         SyncState       `json:"sync_state"`
+	SubSyncState      SubSyncState    `json:"sub_sync_state"`
+	CommitSeq         int64           `json:"commit_seq"`
+	TransactionId     int64           `json:"transaction_id"`
+	TableCommitSeqMap map[int64]int64 `json:"table_commit_seq_map"` // only for DBTablesIncrementalSync
+	InMemoryData      any             `json:"-"`
+	PersistData       string          `json:"data"` // this often for binlog or snapshot info
 }
 
 func NewJobProgress(jobName string, syncType SyncType, db storage.DB) *JobProgress {
@@ -87,7 +88,9 @@ func NewJobProgress(jobName string, syncType SyncType, db storage.DB) *JobProgre
 		CommitSeq:     0,
 		TransactionId: 0,
 
-		InMemoryData: nil,
+		TableCommitSeqMap: nil,
+		InMemoryData:      nil,
+		PersistData:       "",
 	}
 }
 

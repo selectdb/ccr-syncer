@@ -541,3 +541,25 @@ func (s *Spec) CheckRestoreFinished(snapshotName string) (bool, error) {
 
 	return false, fmt.Errorf("check restore state timeout, max try times: %d", MAX_CHECK_RETRY_TIMES)
 }
+
+// Exec sql
+func (s *Spec) Exec(sql string) error {
+	db, err := s.Connect()
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(sql)
+	return err
+}
+
+// Db Exec sql
+func (s *Spec) DbExec(sql string) error {
+	db, err := s.ConnectDB()
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(sql)
+	return err
+}

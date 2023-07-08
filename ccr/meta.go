@@ -956,14 +956,3 @@ func (m *Meta) GetTables() (map[int64]*TableMeta, error) {
 	m.Tables = tables
 	return tables, nil
 }
-
-// Exec sql
-func (m *Meta) Exec(sql string) error {
-	db, err := m.Connect()
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(sql)
-	return err
-}

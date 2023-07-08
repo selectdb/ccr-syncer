@@ -303,6 +303,7 @@ func (j *Job) fullSync() error {
 					commitSeq = seq
 				}
 			}
+			j.progress.TableCommitSeqMap = tableCommitSeqMap // persist in CommitNext
 		case TableSync:
 			commitSeq = tableCommitSeqMap[j.Src.TableId]
 		}
@@ -374,7 +375,10 @@ func (j *Job) fullSync() error {
 				return err
 			}
 
+			j.progress.TableCommitSeqMap = nil
 			j.progress.NextWithPersist(j.progress.CommitSeq, TableIncrementalSync, DB_1, "")
+		default:
+			return errors.Errorf("invalid sync type %d", j.SyncType)
 		}
 
 		return nil
@@ -412,26 +416,54 @@ func (j *Job) newLabel(commitSeq int64) string {
 	}
 }
 
-// Table ingestBinlog
-// TODO: add check success, check ingestBinlog commitInfo
-func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) ([]*ttypes.TTabletCommitInfo, error) {
-	log.Tracef("ingestBinlog, txnId: %d, upsert: %v", txnId, upsert)
-
+func (j *Job) getDbSyncTableRecords(upsert *record.Upsert) []*record.TableRecord {
+	commitSeq := upsert.CommitSeq
+	tableCommitSeqMap := j.progress.TableCommitSeqMap
 	tableRecords := make([]*record.TableRecord, 0, len(upsert.TableRecords))
+
+	for tableId, tableRecord := range upsert.TableRecords {
+		// DBIncrementalSync
+		if tableCommitSeqMap == nil {
+			tableRecords = append(tableRecords, &tableRecord)
+			continue
+		}
+
+		if tableCommitSeq, ok := tableCommitSeqMap[tableId]; ok {
+			if commitSeq > tableCommitSeq {
+				tableRecords = append(tableRecords, &tableRecord)
+			}
+		} else {
+			// TODO: check
+		}
+	}
+
+	return tableRecords
+}
+
+func (j *Job) getReleatedTableRecords(upsert *record.Upsert) ([]*record.TableRecord, error) {
+	var tableRecords []*record.TableRecord //, 0, len(upsert.TableRecords))
+
 	switch j.SyncType {
 	case DBSync:
-		for _, tableRecord := range upsert.TableRecords {
-			tableRecords = append(tableRecords, &tableRecord)
-		}
+		j.getDbSyncTableRecords(upsert)
 	case TableSync:
 		tableRecord, ok := upsert.TableRecords[j.Src.TableId]
 		if !ok {
 			return nil, errors.Errorf("table record not found, table: %s", j.Src.Table)
 		}
+		tableRecords = make([]*record.TableRecord, 0, 1)
 		tableRecords = append(tableRecords, &tableRecord)
 	default:
 		return nil, errors.Errorf("invalid sync type: %s", j.SyncType)
 	}
+
+	return tableRecords, nil
+}
+
+// Table ingestBinlog
+// TODO: add check success, check ingestBinlog commitInfo
+func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*ttypes.TTabletCommitInfo, error) {
+	log.Tracef("ingestBinlog, txnId: %d", txnId)
 
 	var wg sync.WaitGroup
 	var srcBackendMap map[int64]*base.Backend
@@ -561,14 +593,18 @@ func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) ([]*ttypes.TTable
 						resp, err := destRpc.IngestBinlog(req)
 						if err != nil {
 							updateLastError(err)
+							return
 						}
+
 						log.Debugf("ingest resp: %v", resp)
 						if !resp.IsSetStatus() {
 							err = errors.Errorf("ingest resp status not set")
 							updateLastError(err)
+							return
 						} else if resp.Status.StatusCode != tstatus.TStatusCode_OK {
 							err = errors.Errorf("ingest resp status code: %v, msg: %v", resp.Status.StatusCode, resp.Status.ErrorMsgs)
 							updateLastError(err)
+							return
 						} else {
 							updateCommitInfos(commitInfo)
 						}
@@ -592,7 +628,7 @@ func (j *Job) ingestBinlog(txnId int64, upsert *record.Upsert) ([]*ttypes.TTable
 }
 
 // TODO: handle error by abort txn
-func (j *Job) handleUpsertBinlog(binlog *festruct.TBinlog) error {
+func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 	log.Tracef("handle upsert binlog")
 
 	data := binlog.GetData()
@@ -604,7 +640,16 @@ func (j *Job) handleUpsertBinlog(binlog *festruct.TBinlog) error {
 	dest := &j.Dest
 	commitSeq := upsert.CommitSeq
 
-	// Step 1: begin txn
+	// Step 1: get related tableRecords
+	tableRecords, err := j.getReleatedTableRecords(upsert)
+	if err != nil {
+		log.Errorf("get releated table records failed, err: %v", err)
+	}
+	if tableRecords == nil {
+		return nil
+	}
+
+	// Step 2: begin txn
 	log.Tracef("begin txn, dest: %v, commitSeq: %d", dest, commitSeq)
 	destRpc, err := rpc.NewThriftRpc(dest)
 	if err != nil {
@@ -627,12 +672,11 @@ func (j *Job) handleUpsertBinlog(binlog *festruct.TBinlog) error {
 	txnId := beginTxnResp.GetTxnId()
 	log.Infof("TxnId: %d, DbId: %d", txnId, beginTxnResp.GetDbId())
 
-	// Step 2: update job progress
 	j.progress.BeginTransaction(txnId)
 
 	// Step 3: ingest binlog
 	var commitInfos []*ttypes.TTabletCommitInfo
-	commitInfos, err = j.ingestBinlog(txnId, upsert)
+	commitInfos, err = j.ingestBinlog(txnId, tableRecords)
 	if err != nil {
 		return err
 	}
@@ -644,11 +688,25 @@ func (j *Job) handleUpsertBinlog(binlog *festruct.TBinlog) error {
 		return err
 	}
 	log.Debugf("commit resp: %v", resp)
+
+	if j.SyncType == DBSync && j.progress.TableCommitSeqMap != nil {
+		for tableId := range upsert.TableRecords {
+			tableCommitSeq, ok := j.progress.TableCommitSeqMap[tableId]
+			if !ok {
+				continue
+			}
+
+			if tableCommitSeq < commitSeq {
+				j.progress.TableCommitSeqMap[tableId] = commitSeq
+			}
+		}
+	}
+
 	return nil
 }
 
-// handleAddPartitionBinlog
-func (j *Job) handleAddPartitionBinlog(binlog *festruct.TBinlog) error {
+// handleAddPartition
+func (j *Job) handleAddPartition(binlog *festruct.TBinlog) error {
 	log.Tracef("handle add partition binlog")
 
 	data := binlog.GetData()
@@ -671,11 +729,11 @@ func (j *Job) handleAddPartitionBinlog(binlog *festruct.TBinlog) error {
 	// addPartitionSql = "ALTER TABLE " + sql
 	addPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s", destDbName, destTableName, addPartition.Sql)
 	log.Tracef("addPartitionSql: %s", addPartitionSql)
-	return j.destMeta.Exec(addPartitionSql)
+	return j.Dest.Exec(addPartitionSql)
 }
 
-// handleDropPartitionBinlog
-func (j *Job) handleDropPartitionBinlog(binlog *festruct.TBinlog) error {
+// handleDropPartition
+func (j *Job) handleDropPartition(binlog *festruct.TBinlog) error {
 	log.Tracef("handle drop partition binlog")
 
 	data := binlog.GetData()
@@ -698,11 +756,11 @@ func (j *Job) handleDropPartitionBinlog(binlog *festruct.TBinlog) error {
 	// dropPartitionSql = "ALTER TABLE " + sql
 	dropPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s", destDbName, destTableName, dropPartition.Sql)
 	log.Tracef("dropPartitionSql: %s", dropPartitionSql)
-	return j.destMeta.Exec(dropPartitionSql)
+	return j.Dest.Exec(dropPartitionSql)
 }
 
-// handleCreateTableBinlog
-func (j *Job) handleCreateTableBinlog(binlog *festruct.TBinlog) error {
+// handleCreateTable
+func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 	log.Tracef("handle create table binlog")
 
 	data := binlog.GetData()
@@ -717,7 +775,7 @@ func (j *Job) handleCreateTableBinlog(binlog *festruct.TBinlog) error {
 
 	sql := createTable.Sql
 	log.Tracef("createTableSql: %s", sql)
-	return j.destMeta.Exec(sql)
+	return j.Dest.DbExec(sql)
 }
 
 func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
@@ -731,21 +789,24 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 	// TODO: use table driven
 	switch binlog.GetType() {
 	case festruct.TBinlogType_UPSERT:
-		if err := j.handleUpsertBinlog(binlog); err != nil {
+		if err := j.handleUpsert(binlog); err != nil {
 			return err
 		}
 	case festruct.TBinlogType_ADD_PARTITION:
-		if err := j.handleAddPartitionBinlog(binlog); err != nil {
+		if err := j.handleAddPartition(binlog); err != nil {
 			return err
 		}
 	case festruct.TBinlogType_DROP_PARTITION:
-		if err := j.handleDropPartitionBinlog(binlog); err != nil {
+		if err := j.handleDropPartition(binlog); err != nil {
 			return err
 		}
 	case festruct.TBinlogType_CREATE_TABLE:
-		if err := j.handleCreateTableBinlog(binlog); err != nil {
+		if err := j.handleCreateTable(binlog); err != nil {
 			return err
 		}
+	case festruct.TBinlogType_DROP_TABLE:
+	case festruct.TBinlogType_ALTER_JOB:
+	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS:
 	default:
 		return errors.Errorf("unknown binlog type: %v", binlog.GetType())
 	}
@@ -796,11 +857,26 @@ func (j *Job) incrementalSync() error {
 		}
 
 		for _, binlog := range binlogs {
+			// Step 3.1: handle binlog
 			if err := j.handleBinlog(binlog); err != nil {
 				return err
 			}
 
-			// Step 4: update progress to db
+			commitSeq := binlog.GetCommitSeq()
+			if j.SyncType == DBSync && j.progress.TableCommitSeqMap != nil {
+				reachSwitchToDBIncrementalSync := true
+				for _, tableCommitSeq := range j.progress.TableCommitSeqMap {
+					if tableCommitSeq > commitSeq {
+						reachSwitchToDBIncrementalSync = false
+						break
+					}
+				}
+
+				if reachSwitchToDBIncrementalSync {
+					j.progress.NextWithPersist(j.progress.CommitSeq, DBIncrementalSync, DB_1, "")
+				}
+			}
+			// Step 3.2: update progress to db
 			j.progress.Done()
 		}
 	}
@@ -823,10 +899,10 @@ func (j *Job) recoverJobProgress() error {
 func (j *Job) tableSync() error {
 	switch j.progress.SyncState {
 	case TableFullSync:
-		log.Tracef("begin table full sync")
+		log.Tracef("table full sync")
 		return j.fullSync()
 	case TableIncrementalSync:
-		log.Tracef("begin table incremental sync")
+		log.Tracef("table incremental sync")
 		return j.incrementalSync()
 	default:
 		return errors.Errorf("unknown sync state: %v", j.progress.SyncState)
@@ -835,14 +911,14 @@ func (j *Job) tableSync() error {
 
 // TODO(Drogon): impl
 func (j *Job) dbTablesIncrementalSync() error {
-	log.Tracef("begin db tables incremental sync")
+	log.Tracef("db tables incremental sync")
 
 	return nil
 }
 
 // TODO(Drogon): impl DBSpecificTableFullSync
 func (j *Job) dbSpecificTableFullSync() error {
-	log.Tracef("begin db specific table full sync")
+	log.Tracef("db specific table full sync")
 
 	return nil
 }
@@ -850,14 +926,14 @@ func (j *Job) dbSpecificTableFullSync() error {
 func (j *Job) dbSync() error {
 	switch j.progress.SyncState {
 	case DBFullSync:
-		log.Tracef("begin db full sync")
+		log.Tracef("db full sync")
 		return j.fullSync()
 	case DBTablesIncrementalSync:
 		return j.dbTablesIncrementalSync()
 	case DBSpecificTableFullSync:
 		return j.dbSpecificTableFullSync()
 	case DBIncrementalSync:
-		log.Tracef("begin db incremental sync")
+		log.Tracef("db incremental sync")
 		return j.incrementalSync()
 	default:
 		return errors.Errorf("unknown db sync state: %v", j.progress.SyncState)
