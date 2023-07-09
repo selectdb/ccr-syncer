@@ -913,7 +913,7 @@ func (j *Job) tableSync() error {
 func (j *Job) dbTablesIncrementalSync() error {
 	log.Tracef("db tables incremental sync")
 
-	return nil
+	return j.incrementalSync()
 }
 
 // TODO(Drogon): impl DBSpecificTableFullSync
@@ -991,7 +991,14 @@ func (j *Job) Run() error {
 		}
 	} else {
 		j.progress = NewJobProgress(j.Name, j.SyncType, j.db)
-		j.progress.NextWithPersist(0, TableFullSync, BeginCreateSnapshot, "")
+		switch j.SyncType {
+		case TableSync:
+			j.progress.NextWithPersist(0, TableFullSync, BeginCreateSnapshot, "")
+		case DBSync:
+			j.progress.NextWithPersist(0, DBFullSync, BeginCreateSnapshot, "")
+		default:
+			return errors.Errorf("unknown table sync type: %v", j.SyncType)
+		}
 	}
 
 	return j.run()
