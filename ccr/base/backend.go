@@ -5,10 +5,10 @@ import "fmt"
 type Backend struct {
 	Id            int64
 	Host          string
-	HeartbeatPort int16
-	BePort        int16
-	HttpPort      int16
-	BrpcPort      int16
+	HeartbeatPort uint16
+	BePort        uint16
+	HttpPort      uint16
+	BrpcPort      uint16
 }
 
 // Backend Stringer

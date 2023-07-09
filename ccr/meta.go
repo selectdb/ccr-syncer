@@ -20,7 +20,7 @@ const (
 // All Update* functions force to update meta from fe
 // TODO: reduce code, need to each level contain up level reference to get id
 
-func fmtHostPort(host string, port int16) string {
+func fmtHostPort(host string, port uint16) string {
 	return fmt.Sprintf("%s:%d", host, port)
 }
 
@@ -496,13 +496,13 @@ func (m *Meta) GetBackendMap() (map[int64]*base.Backend, error) {
 }
 
 func (m *Meta) GetBackendId(host string, portStr string) (int64, error) {
-	// convert port from string to int16
-	port, err := strconv.ParseInt(portStr, 10, 16)
+	// convert port from string to uint16
+	port, err := strconv.ParseUint(portStr, 10, 16)
 	if err != nil {
 		log.Fatal(err)
 		return 0, err
 	}
-	hostPort := fmtHostPort(host, int16(port))
+	hostPort := fmtHostPort(host, uint16(port))
 	if backendId, ok := m.BackendHostPort2IdMap[hostPort]; ok {
 		return backendId, nil
 	}
