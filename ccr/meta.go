@@ -178,6 +178,7 @@ func (m *Meta) UpdateTable(tableName string) error {
 		log.Fatal(err)
 		return err
 	}
+	defer db.Close()
 
 	var tableId int64
 	var parsedTableName string
@@ -282,6 +283,8 @@ func (m *Meta) UpdatePartitions(tableName string) error {
 		log.Error(err)
 		return err
 	}
+	defer db.Close()
+
 	partitions := make([]*PartitionMeta, 0)
 	// total columns 18
 	var partitionId int64
@@ -427,6 +430,7 @@ func (m *Meta) UpdateBackends() error {
 		log.Fatal(err)
 		return err
 	}
+	defer db.Close()
 
 	backends := make([]*base.Backend, 0)
 	query := "show proc '/backends'"
@@ -557,6 +561,8 @@ func (m *Meta) UpdateIndexes(tableName string, partitionId int64) error {
 		log.Error(err)
 		return err
 	}
+	defer db.Close()
+
 	indexes := make([]*IndexMeta, 0)
 	// totoal rows 4
 	var indexId int64
@@ -648,6 +654,8 @@ func (m *Meta) updateReplica(index *IndexMeta) error {
 		log.Error(err)
 		return err
 	}
+	defer db.Close()
+
 	replicas := make([]*ReplicaMeta, 0)
 	// total columns 21
 	var tabletId int64
@@ -867,6 +875,7 @@ func (m *Meta) GetTableNameById(tableId int64) (string, error) {
 		log.Fatal(err)
 		return "", err
 	}
+	defer db.Close()
 
 	var _dbName string
 	var tableName string
@@ -911,6 +920,7 @@ func (m *Meta) GetTables() (map[int64]*TableMeta, error) {
 		log.Fatal(err)
 		return nil, err
 	}
+	defer db.Close()
 
 	var tableId int64
 	var tableName string

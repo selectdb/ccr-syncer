@@ -548,6 +548,7 @@ func (s *Spec) Exec(sql string) error {
 	if err != nil {
 		return err
 	}
+	defer db.Close()
 
 	_, err = db.Exec(sql)
 	return err
@@ -559,6 +560,7 @@ func (s *Spec) DbExec(sql string) error {
 	if err != nil {
 		return err
 	}
+	defer db.Close()
 
 	_, err = db.Exec(sql)
 	return err
