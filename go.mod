@@ -13,6 +13,7 @@ require (
 	github.com/sirupsen/logrus v1.9.0
 	github.com/tidwall/btree v1.6.0
 	go.uber.org/zap v1.24.0
+	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 

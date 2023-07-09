@@ -5,6 +5,7 @@ package ccr
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"sync"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/selectdb/ccr_syncer/ccr/record"
 	"github.com/selectdb/ccr_syncer/rpc"
 	"github.com/selectdb/ccr_syncer/storage"
+	"github.com/selectdb/ccr_syncer/utils"
 	u "github.com/selectdb/ccr_syncer/utils"
 
 	bestruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/backendservice"
@@ -298,13 +300,11 @@ func (j *Job) fullSync() error {
 		log.Infof("jobInfoBytes: %s", string(jobInfoBytes))
 		snapshotResp.SetJobInfo(jobInfoBytes)
 
-		commitSeq := int64(0)
+		var commitSeq int64 = math.MaxInt64
 		switch j.SyncType {
 		case DBSync:
 			for _, seq := range tableCommitSeqMap {
-				if commitSeq < seq {
-					commitSeq = seq
-				}
+				commitSeq = utils.Min(commitSeq, seq)
 			}
 			j.progress.TableCommitSeqMap = tableCommitSeqMap // persist in CommitNext
 		case TableSync:
@@ -978,6 +978,7 @@ func (j *Job) incrementalSync() error {
 
 			commitSeq := binlog.GetCommitSeq()
 			if j.SyncType == DBSync && j.progress.TableCommitSeqMap != nil {
+				// TODO: [PERFORMANCE] use largest tableCommitSeq in memorydata to acc it
 				// when all table commit seq > commitSeq, it's true
 				reachSwitchToDBIncrementalSync := true
 				for _, tableCommitSeq := range j.progress.TableCommitSeqMap {
