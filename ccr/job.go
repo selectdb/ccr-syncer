@@ -855,7 +855,11 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 
 	sql := createTable.Sql
 	log.Tracef("createTableSql: %s", sql)
-	return j.Dest.DbExec(sql)
+	// HACK: for drop table
+	err = j.Dest.DbExec(sql)
+	j.srcMeta.GetTables()
+	j.destMeta.GetTables()
+	return err
 }
 
 // handleDropTable
@@ -872,21 +876,18 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	// FIXME: this is wrong, can't get src table name
-	destTableId, err := j.getDestTableIdBySrc(dropTable.TableId)
-	if err != nil {
-		return err
-	}
-	log.Tracef("destTableId: %d", destTableId)
-
-	destTableName, err := j.destMeta.GetTableNameById(destTableId)
-	if err != nil {
-		return err
+	dirtySrcTables := j.srcMeta.DirtyGetTables()
+	srcTable, ok := dirtySrcTables[dropTable.TableId]
+	if !ok {
+		return errors.Errorf("table not found, tableId: %d", dropTable.TableId)
 	}
 
-	sql := fmt.Sprintf("DROP TABLE %s FORCE", destTableName)
+	sql := fmt.Sprintf("DROP TABLE %s FORCE", srcTable.Name)
 	log.Tracef("dropTableSql: %s", sql)
-	return j.Dest.DbExec(sql)
+	err = j.Dest.DbExec(sql)
+	j.srcMeta.GetTables()
+	j.destMeta.GetTables()
+	return err
 }
 
 func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
@@ -1116,6 +1117,12 @@ func (j *Job) Run() error {
 		default:
 			return errors.Errorf("unknown table sync type: %v", j.SyncType)
 		}
+	}
+
+	// Hack: for drop table
+	if j.SyncType == DBSync {
+		j.srcMeta.GetTables()
+		j.destMeta.GetTables()
 	}
 
 	return j.run()

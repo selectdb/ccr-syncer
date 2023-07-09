@@ -966,3 +966,7 @@ func (m *Meta) GetTables() (map[int64]*TableMeta, error) {
 	m.Tables = tables
 	return tables, nil
 }
+
+func (m *Meta) DirtyGetTables() map[int64]*TableMeta {
+	return m.Tables
+}
