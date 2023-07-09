@@ -69,7 +69,9 @@ func test_begin(t *base.Spec) {
 
 	label := new_label(t, commitSeq)
 
-	resp, err := rpc.BeginTransaction(t, label)
+	tableIds := make([]int64, 0, 1)
+	tableIds = append(tableIds, t.TableId)
+	resp, err := rpc.BeginTransaction(t, label, tableIds)
 	if err != nil {
 		panic(err)
 	}

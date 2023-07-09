@@ -49,28 +49,30 @@ func (s SyncType) String() string {
 }
 
 type Job struct {
-	SyncType SyncType      `json:"sync_type"`
-	Name     string        `json:"name"`
-	Src      base.Spec     `json:"src"`
-	srcMeta  *Meta         `json:"-"`
-	Dest     base.Spec     `json:"dest"`
-	destMeta *Meta         `json:"-"`
-	progress *JobProgress  `json:"-"`
-	db       storage.DB    `json:"-"`
-	stop     chan struct{} `json:"-"`
+	SyncType          SyncType        `json:"sync_type"`
+	Name              string          `json:"name"`
+	Src               base.Spec       `json:"src"`
+	srcMeta           *Meta           `json:"-"`
+	Dest              base.Spec       `json:"dest"`
+	destMeta          *Meta           `json:"-"`
+	destSrcTableIdMap map[int64]int64 `json:"-"`
+	progress          *JobProgress    `json:"-"`
+	db                storage.DB      `json:"-"`
+	stop              chan struct{}   `json:"-"`
 }
 
 // new job
 func NewJobFromService(name string, src, dest base.Spec, db storage.DB) (*Job, error) {
 	job := &Job{
-		Name:     name,
-		Src:      src,
-		srcMeta:  NewMeta(&src),
-		Dest:     dest,
-		destMeta: NewMeta(&dest),
-		progress: nil,
-		db:       db,
-		stop:     make(chan struct{}),
+		Name:              name,
+		Src:               src,
+		srcMeta:           NewMeta(&src),
+		Dest:              dest,
+		destMeta:          NewMeta(&dest),
+		destSrcTableIdMap: make(map[int64]int64),
+		progress:          nil,
+		db:                db,
+		stop:              make(chan struct{}),
 	}
 
 	if err := job.valid(); err != nil {
@@ -94,6 +96,7 @@ func NewJobFromJson(jsonData string, db storage.DB) (*Job, error) {
 	}
 	job.srcMeta = NewMeta(&job.Src)
 	job.destMeta = NewMeta(&job.Dest)
+	job.destSrcTableIdMap = make(map[int64]int64)
 	job.progress = nil
 	job.db = db
 	job.stop = make(chan struct{})
@@ -416,7 +419,26 @@ func (j *Job) newLabel(commitSeq int64) string {
 	}
 }
 
-func (j *Job) getDbSyncTableRecords(upsert *record.Upsert) []*record.TableRecord {
+// TODO: [Performance] improve by cache
+func (j *Job) getDestTableIdBySrc(srcTableId int64) (int64, error) {
+	if destTableId, ok := j.destSrcTableIdMap[srcTableId]; ok {
+		return destTableId, nil
+	}
+
+	srcTableName, err := j.srcMeta.GetTableNameById(srcTableId)
+	if err != nil {
+		return 0, err
+	}
+
+	if destTableId, err := j.destMeta.GetTableId(srcTableName); err != nil {
+		return 0, err
+	} else {
+		j.destSrcTableIdMap[srcTableId] = destTableId
+		return destTableId, nil
+	}
+}
+
+func (j *Job) getDbSyncTableRecords(upsert *record.Upsert) ([]*record.TableRecord, error) {
 	commitSeq := upsert.CommitSeq
 	tableCommitSeqMap := j.progress.TableCommitSeqMap
 	tableRecords := make([]*record.TableRecord, 0, len(upsert.TableRecords))
@@ -424,20 +446,20 @@ func (j *Job) getDbSyncTableRecords(upsert *record.Upsert) []*record.TableRecord
 	for tableId, tableRecord := range upsert.TableRecords {
 		// DBIncrementalSync
 		if tableCommitSeqMap == nil {
-			tableRecords = append(tableRecords, &tableRecord)
+			tableRecords = append(tableRecords, tableRecord)
 			continue
 		}
 
 		if tableCommitSeq, ok := tableCommitSeqMap[tableId]; ok {
 			if commitSeq > tableCommitSeq {
-				tableRecords = append(tableRecords, &tableRecord)
+				tableRecords = append(tableRecords, tableRecord)
 			}
 		} else {
 			// TODO: check
 		}
 	}
 
-	return tableRecords
+	return tableRecords, nil
 }
 
 func (j *Job) getReleatedTableRecords(upsert *record.Upsert) ([]*record.TableRecord, error) {
@@ -445,14 +467,22 @@ func (j *Job) getReleatedTableRecords(upsert *record.Upsert) ([]*record.TableRec
 
 	switch j.SyncType {
 	case DBSync:
-		j.getDbSyncTableRecords(upsert)
+		records, err := j.getDbSyncTableRecords(upsert)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(records) == 0 {
+			return nil, nil
+		}
+		tableRecords = records
 	case TableSync:
 		tableRecord, ok := upsert.TableRecords[j.Src.TableId]
 		if !ok {
 			return nil, errors.Errorf("table record not found, table: %s", j.Src.Table)
 		}
 		tableRecords = make([]*record.TableRecord, 0, 1)
-		tableRecords = append(tableRecords, &tableRecord)
+		tableRecords = append(tableRecords, tableRecord)
 	default:
 		return nil, errors.Errorf("invalid sync type: %s", j.SyncType)
 	}
@@ -462,6 +492,7 @@ func (j *Job) getReleatedTableRecords(upsert *record.Upsert) ([]*record.TableRec
 
 // Table ingestBinlog
 // TODO: add check success, check ingestBinlog commitInfo
+// TODO: rewrite by use tableId
 func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*ttypes.TTabletCommitInfo, error) {
 	log.Tracef("ingestBinlog, txnId: %d", txnId)
 
@@ -499,33 +530,65 @@ func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*
 	}
 
 	for _, tableRecord := range tableRecords {
-		log.Infof("tableRecord: %v", tableRecord) // TODO: remove it
+		if getLastError() != nil {
+			break
+		}
+
+		log.Tracef("tableRecord: %v", tableRecord)
+		// TODO: check it before ingestBinlog
+		var srcTableName string
+		var destTableName string
+
+		var err error
+		switch j.SyncType {
+		case TableSync:
+			srcTableName = j.Src.Table
+			destTableName = j.Dest.Table
+		case DBSync:
+			srcTableName, err = j.srcMeta.GetTableNameById(tableRecord.Id)
+			if err != nil {
+				break
+			}
+			var destTableId int64
+			destTableId, err = j.getDestTableIdBySrc(tableRecord.Id)
+			if err != nil {
+				break
+			}
+			destTableName, err = j.destMeta.GetTableNameById(destTableId)
+		default:
+			err = errors.Errorf("invalid sync type: %s", j.SyncType)
+		}
+		if err != nil {
+			updateLastError(err)
+			break
+		}
+
 		for _, partitionRecord := range tableRecord.PartitionRecords {
-			log.Infof("partitionRecord: %v", partitionRecord) // TODO: remove it
+			log.Tracef("partitionRecord: %v", partitionRecord)
 			binlogVersion := partitionRecord.Version
 
 			srcPartitionId := partitionRecord.PartitionID
 			var srcPartitionName string
-			srcPartitionName, err = j.srcMeta.GetPartitionName(j.Src.Table, srcPartitionId)
+			srcPartitionName, err = j.srcMeta.GetPartitionName(srcTableName, srcPartitionId)
 			if err != nil {
 				updateLastError(err)
 				break
 			}
 			var destPartitionId int64
-			destPartitionId, err = j.destMeta.GetPartitionIdByName(j.Dest.Table, srcPartitionName)
+			destPartitionId, err = j.destMeta.GetPartitionIdByName(destTableName, srcPartitionName)
 			if err != nil {
 				updateLastError(err)
 				break
 			}
 
 			var srcTablets []*TabletMeta
-			srcTablets, err = j.srcMeta.GetTabletList(j.Src.Table, srcPartitionId)
+			srcTablets, err = j.srcMeta.GetTabletList(srcTableName, srcPartitionId)
 			if err != nil {
 				updateLastError(err)
 				break
 			}
 			var destTablets []*TabletMeta
-			destTablets, err = j.destMeta.GetTabletList(j.Dest.Table, destPartitionId)
+			destTablets, err = j.destMeta.GetTabletList(destTableName, destPartitionId)
 			if err != nil {
 				updateLastError(err)
 				break
@@ -636,17 +699,34 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 	if err != nil {
 		return err
 	}
+	log.Tracef("upsert: %v", upsert)
 
 	dest := &j.Dest
 	commitSeq := upsert.CommitSeq
 
 	// Step 1: get related tableRecords
+	log.Tracef("1")
 	tableRecords, err := j.getReleatedTableRecords(upsert)
 	if err != nil {
+		log.Tracef("2")
 		log.Errorf("get releated table records failed, err: %v", err)
 	}
-	if tableRecords == nil {
+	if len(tableRecords) == 0 {
+		log.Tracef("3")
 		return nil
+	}
+	log.Tracef("tableRecords: %v", tableRecords)
+	destTableIds := make([]int64, 0, len(tableRecords))
+	if j.SyncType == DBSync {
+		for _, tableRecord := range tableRecords {
+			if destTableId, err := j.getDestTableIdBySrc(tableRecord.Id); err != nil {
+				return err
+			} else {
+				destTableIds = append(destTableIds, destTableId)
+			}
+		}
+	} else {
+		destTableIds = append(destTableIds, j.Dest.TableId)
 	}
 
 	// Step 2: begin txn
@@ -659,7 +739,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 
 	label := j.newLabel(commitSeq)
 
-	beginTxnResp, err := destRpc.BeginTransaction(dest, label)
+	beginTxnResp, err := destRpc.BeginTransaction(dest, label, destTableIds)
 	if err != nil {
 		log.Errorf("begin txn failed, err: %v", err)
 		return err

@@ -73,15 +73,14 @@ func (rpc *ThriftRpc) FetchCommitSeqs() ([]uint64, error) {
 //	    10: optional Types.TUniqueId request_id
 //	    11: optional string token
 //	}
-func (rpc *ThriftRpc) BeginTransaction(spec *base.Spec, label string) (*festruct.TBeginTxnResult_, error) {
+func (rpc *ThriftRpc) BeginTransaction(spec *base.Spec, label string, tableIds []int64) (*festruct.TBeginTxnResult_, error) {
 	log.Info("BeginTransaction")
 	client := rpc.client
 	req := &festruct.TBeginTxnRequest{
 		Label: &label,
 	}
 	setAuthInfo(req, spec)
-	tableIds := make([]int64, 0, 1)
-	req.TableIds = append(tableIds, spec.TableId)
+	req.TableIds = tableIds
 
 	log.Infof("BeginTransaction req: %+v", req)
 	return client.BeginTxn(context.Background(), req)

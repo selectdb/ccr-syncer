@@ -15,20 +15,21 @@ func (p PartitionRecord) String() string {
 }
 
 type TableRecord struct {
+	Id               int64             `json:"_"`
 	PartitionRecords []PartitionRecord `json:"partitionRecords"`
 }
 
 func (t TableRecord) String() string {
-	return fmt.Sprintf("TableRecord{PartitionRecords: %v}", t.PartitionRecords)
+	return fmt.Sprintf("TableRecord{Id: %d, PartitionRecords: %v}", t.Id, t.PartitionRecords)
 }
 
 type Upsert struct {
-	CommitSeq    int64                 `json:"commitSeq"`
-	TxnID        int64                 `json:"txnId"`
-	TimeStamp    int64                 `json:"timeStamp"`
-	Label        string                `json:"label"`
-	DbID         int64                 `json:"dbId"`
-	TableRecords map[int64]TableRecord `json:"tableRecords"`
+	CommitSeq    int64                  `json:"commitSeq"`
+	TxnID        int64                  `json:"txnId"`
+	TimeStamp    int64                  `json:"timeStamp"`
+	Label        string                 `json:"label"`
+	DbID         int64                  `json:"dbId"`
+	TableRecords map[int64]*TableRecord `json:"tableRecords"`
 }
 
 // Stringer
@@ -59,5 +60,10 @@ func NewUpsertFromJson(data string) (*Upsert, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	for tableId, tableRecord := range up.TableRecords {
+		tableRecord.Id = tableId
+	}
+
 	return &up, nil
 }
