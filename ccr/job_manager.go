@@ -120,3 +120,14 @@ func (jm *JobManager) runJob(job *Job) {
 		jm.wg.Done()
 	}()
 }
+
+func (jm *JobManager) GetLag(jobName string) (int64, error) {
+	jm.lock.RLock()
+	defer jm.lock.RUnlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return job.GetLag()
+	} else {
+		return 0, fmt.Errorf("job not exist: %s", jobName)
+	}
+}

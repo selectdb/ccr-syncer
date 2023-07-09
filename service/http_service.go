@@ -81,8 +81,37 @@ func (s *HttpService) createCcrHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+type GetLagRequest struct {
+	// must need all fields required
+	Name string `json:"name,required"`
+}
+
+// GetLag service
+func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
+	// Parse the JSON request body
+	var request GetLagRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if request.Name == "" {
+		http.Error(w, "name is empty", http.StatusBadRequest)
+		return
+	}
+
+	lag, err := s.jobManager.GetLag(request.Name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// write lag
+	w.Write([]byte(fmt.Sprintf("lag: %d", lag)))
+}
+
 func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/create_ccr", s.createCcrHandler)
+	s.mux.HandleFunc("/get_lag", s.getLagHandler)
 }
 
 func (s *HttpService) Start() error {

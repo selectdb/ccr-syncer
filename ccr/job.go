@@ -61,6 +61,7 @@ type Job struct {
 	progress          *JobProgress    `json:"-"`
 	db                storage.DB      `json:"-"`
 	stop              chan struct{}   `json:"-"`
+	lock              sync.Mutex      `json:"-"`
 }
 
 // new job
@@ -1059,6 +1060,9 @@ func (j *Job) dbSync() error {
 }
 
 func (j *Job) sync() error {
+	j.lock.Lock()
+	defer j.lock.Unlock()
+
 	switch j.SyncType {
 	case TableSync:
 		return j.tableSync()
@@ -1204,4 +1208,24 @@ func (j *Job) FirstRun() error {
 	}
 
 	return nil
+}
+
+// HACK: temp impl
+func (j *Job) GetLag() (int64, error) {
+	j.lock.Lock()
+	defer j.lock.Unlock()
+
+	srcSpec := &j.Src
+	rpc, err := rpc.NewThriftRpc(srcSpec)
+	if err != nil {
+		return 0, err
+	}
+
+	commitSeq := j.progress.CommitSeq
+	resp, err := rpc.GetBinlogLag(srcSpec, commitSeq)
+	if err != nil {
+		return 0, err
+	}
+	log.Tracef("resp: %v, lag: %d", resp, resp.GetLag())
+	return resp.GetLag(), nil
 }
