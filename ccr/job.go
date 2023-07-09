@@ -705,14 +705,11 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 	commitSeq := upsert.CommitSeq
 
 	// Step 1: get related tableRecords
-	log.Tracef("1")
 	tableRecords, err := j.getReleatedTableRecords(upsert)
 	if err != nil {
-		log.Tracef("2")
 		log.Errorf("get releated table records failed, err: %v", err)
 	}
 	if len(tableRecords) == 0 {
-		log.Tracef("3")
 		return nil
 	}
 	log.Tracef("tableRecords: %v", tableRecords)
@@ -769,7 +766,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 	}
 	log.Debugf("commit resp: %v", resp)
 
-	if j.SyncType == DBSync && j.progress.TableCommitSeqMap != nil {
+	if j.SyncType == DBSync && len(j.progress.TableCommitSeqMap) > 0 {
 		for tableId := range upsert.TableRecords {
 			tableCommitSeq, ok := j.progress.TableCommitSeqMap[tableId]
 			if !ok {
@@ -779,7 +776,10 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			if tableCommitSeq < commitSeq {
 				j.progress.TableCommitSeqMap[tableId] = commitSeq
 			}
+			// TODO: [PERFORMANCE] remove old commit seq
 		}
+
+		j.progress.Persist()
 	}
 
 	return nil
@@ -978,6 +978,7 @@ func (j *Job) incrementalSync() error {
 
 			commitSeq := binlog.GetCommitSeq()
 			if j.SyncType == DBSync && j.progress.TableCommitSeqMap != nil {
+				// when all table commit seq > commitSeq, it's true
 				reachSwitchToDBIncrementalSync := true
 				for _, tableCommitSeq := range j.progress.TableCommitSeqMap {
 					if tableCommitSeq > commitSeq {
@@ -987,6 +988,7 @@ func (j *Job) incrementalSync() error {
 				}
 
 				if reachSwitchToDBIncrementalSync {
+					j.progress.TableCommitSeqMap = nil
 					j.progress.NextWithPersist(j.progress.CommitSeq, DBIncrementalSync, DB_1, "")
 				}
 			}
