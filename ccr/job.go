@@ -843,18 +843,49 @@ func (j *Job) handleDropPartition(binlog *festruct.TBinlog) error {
 func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 	log.Tracef("handle create table binlog")
 
+	if j.SyncType != DBSync {
+		return errors.Errorf("invalid sync type: %v", j.SyncType)
+	}
+
 	data := binlog.GetData()
 	createTable, err := record.NewCreateTableFromJson(data)
 	if err != nil {
 		return err
 	}
 
+	sql := createTable.Sql
+	log.Tracef("createTableSql: %s", sql)
+	return j.Dest.DbExec(sql)
+}
+
+// handleDropTable
+func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
+	log.Tracef("handle drop table binlog")
+
 	if j.SyncType != DBSync {
 		return errors.Errorf("invalid sync type: %v", j.SyncType)
 	}
 
-	sql := createTable.Sql
-	log.Tracef("createTableSql: %s", sql)
+	data := binlog.GetData()
+	dropTable, err := record.NewDropTableFromJson(data)
+	if err != nil {
+		return err
+	}
+
+	// FIXME: this is wrong, can't get src table name
+	destTableId, err := j.getDestTableIdBySrc(dropTable.TableId)
+	if err != nil {
+		return err
+	}
+	log.Tracef("destTableId: %d", destTableId)
+
+	destTableName, err := j.destMeta.GetTableNameById(destTableId)
+	if err != nil {
+		return err
+	}
+
+	sql := fmt.Sprintf("DROP TABLE %s FORCE", destTableName)
+	log.Tracef("dropTableSql: %s", sql)
 	return j.Dest.DbExec(sql)
 }
 
@@ -885,6 +916,9 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 			return err
 		}
 	case festruct.TBinlogType_DROP_TABLE:
+		if err := j.handleDropTable(binlog); err != nil {
+			return err
+		}
 	case festruct.TBinlogType_ALTER_JOB:
 	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS:
 	default:
