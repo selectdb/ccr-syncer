@@ -883,6 +883,19 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 	return err
 }
 
+func (j *Job) handleDummy(binlog *festruct.TBinlog) error {
+	dummyCommitSeq := binlog.GetCommitSeq()
+
+	log.Tracef("handle dummy binlog, need full sync. SyncType: %v, seq: %v", j.SyncType, dummyCommitSeq)
+
+	if j.SyncType == DBSync {
+		j.progress.NextWithPersist(dummyCommitSeq, DBFullSync, BeginCreateSnapshot, "")
+	} else {
+		j.progress.NextWithPersist(dummyCommitSeq, TableFullSync, BeginCreateSnapshot, "")
+	}
+	return nil
+}
+
 // handleAlterJob
 func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 	log.Tracef("handle alter job binlog")
@@ -983,6 +996,10 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		}
 	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS:
 		if err := j.handleLightningSchemaChange(binlog); err != nil {
+			return err
+		}
+	case festruct.TBinlogType_DUMMY:
+		if err := j.handleDummy(binlog); err != nil {
 			return err
 		}
 	default:
