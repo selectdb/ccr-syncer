@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strings"
 	"sync"
 	"time"
 
@@ -891,6 +892,24 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 	return err
 }
 
+// handleLightningSchemaChange
+func (j *Job) handleLightningSchemaChange(binlog *festruct.TBinlog) error {
+	log.Tracef("handle lightning schema change binlog")
+
+	data := binlog.GetData()
+	lightningSchemaChange, err := record.NewModifyTableAddOrDropColumnsFromJson(data)
+	if err != nil {
+		return err
+	}
+
+	rawSql := lightningSchemaChange.RawSql
+	//   "rawSql": "ALTER TABLE `default_cluster:ccr`.`test_ddl` ADD COLUMN `nid1` int(11) NULL COMMENT \"\""
+	// replace `default_cluster:${Src.Database}`.`test_ddl` to `test_ddl`
+	sql := strings.Replace(rawSql, fmt.Sprintf("`default_cluster:%s`.", j.Src.Database), "", 1)
+	log.Tracef("lightningSchemaChangeSql, rawSql: %s, sql: %s", rawSql, sql)
+	return j.Dest.DbExec(sql)
+}
+
 func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 	if binlog == nil || !binlog.IsSetCommitSeq() {
 		return errors.Errorf("invalid binlog: %v", binlog)
@@ -923,6 +942,9 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		}
 	case festruct.TBinlogType_ALTER_JOB:
 	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS:
+		if err := j.handleLightningSchemaChange(binlog); err != nil {
+			return err
+		}
 	default:
 		return errors.Errorf("unknown binlog type: %v", binlog.GetType())
 	}
