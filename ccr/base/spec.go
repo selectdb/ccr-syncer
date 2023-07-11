@@ -3,6 +3,7 @@ package base
 import (
 	"database/sql"
 	"fmt"
+	"github.com/selectdb/ccr_syncer/utils"
 	"strconv"
 	"strings"
 	"time"
@@ -420,21 +421,6 @@ func (s *Spec) CreateSnapshotAndWaitForDone(tables []string) (string, error) {
 	return snapshotName, nil
 }
 
-func makeSingleColScanArgs[T interface{}](prefix int, col *T, suffix int) []interface{} {
-	prefixCols := make([]sql.RawBytes, prefix)
-	suffixCols := make([]sql.RawBytes, suffix)
-	scanArgs := make([]interface{}, 0, prefix+suffix+1)
-	for i := range prefixCols {
-		scanArgs = append(scanArgs, &prefixCols[i])
-	}
-	scanArgs = append(scanArgs, col)
-	for i := range suffixCols {
-		scanArgs = append(scanArgs, &suffixCols[i])
-	}
-
-	return scanArgs
-}
-
 // TODO: Add TaskErrMsg
 func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, error) {
 	log.Infof("check backup state of snapshot %s", snapshotName)
@@ -446,7 +432,7 @@ func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, error) {
 	defer db.Close()
 
 	var backupStateStr string
-	scanArgs := makeSingleColScanArgs(3, &backupStateStr, 10)
+	scanArgs := utils.MakeSingleColScanArgs(3, &backupStateStr, 10)
 
 	sql := fmt.Sprintf("SHOW BACKUP FROM %s WHERE SnapshotName = \"%s\"", s.Database, snapshotName)
 	log.Tracef("check backup state sql: %s", sql)
@@ -499,12 +485,12 @@ func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, error) {
 	defer db.Close()
 
 	var restoreStateStr string
-	scanArgs := makeSingleColScanArgs(4, &restoreStateStr, 16)
+	scanArgs := utils.MakeSingleColScanArgs(4, &restoreStateStr, 16)
 
-	sql := fmt.Sprintf("SHOW RESTORE FROM %s WHERE Label = \"%s\"", s.Database, snapshotName)
+	query := fmt.Sprintf("SHOW RESTORE FROM %s WHERE Label = \"%s\"", s.Database, snapshotName)
 
-	log.Tracef("check restore state sql: %s", sql)
-	rows, err := db.Query(sql)
+	log.Tracef("check restore state sql: %s", query)
+	rows, err := db.Query(query)
 	if err != nil {
 		return RestoreStateUnknown, err
 	}
@@ -524,7 +510,7 @@ func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, error) {
 }
 
 func (s *Spec) CheckRestoreFinished(snapshotName string) (bool, error) {
-	log.Trace("check restore isfinished", zap.String("database", s.Database))
+	log.Trace("check restore is finished", zap.String("database", s.Database))
 
 	for i := 0; i < MAX_CHECK_RETRY_TIMES; i++ {
 		if backupState, err := s.checkRestoreFinished(snapshotName); err != nil {
