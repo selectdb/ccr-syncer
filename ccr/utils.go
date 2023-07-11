@@ -1,6 +1,8 @@
 package ccr
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 func ExtractTableCommitSeqMap(data []byte) (map[int64]int64, error) {
 	type JobInfo struct {

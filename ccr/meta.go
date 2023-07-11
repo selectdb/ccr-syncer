@@ -2,7 +2,11 @@ package ccr
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
+	"github.com/selectdb/ccr_syncer/utils"
+	"net/http"
 	"sort"
 	"strconv"
 
@@ -965,6 +969,88 @@ func (m *Meta) GetTables() (map[int64]*TableMeta, error) {
 	m.TableName2IdMap = tableName2IdMap
 	m.Tables = tables
 	return tables, nil
+}
+
+func (m *Meta) CheckBinlogFeature() error {
+	// Step 1: get fe binlog feature
+	if binlogIsEnabled, err := m.isFEBinlogFeature(); err != nil {
+		return err
+	} else if !binlogIsEnabled {
+		return errors.Errorf("Fe %v:%v enable_binlog_feature=false, please set it true in fe.conf",
+			m.Spec.Host, m.Spec.Port)
+	}
+
+	// Step 2: get be binlog feature
+	if err := m.checkBEsBinlogFeature(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Meta) isFEBinlogFeature() (bool, error) {
+	db, err := m.Connect()
+	if err != nil {
+		log.Fatal(err)
+		return false, err
+	}
+	defer db.Close()
+
+	isEnabled := false
+	scanArgs := utils.MakeSingleColScanArgs(1, &isEnabled, 4)
+	query := fmt.Sprintf("ADMIN SHOW FRONTEND CONFIG LIKE \"%%enable_feature_binlog%%\"")
+	rows, err := db.Query(query)
+	if err != nil {
+		log.Error(err)
+		return false, err
+	}
+
+	defer rows.Close()
+	if rows.Next() {
+		if err := rows.Scan(scanArgs...); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	return isEnabled, nil
+}
+
+func (m *Meta) checkBEsBinlogFeature() error {
+	backends, err := m.GetBackends()
+	if err != nil {
+		return err
+	}
+
+	var disabledBinlogBEs []string
+	for _, backend := range backends {
+		url := fmt.Sprintf("http://%v:%v/api/show_config?conf_item=enable_feature_binlog",
+			backend.Host, backend.HttpPort)
+		resp, err := http.Get(url)
+		if err != nil {
+			return err
+		}
+
+		var configs [][]string
+		if err := json.NewDecoder(resp.Body).Decode(&configs); err != nil {
+			return err
+		}
+
+		if len(configs) != 1 {
+			return errors.Errorf("Be %v:%v len(configs) is invalid, configs: %v",
+				backend.Host, backend.HttpPort, configs)
+		}
+
+		if configs[0][2] != "1" {
+			disabledBinlogBEs = append(disabledBinlogBEs, fmt.Sprintf("%v:%v", backend.Host, backend.HttpPort))
+		}
+	}
+
+	if len(disabledBinlogBEs) != 0 {
+		return errors.Errorf(fmt.Sprintf("Be: %v enable_feature_binlog=false, please set it true in be.conf",
+			disabledBinlogBEs))
+	}
+
+	return nil
 }
 
 func (m *Meta) DirtyGetTables() map[int64]*TableMeta {

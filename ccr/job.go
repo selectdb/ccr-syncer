@@ -1163,7 +1163,15 @@ func (j *Job) Stop() error {
 func (j *Job) FirstRun() error {
 	log.Info("first run check job", zap.String("src", j.Src.String()), zap.String("dest", j.Dest.String()))
 
-	// Step 1: check src database
+	// Step 1: check fe and be binlog feature is enabled
+	if err := j.srcMeta.CheckBinlogFeature(); err != nil {
+		return err
+	}
+	if err := j.destMeta.CheckBinlogFeature(); err != nil {
+		return err
+	}
+
+	// Step 2: check src database
 	if src_db_exists, err := j.Src.CheckDatabaseExists(); err != nil {
 		return err
 	} else if !src_db_exists {
@@ -1182,7 +1190,7 @@ func (j *Job) FirstRun() error {
 		j.Src.DbId = srcDbId
 	}
 
-	// Step 2: check src table exists, if not exists, return err
+	// Step 3: check src table exists, if not exists, return err
 	if j.SyncType == TableSync {
 		if src_table_exists, err := j.Src.CheckTableExists(); err != nil {
 			return err
@@ -1203,7 +1211,7 @@ func (j *Job) FirstRun() error {
 		}
 	}
 
-	// Step 3: check dest database && table exists
+	// Step 4: check dest database && table exists
 	// if dest database && table exists, return err
 	dest_db_exists, err := j.Dest.CheckDatabaseExists()
 	if err != nil {
