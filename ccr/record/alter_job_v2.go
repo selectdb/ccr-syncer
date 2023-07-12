@@ -23,10 +23,11 @@ func NewAlterJobV2FromJson(data string) (*AlterJobV2, error) {
 		return nil, err
 	}
 
-	if alterJob.RawSql == "" {
-		// TODO: fallback to create sql from other fields
-		return nil, fmt.Errorf("alter job raw sql is empty")
-	}
+	// rollup not contain RawSql
+	// if alterJob.RawSql == "" {
+	// 	// TODO: fallback to create sql from other fields
+	// 	return nil, fmt.Errorf("alter job raw sql is empty")
+	// }
 
 	if alterJob.TableId == 0 {
 		return nil, fmt.Errorf("table id not found")
@@ -35,8 +36,12 @@ func NewAlterJobV2FromJson(data string) (*AlterJobV2, error) {
 	return &alterJob, nil
 }
 
+func (a *AlterJobV2) IsFinished() bool {
+	return a.JobState == "FINISHED"
+}
+
 // String
-func (c *AlterJobV2) String() string {
+func (a *AlterJobV2) String() string {
 	return fmt.Sprintf("AlterJobV2: DbId: %d, TableId: %d, TableName: %s, State: %s, JobId: %d, JobState: %s, RawSql: %s",
-		c.DbId, c.TableId, c.TableName, c.State, c.JobId, c.JobState, c.RawSql)
+		a.DbId, a.TableId, a.TableName, a.State, a.JobId, a.JobState, a.RawSql)
 }
