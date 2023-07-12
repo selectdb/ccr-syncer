@@ -892,6 +892,52 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 	return err
 }
 
+// handleAlterJob
+func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
+	log.Tracef("handle alter job binlog")
+
+	data := binlog.GetData()
+	alterJob, err := record.NewAlterJobV2FromJson(data)
+	if err != nil {
+		return err
+	}
+	if alterJob.TableName == "" {
+		return errors.Errorf("invalid alter job, tableName: %s", alterJob.TableName)
+	}
+	if !alterJob.IsFinished() {
+		return nil
+	}
+
+	// HACK: busy loop for success
+	// TODO: Add to state machine
+	for {
+		// drop table dropTableSql
+		// TODO: [IMPROVEMENT] use rename table instead of drop table
+		var dropTableSql string
+		if j.SyncType == TableSync {
+			dropTableSql = fmt.Sprintf("DROP TABLE %s FORCE", j.Dest.Table)
+		} else {
+			dropTableSql = fmt.Sprintf("DROP TABLE %s FORCE", alterJob.TableName)
+		}
+		log.Tracef("dropTableSql: %s", dropTableSql)
+
+		if err := j.destMeta.DbExec(dropTableSql); err == nil {
+			break
+		}
+	}
+
+	switch j.SyncType {
+	case TableSync:
+		j.progress.NextWithPersist(j.progress.CommitSeq, TableFullSync, BeginCreateSnapshot, "")
+	case DBSync:
+		j.progress.NextWithPersist(j.progress.CommitSeq, DBFullSync, BeginCreateSnapshot, "")
+	default:
+		return errors.Errorf("unknown table sync type: %v", j.SyncType)
+	}
+
+	return nil
+}
+
 // handleLightningSchemaChange
 func (j *Job) handleLightningSchemaChange(binlog *festruct.TBinlog) error {
 	log.Tracef("handle lightning schema change binlog")
@@ -941,6 +987,9 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 			return err
 		}
 	case festruct.TBinlogType_ALTER_JOB:
+		if err := j.handleAlterJob(binlog); err != nil {
+			return err
+		}
 	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS:
 		if err := j.handleLightningSchemaChange(binlog); err != nil {
 			return err
