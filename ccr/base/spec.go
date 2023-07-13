@@ -3,10 +3,12 @@ package base
 import (
 	"database/sql"
 	"fmt"
-	"github.com/selectdb/ccr_syncer/utils"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/selectdb/ccr_syncer/utils"
 
 	_ "github.com/go-sql-driver/mysql"
 	log "github.com/sirupsen/logrus"
@@ -110,52 +112,60 @@ type Spec struct {
 // valid table spec
 func (s *Spec) Valid() error {
 	if s.Host == "" {
-		return fmt.Errorf("host is empty")
+		return errors.Errorf("host is empty")
 	}
 
 	// convert port to int16 and check port in range [0, 65535]
 	port, err := strconv.ParseUint(s.Port, 10, 16)
 	if err != nil {
-		return fmt.Errorf("port is invalid: %s", s.Port)
+		return errors.Errorf("port is invalid: %s", s.Port)
 	}
 	if port > 65535 {
-		return fmt.Errorf("port is invalid: %s", s.Port)
+		return errors.Errorf("port is invalid: %s", s.Port)
 	}
 
 	// convert thrift port to int16 and check port in range [0, 65535]
 	thriftPort, err := strconv.ParseUint(s.ThriftPort, 10, 16)
 	if err != nil {
-		return fmt.Errorf("thrift_port is invalid: %s", s.ThriftPort)
+		return errors.Errorf("thrift_port is invalid: %s", s.ThriftPort)
 	}
 	if thriftPort > 65535 {
-		return fmt.Errorf("thrift_port is invalid: %s", s.ThriftPort)
+		return errors.Errorf("thrift_port is invalid: %s", s.ThriftPort)
 	}
 
 	if s.User == "" {
-		return fmt.Errorf("user is empty")
+		return errors.Errorf("user is empty")
 	}
 
 	if s.Database == "" {
-		return fmt.Errorf("database is empty")
+		return errors.Errorf("database is empty")
 	}
 
 	return nil
 }
 
 func (s *Spec) String() string {
-	return fmt.Sprintf("host: %s, port: %s, thrift_port: %s, user: %s, password: %s, cluster: %s, database: %s, table: %s",
-		s.Host, s.Port, s.ThriftPort, s.User, s.Password, s.Cluster, s.Database, s.Table)
+	return fmt.Sprintf("host: %s, port: %s, thrift_port: %s, user: %s, password: %s, cluster: %s, database: %s, database id: %d, table: %s, table id: %d",
+		s.Host, s.Port, s.ThriftPort, s.User, s.Password, s.Cluster, s.Database, s.DbId, s.Table, s.TableId)
+}
+
+func (s *Spec) connect(dsn string) (*sql.DB, error) {
+	if db, err := sql.Open("mysql", dsn); err != nil {
+		return nil, errors.Wrapf(err, "connect to mysql failed, dsn: %s", dsn)
+	} else {
+		return db, nil
+	}
 }
 
 // create mysql connection from spec
 func (s *Spec) Connect() (*sql.DB, error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/", s.User, s.Password, s.Host, s.Port)
-	return sql.Open("mysql", dsn)
+	return s.connect(dsn)
 }
 
 func (s *Spec) ConnectDB() (*sql.DB, error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", s.User, s.Password, s.Host, s.Port, s.Database)
-	return sql.Open("mysql", dsn)
+	return s.connect(dsn)
 }
 
 // mysql> show create database ccr;
@@ -181,7 +191,7 @@ func (s *Spec) IsDatabaseEnableBinlog() (bool, error) {
 	var createDBString string
 	err = db.QueryRow("SHOW CREATE DATABASE "+s.Database).Scan(&_dbNmae, &createDBString)
 	if err != nil {
-		return false, err
+		return false, errors.Wrapf(err, "show create database %s failed", s.Database)
 	}
 	log.Infof("database %s create string: %s", s.Database, createDBString)
 
@@ -201,9 +211,10 @@ func (s *Spec) IsTableEnableBinlog() (bool, error) {
 
 	var tableName string
 	var createTableString string
-	err = db.QueryRow("SHOW CREATE TABLE "+s.Database+"."+s.Table).Scan(&tableName, &createTableString)
+	sql := fmt.Sprintf("SHOW CREATE TABLE %s.%s", s.Database, s.Table)
+	err = db.QueryRow(sql).Scan(&tableName, &createTableString)
 	if err != nil {
-		return false, err
+		return false, errors.Wrapf(err, "show create table %s.%s failed", s.Database, s.Table)
 	}
 	log.Infof("table %s.%s create string: %s", s.Database, s.Table, createTableString)
 
@@ -223,7 +234,7 @@ func (s *Spec) GetAllTables() ([]string, error) {
 
 	rows, err := db.Query("SHOW TABLES")
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "show tables failed")
 	}
 	defer rows.Close()
 
@@ -232,7 +243,7 @@ func (s *Spec) GetAllTables() ([]string, error) {
 		var table string
 		err = rows.Scan(&table)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "scan table name failed")
 		}
 		tables = append(tables, table)
 	}
@@ -247,9 +258,12 @@ func (s *Spec) dropTable(table string) error {
 		return err
 	}
 	defer db.Close()
-
-	_, err = db.Exec("DROP TABLE " + s.Database + "." + table)
-	return err
+	sql := fmt.Sprintf("DROP TABLE %s.%s", s.Database, table)
+	_, err = db.Exec(sql)
+	if err != nil {
+		return errors.Wrapf(err, "drop table %s.%s failed, sql: %s", s.Database, table, sql)
+	}
+	return nil
 }
 
 func (s *Spec) DropTable() error {
@@ -269,7 +283,10 @@ func (s *Spec) DropTables(tables []string) ([]string, error) {
 		successTables = append(successTables, table)
 	}
 
-	return successTables, nil
+	if err != nil {
+		err = errors.Errorf("drop tables %s failed", tables)
+	}
+	return successTables, err
 }
 
 func (s *Spec) ClearDB() error {
@@ -281,13 +298,16 @@ func (s *Spec) ClearDB() error {
 	}
 	defer db.Close()
 
-	_, err = db.Exec("DROP DATABASE " + s.Database)
+	sql := fmt.Sprintf("DROP DATABASE %s", s.Database)
+	_, err = db.Exec(sql)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "drop database %s failed", s.Database)
 	}
 
-	_, err = db.Exec("CREATE DATABASE " + s.Database)
-	return err
+	if _, err = db.Exec("CREATE DATABASE " + s.Database); err != nil {
+		return errors.Wrapf(err, "create database %s failed", s.Database)
+	}
+	return nil
 }
 
 func (s *Spec) CreateDatabase() error {
@@ -299,8 +319,10 @@ func (s *Spec) CreateDatabase() error {
 	}
 	defer db.Close()
 
-	_, err = db.Exec("CREATE DATABASE IF NOT EXISTS " + s.Database)
-	return err
+	if _, err = db.Exec("CREATE DATABASE IF NOT EXISTS " + s.Database); err != nil {
+		return errors.Wrapf(err, "create database %s failed", s.Database)
+	}
+	return nil
 }
 
 func (s *Spec) CreateTable(stmt string) error {
@@ -310,8 +332,10 @@ func (s *Spec) CreateTable(stmt string) error {
 	}
 	defer db.Close()
 
-	_, err = db.Exec(stmt)
-	return err
+	if _, err = db.Exec(stmt); err != nil {
+		return errors.Wrapf(err, "create table %s.%s failed", s.Database, s.Table)
+	}
+	return nil
 }
 
 func (s *Spec) CheckDatabaseExists() (bool, error) {
@@ -322,20 +346,21 @@ func (s *Spec) CheckDatabaseExists() (bool, error) {
 	}
 	defer db.Close()
 
-	rows, err := db.Query("SHOW DATABASES LIKE '" + s.Database + "'")
+	sql := fmt.Sprintf("SHOW DATABASES LIKE '%s'", s.Database)
+	rows, err := db.Query(sql)
 	if err != nil {
-		return false, err
+		return false, errors.Wrapf(err, "show databases failed, sql: %s", sql)
 	}
 	defer rows.Close()
 
 	var database string
 	for rows.Next() {
 		if err := rows.Scan(&database); err != nil {
-			return false, err
+			return false, errors.Wrapf(err, "scan database name failed, sql: %s", sql)
 		}
 	}
 	if err := rows.Err(); err != nil {
-		return false, err
+		return false, errors.Wrapf(err, "scan database name failed, sql: %s", sql)
 	}
 
 	return database != "", nil
@@ -343,7 +368,7 @@ func (s *Spec) CheckDatabaseExists() (bool, error) {
 
 // check table exits in database dir by spec
 func (s *Spec) CheckTableExists() (bool, error) {
-	log.Trace("check table exists", zap.String("table", s.Table))
+	log.Trace("check table exists by spec", zap.String("spec", s.String()))
 
 	db, err := s.Connect()
 	if err != nil {
@@ -351,20 +376,21 @@ func (s *Spec) CheckTableExists() (bool, error) {
 	}
 	defer db.Close()
 
-	rows, err := db.Query("SHOW TABLES FROM " + s.Database + " LIKE '" + s.Table + "'")
+	sql := fmt.Sprintf("SHOW TABLES FROM %s LIKE '%s'", s.Database, s.Table)
+	rows, err := db.Query(sql)
 	if err != nil {
-		return false, err
+		return false, errors.Wrapf(err, "show tables failed, sql: %s", sql)
 	}
 	defer rows.Close()
 
 	var table string
 	for rows.Next() {
 		if err := rows.Scan(&table); err != nil {
-			return false, err
+			return false, errors.Wrapf(err, "scan table name failed, sql: %s", sql)
 		}
 	}
 	if err := rows.Err(); err != nil {
-		return false, err
+		return false, errors.Wrapf(err, "scan table name failed, sql: %s", sql)
 	}
 
 	return table != "", nil
@@ -405,16 +431,15 @@ func (s *Spec) CreateSnapshotAndWaitForDone(tables []string) (string, error) {
 	log.Debugf("backup snapshot sql: %s", backupSnapshotSql)
 	_, err = db.Exec(backupSnapshotSql)
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "backup snapshot %s failed, sql: %s", snapshotName, backupSnapshotSql)
 	}
 
 	backupFinished, err := s.CheckBackupFinished(snapshotName)
 	if err != nil {
-		log.Errorf("check backup state failed, err: %v", err)
 		return "", err
 	}
 	if !backupFinished {
-		err = fmt.Errorf("check backup state timeout, max try times: %d", MAX_CHECK_RETRY_TIMES)
+		err = errors.Errorf("check backup state timeout, max try times: %d, sql: %s", MAX_CHECK_RETRY_TIMES, backupSnapshotSql)
 		return "", err
 	}
 
@@ -438,21 +463,19 @@ func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, error) {
 	log.Tracef("check backup state sql: %s", sql)
 	rows, err := db.Query(sql)
 	if err != nil {
-		return BackupStateUnknown, err
+		return BackupStateUnknown, errors.Wrapf(err, "show backup failed, sql: %s", sql)
 	}
 	defer rows.Close()
 
 	if rows.Next() {
 		if err := rows.Scan(scanArgs...); err != nil {
-			log.Fatal(err)
-			return BackupStateUnknown, err
+			return BackupStateUnknown, errors.Wrapf(err, "scan backup state failed, sql: %s", sql)
 		}
 
 		log.Tracef("check backup state: %v", backupStateStr)
-
 		return ParseBackupState(backupStateStr), nil
 	}
-	return BackupStateUnknown, fmt.Errorf("no backup state found")
+	return BackupStateUnknown, errors.Errorf("no backup state found, sql: %s", sql)
 }
 
 func (s *Spec) CheckBackupFinished(snapshotName string) (bool, error) {
@@ -464,14 +487,14 @@ func (s *Spec) CheckBackupFinished(snapshotName string) (bool, error) {
 		} else if backupState == BackupStateFinished {
 			return true, nil
 		} else if backupState == BackupStateCancelled {
-			return false, fmt.Errorf("backup failed or canceled")
+			return false, errors.Errorf("backup failed or canceled")
 		} else {
 			// BackupStatePending, BackupStateUnknown
 			time.Sleep(BACKUP_CHECK_DURATION)
 		}
 	}
 
-	return false, fmt.Errorf("check backup state timeout, max try times: %d", MAX_CHECK_RETRY_TIMES)
+	return false, errors.Errorf("check backup state timeout, max try times: %d", MAX_CHECK_RETRY_TIMES)
 }
 
 // TODO: Add TaskErrMsg
@@ -492,25 +515,24 @@ func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, error) {
 	log.Tracef("check restore state sql: %s", query)
 	rows, err := db.Query(query)
 	if err != nil {
-		return RestoreStateUnknown, err
+		return RestoreStateUnknown, errors.Wrapf(err, "query restore state failed")
 	}
 	defer rows.Close()
 
 	if rows.Next() {
 		if err := rows.Scan(scanArgs...); err != nil {
-			log.Fatal(err)
-			return RestoreStateUnknown, err
+			return RestoreStateUnknown, errors.Wrapf(err, "scan restore state failed")
 		}
 
 		log.Tracef("check restore state: %v", restoreStateStr)
 
 		return ParseRestoreState(restoreStateStr), nil
 	}
-	return RestoreStateUnknown, fmt.Errorf("no restore state found")
+	return RestoreStateUnknown, errors.Errorf("no restore state found")
 }
 
 func (s *Spec) CheckRestoreFinished(snapshotName string) (bool, error) {
-	log.Trace("check restore is finished", zap.String("database", s.Database))
+	log.Trace("check restore is finished", zap.String("spec", s.String()), zap.String("snapshot", snapshotName))
 
 	for i := 0; i < MAX_CHECK_RETRY_TIMES; i++ {
 		if backupState, err := s.checkRestoreFinished(snapshotName); err != nil {
@@ -518,14 +540,14 @@ func (s *Spec) CheckRestoreFinished(snapshotName string) (bool, error) {
 		} else if backupState == RestoreStateFinished {
 			return true, nil
 		} else if backupState == RestoreStateCancelled {
-			return false, fmt.Errorf("backup failed or canceled")
+			return false, errors.Errorf("backup failed or canceled, spec: %s, snapshot: %s", s.String(), snapshotName)
 		} else {
 			// RestoreStatePending, RestoreStateUnknown
 			time.Sleep(RESTORE_CHECK_DURATION)
 		}
 	}
 
-	return false, fmt.Errorf("check restore state timeout, max try times: %d", MAX_CHECK_RETRY_TIMES)
+	return false, errors.Errorf("check restore state timeout, max try times: %d, spec: %s, snapshot: %s", MAX_CHECK_RETRY_TIMES, s.String(), snapshotName)
 }
 
 // Exec sql
@@ -537,7 +559,10 @@ func (s *Spec) Exec(sql string) error {
 	defer db.Close()
 
 	_, err = db.Exec(sql)
-	return err
+	if err != nil {
+		return errors.Wrapf(err, "exec sql %s failed", sql)
+	}
+	return nil
 }
 
 // Db Exec sql
@@ -549,5 +574,8 @@ func (s *Spec) DbExec(sql string) error {
 	defer db.Close()
 
 	_, err = db.Exec(sql)
-	return err
+	if err != nil {
+		return errors.Wrapf(err, "exec sql %s failed", sql)
+	}
+	return nil
 }
