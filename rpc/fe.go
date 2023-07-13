@@ -9,6 +9,7 @@ import (
 	festruct_types "github.com/selectdb/ccr_syncer/rpc/kitex_gen/types"
 
 	"github.com/cloudwego/kitex/client"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -44,17 +45,13 @@ func NewThriftRpc(spec *base.Spec) (*ThriftRpc, error) {
 	}
 
 	// create kitex FrontendService client
-	fe_client, err := feservice.NewClient("FrontendService", client.WithHostPorts(spec.Host+":"+spec.ThriftPort))
-
-	return &ThriftRpc{
-		client: fe_client,
-	}, err
-}
-
-// fetch all commit_seq version from src
-func (rpc *ThriftRpc) FetchCommitSeqs() ([]uint64, error) {
-	// TODO(Drogon): impl
-	return nil, nil
+	if fe_client, err := feservice.NewClient("FrontendService", client.WithHostPorts(spec.Host+":"+spec.ThriftPort)); err != nil {
+		return nil, errors.Wrapf(err, "NewFeClient error: %v, spec: %s", err, spec)
+	} else {
+		return &ThriftRpc{
+			client: fe_client,
+		}, nil
+	}
 }
 
 // begin transaction
@@ -74,7 +71,8 @@ func (rpc *ThriftRpc) FetchCommitSeqs() ([]uint64, error) {
 //	    11: optional string token
 //	}
 func (rpc *ThriftRpc) BeginTransaction(spec *base.Spec, label string, tableIds []int64) (*festruct.TBeginTxnResult_, error) {
-	log.Info("BeginTransaction")
+	log.Tracef("BeginTransaction spec: %s, label: %s, tableIds: %v", spec, label, tableIds)
+
 	client := rpc.client
 	req := &festruct.TBeginTxnRequest{
 		Label: &label,
@@ -82,8 +80,12 @@ func (rpc *ThriftRpc) BeginTransaction(spec *base.Spec, label string, tableIds [
 	setAuthInfo(req, spec)
 	req.TableIds = tableIds
 
-	log.Infof("BeginTransaction req: %+v", req)
-	return client.BeginTxn(context.Background(), req)
+	log.Tracef("BeginTransaction req: %+v", req)
+	if result, err := client.BeginTxn(context.Background(), req); err != nil {
+		return nil, errors.Wrapf(err, "BeginTransaction error: %v, req: %+v", err, req)
+	} else {
+		return result, nil
+	}
 }
 
 //	struct TCommitTxnRequest {
@@ -101,16 +103,20 @@ func (rpc *ThriftRpc) BeginTransaction(spec *base.Spec, label string, tableIds [
 //	    12: optional i64 db_id
 //	}
 func (rpc *ThriftRpc) CommitTransaction(spec *base.Spec, txnId int64, commitInfos []*festruct_types.TTabletCommitInfo) (*festruct.TCommitTxnResult_, error) {
-	log.Info("CommitTransaction")
+	log.Tracef("CommitTransaction spec: %s, txnId: %d, commitInfos: %v", spec, txnId, commitInfos)
+
 	client := rpc.client
 	req := &festruct.TCommitTxnRequest{}
 	setAuthInfo(req, spec)
 	req.TxnId = &txnId
 	req.CommitInfos = commitInfos
 
-	log.Infof("CommitTransaction req: %+v", req)
-	// return nil, nil
-	return client.CommitTxn(context.Background(), req)
+	log.Tracef("CommitTransaction req: %+v", req)
+	if result, err := client.CommitTxn(context.Background(), req); err != nil {
+		return nil, errors.Wrapf(err, "CommitTransaction error: %v, req: %+v", err, req)
+	} else {
+		return result, nil
+	}
 }
 
 //	struct TGetBinlogRequest {
@@ -124,7 +130,7 @@ func (rpc *ThriftRpc) CommitTransaction(spec *base.Spec, txnId int64, commitInfo
 //	    8: required i64 prev_commit_seq
 //	}
 func (rpc *ThriftRpc) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogResult_, error) {
-	log.Tracef("GetBinlog: %d", commitSeq)
+	log.Tracef("GetBinlog, spec: %s, commit seq: %d", spec, commitSeq)
 
 	client := rpc.client
 	req := &festruct.TGetBinlogRequest{
@@ -139,18 +145,16 @@ func (rpc *ThriftRpc) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGe
 		}
 	}
 
-	log.Infof("GetBinlog req: %+v", req)
+	log.Tracef("GetBinlog req: %+v", req)
 	if resp, err := client.GetBinlog(context.Background(), req); err != nil {
-		log.Fatal(err)
-		return nil, err
+		return nil, errors.Wrapf(err, "GetBinlog error: %v, req: %+v", err, req)
 	} else {
-		log.Infof("GetBinlog resp: %+v", resp)
 		return resp, nil
 	}
 }
 
 func (rpc *ThriftRpc) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogLagResult_, error) {
-	log.Tracef("GetBinlogLag: %d", commitSeq)
+	log.Tracef("GetBinlogLag, spec: %s, commit seq: %d", spec, commitSeq)
 
 	client := rpc.client
 	req := &festruct.TGetBinlogRequest{
@@ -166,12 +170,10 @@ func (rpc *ThriftRpc) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.
 		}
 	}
 
-	log.Infof("GetBinlogLag req: %+v", req)
+	log.Tracef("GetBinlogLag req: %+v", req)
 	if resp, err := client.GetBinlogLag(context.Background(), req); err != nil {
-		log.Fatal(err)
-		return nil, err
+		return nil, errors.Wrapf(err, "GetBinlogLag error: %v, req: %+v", err, req)
 	} else {
-		log.Infof("GetBinlogLag resp: %+v", resp)
 		return resp, nil
 	}
 }
@@ -188,7 +190,8 @@ func (rpc *ThriftRpc) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.
 //	    9: optional TSnapshotType snapshot_type
 //	}
 func (rpc *ThriftRpc) GetSnapshot(spec *base.Spec, labelName string) (*festruct.TGetSnapshotResult_, error) {
-	log.Info("GetSnapshot")
+	log.Tracef("GetSnapshot %s, spec: %s", labelName, spec)
+
 	client := rpc.client
 	snapshotType := festruct.TSnapshotType_LOCAL
 	snapshotName := ""
@@ -200,12 +203,10 @@ func (rpc *ThriftRpc) GetSnapshot(spec *base.Spec, labelName string) (*festruct.
 	}
 	setAuthInfo(req, spec)
 
-	log.Debugf("GetBinlog req: %+v", req)
+	log.Tracef("GetBinlog req: %+v", req)
 	if resp, err := client.GetSnapshot(context.Background(), req); err != nil {
-		log.Fatal(err)
-		return nil, err
+		return nil, errors.Wrapf(err, "GetSnapshot error: %v, req: %+v", err, req)
 	} else {
-		log.Debugf("GetBinlog resp: %+v", resp)
 		return resp, nil
 	}
 }
@@ -227,7 +228,8 @@ func (rpc *ThriftRpc) GetSnapshot(spec *base.Spec, labelName string) (*festruct.
 //
 // Restore Snapshot rpc
 func (rpc *ThriftRpc) RestoreSnapshot(spec *base.Spec, label string, snapshotResult *festruct.TGetSnapshotResult_) (*festruct.TRestoreSnapshotResult_, error) {
-	log.Info("RestoreSnapshot")
+	log.Tracef("RestoreSnapshot, spec: %s, snapshot result: %+v", spec, snapshotResult)
+
 	client := rpc.client
 	repoName := "__keep_on_local__"
 	properties := make(map[string]string)
@@ -243,18 +245,17 @@ func (rpc *ThriftRpc) RestoreSnapshot(spec *base.Spec, label string, snapshotRes
 	}
 	setAuthInfo(req, spec)
 
-	log.Infof("RestoreSnapshot req: %+v", req)
+	log.Tracef("RestoreSnapshot req: %+v", req)
 	if resp, err := client.RestoreSnapshot(context.Background(), req); err != nil {
-		log.Fatal(err)
-		return nil, err
+		return nil, errors.Wrapf(err, "RestoreSnapshot failed, req: %+v", req)
 	} else {
-		log.Infof("RestoreSnapshot resp: %+v", resp)
 		return resp, nil
 	}
 }
 
 func (rpc *ThriftRpc) GetMasterToken(spec *base.Spec) (string, error) {
-	log.Info("GetMasterToken")
+	log.Tracef("GetMasterToken, spec: %s", spec)
+
 	client := rpc.client
 	req := &festruct.TGetMasterTokenRequest{
 		Cluster:  &spec.Cluster,
@@ -262,12 +263,10 @@ func (rpc *ThriftRpc) GetMasterToken(spec *base.Spec) (string, error) {
 		Password: &spec.Password,
 	}
 
-	log.Infof("GetMasterToken req: %+v", req)
+	log.Tracef("GetMasterToken req: %+v", req)
 	if resp, err := client.GetMasterToken(context.Background(), req); err != nil {
-		log.Fatal(err)
-		return "", err
+		return "", errors.Wrapf(err, "GetMasterToken failed, req: %+v", req)
 	} else {
-		log.Infof("GetMasterToken resp: %+v", resp)
 		return resp.GetToken(), nil
 	}
 }

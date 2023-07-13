@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/selectdb/ccr_syncer/ccr/base"
 	bestruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/backendservice"
 	beservice "github.com/selectdb/ccr_syncer/rpc/kitex_gen/backendservice/backendservice"
@@ -18,25 +19,26 @@ type BeThriftRpc struct {
 }
 
 func NewBeThriftRpc(be *base.Backend) (*BeThriftRpc, error) {
+	log.Tracef("NewBeThriftRpc be: %s", be)
+
 	// create kitex FrontendService client
-	client, err := beservice.NewClient("FrontendService", client.WithHostPorts(fmt.Sprintf("%s:%d", be.Host, be.BePort)))
-
-	if err != nil {
-		log.Errorf("NewBeClient error: %v", err)
-		return nil, err
+	if client, err := beservice.NewClient("FrontendService", client.WithHostPorts(fmt.Sprintf("%s:%d", be.Host, be.BePort))); err != nil {
+		return nil, errors.Wrapf(err, "NewBeClient error: %v", err)
+	} else {
+		return &BeThriftRpc{
+			backend: be,
+			client:  client,
+		}, nil
 	}
-	log.Infof("NewBeClient success: %v", client)
-
-	return &BeThriftRpc{
-		backend: be,
-		client:  client,
-	}, err
 }
 
 func (beRpc *BeThriftRpc) IngestBinlog(req *bestruct.TIngestBinlogRequest) (*bestruct.TIngestBinlogResult_, error) {
-	log.Infof("IngestBinlog")
-	client := beRpc.client
+	log.Tracef("IngestBinlog req: %+v, txnId: %d, be: %v", req, req.GetTxnId(), beRpc.backend)
 
-	log.Infof("IngestBinlog req: %+v, txnId: %d", req, req.GetTxnId())
-	return client.IngestBinlog(context.Background(), req)
+	client := beRpc.client
+	if result, err := client.IngestBinlog(context.Background(), req); err != nil {
+		return nil, errors.Wrapf(err, "IngestBinlog error: %v", err)
+	} else {
+		return result, nil
+	}
 }
