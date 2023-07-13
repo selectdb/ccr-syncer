@@ -421,6 +421,7 @@ func (j *Job) newLabel(commitSeq int64) string {
 	}
 }
 
+// only called by DBSync, TableSync tableId is in Src/Dest Spec
 // TODO: [Performance] improve by cache
 func (j *Job) getDestTableIdBySrc(srcTableId int64) (int64, error) {
 	if destTableId, ok := j.destSrcTableIdMap[srcTableId]; ok {
