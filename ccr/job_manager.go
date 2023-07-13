@@ -2,13 +2,12 @@ package ccr
 
 import (
 	"encoding/json"
-	"fmt"
 	"sync"
 
 	"github.com/selectdb/ccr_syncer/storage"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"go.uber.org/zap"
 )
 
 const (
@@ -39,7 +38,7 @@ func (jm *JobManager) AddJob(job *Job) error {
 
 	// Step 1: check job exist
 	if _, ok := jm.jobs[job.Name]; ok {
-		return fmt.Errorf("%s: %s", ErrJobExist, job.Name)
+		return errors.Errorf("%s: %s", ErrJobExist, job.Name)
 	}
 
 	// Step 2: check job first run, mostly for dest/src fe db/table info
@@ -50,7 +49,7 @@ func (jm *JobManager) AddJob(job *Job) error {
 	// Step 3: add job info to db
 	data, err := json.Marshal(job)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "marshal job error")
 	}
 	if err := jm.db.AddJob(job.Name, string(data)); err != nil {
 		return err
@@ -75,7 +74,7 @@ func (jm *JobManager) RemoveJob(name string) error {
 		delete(jm.jobs, name)
 		return nil
 	} else {
-		return fmt.Errorf("job not exist: %s", name)
+		return errors.Errorf("job not exist: %s", name)
 	}
 }
 
@@ -115,7 +114,7 @@ func (jm *JobManager) runJob(job *Job) {
 	go func() {
 		err := job.Run()
 		if err != nil {
-			log.Error("job run failed", zap.String("job", job.Name), zap.Error(err))
+			log.Errorf("job run failed, job name: %s, error: %+v", job.Name, err)
 		}
 		jm.wg.Done()
 	}()
@@ -128,6 +127,6 @@ func (jm *JobManager) GetLag(jobName string) (int64, error) {
 	if job, ok := jm.jobs[jobName]; ok {
 		return job.GetLag()
 	} else {
-		return 0, fmt.Errorf("job not exist: %s", jobName)
+		return 0, errors.Errorf("job not exist: %s", jobName)
 	}
 }

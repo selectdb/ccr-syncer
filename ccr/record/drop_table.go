@@ -3,6 +3,8 @@ package record
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/pkg/errors"
 )
 
 type DropTable struct {
@@ -14,11 +16,11 @@ func NewDropTableFromJson(data string) (*DropTable, error) {
 	var dropTable DropTable
 	err := json.Unmarshal([]byte(data), &dropTable)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "unmarshal drop table error")
 	}
 
 	if dropTable.TableId == 0 {
-		return nil, fmt.Errorf("table id not found")
+		return nil, errors.Errorf("table id not found")
 	}
 
 	return &dropTable, nil

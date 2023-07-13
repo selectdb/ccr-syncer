@@ -3,6 +3,8 @@ package record
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/pkg/errors"
 )
 
 type PartitionRecord struct {
@@ -58,7 +60,7 @@ func NewUpsertFromJson(data string) (*Upsert, error) {
 	var up Upsert
 	err := json.Unmarshal([]byte(data), &up)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "unmarshal upsert error")
 	}
 
 	for tableId, tableRecord := range up.TableRecords {

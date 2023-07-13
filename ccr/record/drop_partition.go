@@ -2,7 +2,8 @@ package record
 
 import (
 	"encoding/json"
-	"fmt"
+
+	"github.com/pkg/errors"
 )
 
 type DropPartition struct {
@@ -14,16 +15,16 @@ func NewDropPartitionFromJson(data string) (*DropPartition, error) {
 	var dropPartition DropPartition
 	err := json.Unmarshal([]byte(data), &dropPartition)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "unmarshal drop partition error")
 	}
 
 	if dropPartition.Sql == "" {
 		// TODO: fallback to create sql from other fields
-		return nil, fmt.Errorf("drop partition sql is empty")
+		return nil, errors.Errorf("drop partition sql is empty")
 	}
 
 	if dropPartition.TableId == 0 {
-		return nil, fmt.Errorf("table id not found")
+		return nil, errors.Errorf("table id not found")
 	}
 
 	return &dropPartition, nil

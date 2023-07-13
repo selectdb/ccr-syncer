@@ -2,7 +2,8 @@ package record
 
 import (
 	"encoding/json"
-	"fmt"
+
+	"github.com/pkg/errors"
 )
 
 type AddPartition struct {
@@ -14,16 +15,16 @@ func NewAddPartitionFromJson(data string) (*AddPartition, error) {
 	var addPartition AddPartition
 	err := json.Unmarshal([]byte(data), &addPartition)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "unmarshal add partition error")
 	}
 
 	if addPartition.Sql == "" {
 		// TODO: fallback to create sql from other fields
-		return nil, fmt.Errorf("add partition sql is empty")
+		return nil, errors.Errorf("add partition sql is empty")
 	}
 
 	if addPartition.TableId == 0 {
-		return nil, fmt.Errorf("table id not found")
+		return nil, errors.Errorf("table id not found")
 	}
 
 	return &addPartition, nil

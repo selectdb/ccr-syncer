@@ -3,6 +3,8 @@ package record
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/pkg/errors"
 )
 
 type ModifyTableAddOrDropColumns struct {
@@ -15,16 +17,16 @@ func NewModifyTableAddOrDropColumnsFromJson(data string) (*ModifyTableAddOrDropC
 	var modifyTableAddOrDropColumns ModifyTableAddOrDropColumns
 	err := json.Unmarshal([]byte(data), &modifyTableAddOrDropColumns)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "unmarshal modify table add or drop columns error")
 	}
 
 	if modifyTableAddOrDropColumns.RawSql == "" {
 		// TODO: fallback to create sql from other fields
-		return nil, fmt.Errorf("modify table add or drop columns sql is empty")
+		return nil, errors.Errorf("modify table add or drop columns sql is empty")
 	}
 
 	if modifyTableAddOrDropColumns.TableId == 0 {
-		return nil, fmt.Errorf("table id not found")
+		return nil, errors.Errorf("table id not found")
 	}
 
 	return &modifyTableAddOrDropColumns, nil

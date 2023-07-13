@@ -726,7 +726,6 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 	log.Tracef("begin txn, dest: %v, commitSeq: %d", dest, commitSeq)
 	destRpc, err := rpc.NewThriftRpc(dest)
 	if err != nil {
-		log.Errorf("new thrift rpc failed, err: %v", err)
 		return err
 	}
 
@@ -734,12 +733,10 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 
 	beginTxnResp, err := destRpc.BeginTransaction(dest, label, destTableIds)
 	if err != nil {
-		log.Errorf("begin txn failed, err: %v", err)
 		return err
 	}
 	log.Infof("resp: %v", beginTxnResp)
 	if beginTxnResp.GetStatus().GetStatusCode() != tstatus.TStatusCode_OK {
-		log.Errorf("begin txn failed, status: %v", beginTxnResp.GetStatus())
 		return errors.Errorf("begin txn failed, status: %v", beginTxnResp.GetStatus())
 	}
 	txnId := beginTxnResp.GetTxnId()
@@ -1069,7 +1066,7 @@ func (j *Job) incrementalSync() error {
 func (j *Job) recoverJobProgress() error {
 	// parse progress
 	if progress, err := NewJobProgressFromJson(j.Name, j.db); err != nil {
-		log.Error("parse job progress failed", zap.String("job", j.Name), zap.Error(err))
+		log.Errorf("parse job progress failed, job: %s, err: %+v", j.Name, err)
 		return err
 	} else {
 		j.progress = progress
@@ -1148,7 +1145,7 @@ func (j *Job) run() error {
 			return nil
 		case <-ticker.C:
 			if err := j.sync(); err != nil {
-				log.Error("job sync failed", zap.String("job", j.Name), zap.Error(err))
+				log.Errorf("job sync failed, job: %s, err: %+v", j.Name, err)
 			}
 		}
 	}
@@ -1162,7 +1159,7 @@ func (j *Job) Run() error {
 	for i := 0; i < 3; i++ {
 		isProgressExist, err = j.db.IsProgressExist(j.Name)
 		if err != nil {
-			log.Error("check progress exist failed", zap.Error(err))
+			log.Errorf("check progress exist failed, error: %+v", err)
 			continue
 		}
 		break
@@ -1173,7 +1170,7 @@ func (j *Job) Run() error {
 
 	if isProgressExist {
 		if err := j.recoverJobProgress(); err != nil {
-			log.Fatalf("recover job %s progress failed: %v", j.Name, err)
+			log.Fatalf("recover job %s progress failed: %+v", j.Name, err)
 			return err
 		}
 	} else {
@@ -1299,6 +1296,7 @@ func (j *Job) GetLag() (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	log.Tracef("resp: %v, lag: %d", resp, resp.GetLag())
 	return resp.GetLag(), nil
 }

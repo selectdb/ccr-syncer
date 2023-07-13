@@ -3,6 +3,8 @@ package record
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/pkg/errors"
 )
 
 type AlterJobV2 struct {
@@ -20,17 +22,17 @@ func NewAlterJobV2FromJson(data string) (*AlterJobV2, error) {
 	var alterJob AlterJobV2
 	err := json.Unmarshal([]byte(data), &alterJob)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "unmarshal alter job error")
 	}
 
 	// rollup not contain RawSql
 	// if alterJob.RawSql == "" {
 	// 	// TODO: fallback to create sql from other fields
-	// 	return nil, fmt.Errorf("alter job raw sql is empty")
+	// 	return nil, errors.Errorf("alter job raw sql is empty")
 	// }
 
 	if alterJob.TableId == 0 {
-		return nil, fmt.Errorf("table id not found")
+		return nil, errors.Errorf("table id not found")
 	}
 
 	return &alterJob, nil

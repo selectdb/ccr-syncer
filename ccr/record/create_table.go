@@ -3,6 +3,8 @@ package record
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/pkg/errors"
 )
 
 type CreateTable struct {
@@ -15,16 +17,16 @@ func NewCreateTableFromJson(data string) (*CreateTable, error) {
 	var createTable CreateTable
 	err := json.Unmarshal([]byte(data), &createTable)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "unmarshal create table error")
 	}
 
 	if createTable.Sql == "" {
 		// TODO: fallback to create sql from other fields
-		return nil, fmt.Errorf("create table sql is empty")
+		return nil, errors.Errorf("create table sql is empty")
 	}
 
 	if createTable.TableId == 0 {
-		return nil, fmt.Errorf("table id not found")
+		return nil, errors.Errorf("table id not found")
 	}
 
 	return &createTable, nil
