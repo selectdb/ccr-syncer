@@ -2,6 +2,8 @@ package ccr
 
 import (
 	"encoding/json"
+
+	"github.com/pkg/errors"
 )
 
 func ExtractTableCommitSeqMap(data []byte) (map[int64]int64, error) {
@@ -9,9 +11,9 @@ func ExtractTableCommitSeqMap(data []byte) (map[int64]int64, error) {
 		TableCommitSeqMap map[int64]int64 `json:"table_commit_seq_map"`
 	}
 	var jobInfo JobInfo
-	err := json.Unmarshal(data, &jobInfo)
-	if err != nil {
-		return nil, err
+
+	if err := json.Unmarshal(data, &jobInfo); err != nil {
+		return nil, errors.Wrapf(err, "unmarshal job info error: %v", err)
 	}
 	return jobInfo.TableCommitSeqMap, nil
 }

@@ -96,8 +96,9 @@ func NewJobFromJson(jsonData string, db storage.DB) (*Job, error) {
 	var job Job
 	err := json.Unmarshal([]byte(jsonData), &job)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "unmarshal json failed, json: %s", jsonData)
 	}
+
 	job.srcMeta = NewMeta(&job.Src)
 	job.destMeta = NewMeta(&job.Dest)
 	job.destSrcTableIdMap = make(map[int64]int64)
@@ -165,17 +166,15 @@ func (j *Job) genExtraInfo() (*base.ExtraInfo, error) {
 	meta := j.srcMeta
 	masterToken, err := meta.GetMasterToken()
 	if err != nil {
-		log.Errorf("get master token failed: %v", err)
 		return nil, err
 	}
 
 	backends, err := meta.GetBackends()
 	if err != nil {
-		log.Errorf("get backends failed: %v", err)
 		return nil, err
-	} else {
-		log.Infof("found backends: %v", backends)
 	}
+
+	log.Tracef("found backends: %v", backends)
 
 	beNetworkMap := make(map[int64]base.NetworkAddr)
 	for _, backend := range backends {
@@ -253,7 +252,6 @@ func (j *Job) fullSync() error {
 
 		tableCommitSeqMap, err := ExtractTableCommitSeqMap(snapshotResp.GetJobInfo())
 		if err != nil {
-			log.Errorf("extract table commit seq map failed, err: %v", err)
 			return err
 		}
 
@@ -282,8 +280,7 @@ func (j *Job) fullSync() error {
 		var jobInfoMap map[string]interface{}
 		err := json.Unmarshal(jobInfo, &jobInfoMap)
 		if err != nil {
-			log.Errorf("unmarshal jobInfo failed, err: %v", err)
-			return err
+			return errors.Wrapf(err, "unmarshal jobInfo failed, jobInfo: %s", string(jobInfo))
 		}
 		log.Debugf("jobInfo: %v", jobInfoMap)
 
@@ -296,8 +293,7 @@ func (j *Job) fullSync() error {
 		jobInfoMap["extra_info"] = extraInfo
 		jobInfoBytes, err := json.Marshal(jobInfoMap)
 		if err != nil {
-			log.Errorf("marshal jobInfo failed, err: %v", err)
-			return err
+			return errors.Errorf("marshal jobInfo failed, jobInfo: %v", jobInfoMap)
 		}
 		log.Infof("jobInfoBytes: %s", string(jobInfoBytes))
 		snapshotResp.SetJobInfo(jobInfoBytes)
@@ -323,7 +319,7 @@ func (j *Job) fullSync() error {
 			inMemoryData := &inMemoryData{}
 			if err := json.Unmarshal([]byte(persistData), inMemoryData); err != nil {
 				// TODO: return to snapshot
-				return err
+				return errors.Errorf("unmarshal persistData failed, persistData: %s", persistData)
 			}
 			j.progress.InMemoryData = inMemoryData
 		}
@@ -343,14 +339,12 @@ func (j *Job) fullSync() error {
 		log.Debugf("begin restore snapshot %s", snapshotName)
 		restoreResp, err := destRpc.RestoreSnapshot(dest, snapshotName, snapshotResp)
 		if err != nil {
-			log.Errorf("restore snapshot failed, err: %v", err)
 			return err
 		}
 		log.Infof("resp: %v", restoreResp)
 		// TODO: impl wait for done, use show restore
 		restoreFinished, err := j.Dest.CheckRestoreFinished(snapshotName)
 		if err != nil {
-			log.Errorf("check restore state failed, err: %v", err)
 			return err
 		}
 		if !restoreFinished {
@@ -387,7 +381,6 @@ func (j *Job) fullSync() error {
 		}
 
 		return nil
-
 	default:
 		return errors.Errorf("invalid job sub sync state %d", j.progress.SubSyncState)
 	}
@@ -398,7 +391,7 @@ func (j *Job) fullSync() error {
 func (j *Job) persistJob() error {
 	data, err := json.Marshal(j)
 	if err != nil {
-		return err
+		return errors.Errorf("marshal job failed, job: %v", j)
 	}
 
 	if err := j.db.UpdateJob(j.Name, string(data)); err != nil {

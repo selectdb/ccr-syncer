@@ -4,15 +4,15 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
-	"github.com/selectdb/ccr_syncer/utils"
 	"net/http"
 	"sort"
 	"strconv"
 
 	"github.com/selectdb/ccr_syncer/ccr/base"
 	"github.com/selectdb/ccr_syncer/rpc"
+	"github.com/selectdb/ccr_syncer/utils"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/btree"
 )
@@ -116,7 +116,7 @@ func (m *Meta) GetDbId() (int64, error) {
 	// +-------+------------------------------------+----------+----------+-------------+--------------------------+--------------+--------------+------------------+
 	db, err := m.Connect()
 	if err != nil {
-		log.Fatal(err)
+		return 0, err
 	}
 	defer db.Close()
 
@@ -129,14 +129,13 @@ func (m *Meta) GetDbId() (int64, error) {
 	}
 	rows, err := db.Query("show proc '/dbs/'")
 	if err != nil {
-		log.Fatal(err)
-		return 0, err
+		return 0, errors.Wrapf(err, "show proc '/dbs/' failed")
 	}
 
 	defer rows.Close()
 	for rows.Next() {
 		if err := rows.Scan(scanArgs...); err != nil {
-			log.Fatal(err)
+			return 0, errors.Wrapf(err, "show proc '/dbs/' failed")
 		}
 		// match parsedDbname == dbname, return dbId
 		if parsedDbname == dbname {
@@ -147,12 +146,11 @@ func (m *Meta) GetDbId() (int64, error) {
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Fatal(err)
-		return 0, err
+		return 0, errors.Wrapf(err, "show proc '/dbs/' failed")
 	}
 
 	// not found
-	return 0, fmt.Errorf("%s not found dbId", dbname)
+	return 0, errors.Errorf("%s not found dbId", dbname)
 }
 
 func (m *Meta) GetFullTableName(tableName string) string {
@@ -179,7 +177,6 @@ func (m *Meta) UpdateTable(tableName string) error {
 	// +---------+---------------+----------+---------------------+--------------+--------+------+--------------------------+--------------+
 	db, err := m.Connect()
 	if err != nil {
-		log.Fatal(err)
 		return err
 	}
 	defer db.Close()
@@ -194,14 +191,13 @@ func (m *Meta) UpdateTable(tableName string) error {
 	query := fmt.Sprintf("show proc '/dbs/%d/'", dbId)
 	rows, err := db.Query(query)
 	if err != nil {
-		log.Fatal(err)
-		return err
+		return errors.Wrap(err, query)
 	}
 
 	defer rows.Close()
 	for rows.Next() {
 		if err := rows.Scan(scanArgs...); err != nil {
-			log.Fatal(err)
+			return errors.Wrap(err, query)
 		}
 		// match parsedDbname == dbname, return dbId
 		if parsedTableName == tableName {
@@ -218,12 +214,11 @@ func (m *Meta) UpdateTable(tableName string) error {
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Fatal(err)
-		return err
+		return errors.Wrap(err, query)
 	}
 
 	// not found
-	return fmt.Errorf("%s not found table", fullTableName)
+	return errors.Errorf("%s not found table", fullTableName)
 }
 
 func (m *Meta) GetTable(tableName string) (*TableMeta, error) {
@@ -235,7 +230,7 @@ func (m *Meta) GetTable(tableName string) (*TableMeta, error) {
 		}
 		_, ok = m.TableName2IdMap[fullTableName]
 		if !ok {
-			return nil, fmt.Errorf("table %s not found", fullTableName)
+			return nil, errors.Errorf("table %s not found", fullTableName)
 		}
 	}
 
@@ -256,7 +251,7 @@ func (m *Meta) GetTableId(tableName string) (int64, error) {
 	if tableId, ok := m.TableName2IdMap[fullTableName]; ok {
 		return tableId, nil
 	} else {
-		return 0, fmt.Errorf("table %s not found tableId", fullTableName)
+		return 0, errors.Errorf("table %s not found tableId", fullTableName)
 	}
 }
 
@@ -264,14 +259,12 @@ func (m *Meta) UpdatePartitions(tableName string) error {
 	// Step 1: get dbId
 	dbId, err := m.GetDbId()
 	if err != nil {
-		log.Error(err)
 		return err
 	}
 
 	// Step 2: get tableId
 	table, err := m.GetTable(tableName)
 	if err != nil {
-		log.Error(err)
 		return err
 	}
 
@@ -284,7 +277,6 @@ func (m *Meta) UpdatePartitions(tableName string) error {
 	// +-------------+---------------+----------------+---------------------+--------+--------------+-------+-----------------+---------+----------------+---------------+---------------------+---------------------+--------------------------+----------+------------+-------------------------+-----------+
 	db, err := m.Connect()
 	if err != nil {
-		log.Error(err)
 		return err
 	}
 	defer db.Close()
@@ -302,14 +294,13 @@ func (m *Meta) UpdatePartitions(tableName string) error {
 	log.Trace(query)
 	rows, err := db.Query(query)
 	if err != nil {
-		log.Error(err)
-		return err
+		return errors.Wrap(err, query)
 	}
 
 	defer rows.Close()
 	for rows.Next() {
 		if err := rows.Scan(scanArgs...); err != nil {
-			log.Fatal(err)
+			return errors.Wrap(err, query)
 		}
 		log.Printf("partitionId: %d, partitionName: %s", partitionId, partitionName)
 		partition := &PartitionMeta{
@@ -321,8 +312,7 @@ func (m *Meta) UpdatePartitions(tableName string) error {
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Fatal(err)
-		return err
+		return errors.Wrap(err, query)
 	}
 
 	table.Partitions = make(map[int64]*PartitionMeta)
@@ -335,11 +325,10 @@ func (m *Meta) UpdatePartitions(tableName string) error {
 
 func (m *Meta) getPartitionsWithUpdate(tableName string, depth int64) (map[int64]*PartitionMeta, error) {
 	if depth >= 3 {
-		return nil, fmt.Errorf("getPartitions depth >= 3")
+		return nil, errors.Errorf("getPartitions depth >= 3")
 	}
 
 	if err := m.UpdatePartitions(tableName); err != nil {
-		log.Error(err)
 		return nil, err
 	}
 
@@ -349,7 +338,7 @@ func (m *Meta) getPartitionsWithUpdate(tableName string, depth int64) (map[int64
 
 func (m *Meta) getPartitions(tableName string, depth int64) (map[int64]*PartitionMeta, error) {
 	if depth >= 3 {
-		return nil, fmt.Errorf("getPartitions depth >= 3")
+		return nil, errors.Errorf("getPartitions depth >= 3")
 	}
 
 	fullTableName := m.GetFullTableName(tableName)
@@ -400,7 +389,7 @@ func (m *Meta) GetPartitionName(tableName string, partitionId int64) (string, er
 
 	partition, ok := partitions[partitionId]
 	if !ok {
-		return "", fmt.Errorf("partitionId %d not found", partitionId)
+		return "", errors.Errorf("partitionId %d not found", partitionId)
 	}
 
 	return partition.Name, nil
@@ -419,7 +408,7 @@ func (m *Meta) GetPartitionIdByName(tableName string, partitionName string) (int
 		}
 	}
 
-	return 0, fmt.Errorf("partitionName %s not found", partitionName)
+	return 0, errors.Errorf("partitionName %s not found", partitionName)
 }
 
 func (m *Meta) UpdateBackends() error {
@@ -431,7 +420,6 @@ func (m *Meta) UpdateBackends() error {
 	// +-----------+-----------------+-----------+---------------+--------+----------+----------+---------------------+---------------------+-------+----------------------+-----------------------+-----------+------------------+---------------+---------------+---------+----------------+--------------------+--------------------------+--------+------------------------------+-------------------------------------------------------------------------------------------------------------------------------+-------------------------+----------+
 	db, err := m.Connect()
 	if err != nil {
-		log.Fatal(err)
 		return err
 	}
 	defer db.Close()
@@ -441,8 +429,7 @@ func (m *Meta) UpdateBackends() error {
 	log.Trace(query)
 	rows, err := db.Query(query)
 	if err != nil {
-		log.Fatal(err)
-		return err
+		return errors.Wrap(err, query)
 	}
 
 	defer rows.Close()
@@ -456,8 +443,7 @@ func (m *Meta) UpdateBackends() error {
 		}
 
 		if err := rows.Scan(scanArgs...); err != nil {
-			log.Fatal(err)
-			return err
+			return errors.Wrap(err, query)
 		}
 		log.Debugf("backend: %v", &backend)
 		backends = append(backends, &backend)
@@ -483,7 +469,6 @@ func (m *Meta) GetBackends() ([]*base.Backend, error) {
 	}
 
 	if err := m.UpdateBackends(); err != nil {
-		log.Error(err)
 		return nil, err
 	}
 
@@ -496,7 +481,6 @@ func (m *Meta) GetBackendMap() (map[int64]*base.Backend, error) {
 	}
 
 	if err := m.UpdateBackends(); err != nil {
-		log.Error(err)
 		return nil, err
 	}
 
@@ -507,7 +491,6 @@ func (m *Meta) GetBackendId(host string, portStr string) (int64, error) {
 	// convert port from string to uint16
 	port, err := strconv.ParseUint(portStr, 10, 16)
 	if err != nil {
-		log.Fatal(err)
 		return 0, err
 	}
 	hostPort := fmtHostPort(host, uint16(port))
@@ -515,14 +498,13 @@ func (m *Meta) GetBackendId(host string, portStr string) (int64, error) {
 		return backendId, nil
 	}
 	if err := m.UpdateBackends(); err != nil {
-		log.Fatal(err)
 		return 0, err
 	}
 	if backendId, ok := m.BackendHostPort2IdMap[hostPort]; ok {
 		return backendId, nil
 	}
 
-	return 0, fmt.Errorf("hostPort: %s not found", hostPort)
+	return 0, errors.Errorf("hostPort: %s not found", hostPort)
 }
 
 func (m *Meta) UpdateIndexes(tableName string, partitionId int64) error {
@@ -530,27 +512,24 @@ func (m *Meta) UpdateIndexes(tableName string, partitionId int64) error {
 	// Step 1: get dbId
 	dbId, err := m.GetDbId()
 	if err != nil {
-		log.Error(err)
 		return err
 	}
 
 	// Step 2: get tableId
 	table, err := m.GetTable(tableName)
 	if err != nil {
-		log.Error(err)
 		return err
 	}
 
 	// Step 3: get partitions
 	parititions, err := m.GetPartitions(tableName)
 	if err != nil {
-		log.Fatal(err)
 		return err
 	}
 
 	partition, ok := parititions[partitionId]
 	if !ok {
-		return fmt.Errorf("partitionId: %d not found", partitionId)
+		return errors.Errorf("partitionId: %d not found", partitionId)
 	}
 
 	// mysql> show proc '/dbs/10116/10118/partitions/10117';
@@ -562,7 +541,6 @@ func (m *Meta) UpdateIndexes(tableName string, partitionId int64) error {
 	// 1 row in set (0.01 sec)
 	db, err := m.Connect()
 	if err != nil {
-		log.Error(err)
 		return err
 	}
 	defer db.Close()
@@ -580,14 +558,13 @@ func (m *Meta) UpdateIndexes(tableName string, partitionId int64) error {
 	log.Trace(query)
 	rows, err := db.Query(query)
 	if err != nil {
-		log.Error(err)
-		return err
+		return errors.Wrap(err, query)
 	}
 
 	defer rows.Close()
 	for rows.Next() {
 		if err := rows.Scan(scanArgs...); err != nil {
-			log.Fatal(err)
+			return errors.Wrap(err, query)
 		}
 		log.Debugf("indexId: %d, indexName: %s", indexId, indexName)
 
@@ -600,8 +577,7 @@ func (m *Meta) UpdateIndexes(tableName string, partitionId int64) error {
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Fatal(err)
-		return err
+		return errors.Wrap(err, query)
 	}
 
 	partition.Indexes = make(map[int64]*IndexMeta)
@@ -615,19 +591,17 @@ func (m *Meta) UpdateIndexes(tableName string, partitionId int64) error {
 func (m *Meta) getIndexes(tableName string, partitionId int64, hasUpdate bool) (map[int64]*IndexMeta, error) {
 	parititions, err := m.GetPartitions(tableName)
 	if err != nil {
-		log.Fatal(err)
 		return nil, err
 	}
 
 	partition, ok := parititions[partitionId]
 	if !ok || len(partition.Indexes) == 0 {
 		if hasUpdate {
-			return nil, fmt.Errorf("partitionId: %d not found", partitionId)
+			return nil, errors.Errorf("partitionId: %d not found", partitionId)
 		}
 
 		err = m.UpdateIndexes(tableName, partitionId)
 		if err != nil {
-			log.Fatal(err)
 			return nil, err
 		}
 		return m.getIndexes(tableName, partitionId, true)
@@ -655,7 +629,6 @@ func (m *Meta) updateReplica(index *IndexMeta) error {
 	// +----------+-----------+-----------+------------+---------+-------------------+------------------+---------------+---------------+----------------+----------+--------+-------------------------+--------------+--------------+-----------+----------------------+---------------------------------------------+-----------------------------------------------------------+-------------------+----------------+
 	db, err := m.Connect()
 	if err != nil {
-		log.Error(err)
 		return err
 	}
 	defer db.Close()
@@ -674,14 +647,13 @@ func (m *Meta) updateReplica(index *IndexMeta) error {
 	log.Trace(query)
 	rows, err := db.Query(query)
 	if err != nil {
-		log.Fatal(err)
-		return err
+		return errors.Wrap(err, query)
 	}
 
 	defer rows.Close()
 	for rows.Next() {
 		if err := rows.Scan(scanArgs...); err != nil {
-			log.Fatal(err)
+			return errors.Wrap(err, query)
 		}
 		replica := &ReplicaMeta{
 			Id:        replicaId,
@@ -692,8 +664,7 @@ func (m *Meta) updateReplica(index *IndexMeta) error {
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Fatal(err)
-		return err
+		return errors.Wrap(err, query)
 	}
 
 	index.TabletMetas = btree.NewMap[int64, *TabletMeta](degree)
@@ -712,18 +683,18 @@ func (m *Meta) updateReplica(index *IndexMeta) error {
 		tablet.ReplicaMetas.Set(replica.Id, replica)
 		index.ReplicaMetas.Set(replica.Id, replica)
 	}
+
 	return nil
 }
 
 func (m *Meta) UpdateReplicas(tableName string, partitionId int64) error {
 	indexes, err := m.GetIndexes(tableName, partitionId)
 	if err != nil {
-		log.Fatal(err)
 		return err
 	}
 
 	if len(indexes) == 0 {
-		return fmt.Errorf("indexes is empty")
+		return errors.Errorf("indexes is empty")
 	}
 
 	// TODO: Update index as much as possible, record error
@@ -732,18 +703,18 @@ func (m *Meta) UpdateReplicas(tableName string, partitionId int64) error {
 			return err
 		}
 	}
+
 	return nil
 }
 
 func (m *Meta) GetReplicas(tableName string, partitionId int64) (*btree.Map[int64, *ReplicaMeta], error) {
 	indexes, err := m.GetIndexes(tableName, partitionId)
 	if err != nil {
-		log.Fatal(err)
 		return nil, err
 	}
 
 	if len(indexes) == 0 {
-		return nil, fmt.Errorf("indexes is empty")
+		return nil, errors.Errorf("indexes is empty")
 	}
 
 	// fast path, no rollup
@@ -783,18 +754,16 @@ func (m *Meta) GetReplicas(tableName string, partitionId int64) (*btree.Map[int6
 func (m *Meta) GetTablets(tableName string, partitionId int64) (*btree.Map[int64, *TabletMeta], error) {
 	_, err := m.GetReplicas(tableName, partitionId)
 	if err != nil {
-		log.Fatal(err)
 		return nil, err
 	}
 
 	indexes, err := m.GetIndexes(tableName, partitionId)
 	if err != nil {
-		log.Fatal(err)
 		return nil, err
 	}
 
 	if len(indexes) == 0 {
-		return nil, fmt.Errorf("indexes is empty")
+		return nil, errors.Errorf("indexes is empty")
 	}
 
 	// fast path, no rollup
@@ -828,7 +797,7 @@ func (m *Meta) GetTabletList(tableName string, partitionId int64) ([]*TabletMeta
 	}
 
 	if tablets.Len() == 0 {
-		return nil, fmt.Errorf("tablets is empty")
+		return nil, errors.Errorf("tablets is empty")
 	}
 
 	list := make([]*TabletMeta, 0, tablets.Len())
@@ -859,7 +828,6 @@ func (m *Meta) GetMasterToken() (string, error) {
 	}
 
 	if err := m.UpdateToken(); err != nil {
-		log.Error(err)
 		return "", err
 	}
 
@@ -876,7 +844,6 @@ func (m *Meta) GetTableNameById(tableId int64) (string, error) {
 
 	db, err := m.Connect()
 	if err != nil {
-		log.Fatal(err)
 		return "", err
 	}
 	defer db.Close()
@@ -887,18 +854,18 @@ func (m *Meta) GetTableNameById(tableId int64) (string, error) {
 	sql := fmt.Sprintf("show table %d", tableId)
 	rows, err := db.Query(sql)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, sql)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		if err := rows.Scan(&_dbName, &tableName, &_dbId); err != nil {
-			return "", err
+			return "", errors.Wrap(err, sql)
 		}
 	}
 
 	if err := rows.Err(); err != nil {
-		return "", err
+		return "", errors.Wrap(err, sql)
 	}
 
 	return tableName, nil
@@ -921,7 +888,6 @@ func (m *Meta) GetTables() (map[int64]*TableMeta, error) {
 	// +---------+---------------+----------+---------------------+--------------+--------+------+--------------------------+--------------+
 	db, err := m.Connect()
 	if err != nil {
-		log.Fatal(err)
 		return nil, err
 	}
 	defer db.Close()
@@ -936,8 +902,7 @@ func (m *Meta) GetTables() (map[int64]*TableMeta, error) {
 	query := fmt.Sprintf("show proc '/dbs/%d/'", dbId)
 	rows, err := db.Query(query)
 	if err != nil {
-		log.Fatal(err)
-		return nil, err
+		return nil, errors.Wrapf(err, query)
 	}
 
 	tableName2IdMap := make(map[string]int64)
@@ -945,8 +910,7 @@ func (m *Meta) GetTables() (map[int64]*TableMeta, error) {
 	defer rows.Close()
 	for rows.Next() {
 		if err := rows.Scan(scanArgs...); err != nil {
-			log.Fatal(err)
-			return nil, err
+			return nil, errors.Wrapf(err, query)
 		}
 
 		// match parsedDbname == dbname, return dbId
@@ -962,8 +926,7 @@ func (m *Meta) GetTables() (map[int64]*TableMeta, error) {
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Fatal(err)
-		return nil, err
+		return nil, errors.Wrapf(err, query)
 	}
 
 	m.TableName2IdMap = tableName2IdMap
@@ -991,7 +954,6 @@ func (m *Meta) CheckBinlogFeature() error {
 func (m *Meta) isFEBinlogFeature() (bool, error) {
 	db, err := m.Connect()
 	if err != nil {
-		log.Fatal(err)
 		return false, err
 	}
 	defer db.Close()
@@ -1001,14 +963,13 @@ func (m *Meta) isFEBinlogFeature() (bool, error) {
 	query := fmt.Sprintf("ADMIN SHOW FRONTEND CONFIG LIKE \"%%enable_feature_binlog%%\"")
 	rows, err := db.Query(query)
 	if err != nil {
-		log.Error(err)
-		return false, err
+		return false, errors.Wrap(err, query)
 	}
 
 	defer rows.Close()
 	if rows.Next() {
 		if err := rows.Scan(scanArgs...); err != nil {
-			log.Fatal(err)
+			return false, errors.Wrap(err, query)
 		}
 	}
 
@@ -1027,12 +988,12 @@ func (m *Meta) checkBEsBinlogFeature() error {
 			backend.Host, backend.HttpPort)
 		resp, err := http.Get(url)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "get url: %s failed", url)
 		}
 
 		var configs [][]string
 		if err := json.NewDecoder(resp.Body).Decode(&configs); err != nil {
-			return err
+			return errors.Wrapf(err, "decode json failed, url: %s", url)
 		}
 
 		if len(configs) != 1 {
@@ -1046,8 +1007,8 @@ func (m *Meta) checkBEsBinlogFeature() error {
 	}
 
 	if len(disabledBinlogBEs) != 0 {
-		return errors.Errorf(fmt.Sprintf("Be: %v enable_feature_binlog=false, please set it true in be.conf",
-			disabledBinlogBEs))
+		return errors.Errorf("Be: %v enable_feature_binlog=false, please set it true in be.conf",
+			disabledBinlogBEs)
 	}
 
 	return nil
