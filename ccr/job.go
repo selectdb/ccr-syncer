@@ -532,25 +532,20 @@ func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*
 
 		log.Tracef("tableRecord: %v", tableRecord)
 		// TODO: check it before ingestBinlog
-		var srcTableName string
-		var destTableName string
+		var srcTableId int64
+		var destTableId int64
 
 		var err error
 		switch j.SyncType {
 		case TableSync:
-			srcTableName = j.Src.Table
-			destTableName = j.Dest.Table
+			srcTableId = j.Src.TableId
+			destTableId = j.Dest.TableId
 		case DBSync:
-			srcTableName, err = j.srcMeta.GetTableNameById(tableRecord.Id)
-			if err != nil {
-				break
-			}
-			var destTableId int64
+			srcTableId = tableRecord.Id
 			destTableId, err = j.getDestTableIdBySrc(tableRecord.Id)
 			if err != nil {
 				break
 			}
-			destTableName, err = j.destMeta.GetTableNameById(destTableId)
 		default:
 			err = errors.Errorf("invalid sync type: %s", j.SyncType)
 		}
@@ -565,26 +560,26 @@ func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*
 
 			srcPartitionId := partitionRecord.PartitionID
 			var srcPartitionName string
-			srcPartitionName, err = j.srcMeta.GetPartitionName(srcTableName, srcPartitionId)
+			srcPartitionName, err = j.srcMeta.GetPartitionName(srcTableId, srcPartitionId)
 			if err != nil {
 				updateLastError(err)
 				break
 			}
 			var destPartitionId int64
-			destPartitionId, err = j.destMeta.GetPartitionIdByName(destTableName, srcPartitionName)
+			destPartitionId, err = j.destMeta.GetPartitionIdByName(destTableId, srcPartitionName)
 			if err != nil {
 				updateLastError(err)
 				break
 			}
 
 			var srcTablets []*TabletMeta
-			srcTablets, err = j.srcMeta.GetTabletList(srcTableName, srcPartitionId)
+			srcTablets, err = j.srcMeta.GetTabletList(srcTableId, srcPartitionId)
 			if err != nil {
 				updateLastError(err)
 				break
 			}
 			var destTablets []*TabletMeta
-			destTablets, err = j.destMeta.GetTabletList(destTableName, destPartitionId)
+			destTablets, err = j.destMeta.GetTabletList(destTableId, destPartitionId)
 			if err != nil {
 				updateLastError(err)
 				break
