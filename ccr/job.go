@@ -864,10 +864,8 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	var tableName string
-	if dropTable.TableName == "" {
-		tableName = dropTable.TableName
-	} else {
+	tableName := dropTable.TableName
+	if tableName == "" {
 		dirtySrcTables := j.srcMeta.DirtyGetTables()
 		srcTable, ok := dirtySrcTables[dropTable.TableId]
 		if !ok {
@@ -876,8 +874,8 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 
 		tableName = srcTable.Name
 	}
-	sql := fmt.Sprintf("DROP TABLE %s FORCE", tableName)
 
+	sql := fmt.Sprintf("DROP TABLE %s FORCE", tableName)
 	log.Tracef("dropTableSql: %s", sql)
 	err = j.Dest.DbExec(sql)
 	j.srcMeta.GetTables()

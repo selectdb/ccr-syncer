@@ -11,6 +11,7 @@ type DropTable struct {
 	DbId      int64  `json:"dbId"`
 	TableId   int64  `json:"tableId"`
 	TableName string `json:"tableName"`
+	RawSql    string `json:"rawSql"`
 }
 
 func NewDropTableFromJson(data string) (*DropTable, error) {
@@ -27,7 +28,7 @@ func NewDropTableFromJson(data string) (*DropTable, error) {
 	return &dropTable, nil
 }
 
-// String
+// Stringer, all fields
 func (c *DropTable) String() string {
-	return fmt.Sprintf("DropTable: DbId: %d, TableId: %d", c.DbId, c.TableId)
+	return fmt.Sprintf("DropTable: DbId: %d, TableId: %d, TableName: %s, RawSql: %s", c.DbId, c.TableId, c.TableName, c.RawSql)
 }
