@@ -8,8 +8,9 @@ import (
 )
 
 type DropTable struct {
-	DbId    int64 `json:"dbId"`
-	TableId int64 `json:"tableId"`
+	DbId      int64  `json:"dbId"`
+	TableId   int64  `json:"tableId"`
+	TableName string `json:"tableName"`
 }
 
 func NewDropTableFromJson(data string) (*DropTable, error) {

@@ -864,13 +864,20 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	dirtySrcTables := j.srcMeta.DirtyGetTables()
-	srcTable, ok := dirtySrcTables[dropTable.TableId]
-	if !ok {
-		return errors.Errorf("table not found, tableId: %d", dropTable.TableId)
-	}
+	var tableName string
+	if dropTable.TableName == "" {
+		tableName = dropTable.TableName
+	} else {
+		dirtySrcTables := j.srcMeta.DirtyGetTables()
+		srcTable, ok := dirtySrcTables[dropTable.TableId]
+		if !ok {
+			return errors.Errorf("table not found, tableId: %d", dropTable.TableId)
+		}
 
-	sql := fmt.Sprintf("DROP TABLE %s FORCE", srcTable.Name)
+		tableName = srcTable.Name
+	}
+	sql := fmt.Sprintf("DROP TABLE %s FORCE", tableName)
+
 	log.Tracef("dropTableSql: %s", sql)
 	err = j.Dest.DbExec(sql)
 	j.srcMeta.GetTables()
