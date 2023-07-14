@@ -27,7 +27,7 @@ func test_init_meta(m *ccr.Meta) {
 	}
 
 	var partitionId int64
-	if partitions, err := m.GetPartitions(m.Table); err != nil {
+	if partitions, err := m.GetPartitions(tableId); err != nil {
 		panic(err)
 	} else {
 		if len(partitions) == 0 {
@@ -52,13 +52,13 @@ func test_init_meta(m *ccr.Meta) {
 	}
 	log.Infof("meta: %#v", m)
 
-	if indexes, err := m.GetIndexes(m.Table, partitionId); err != nil {
+	if indexes, err := m.GetIndexes(tableId, partitionId); err != nil {
 		panic(err)
 	} else {
 		log.Infof("partitionid: %d, found indexes: %v", partitionId, indexes)
 	}
 
-	if tablets, err := m.GetTabletList(m.Table, partitionId); err != nil {
+	if tablets, err := m.GetTabletList(tableId, partitionId); err != nil {
 		panic(err)
 	} else {
 		log.Infof("partitionid: %d, found tablets: %v", partitionId, tablets)
@@ -67,7 +67,7 @@ func test_init_meta(m *ccr.Meta) {
 		}
 	}
 
-	if replicas, err := m.GetReplicas(m.Table, partitionId); err != nil {
+	if replicas, err := m.GetReplicas(tableId, partitionId); err != nil {
 		panic(err)
 	} else {
 		log.Infof("partitionid: %d, found replicas: %v, len %d", partitionId, replicas, replicas.Len())
