@@ -40,16 +40,23 @@ type TableMeta struct {
 	Partitions   map[int64]*PartitionMeta // partitionId -> partition
 }
 
+// Stringer
+func (t *TableMeta) String() string {
+	return fmt.Sprintf("TableMeta{(id:%d), (name:%s)}", t.Id, t.Name)
+}
+
 type PartitionMeta struct {
 	TableMeta *TableMeta
 	Id        int64
 	Name      string
+	Key       string
+	Range     string
 	Indexes   map[int64]*IndexMeta // indexId -> index
 }
 
 // Stringer
 func (p *PartitionMeta) String() string {
-	return fmt.Sprintf("PartitionMeta{(id:%d), (name:%s)}", p.Id, p.Name)
+	return fmt.Sprintf("PartitionMeta{(id:%d), (name:%s), (key:%s), (range:%s)}", p.Id, p.Name, p.Key, p.Range)
 }
 
 type IndexMeta struct {
@@ -273,11 +280,13 @@ func (m *Meta) UpdatePartitions(tableId int64) error {
 
 	partitions := make([]*PartitionMeta, 0)
 	// total columns 18
-	var partitionId int64
-	var partitionName string
-	discardCols := make([]sql.RawBytes, 16)
-	scanArgs := []interface{}{&partitionId, &partitionName}
-	for i := range discardCols {
+	var partitionId int64     // column 0
+	var partitionName string  // column 1
+	var partitionKey string   // column 5
+	var partitionRange string // column 6
+	discardCols := make([]sql.RawBytes, 14)
+	scanArgs := []interface{}{&partitionId, &partitionName, &discardCols[0], &discardCols[1], &discardCols[2], &partitionKey, &partitionRange}
+	for i := 3; i < len(discardCols); i++ {
 		scanArgs = append(scanArgs, &discardCols[i])
 	}
 	query := fmt.Sprintf("show proc '/dbs/%d/%d/partitions'", dbId, table.Id)
@@ -297,6 +306,8 @@ func (m *Meta) UpdatePartitions(tableId int64) error {
 			TableMeta: table,
 			Id:        partitionId,
 			Name:      partitionName,
+			Key:       partitionKey,
+			Range:     partitionRange,
 		}
 		partitions = append(partitions, partition)
 	}
@@ -388,6 +399,25 @@ func (m *Meta) GetPartitionName(tableId int64, partitionId int64) (string, error
 	return partition.Name, nil
 }
 
+func (m *Meta) GetPartitionRange(tableId int64, partitionId int64) (string, error) {
+	partitions, err := m.GetPartitions(tableId)
+	if err != nil {
+		return "", err
+	}
+	partition, ok := partitions[partitionId]
+	if !ok {
+		partitions, err = m.getPartitionsWithUpdate(tableId, 0)
+		if err != nil {
+			return "", err
+		}
+		if partition, ok = partitions[partitionId]; !ok {
+			return "", errors.Errorf("partitionId %d not found", partitionId)
+		}
+	}
+
+	return partition.Range, nil
+}
+
 func (m *Meta) GetPartitionIdByName(tableId int64, partitionName string) (int64, error) {
 	// TODO: optimize performance
 	partitions, err := m.GetPartitions(tableId)
@@ -410,7 +440,32 @@ func (m *Meta) GetPartitionIdByName(tableId int64, partitionName string) (int64,
 		}
 	}
 
-	return 0, errors.Errorf("partitionName %s not found", partitionName)
+	return 0, errors.Errorf("partition name %s not found", partitionName)
+}
+
+func (m *Meta) GetPartitionIdByRange(tableId int64, partitionRange string) (int64, error) {
+	// TODO: optimize performance
+	partitions, err := m.GetPartitions(tableId)
+	if err != nil {
+		return 0, err
+	}
+
+	for partitionId, partition := range partitions {
+		if partition.Range == partitionRange {
+			return partitionId, nil
+		}
+	}
+	partitions, err = m.getPartitionsWithUpdate(tableId, 0)
+	if err != nil {
+		return 0, err
+	}
+	for partitionId, partition := range partitions {
+		if partition.Range == partitionRange {
+			return partitionId, nil
+		}
+	}
+
+	return 0, errors.Errorf("partition range %s not found", partitionRange)
 }
 
 func (m *Meta) UpdateBackends() error {

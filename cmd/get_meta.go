@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/selectdb/ccr_syncer/ccr"
@@ -8,7 +10,14 @@ import (
 	"github.com/selectdb/ccr_syncer/utils"
 )
 
+var (
+	tableName string
+)
+
 func init() {
+	flag.StringVar(&tableName, "table", "enable_binlog", "table name")
+	flag.Parse()
+
 	utils.InitLog()
 }
 
@@ -96,7 +105,7 @@ func main() {
 		User:       "root",
 		Password:   "",
 		Database:   "ccr",
-		Table:      "enable_binlog",
+		Table:      tableName,
 	}
 
 	meta := ccr.NewMeta(src)

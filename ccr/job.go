@@ -559,14 +559,14 @@ func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*
 			binlogVersion := partitionRecord.Version
 
 			srcPartitionId := partitionRecord.PartitionID
-			var srcPartitionName string
-			srcPartitionName, err = j.srcMeta.GetPartitionName(srcTableId, srcPartitionId)
+			var srcPartitionRange string
+			srcPartitionRange, err = j.srcMeta.GetPartitionRange(srcTableId, srcPartitionId)
 			if err != nil {
 				updateLastError(err)
 				break
 			}
 			var destPartitionId int64
-			destPartitionId, err = j.destMeta.GetPartitionIdByName(destTableId, srcPartitionName)
+			destPartitionId, err = j.destMeta.GetPartitionIdByRange(destTableId, srcPartitionRange)
 			if err != nil {
 				updateLastError(err)
 				break
