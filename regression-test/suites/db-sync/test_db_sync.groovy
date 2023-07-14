@@ -246,10 +246,10 @@ suite("test_db_sync") {
     sql "DROP TABLE ${tableAggregate1}"
     sql "DROP TABLE ${tableDuplicate1}"
 
-    assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableUnique1}",
-                                notExist, 30))
-    assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableAggregate1}",
-                                notExist, 30))
-    assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableDuplicate1}",
-                                notExist, 30))
+    assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${tableUnique1}'", 
+                                notExist, 30, "target"))
+    assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${tableAggregate1}'",
+                                notExist, 30, "target"))
+    assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${tableDuplicate1}'", 
+                                notExist, 30, "target"))
 }
