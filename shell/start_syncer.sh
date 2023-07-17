@@ -1,4 +1,18 @@
+set -eo pipefail
+
 curdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+
+SYNCER_HOME="$(
+    cd "${curdir}/.."
+    pwd
+)"
+export SYNCER_HOME
+
+PID_DIR="$(
+    cd "${curdir}"
+    pwd
+)"
+export PID_DIR
 
 OPTS="$(getopt \
     -n "$0" \
@@ -26,18 +40,6 @@ while true; do
     esac
 done
 
-SYNCER_HOME="$(
-    cd "${curdir}/.."
-    pwd
-)"
-export SYNCER_HOME
-
-PID_DIR="$(
-    cd "${curdir}"
-    pwd
-)"
-export PID_DIR
-
 LOG_DIR="${SYNCER_HOME}/log"
 
 pidfile="${PID_DIR}/syncer.pid"
@@ -55,7 +57,7 @@ echo "start time: $(date)" >>"${LOG_DIR}/ccr_syncer.log"
 
 if [[ "${RUN_DAEMON}" -eq 1 ]]; then
     nohup "${SYNCER_HOME}/bin/ccr_syncer" "$@" >>"${LOG_DIR}/ccr_syncer.log" 2>&1 </dev/null &
-    echo $! > bin/syncer.pid
+    echo $! > ${PID_DIR}/syncer.pid
 else
     "${SYNCER_HOME}/bin/ccr_syncer" "$@" 2>&1 </dev/null
 fi
