@@ -18,16 +18,34 @@ OPTS="$(getopt \
     -n "$0" \
     -o '' \
     -l 'daemon' \
+    -l 'log_level:' \
+    -l 'log_dir:' \
+    -l 'db_dir:' \
     -- "$@")"
 
 eval set -- "${OPTS}"
 
 RUN_DAEMON=0
+LOG_LEVEL=""
+LOG_DIR="${SYNCER_HOME}/log/ccr_syncer.log"
+DB_DIR="${SYNCER_HOME}/db/ccr.db"
 while true; do
     case "$1" in
     --daemon)
         RUN_DAEMON=1
         shift
+        ;;
+    --log_level)
+        LOG_LEVEL=$2
+        shift 2
+        ;;
+    --log_dir)
+        LOG_DIR=$2
+        shift 2
+        ;;
+    --db_dir)
+        DB_DIR=$2
+        shift 2
         ;;
     --)
         shift
@@ -40,7 +58,15 @@ while true; do
     esac
 done
 
-LOG_DIR="${SYNCER_HOME}/log"
+if [[ RUN_DAEMON -eq 0 ]]; then
+    if [[ -z "${LOG_LEVEL}" ]]; then
+        LOG_LEVEL="trace"
+    fi
+else
+    if [[ -z "${LOG_LEVEL}" ]]; then
+        LOG_LEVEL="info"
+    fi
+fi
 
 pidfile="${PID_DIR}/syncer.pid"
 if [[ -f "${pidfile}" ]]; then
@@ -53,11 +79,15 @@ if [[ -f "${pidfile}" ]]; then
 fi
 
 chmod 755 "${SYNCER_HOME}/bin/ccr_syncer"
-echo "start time: $(date)" >>"${LOG_DIR}/ccr_syncer.log"
+echo "start time: $(date)" >>"${LOG_DIR}"
 
 if [[ "${RUN_DAEMON}" -eq 1 ]]; then
-    nohup "${SYNCER_HOME}/bin/ccr_syncer" "$@" >>"${LOG_DIR}/ccr_syncer.log" 2>&1 </dev/null &
+    nohup "${SYNCER_HOME}/bin/ccr_syncer" \
+          "-db_dir=${DB_DIR}" \
+          "-log_level=${LOG_LEVEL}" \
+          "-log_filename=${LOG_DIR}" \
+          "$@" >>"${LOG_DIR}" 2>&1 </dev/null &
     echo $! > ${PID_DIR}/syncer.pid
 else
-    "${SYNCER_HOME}/bin/ccr_syncer" "$@" 2>&1 </dev/null
+    "${SYNCER_HOME}/bin/ccr_syncer" "-db_dir=${DB_DIR}" "-log_level=${LOG_LEVEL}" | tee -a "${LOG_DIR}"
 fi
