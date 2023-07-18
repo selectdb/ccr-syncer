@@ -34,7 +34,7 @@
 
 - 现在可以指定syncer持久化DB的文件路径  
   `--db_dir </PATH/TO/DB/FILE>`：  
-  DB文件路径包括路径+文件名，如：/var/myccr.log，默认值为 `db/ccr.db`  
+  DB文件路径包括路径+文件名，如：/var/myccr.db，默认值为 `db/ccr.db`  
   
   例：  
 
