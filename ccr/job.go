@@ -10,12 +10,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/modern-go/gls"
 	"github.com/selectdb/ccr_syncer/ccr/base"
 	"github.com/selectdb/ccr_syncer/ccr/record"
 	"github.com/selectdb/ccr_syncer/rpc"
 	"github.com/selectdb/ccr_syncer/storage"
-	"github.com/selectdb/ccr_syncer/utils"
-	u "github.com/selectdb/ccr_syncer/utils"
+	utils "github.com/selectdb/ccr_syncer/utils"
 
 	bestruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/backendservice"
 	festruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/frontendservice"
@@ -204,7 +204,7 @@ func (j *Job) fullSync() error {
 	switch j.progress.SubSyncState {
 	case BeginCreateSnapshot:
 		// Step 1: Create snapshot
-		log.Debugf("create snapshot")
+		log.Infof("fullsync status: create snapshot")
 
 		backupTableList := make([]string, 0)
 		switch j.SyncType {
@@ -230,7 +230,7 @@ func (j *Job) fullSync() error {
 
 	case GetSnapshotInfo:
 		// Step 2: Get snapshot info
-		log.Tracef("get snapshot info")
+		log.Infof("fullsync status: get snapshot info")
 
 		snapshotName := j.progress.PersistData
 		src := &j.Src
@@ -270,7 +270,7 @@ func (j *Job) fullSync() error {
 
 	case AddExtraInfo:
 		// Step 3: Add extra info
-		log.Tracef("add extra info")
+		log.Infof("fullsync status: add extra info")
 
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
 		snapshotResp := inMemoryData.SnapshotResp
@@ -312,7 +312,7 @@ func (j *Job) fullSync() error {
 
 	case RestoreSnapshot:
 		// Step : Restore snapshot
-		log.Tracef("restore snapshot")
+		log.Infof("fullsync status: restore snapshot")
 
 		if j.progress.InMemoryData == nil {
 			persistData := j.progress.PersistData
@@ -356,7 +356,7 @@ func (j *Job) fullSync() error {
 	case PersistRestoreInfo:
 		// Step 6: Update job progress && dest table id
 		// update job info, only for dest table id
-		log.Tracef("persist restore info")
+		log.Infof("fullsync status: persist restore info")
 
 		// TODO: retry && mark it for not start a new full sync
 		switch j.SyncType {
@@ -490,7 +490,7 @@ func (j *Job) getReleatedTableRecords(upsert *record.Upsert) ([]*record.TableRec
 // TODO: add check success, check ingestBinlog commitInfo
 // TODO: rewrite by use tableId
 func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*ttypes.TTabletCommitInfo, error) {
-	log.Tracef("ingestBinlog, txnId: %d", txnId)
+	log.Infof("ingestBinlog, txnId: %d", txnId)
 
 	var wg sync.WaitGroup
 	var srcBackendMap map[int64]*base.Backend
@@ -626,13 +626,13 @@ func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*
 						return false
 					}
 					req := &bestruct.TIngestBinlogRequest{
-						TxnId:          u.ThriftValueWrapper(txnId),
-						RemoteTabletId: u.ThriftValueWrapper[int64](srcTablet.Id),
-						BinlogVersion:  u.ThriftValueWrapper(binlogVersion),
-						RemoteHost:     u.ThriftValueWrapper(srcBackend.Host),
-						RemotePort:     u.ThriftValueWrapper(srcBackend.GetHttpPortStr()),
-						PartitionId:    u.ThriftValueWrapper[int64](destPartitionId),
-						LocalTabletId:  u.ThriftValueWrapper[int64](destTabletId),
+						TxnId:          utils.ThriftValueWrapper(txnId),
+						RemoteTabletId: utils.ThriftValueWrapper[int64](srcTablet.Id),
+						BinlogVersion:  utils.ThriftValueWrapper(binlogVersion),
+						RemoteHost:     utils.ThriftValueWrapper(srcBackend.Host),
+						RemotePort:     utils.ThriftValueWrapper(srcBackend.GetHttpPortStr()),
+						PartitionId:    utils.ThriftValueWrapper[int64](destPartitionId),
+						LocalTabletId:  utils.ThriftValueWrapper[int64](destTabletId),
 						LoadId:         loadId,
 					}
 					commitInfo := &ttypes.TTabletCommitInfo{
@@ -650,7 +650,7 @@ func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*
 							return
 						}
 
-						log.Debugf("ingest resp: %v", resp)
+						log.Infof("ingest resp: %v", resp)
 						if !resp.IsSetStatus() {
 							err = errors.Errorf("ingest resp status not set")
 							updateLastError(err)
@@ -718,7 +718,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 	}
 
 	// Step 2: begin txn
-	log.Tracef("begin txn, dest: %v, commitSeq: %d", dest, commitSeq)
+	log.Infof("begin txn, dest: %v, commitSeq: %d", dest, commitSeq)
 	destRpc, err := rpc.NewThriftRpc(dest)
 	if err != nil {
 		return err
@@ -1155,6 +1155,9 @@ func (j *Job) sync() error {
 func (j *Job) run() error {
 	ticker := time.NewTicker(SYNC_DURATION)
 	defer ticker.Stop()
+	
+	gls.ResetGls(gls.GoID(), map[interface{}]interface{}{})
+	gls.Set("ccrName", j.Name)
 
 	for {
 		select {
@@ -1213,6 +1216,7 @@ func (j *Job) Run() error {
 
 // stop job
 func (j *Job) Stop() error {
+	gls.DeleteGls(gls.GoID())
 	close(j.stop)
 	return nil
 }

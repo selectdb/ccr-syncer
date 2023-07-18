@@ -8,6 +8,7 @@ require (
 	github.com/go-sql-driver/mysql v1.7.0
 	github.com/keepeye/logrus-filename v0.0.0-20190711075016-ce01a4391dd1
 	github.com/mattn/go-sqlite3 v1.14.17
+	github.com/modern-go/gls v0.0.0-20220109145502-612d0167dce5
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
 	github.com/t-tomalak/logrus-prefixed-formatter v0.5.2
