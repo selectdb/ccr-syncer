@@ -145,8 +145,8 @@ func (s *Spec) Valid() error {
 }
 
 func (s *Spec) String() string {
-	return fmt.Sprintf("host: %s, port: %s, thrift_port: %s, user: %s, password: %s, cluster: %s, database: %s, database id: %d, table: %s, table id: %d",
-		s.Host, s.Port, s.ThriftPort, s.User, s.Password, s.Cluster, s.Database, s.DbId, s.Table, s.TableId)
+	return fmt.Sprintf("host: %s, port: %s, thrift_port: %s, user: %s, cluster: %s, database: %s, database id: %d, table: %s, table id: %d",
+		s.Host, s.Port, s.ThriftPort, s.User, s.Cluster, s.Database, s.DbId, s.Table, s.TableId)
 }
 
 func (s *Spec) connect(dsn string) (*sql.DB, error) {

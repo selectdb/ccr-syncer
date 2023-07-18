@@ -11,18 +11,18 @@ import (
 )
 
 var (
-	db string
+	dbPath string
 )
 
 func init() {
-	flag.StringVar(&db, "db", "ccr.db", "sqlite3 db file")
+	flag.StringVar(&dbPath, "db_dir", "ccr.db", "sqlite3 db file")
 	flag.Parse()
-
+	
 	utils.InitLog()
 }
 
 func main() {
-	db, err := storage.NewSQLiteDB(db)
+	db, err := storage.NewSQLiteDB(dbPath)
 	if err != nil {
 		panic(err)
 	}
