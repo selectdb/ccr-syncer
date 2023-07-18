@@ -22,7 +22,7 @@ func init() {
 }
 
 func main() {
-	db, err := storage.NewSQLiteDB("ccr.db")
+	db, err := storage.NewSQLiteDB(db)
 	if err != nil {
 		panic(err)
 	}
