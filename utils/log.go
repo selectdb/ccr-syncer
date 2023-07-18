@@ -19,7 +19,7 @@ var (
 )
 
 func init() {
-	flag.StringVar(&logLevel, "log_level", "info", "log level")
+	flag.StringVar(&logLevel, "log_level", "trace", "log level")
 	flag.StringVar(&logFilename, "log_filename", "", "log filename")
 	flag.BoolVar(&logAlsoToStderr, "log_also_to_stderr", false, "log also to stderr")
 }
@@ -37,6 +37,8 @@ func InitLog() {
 		ForceFormatting: true,
 	})
 
+	syncHook := NewHook()
+	log.AddHook(syncHook)
 	if level > log.InfoLevel {
 		// log.SetReportCaller(true), caller by filename
 		filenameHook := filename.NewHook()

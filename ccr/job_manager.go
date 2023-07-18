@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/selectdb/ccr_syncer/storage"
-
 	"github.com/pkg/errors"
+	"github.com/selectdb/ccr_syncer/storage"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -448,7 +448,7 @@ func (s *Spec) CreateSnapshotAndWaitForDone(tables []string) (string, error) {
 
 // TODO: Add TaskErrMsg
 func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, error) {
-	log.Infof("check backup state of snapshot %s", snapshotName)
+	log.Tracef("check backup state of snapshot %s", snapshotName)
 
 	db, err := s.Connect()
 	if err != nil {
@@ -472,7 +472,7 @@ func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, error) {
 			return BackupStateUnknown, errors.Wrapf(err, "scan backup state failed, sql: %s", sql)
 		}
 
-		log.Tracef("check backup state: %v", backupStateStr)
+		log.Infof("check snapshot %s backup state: [%v]", snapshotName, backupStateStr)
 		return ParseBackupState(backupStateStr), nil
 	}
 	return BackupStateUnknown, errors.Errorf("no backup state found, sql: %s", sql)
@@ -524,7 +524,7 @@ func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, error) {
 			return RestoreStateUnknown, errors.Wrapf(err, "scan restore state failed")
 		}
 
-		log.Tracef("check restore state: %v", restoreStateStr)
+		log.Infof("check snapshot %s restore state: [%v]", snapshotName, restoreStateStr)
 
 		return ParseRestoreState(restoreStateStr), nil
 	}
