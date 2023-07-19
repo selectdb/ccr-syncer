@@ -290,7 +290,7 @@ func (m *Meta) UpdatePartitions(tableId int64) error {
 		scanArgs = append(scanArgs, &discardCols[i])
 	}
 	query := fmt.Sprintf("show proc '/dbs/%d/%d/partitions'", dbId, table.Id)
-	log.Trace(query)
+	log.Debug(query)
 	rows, err := db.Query(query)
 	if err != nil {
 		return errors.Wrap(err, query)
@@ -301,7 +301,7 @@ func (m *Meta) UpdatePartitions(tableId int64) error {
 		if err := rows.Scan(scanArgs...); err != nil {
 			return errors.Wrap(err, query)
 		}
-		log.Printf("partitionId: %d, partitionName: %s", partitionId, partitionName)
+		log.Debugf("partitionId: %d, partitionName: %s", partitionId, partitionName)
 		partition := &PartitionMeta{
 			TableMeta: table,
 			Id:        partitionId,
@@ -483,7 +483,7 @@ func (m *Meta) UpdateBackends() error {
 
 	backends := make([]*base.Backend, 0)
 	query := "show proc '/backends'"
-	log.Trace(query)
+	log.Debug(query)
 	rows, err := db.Query(query)
 	if err != nil {
 		return errors.Wrap(err, query)
@@ -612,7 +612,7 @@ func (m *Meta) UpdateIndexes(tableId int64, partitionId int64) error {
 		scanArgs = append(scanArgs, &discardCols[i])
 	}
 	query := fmt.Sprintf("show proc '/dbs/%d/%d/partitions/%d'", dbId, table.Id, partition.Id)
-	log.Trace(query)
+	log.Debug(query)
 	rows, err := db.Query(query)
 	if err != nil {
 		return errors.Wrap(err, query)
@@ -701,7 +701,7 @@ func (m *Meta) updateReplica(index *IndexMeta) error {
 		scanArgs = append(scanArgs, &discardCols[i])
 	}
 	query := fmt.Sprintf("show proc '/dbs/%d/%d/partitions/%d/%d'", dbId, tableId, partitionId, indexId)
-	log.Trace(query)
+	log.Debug(query)
 	rows, err := db.Query(query)
 	if err != nil {
 		return errors.Wrap(err, query)
@@ -839,7 +839,7 @@ func (m *Meta) GetTablets(tableId int64, partitionId int64) (*btree.Map[int64, *
 	tablets := btree.NewMap[int64, *TabletMeta](degree)
 	for _, index := range indexes {
 		for _, tablet := range index.TabletMetas.Values() {
-			log.Tracef("tablet: %d, replica len: %d", tablet.Id, tablet.ReplicaMetas.Len()) // TODO: remove it
+			log.Debugf("tablet: %d, replica len: %d", tablet.Id, tablet.ReplicaMetas.Len()) // TODO: remove it
 			tablets.Set(tablet.Id, tablet)
 		}
 	}
