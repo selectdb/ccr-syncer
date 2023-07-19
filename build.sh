@@ -37,6 +37,7 @@ while true; do
     esac
 done
 
+mkdir -p ${SYNCER_OUTPUT}/bin
 mkdir -p ${SYNCER_OUTPUT}/log
 mkdir -p ${SYNCER_OUTPUT}/db
 
@@ -47,7 +48,7 @@ fi
 
 make -j ${PARALLEL}
 
-cp -r ${SYNCER_HOME}/bin ${SYNCER_OUTPUT}/bin
+cp ${SYNCER_HOME}/bin/ccr_syncer ${SYNCER_OUTPUT}/bin/
 cp ${SYNCER_HOME}/shell/* ${SYNCER_OUTPUT}/bin/
 cp ${SYNCER_HOME}/CHANGELOG.md ${SYNCER_OUTPUT}/
 
