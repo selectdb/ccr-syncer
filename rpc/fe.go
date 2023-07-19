@@ -80,7 +80,7 @@ func (rpc *ThriftRpc) BeginTransaction(spec *base.Spec, label string, tableIds [
 	setAuthInfo(req, spec)
 	req.TableIds = tableIds
 
-	log.Debugf("BeginTransaction user %s, label: %s, tableIds: %v", *req.User, label, tableIds)
+	log.Debugf("BeginTransaction user %s, label: %s, tableIds: %v", req.GetUser(), label, tableIds)
 	if result, err := client.BeginTxn(context.Background(), req); err != nil {
 		return nil, errors.Wrapf(err, "BeginTransaction error: %v, req: %+v", err, req)
 	} else {
@@ -111,7 +111,7 @@ func (rpc *ThriftRpc) CommitTransaction(spec *base.Spec, txnId int64, commitInfo
 	req.TxnId = &txnId
 	req.CommitInfos = commitInfos
 
-	log.Debugf("CommitTransaction txnId: %d", *req.TxnId)
+	log.Debugf("CommitTransaction txnId: %d", req.GetTxnId())
 	if result, err := client.CommitTxn(context.Background(), req); err != nil {
 		return nil, errors.Wrapf(err, "CommitTransaction error: %v, req: %+v", err, req)
 	} else {
@@ -145,8 +145,8 @@ func (rpc *ThriftRpc) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGe
 		}
 	}
 
-	log.Debugf("GetBinlog user %s, db %s, table %s, tableId %d, prev seq: %d",
-		*req.User, *req.Db, *req.Table, *req.TableId, *req.PrevCommitSeq)
+	log.Debugf("GetBinlog user %s, db %s, tableId %d, prev seq: %d", req.GetUser(), req.GetDb(),
+		req.GetTableId(), req.GetPrevCommitSeq())
 	if resp, err := client.GetBinlog(context.Background(), req); err != nil {
 		return nil, errors.Wrapf(err, "GetBinlog error: %v, req: %+v", err, req)
 	} else {
@@ -171,8 +171,8 @@ func (rpc *ThriftRpc) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.
 		}
 	}
 
-	log.Debugf("GetBinlog user %s, db %s, table %s, tableId %d, prev seq: %d",
-		*req.User, *req.Db, *req.Table, *req.TableId, *req.PrevCommitSeq)
+	log.Debugf("GetBinlog user %s, db %s, tableId %d, prev seq: %d", req.GetUser(), req.GetDb(),
+		req.GetTableId(), req.GetPrevCommitSeq())
 	if resp, err := client.GetBinlogLag(context.Background(), req); err != nil {
 		return nil, errors.Wrapf(err, "GetBinlogLag error: %v, req: %+v", err, req)
 	} else {
@@ -206,7 +206,7 @@ func (rpc *ThriftRpc) GetSnapshot(spec *base.Spec, labelName string) (*festruct.
 	setAuthInfo(req, spec)
 
 	log.Debugf("GetSnapshotRequest user %s, db %s, table %s, label name %s, snapshot name %s, snapshot type %d",
-		*req.User, *req.Db, *req.Table, *req.LabelName, *req.SnapshotName, *req.SnapshotType)
+		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), req.GetSnapshotName(), req.GetSnapshotType())
 	if resp, err := client.GetSnapshot(context.Background(), req); err != nil {
 		return nil, errors.Wrapf(err, "GetSnapshot error: %v, req: %+v", err, req)
 	} else {
@@ -249,7 +249,7 @@ func (rpc *ThriftRpc) RestoreSnapshot(spec *base.Spec, label string, snapshotRes
 	setAuthInfo(req, spec)
 
 	log.Debugf("RestoreSnapshotRequest user %s, db %s, table %s, label name %s, properties %v, meta %v, job info %v",
-		*req.User, *req.Db, *req.Table, *req.LabelName, properties, snapshotResult.GetMeta(), snapshotResult.GetJobInfo())
+		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), properties, snapshotResult.GetMeta(), snapshotResult.GetJobInfo())
 	if resp, err := client.RestoreSnapshot(context.Background(), req); err != nil {
 		return nil, errors.Wrapf(err, "RestoreSnapshot failed, req: %+v", req)
 	} else {
