@@ -170,7 +170,7 @@ func (j *JobProgress) BeginTransaction(txnId int64) {
 // write progress to db, busy loop until success
 // TODO: add timeout check
 func (j *JobProgress) Persist() {
-	log.Tracef("update job progress: %v", j)
+	log.Debugf("update job progress: %v", j)
 	for {
 		// Step 1: to json
 		// TODO: fix to json error
@@ -191,7 +191,7 @@ func (j *JobProgress) Persist() {
 
 		break
 	}
-	log.Tracef("update job progress done: %v", j)
+	log.Debugf("update job progress done: %v", j)
 }
 
 // func (j *JobProgress) Done() {

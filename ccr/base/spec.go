@@ -224,7 +224,7 @@ func (s *Spec) IsTableEnableBinlog() (bool, error) {
 }
 
 func (s *Spec) GetAllTables() ([]string, error) {
-	log.Infof("get all tables in database %s", s.Database)
+	log.Debugf("get all tables in database %s", s.Database)
 
 	db, err := s.ConnectDB()
 	if err != nil {
@@ -311,7 +311,7 @@ func (s *Spec) ClearDB() error {
 }
 
 func (s *Spec) CreateDatabase() error {
-	log.Trace("create database")
+	log.Debug("create database")
 
 	db, err := s.Connect()
 	if err != nil {
@@ -339,7 +339,7 @@ func (s *Spec) CreateTable(stmt string) error {
 }
 
 func (s *Spec) CheckDatabaseExists() (bool, error) {
-	log.Trace("check database exist by spec", zap.String("spec", s.String()))
+	log.Debug("check database exist by spec", zap.String("spec", s.String()))
 	db, err := s.Connect()
 	if err != nil {
 		return false, err
@@ -368,7 +368,7 @@ func (s *Spec) CheckDatabaseExists() (bool, error) {
 
 // check table exits in database dir by spec
 func (s *Spec) CheckTableExists() (bool, error) {
-	log.Trace("check table exists by spec", zap.String("spec", s.String()))
+	log.Debug("check table exists by spec", zap.String("spec", s.String()))
 
 	db, err := s.Connect()
 	if err != nil {
@@ -448,7 +448,7 @@ func (s *Spec) CreateSnapshotAndWaitForDone(tables []string) (string, error) {
 
 // TODO: Add TaskErrMsg
 func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, error) {
-	log.Tracef("check backup state of snapshot %s", snapshotName)
+	log.Debugf("check backup state of snapshot %s", snapshotName)
 
 	db, err := s.Connect()
 	if err != nil {
@@ -460,7 +460,7 @@ func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, error) {
 	scanArgs := utils.MakeSingleColScanArgs(3, &backupStateStr, 10)
 
 	sql := fmt.Sprintf("SHOW BACKUP FROM %s WHERE SnapshotName = \"%s\"", s.Database, snapshotName)
-	log.Tracef("check backup state sql: %s", sql)
+	log.Debugf("check backup state sql: %s", sql)
 	rows, err := db.Query(sql)
 	if err != nil {
 		return BackupStateUnknown, errors.Wrapf(err, "show backup failed, sql: %s", sql)
@@ -479,7 +479,7 @@ func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, error) {
 }
 
 func (s *Spec) CheckBackupFinished(snapshotName string) (bool, error) {
-	log.Trace("check backup state", zap.String("database", s.Database))
+	log.Debug("check backup state", zap.String("database", s.Database))
 
 	for i := 0; i < MAX_CHECK_RETRY_TIMES; i++ {
 		if backupState, err := s.checkBackupFinished(snapshotName); err != nil {
@@ -499,7 +499,7 @@ func (s *Spec) CheckBackupFinished(snapshotName string) (bool, error) {
 
 // TODO: Add TaskErrMsg
 func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, error) {
-	log.Tracef("check restore state %s", snapshotName)
+	log.Debugf("check restore state %s", snapshotName)
 
 	db, err := s.Connect()
 	if err != nil {
@@ -512,7 +512,7 @@ func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, error) {
 
 	query := fmt.Sprintf("SHOW RESTORE FROM %s WHERE Label = \"%s\"", s.Database, snapshotName)
 
-	log.Tracef("check restore state sql: %s", query)
+	log.Debugf("check restore state sql: %s", query)
 	rows, err := db.Query(query)
 	if err != nil {
 		return RestoreStateUnknown, errors.Wrapf(err, "query restore state failed")
@@ -532,7 +532,7 @@ func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, error) {
 }
 
 func (s *Spec) CheckRestoreFinished(snapshotName string) (bool, error) {
-	log.Trace("check restore is finished", zap.String("spec", s.String()), zap.String("snapshot", snapshotName))
+	log.Debug("check restore is finished", zap.String("spec", s.String()), zap.String("snapshot", snapshotName))
 
 	for i := 0; i < MAX_CHECK_RETRY_TIMES; i++ {
 		if backupState, err := s.checkRestoreFinished(snapshotName); err != nil {

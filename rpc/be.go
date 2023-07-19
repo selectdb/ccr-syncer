@@ -19,7 +19,7 @@ type BeThriftRpc struct {
 }
 
 func NewBeThriftRpc(be *base.Backend) (*BeThriftRpc, error) {
-	log.Tracef("NewBeThriftRpc be: %s", be)
+	log.Debugf("NewBeThriftRpc be: %s", be)
 
 	// create kitex FrontendService client
 	if client, err := beservice.NewClient("FrontendService", client.WithHostPorts(fmt.Sprintf("%s:%d", be.Host, be.BePort))); err != nil {
@@ -33,7 +33,7 @@ func NewBeThriftRpc(be *base.Backend) (*BeThriftRpc, error) {
 }
 
 func (beRpc *BeThriftRpc) IngestBinlog(req *bestruct.TIngestBinlogRequest) (*bestruct.TIngestBinlogResult_, error) {
-	log.Tracef("IngestBinlog req: %+v, txnId: %d, be: %v", req, req.GetTxnId(), beRpc.backend)
+	log.Debugf("IngestBinlog req: %+v, txnId: %d, be: %v", req, req.GetTxnId(), beRpc.backend)
 
 	client := beRpc.client
 	if result, err := client.IngestBinlog(context.Background(), req); err != nil {
