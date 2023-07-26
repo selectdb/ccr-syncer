@@ -129,7 +129,7 @@ func (m *Meta) GetDbId() (int64, error) {
 
 	var dbId int64
 	var parsedDbname string
-	discardCols := make([]sql.RawBytes, 7)
+	discardCols := make([]sql.RawBytes, 8)
 	scanArgs := []interface{}{&dbId, &parsedDbname}
 	for i := range discardCols {
 		scanArgs = append(scanArgs, &discardCols[i])
@@ -188,7 +188,7 @@ func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) 
 
 	var parsedTableId int64
 	var parsedTableName string
-	discardCols := make([]sql.RawBytes, 7)
+	discardCols := make([]sql.RawBytes, 8)
 	scanArgs := []interface{}{&parsedTableId, &parsedTableName}
 	for i := range discardCols {
 		scanArgs = append(scanArgs, &discardCols[i])
@@ -951,7 +951,7 @@ func (m *Meta) GetTables() (map[int64]*TableMeta, error) {
 
 	var tableId int64
 	var tableName string
-	discardCols := make([]sql.RawBytes, 7)
+	discardCols := make([]sql.RawBytes, 8)
 	scanArgs := []interface{}{&tableId, &tableName}
 	for i := range discardCols {
 		scanArgs = append(scanArgs, &discardCols[i])
