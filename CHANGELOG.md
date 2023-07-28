@@ -1,5 +1,8 @@
 # 更新日志
 
+## v 0.4 WIP
+* 增加 enable_db_binlog.sh 方便用户对整库开启binlog
+
 ## v 0.3
 
 ### LOG
