@@ -6,6 +6,7 @@ require (
 	github.com/apache/thrift v0.13.0
 	github.com/cloudwego/kitex v0.4.5-0.20230228141742-02833714c355
 	github.com/go-sql-driver/mysql v1.7.0
+	github.com/google/uuid v1.1.2
 	github.com/keepeye/logrus-filename v0.0.0-20190711075016-ce01a4391dd1
 	github.com/mattn/go-sqlite3 v1.14.17
 	github.com/modern-go/gls v0.0.0-20220109145502-612d0167dce5

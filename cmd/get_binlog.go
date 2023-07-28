@@ -15,10 +15,15 @@ import (
 // commit_seq flag default 0
 var (
 	commitSeq int64
+	db        string
+	table     string
 )
 
 func init_flags() {
 	flag.Int64Var(&commitSeq, "commit_seq", 0, "commit_seq")
+	flag.StringVar(&db, "db", "ccr", "db")
+	flag.StringVar(&table, "table", "src_1", "table")
+
 	flag.Parse()
 }
 
@@ -33,7 +38,6 @@ func test_get_binlog(spec *base.Spec) {
 		panic(err)
 	}
 	t_spec := *spec
-	t_spec.Table = ""
 	resp, err := rpc.GetBinlog(&t_spec, commitSeq)
 	// resp, err := rpc.GetBinlog(spec, commitSeq)
 	if err != nil {
@@ -80,6 +84,9 @@ func test_get_binlog(spec *base.Spec) {
 		} else {
 			log.Infof("alterJobRecord: %s", alterJobRecord)
 		}
+	case festruct.TBinlogType_DUMMY:
+		s, _ := json.Marshal(&binlog)
+		log.Infof("dummy: %s", s)
 	}
 }
 
@@ -90,8 +97,8 @@ func main() {
 		ThriftPort: "9020",
 		User:       "root",
 		Password:   "",
-		Database:   "ccr",
-		Table:      "src_1",
+		Database:   db,
+		Table:      table,
 	}
 
 	test_get_binlog(src)

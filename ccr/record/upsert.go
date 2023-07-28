@@ -19,10 +19,11 @@ func (p PartitionRecord) String() string {
 type TableRecord struct {
 	Id               int64             `json:"_"`
 	PartitionRecords []PartitionRecord `json:"partitionRecords"`
+	IndexIds         []int64           `json:"indexIds"`
 }
 
 func (t TableRecord) String() string {
-	return fmt.Sprintf("TableRecord{Id: %d, PartitionRecords: %v}", t.Id, t.PartitionRecords)
+	return fmt.Sprintf("TableRecord{Id: %d, PartitionRecords: %v, IndexIds: %v}", t.Id, t.PartitionRecords, t.IndexIds)
 }
 
 type Upsert struct {
