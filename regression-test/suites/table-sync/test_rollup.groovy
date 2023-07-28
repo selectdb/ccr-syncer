@@ -15,8 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_rollup") {
-    def tableName = "tbl_rollup"
+suite("test_rollup_sync") {
+    def tableName = "tbl_rollup_sync"
     def test_num = 0
     def insert_num = 5
     def sync_gap_time = 5000
@@ -49,7 +49,7 @@ suite("test_rollup") {
 
     sql "DROP TABLE IF EXISTS ${tableName}"
     sql """
-        CREATE TABLE if NOT EXISTS ${tableName}
+        CREATE TABLE if NOT EXISTS ${tableName} 
         (
             `id` INT,
             `col1` INT,
@@ -58,13 +58,14 @@ suite("test_rollup") {
             `col4` INT,
         )
         ENGINE=OLAP
-        DISTRIBUTED BY HASH(id) BUCKETS 1
-        PROPERTIES (
-            "replication_allocation" = "tag.location.default: 1"
+        DISTRIBUTED BY HASH(id) BUCKETS 1 
+        PROPERTIES ( 
+            "replication_allocation" = "tag.location.default: 1",
+            "binlog.enable" = "true"
         )
     """
     sql """
-        ALTER TABLE ${tableName}
+        ALTER TABLE ${tableName} 
         ADD ROLLUP rollup_${tableName}(id, col2, col4)
         """
 
@@ -72,12 +73,11 @@ suite("test_rollup") {
         return res.size() != 0
     }
     assertTrue(checkShowTimesOf("""
-                                SHOW ALTER TABLE ROLLUP
+                                SHOW ALTER TABLE ROLLUP 
                                 FROM ${context.dbName}
                                 WHERE TableName = "${tableName}" AND State = "FINISHED"
-                                """,
+                                """, 
                                 exist, 30))
-    sql """ALTER TABLE ${tableName} set ("binlog.enable" = "true")"""
 
     httpTest {
         uri "/create_ccr"
@@ -88,7 +88,7 @@ suite("test_rollup") {
         result respone
     }
 
-    assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableName}",
+    assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableName}", 
                                 exist, 30))
 
     def hasRollup = { res -> Boolean
@@ -100,6 +100,6 @@ suite("test_rollup") {
 
         return false
     }
-    assertTrue(checkShowTimesOf("SHOW ALTER TABLE ROLLUP FROM TEST_${context.dbName}",
+    assertTrue(checkShowTimesOf("DESC TEST_${context.dbName}.${tableName} ALL", 
                                 hasRollup, 30, "target"))
 }
