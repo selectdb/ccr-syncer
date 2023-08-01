@@ -32,6 +32,8 @@ func NewJobManager(db storage.DB) *JobManager {
 
 // add job to job manager && run job
 func (jm *JobManager) AddJob(job *Job) error {
+	log.Infof("add job: %s", job.Name)
+
 	jm.lock.Lock()
 	defer jm.lock.Unlock()
 
@@ -58,6 +60,35 @@ func (jm *JobManager) AddJob(job *Job) error {
 	jm.jobs[job.Name] = job
 	jm.runJob(job)
 
+	return nil
+}
+
+func (jm *JobManager) Recover() error {
+	log.Info("job manager recover")
+
+	jm.lock.Lock()
+	defer jm.lock.Unlock()
+
+	jobMap, err := jm.db.GetAllJobs()
+	if err != nil {
+		return err
+	}
+
+	jobs := make([]*Job, 0)
+	for jobName, jobData := range jobMap {
+		log.Infof("recover job: %s", jobName)
+
+		if job, err := NewJobFromJson(jobData, jm.db); err == nil {
+			jobs = append(jobs, job)
+		} else {
+			return err
+		}
+	}
+
+	for _, job := range jobs {
+		jm.jobs[job.Name] = job
+		jm.runJob(job)
+	}
 	return nil
 }
 
