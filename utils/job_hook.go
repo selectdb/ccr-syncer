@@ -6,8 +6,8 @@ import (
 )
 
 type Hook struct {
-	Field     string
-	levels    []logrus.Level
+	Field  string
+	levels []logrus.Level
 }
 
 func (hook *Hook) Levels() []logrus.Level {
@@ -24,7 +24,7 @@ func (hook *Hook) Fire(entry *logrus.Entry) error {
 
 func NewHook(levels ...logrus.Level) *Hook {
 	hook := Hook{
-		Field:  "ccrName",
+		Field:  "job",
 		levels: levels,
 	}
 	if len(hook.levels) == 0 {

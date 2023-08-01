@@ -1181,9 +1181,6 @@ func (j *Job) run() error {
 	ticker := time.NewTicker(SYNC_DURATION)
 	defer ticker.Stop()
 
-	gls.ResetGls(gls.GoID(), map[interface{}]interface{}{})
-	gls.Set("ccrName", j.Name)
-
 	for {
 		select {
 		case <-j.stop:
@@ -1198,6 +1195,9 @@ func (j *Job) run() error {
 
 // run job
 func (j *Job) Run() error {
+	gls.ResetGls(gls.GoID(), map[interface{}]interface{}{})
+	gls.Set("job", j.Name)
+
 	// retry 3 times to check IsProgressExist
 	var isProgressExist bool
 	var err error
