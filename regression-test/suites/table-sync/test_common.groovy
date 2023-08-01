@@ -20,6 +20,7 @@ suite("test_common") {
     def uniqueTable = "${tableName}_unique"
     def aggregateTable = "${tableName}_aggregate"
     def duplicateTable = "${tableName}_duplicate"
+    def syncerAddress = "127.0.0.1:9190"
     def test_num = 0
     def insert_num = 5
     def sync_gap_time = 5000
@@ -149,7 +150,7 @@ suite("test_common") {
     logger.info("=== Test 1: backup/restore case ===")
     httpTest {
         uri "/create_ccr"
-        endpoint context.config.syncerAddress
+        endpoint syncerAddress
         def bodyJson = get_ccr_body "${uniqueTable}"
         body "${bodyJson}"
         op "post"
@@ -161,7 +162,7 @@ suite("test_common") {
 
     httpTest {
         uri "/create_ccr"
-        endpoint context.config.syncerAddress
+        endpoint syncerAddress
         def bodyJson = get_ccr_body "${aggregateTable}"
         body "${bodyJson}"
         op "post"
@@ -176,7 +177,7 @@ suite("test_common") {
 
     httpTest {
         uri "/create_ccr"
-        endpoint context.config.syncerAddress
+        endpoint syncerAddress
         def bodyJson = get_ccr_body "${duplicateTable}"
         body "${bodyJson}"
         op "post"

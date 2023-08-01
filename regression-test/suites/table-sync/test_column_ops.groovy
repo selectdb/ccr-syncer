@@ -17,6 +17,7 @@
 suite("test_column_ops") {
 
     def tableName = "tbl_column_ops"
+    def syncerAddress = "127.0.0.1:9190"
     def test_num = 0
     def insert_num = 5
     def sync_gap_time = 5000
@@ -132,7 +133,7 @@ suite("test_column_ops") {
 
     httpTest {
         uri "/create_ccr"
-        endpoint context.config.syncerAddress
+        endpoint syncerAddress
         def bodyJson = get_ccr_body "${tableName}"
         body "${bodyJson}"
         op "post"
