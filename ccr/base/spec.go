@@ -150,11 +150,7 @@ func (s *Spec) String() string {
 }
 
 func (s *Spec) connect(dsn string) (*sql.DB, error) {
-	if db, err := sql.Open("mysql", dsn); err != nil {
-		return nil, errors.Wrapf(err, "connect to mysql failed, dsn: %s", dsn)
-	} else {
-		return db, nil
-	}
+	return GetMysqlDB(dsn)
 }
 
 // create mysql connection from spec
@@ -185,7 +181,6 @@ func (s *Spec) IsDatabaseEnableBinlog() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer db.Close()
 
 	var _dbNmae string
 	var createDBString string
@@ -207,7 +202,6 @@ func (s *Spec) IsTableEnableBinlog() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer db.Close()
 
 	var tableName string
 	var createTableString string
@@ -230,7 +224,6 @@ func (s *Spec) GetAllTables() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 
 	rows, err := db.Query("SHOW TABLES")
 	if err != nil {
@@ -257,7 +250,7 @@ func (s *Spec) dropTable(table string) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+
 	sql := fmt.Sprintf("DROP TABLE %s.%s", s.Database, table)
 	_, err = db.Exec(sql)
 	if err != nil {
@@ -296,7 +289,6 @@ func (s *Spec) ClearDB() error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 
 	sql := fmt.Sprintf("DROP DATABASE %s", s.Database)
 	_, err = db.Exec(sql)
@@ -317,7 +309,6 @@ func (s *Spec) CreateDatabase() error {
 	if err != nil {
 		return nil
 	}
-	defer db.Close()
 
 	if _, err = db.Exec("CREATE DATABASE IF NOT EXISTS " + s.Database); err != nil {
 		return errors.Wrapf(err, "create database %s failed", s.Database)
@@ -330,7 +321,6 @@ func (s *Spec) CreateTable(stmt string) error {
 	if err != nil {
 		return nil
 	}
-	defer db.Close()
 
 	if _, err = db.Exec(stmt); err != nil {
 		return errors.Wrapf(err, "create table %s.%s failed", s.Database, s.Table)
@@ -344,7 +334,6 @@ func (s *Spec) CheckDatabaseExists() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer db.Close()
 
 	sql := fmt.Sprintf("SHOW DATABASES LIKE '%s'", s.Database)
 	rows, err := db.Query(sql)
@@ -374,7 +363,6 @@ func (s *Spec) CheckTableExists() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer db.Close()
 
 	sql := fmt.Sprintf("SHOW TABLES FROM %s LIKE '%s'", s.Database, s.Table)
 	rows, err := db.Query(sql)
@@ -425,7 +413,6 @@ func (s *Spec) CreateSnapshotAndWaitForDone(tables []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer db.Close()
 
 	backupSnapshotSql := fmt.Sprintf("BACKUP SNAPSHOT %s.%s TO `__keep_on_local__` ON ( %s ) PROPERTIES (\"type\" = \"full\")", s.Database, snapshotName, tableRefs)
 	log.Debugf("backup snapshot sql: %s", backupSnapshotSql)
@@ -454,7 +441,6 @@ func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, error) {
 	if err != nil {
 		return BackupStateUnknown, err
 	}
-	defer db.Close()
 
 	var backupStateStr string
 	scanArgs := utils.MakeSingleColScanArgs(3, &backupStateStr, 10)
@@ -505,7 +491,6 @@ func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, error) {
 	if err != nil {
 		return RestoreStateUnknown, err
 	}
-	defer db.Close()
 
 	var restoreStateStr string
 	scanArgs := utils.MakeSingleColScanArgs(4, &restoreStateStr, 16)
@@ -556,7 +541,6 @@ func (s *Spec) Exec(sql string) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 
 	_, err = db.Exec(sql)
 	if err != nil {
@@ -571,7 +555,6 @@ func (s *Spec) DbExec(sql string) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 
 	_, err = db.Exec(sql)
 	if err != nil {

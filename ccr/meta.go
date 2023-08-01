@@ -125,7 +125,6 @@ func (m *Meta) GetDbId() (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer db.Close()
 
 	var dbId int64
 	var parsedDbname string
@@ -184,7 +183,6 @@ func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) 
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 
 	var parsedTableId int64
 	var parsedTableName string
@@ -276,7 +274,6 @@ func (m *Meta) UpdatePartitions(tableId int64) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 
 	partitions := make([]*PartitionMeta, 0)
 	// total columns 18
@@ -479,7 +476,6 @@ func (m *Meta) UpdateBackends() error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 
 	backends := make([]*base.Backend, 0)
 	query := "show proc '/backends'"
@@ -600,7 +596,6 @@ func (m *Meta) UpdateIndexes(tableId int64, partitionId int64) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 
 	indexes := make([]*IndexMeta, 0)
 	// totoal rows 4
@@ -688,7 +683,6 @@ func (m *Meta) updateReplica(index *IndexMeta) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 
 	replicas := make([]*ReplicaMeta, 0)
 	// total columns 21
@@ -903,7 +897,6 @@ func (m *Meta) GetTableNameById(tableId int64) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer db.Close()
 
 	var _dbName string
 	var tableName string
@@ -947,7 +940,6 @@ func (m *Meta) GetTables() (map[int64]*TableMeta, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 
 	var tableId int64
 	var tableName string
@@ -1013,7 +1005,6 @@ func (m *Meta) isFEBinlogFeature() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer db.Close()
 
 	isEnabled := false
 	scanArgs := utils.MakeSingleColScanArgs(1, &isEnabled, 4)
