@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/pkg/errors"
 	"github.com/selectdb/ccr_syncer/ccr"
 	"github.com/selectdb/ccr_syncer/ccr/base"
 	"github.com/selectdb/ccr_syncer/storage"
@@ -175,6 +176,15 @@ func (s *HttpService) RegisterHandlers() {
 func (s *HttpService) Start() error {
 	addr := fmt.Sprintf(":%d", s.port)
 	log.Infof("Server listening on %s", addr)
+
 	s.RegisterHandlers()
-	return http.ListenAndServe(addr, s.mux)
+	err := http.ListenAndServe(addr, s.mux)
+	if err == nil {
+		return nil
+	} else if err == http.ErrServerClosed {
+		log.Info("http server closed")
+		return nil
+	} else {
+		return errors.Wrapf(err, "http server start on %s failed", addr)
+	}
 }
