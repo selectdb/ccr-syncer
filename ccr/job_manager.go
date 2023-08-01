@@ -129,3 +129,26 @@ func (jm *JobManager) GetLag(jobName string) (int64, error) {
 		return 0, errors.Errorf("job not exist: %s", jobName)
 	}
 }
+
+func (jm *JobManager) dealJob(jobName string, dealFunc func(job *Job) error) error {
+	jm.lock.RLock()
+	defer jm.lock.RUnlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return dealFunc(job)
+	} else {
+		return errors.Errorf("job not exist: %s", jobName)
+	}
+}
+
+func (jm *JobManager) Pause(jobName string) error {
+	return jm.dealJob(jobName, func(job *Job) error {
+		return job.Pause()
+	})
+}
+
+func (jm *JobManager) Resume(jobName string) error {
+	return jm.dealJob(jobName, func(job *Job) error {
+		return job.Resume()
+	})
+}

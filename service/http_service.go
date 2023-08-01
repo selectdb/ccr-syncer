@@ -62,6 +62,8 @@ func (s *HttpService) createCcr(request *CreateCcrRequest) error {
 
 // HttpServer serving /create_ccr by json http rpc
 func (s *HttpService) createCcrHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("create ccr")
+
 	// Parse the JSON request body
 	var request CreateCcrRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
@@ -73,23 +75,27 @@ func (s *HttpService) createCcrHandler(w http.ResponseWriter, r *http.Request) {
 	// Call the createCcr function to create the CCR
 	err = s.createCcr(&request)
 	if err != nil {
+		log.Errorf("create ccr failed: %+v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Write a success response
 	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("create ccr success"))
 }
 
-type GetLagRequest struct {
+type CcrCommonRequest struct {
 	// must need all fields required
 	Name string `json:"name,required"`
 }
 
 // GetLag service
 func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("get lag")
+
 	// Parse the JSON request body
-	var request GetLagRequest
+	var request CcrCommonRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -109,9 +115,61 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(fmt.Sprintf("lag: %d", lag)))
 }
 
+// Pause service
+func (s *HttpService) pauseHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("pause job")
+
+	// Parse the JSON request body
+	var request CcrCommonRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if request.Name == "" {
+		http.Error(w, "name is empty", http.StatusBadRequest)
+		return
+	}
+
+	err = s.jobManager.Pause(request.Name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// write lag
+	w.Write([]byte("pause success"))
+}
+
+// Resume service
+func (s *HttpService) resumeHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("resume job")
+
+	// Parse the JSON request body
+	var request CcrCommonRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if request.Name == "" {
+		http.Error(w, "name is empty", http.StatusBadRequest)
+		return
+	}
+
+	err = s.jobManager.Resume(request.Name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// write lag
+	w.Write([]byte("resume success"))
+}
+
 func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/create_ccr", s.createCcrHandler)
 	s.mux.HandleFunc("/get_lag", s.getLagHandler)
+	s.mux.HandleFunc("/pause", s.pauseHandler)
+	s.mux.HandleFunc("/resume", s.resumeHandler)
 }
 
 func (s *HttpService) Start() error {

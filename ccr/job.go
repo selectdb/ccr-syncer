@@ -51,6 +51,25 @@ func (s SyncType) String() string {
 	}
 }
 
+type JobState int
+
+const (
+	JobRunning JobState = 0
+	JobPaused  JobState = 1
+)
+
+// JobState Stringer
+func (j JobState) String() string {
+	switch j {
+	case JobRunning:
+		return "running"
+	case JobPaused:
+		return "paused"
+	default:
+		return "unknown"
+	}
+}
+
 type Job struct {
 	SyncType          SyncType        `json:"sync_type"`
 	Name              string          `json:"name"`
@@ -58,6 +77,7 @@ type Job struct {
 	srcMeta           *Meta           `json:"-"`
 	Dest              base.Spec       `json:"dest"`
 	destMeta          *Meta           `json:"-"`
+	State             JobState        `json:"state"`
 	destSrcTableIdMap map[int64]int64 `json:"-"`
 	progress          *JobProgress    `json:"-"`
 	db                storage.DB      `json:"-"`
@@ -73,6 +93,7 @@ func NewJobFromService(name string, src, dest base.Spec, db storage.DB) (*Job, e
 		srcMeta:           NewMeta(&src),
 		Dest:              dest,
 		destMeta:          NewMeta(&dest),
+		State:             JobRunning,
 		destSrcTableIdMap: make(map[int64]int64),
 		progress:          nil,
 		db:                db,
@@ -1142,6 +1163,10 @@ func (j *Job) sync() error {
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
+	if j.State != JobRunning {
+		return nil
+	}
+
 	switch j.SyncType {
 	case TableSync:
 		return j.tableSync()
@@ -1155,7 +1180,7 @@ func (j *Job) sync() error {
 func (j *Job) run() error {
 	ticker := time.NewTicker(SYNC_DURATION)
 	defer ticker.Stop()
-	
+
 	gls.ResetGls(gls.GoID(), map[interface{}]interface{}{})
 	gls.Set("ccrName", j.Name)
 
@@ -1320,4 +1345,35 @@ func (j *Job) GetLag() (int64, error) {
 
 	log.Debugf("resp: %v, lag: %d", resp, resp.GetLag())
 	return resp.GetLag(), nil
+}
+
+func (j *Job) changeJobState(state JobState) error {
+	j.lock.Lock()
+	defer j.lock.Unlock()
+
+	if j.State == state {
+		log.Debugf("job %s state is already %s", j.Name, state)
+		return nil
+	}
+
+	originState := j.State
+	j.State = state
+	if err := j.persistJob(); err != nil {
+		j.State = originState
+		return err
+	}
+	log.Debugf("change job %s state from %s to %s", j.Name, originState, state)
+	return nil
+}
+
+func (j *Job) Pause() error {
+	log.Infof("pause job %s", j.Name)
+
+	return j.changeJobState(JobPaused)
+}
+
+func (j *Job) Resume() error {
+	log.Infof("resume job %s", j.Name)
+
+	return j.changeJobState(JobRunning)
 }

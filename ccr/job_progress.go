@@ -16,15 +16,15 @@ const (
 	UPDATE_JOB_PROGRESS_DURATION = time.Second * 3
 )
 
-type JobState int
+type ProgressState int
 
 const (
-	JobStatePrepare JobState = 0
-	JobStateCommit  JobState = 1
-	JobStateAbort   JobState = 2
+	JobStatePrepare ProgressState = 0
+	JobStateCommit  ProgressState = 1
+	JobStateAbort   ProgressState = 2
 
-	JobStateFullSync_DoneCreateSnapshot JobState = 31
-	JobStateFullSync_BeginRestore       JobState = 32
+	JobStateFullSync_DoneCreateSnapshot ProgressState = 31
+	JobStateFullSync_BeginRestore       ProgressState = 32
 )
 
 type SyncState int
@@ -61,7 +61,7 @@ type JobProgress struct {
 	JobName string     `json:"job_name"`
 	db      storage.DB `json:"-"`
 
-	JobState          JobState        `json:"state"`
+	ProgressState     ProgressState   `json:"state"`
 	SyncState         SyncState       `json:"sync_state"`
 	SubSyncState      SubSyncState    `json:"sub_sync_state"`
 	CommitSeq         int64           `json:"commit_seq"`
@@ -82,7 +82,7 @@ func NewJobProgress(jobName string, syncType SyncType, db storage.DB) *JobProgre
 		JobName: jobName,
 		db:      db,
 
-		JobState:      JobStateCommit,
+		ProgressState: JobStateCommit,
 		SyncState:     syncState,
 		SubSyncState:  BeginCreateSnapshot,
 		CommitSeq:     0,
@@ -141,7 +141,7 @@ func (j *JobProgress) ToJson() (string, error) {
 // }
 
 func (j *JobProgress) DoneCreateSnapshot(snapshotName string) {
-	j.JobState = JobStateFullSync_DoneCreateSnapshot
+	j.ProgressState = JobStateFullSync_DoneCreateSnapshot
 	j.PersistData = snapshotName
 
 	j.Persist()
@@ -154,7 +154,7 @@ func (j *JobProgress) NewIncrementalSync() {
 }
 
 func (j *JobProgress) StartHandle(commitSeq int64) {
-	j.JobState = JobStatePrepare
+	j.ProgressState = JobStatePrepare
 	j.CommitSeq = commitSeq
 	j.TransactionId = 0
 
