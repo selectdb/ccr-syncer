@@ -16,7 +16,7 @@
 // under the License.
 
 suite("test_rollup_sync") {
-    def tableName = "tbl_rollup_sync"
+    def tableName = "tbl_rollup_sync_" + UUID.randomUUID().toString().replace("-", "")
     def syncerAddress = "127.0.0.1:9190"
     def test_num = 0
     def insert_num = 5
@@ -48,7 +48,6 @@ suite("test_rollup_sync") {
         return ret
     }
 
-    sql "DROP TABLE IF EXISTS ${tableName}"
     sql """
         CREATE TABLE if NOT EXISTS ${tableName} 
         (

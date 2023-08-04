@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_inverted_index") {
+suite("test_materialized_index") {
 
-    def tableName = "tbl_inverted_index"
+    def tableName = "tbl_materialized_index_" + UUID.randomUUID().toString().replace("-", "")
     def syncerAddress = "127.0.0.1:9190"
     def test_num = 0
     def insert_num = 5
@@ -49,7 +49,6 @@ suite("test_inverted_index") {
         return ret
     }
 
-    sql "DROP TABLE IF EXISTS ${tableName}"
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (

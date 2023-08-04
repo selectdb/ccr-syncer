@@ -16,7 +16,7 @@
 // under the License.
 suite("test_common") {
 
-    def tableName = "tbl_common"
+    def tableName = "tbl_common_" + UUID.randomUUID().toString().replace("-", "")
     def uniqueTable = "${tableName}_unique"
     def aggregateTable = "${tableName}_aggregate"
     def duplicateTable = "${tableName}_duplicate"
@@ -73,7 +73,6 @@ suite("test_common") {
         return true
     }
 
-    sql "DROP TABLE IF EXISTS ${uniqueTable}"
     sql """
         CREATE TABLE if NOT EXISTS ${uniqueTable}
         (
@@ -90,7 +89,6 @@ suite("test_common") {
         )
     """
 
-    sql "DROP TABLE IF EXISTS ${aggregateTable}"
     sql """
         CREATE TABLE if NOT EXISTS ${aggregateTable}
         (
@@ -110,7 +108,6 @@ suite("test_common") {
         )
     """
 
-    sql "DROP TABLE IF EXISTS ${duplicateTable}"
     sql """
         CREATE TABLE if NOT EXISTS ${duplicateTable}
         (

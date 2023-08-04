@@ -23,7 +23,6 @@ suite("test_db_sync") {
     def sync_gap_time = 5000
 
     def createUniqueTable = { tableName ->
-        sql "DROP TABLE IF EXISTS ${tableName}"
         sql """
             CREATE TABLE if NOT EXISTS ${tableName}
             (
@@ -40,7 +39,6 @@ suite("test_db_sync") {
         """
     }
     def createAggergateTable = { tableName ->
-        sql "DROP TABLE IF EXISTS ${tableName}"
         sql """
             CREATE TABLE if NOT EXISTS ${tableName}
             (
@@ -61,7 +59,6 @@ suite("test_db_sync") {
     }
 
     def createDuplicateTable = { tableName ->
-        sql "DROP TABLE IF EXISTS ${tableName}"
         sql """
             CREATE TABLE if NOT EXISTS ${tableName}
             (
@@ -123,9 +120,9 @@ suite("test_db_sync") {
         return res.size() == 0
     }
 
-    def tableUnique0 = "tbl_common_0"
-    def tableAggregate0 = "tbl_aggregate_0"
-    def tableDuplicate0 = "tbl_duplicate_0"
+    def tableUnique0 = "tbl_common_0_" + UUID.randomUUID().toString().replace("-", "")
+    def tableAggregate0 = "tbl_aggregate_0_" + UUID.randomUUID().toString().replace("-", "")
+    def tableDuplicate0 = "tbl_duplicate_0_" + UUID.randomUUID().toString().replace("-", "")
 
     createUniqueTable(tableUnique0)
     for (int index = 0; index < insert_num; index++) {
@@ -204,9 +201,9 @@ suite("test_db_sync") {
 
     logger.info("=== Test 2: create table case ===")
     test_num = 2
-    def tableUnique1 = "tbl_common_1"
-    def tableAggregate1 = "tbl_aggregate_1"
-    def tableDuplicate1 = "tbl_duplicate_1"
+    def tableUnique1 = "tbl_common_1_" + UUID.randomUUID().toString().replace("-", "")
+    def tableAggregate1 = "tbl_aggregate_1_" + UUID.randomUUID().toString().replace("-", "")
+    def tableDuplicate1 = "tbl_duplicate_1_" + UUID.randomUUID().toString().replace("-", "")
 
     createUniqueTable(tableUnique1)
     createAggergateTable(tableAggregate1)
