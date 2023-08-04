@@ -48,6 +48,30 @@ suite("test_rollup_sync") {
         return ret
     }
 
+    def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
+        Boolean ret = false
+        while (times > 0) {
+            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
+            for (List<Object> row : sqlInfo) {
+                if ((row[10] as String).contains(checkTable)) {
+                    ret = (row[4] as String) == "FINISHED"
+                }
+            }
+
+            if (ret) {
+                break
+            } else if (--times > 0) {
+                sleep(sync_gap_time)
+            }
+        }
+
+        return ret
+    }
+
+    def exist = { res -> Boolean
+        return res.size() != 0
+    }
+
     sql """
         CREATE TABLE if NOT EXISTS ${tableName} 
         (
@@ -69,9 +93,7 @@ suite("test_rollup_sync") {
         ADD ROLLUP rollup_${tableName}(id, col2, col4)
         """
 
-    def exist = { res -> Boolean
-        return res.size() != 0
-    }
+    
     assertTrue(checkShowTimesOf("""
                                 SHOW ALTER TABLE ROLLUP 
                                 FROM ${context.dbName}
@@ -88,8 +110,7 @@ suite("test_rollup_sync") {
         result respone
     }
 
-    assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableName}", 
-                                exist, 30))
+    assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
 
     def hasRollup = { res -> Boolean
         for (List<Object> row : res) {

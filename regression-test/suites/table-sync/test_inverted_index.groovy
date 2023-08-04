@@ -24,20 +24,15 @@ suite("test_inverted_index") {
     def sync_gap_time = 5000
     String respone
 
-    def checkShowTimesOf = { sqlString, myClosure, times, func = "sql" -> Boolean
+    def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
         Boolean ret = false
-        List<List<Object>> res
         while (times > 0) {
-            try {
-                if (func == "sql") {
-                    res = sql "${sqlString}"
-                } else {
-                    res = target_sql "${sqlString}"
+            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
+            for (List<Object> row : sqlInfo) {
+                if ((row[10] as String).contains(checkTable)) {
+                    ret = row[4] == "FINISHED"
                 }
-                if (myClosure.call(res)) {
-                    ret = true
-                }
-            } catch (Exception e) {}
+            }
 
             if (ret) {
                 break
@@ -79,11 +74,7 @@ suite("test_inverted_index") {
         result respone
     }
 
-    def exist = { res -> Boolean
-        return res.size() != 0
-    }
-    assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableName}",
-                                exist, 30))
+    assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
 
     def res = target_sql "SHOW INDEXES FROM TEST_${context.dbName}.${tableName}"
     def invertIdx = false

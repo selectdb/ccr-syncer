@@ -16,7 +16,7 @@
 // under the License.
 suite("test_column_ops") {
 
-    def tableName = "tbl_column_ops_" + UUID.randomUUID().toString().replace("-", "")
+    def tableName = "tbl_column_ops" + UUID.randomUUID().toString().replace("-", "")
     def syncerAddress = "127.0.0.1:9190"
     def test_num = 0
     def insert_num = 5
@@ -88,14 +88,13 @@ suite("test_column_ops") {
         return true
     }
 
-    def checkRestoreFinishTimesOf = { checkTable, rowIndex, times -> Boolean
+    def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
         Boolean ret = false
         while (times > 0) {
             def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            if (sqlInfo.size() > rowIndex) {
-                List<Object> row = sqlInfo[rowIndex]
-                if ((row[1] as String).contains(checkTable)) {
-                    ret = row[4] == "FINISHED"
+            for (List<Object> row : sqlInfo) {
+                if ((row[10] as String).contains(checkTable)) {
+                    ret = (row[4] as String) == "FINISHED"
                 }
             }
 
@@ -109,6 +108,11 @@ suite("test_column_ops") {
         return ret
     }
 
+    def exist = { res -> Boolean
+        return res.size() != 0
+    }
+
+    sql "DROP TABLE IF EXISTS ${tableName}"
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (
@@ -139,11 +143,7 @@ suite("test_column_ops") {
         result respone
     }
 
-    def exist = { res -> Boolean
-        return res.size() != 0
-    }
-    assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableName}",
-                                exist, 30))
+    assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
 
 
     logger.info("=== Test 2: add column case ===")
@@ -151,6 +151,7 @@ suite("test_column_ops") {
         ALTER TABLE ${tableName}
         ADD COLUMN (`cost` VARCHAR(3) DEFAULT "123")
         """
+    
     assertTrue(checkShowTimesOf("""
                                 SHOW ALTER TABLE COLUMN
                                 FROM ${context.dbName}

@@ -113,6 +113,26 @@ suite("test_db_sync") {
         return tmpRes.size() == rowSize
     }
 
+    def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
+        Boolean ret = false
+        while (times > 0) {
+            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
+            for (List<Object> row : sqlInfo) {
+                if ((row[10] as String).contains(checkTable)) {
+                    ret = (row[4] as String) == "FINISHED"
+                }
+            }
+
+            if (ret) {
+                break
+            } else if (--times > 0) {
+                sleep(sync_gap_time)
+            }
+        }
+
+        return ret
+    }
+
     def exist = { res -> Boolean
         return res.size() != 0
     }
@@ -157,18 +177,15 @@ suite("test_db_sync") {
         result respone
     }
 
-    assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableUnique0}",
-                                exist, 30))
+    assertTrue(checkRestoreFinishTimesOf("${tableUnique0}", 30))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
                                    insert_num, 30))
 
-    assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableAggregate0}",
-                                exist, 30))
+    assertTrue(checkRestoreFinishTimesOf("${tableAggregate0}", 30))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableAggregate0} WHERE test=${test_num}",
                                    1, 30))
 
-    assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableDuplicate0}",
-                                exist, 30))
+    assertTrue(checkRestoreFinishTimesOf("${tableDuplicate0}", 30))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableDuplicate0} WHERE test=${test_num}",
                                    insert_num, 30))
 

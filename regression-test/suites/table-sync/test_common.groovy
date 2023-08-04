@@ -44,7 +44,7 @@ suite("test_common") {
         while (times > 0) {
             def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
             for (List<Object> row : sqlInfo) {
-                if ((row[1] as String).contains(checkTable)) {
+                if ((row[10] as String).contains(checkTable)) {
                     ret = row[4] == "FINISHED"
                 }
             }

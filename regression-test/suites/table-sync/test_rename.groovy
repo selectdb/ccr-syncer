@@ -61,6 +61,26 @@ suite("test_rename") {
         return ret
     }
 
+    def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
+        Boolean ret = false
+        while (times > 0) {
+            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
+            for (List<Object> row : sqlInfo) {
+                if ((row[10] as String).contains(checkTable)) {
+                    ret = (row[4] as String) == "FINISHED"
+                }
+            }
+
+            if (ret) {
+                break
+            } else if (--times > 0) {
+                sleep(sync_gap_time)
+            }
+        }
+
+        return ret
+    }
+
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (
@@ -90,11 +110,7 @@ suite("test_rename") {
         result respone
     }
 
-    def exist = { res -> Boolean
-        return res.size() != 0
-    }
-    assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableName}",
-                                exist, 30))
+    assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
 
 
     logger.info("=== Test 0: Common insert case ===")
