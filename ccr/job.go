@@ -1184,6 +1184,8 @@ func (j *Job) run() error {
 	for {
 		select {
 		case <-j.stop:
+			gls.DeleteGls(gls.GoID())
+			log.Infof("job stopped, job: %s", j.Name)
 			return nil
 		case <-ticker.C:
 			if err := j.sync(); err != nil {
@@ -1240,10 +1242,8 @@ func (j *Job) Run() error {
 }
 
 // stop job
-func (j *Job) Stop() error {
-	gls.DeleteGls(gls.GoID())
+func (j *Job) Stop() {
 	close(j.stop)
-	return nil
 }
 
 func (j *Job) FirstRun() error {

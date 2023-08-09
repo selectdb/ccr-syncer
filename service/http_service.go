@@ -62,7 +62,7 @@ func (s *HttpService) createCcr(request *CreateCcrRequest) error {
 }
 
 // HttpServer serving /create_ccr by json http rpc
-func (s *HttpService) createCcrHandler(w http.ResponseWriter, r *http.Request) {
+func (s *HttpService) createHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("create ccr")
 
 	// Parse the JSON request body
@@ -112,7 +112,6 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// write lag
 	w.Write([]byte(fmt.Sprintf("lag: %d", lag)))
 }
 
@@ -137,7 +136,6 @@ func (s *HttpService) pauseHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// write lag
 	w.Write([]byte("pause success"))
 }
 
@@ -162,15 +160,38 @@ func (s *HttpService) resumeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// write lag
+	w.Write([]byte("resume success"))
+}
+
+func (s *HttpService) deleteHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("delete job")
+
+	// Parse the JSON request body
+	var request CcrCommonRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if request.Name == "" {
+		http.Error(w, "name is empty", http.StatusBadRequest)
+		return
+	}
+
+	err = s.jobManager.RemoveJob(request.Name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	w.Write([]byte("resume success"))
 }
 
 func (s *HttpService) RegisterHandlers() {
-	s.mux.HandleFunc("/create_ccr", s.createCcrHandler)
+	s.mux.HandleFunc("/create_ccr", s.createHandler)
 	s.mux.HandleFunc("/get_lag", s.getLagHandler)
 	s.mux.HandleFunc("/pause", s.pauseHandler)
 	s.mux.HandleFunc("/resume", s.resumeHandler)
+	s.mux.HandleFunc("/delete", s.deleteHandler)
 }
 
 func (s *HttpService) Start() error {

@@ -94,6 +94,8 @@ func (jm *JobManager) Recover() error {
 
 // remove job
 func (jm *JobManager) RemoveJob(name string) error {
+	log.Infof("remove job: %s", name)
+
 	jm.lock.Lock()
 	defer jm.lock.Unlock()
 
