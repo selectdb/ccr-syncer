@@ -17,7 +17,6 @@ import (
 	"github.com/selectdb/ccr_syncer/storage"
 	utils "github.com/selectdb/ccr_syncer/utils"
 
-	bestruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/backendservice"
 	festruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/frontendservice"
 	tstatus "github.com/selectdb/ccr_syncer/rpc/kitex_gen/status"
 	ttypes "github.com/selectdb/ccr_syncer/rpc/kitex_gen/types"
@@ -81,6 +80,7 @@ type Job struct {
 	destSrcTableIdMap map[int64]int64 `json:"-"`
 	progress          *JobProgress    `json:"-"`
 	db                storage.DB      `json:"-"`
+	jobFactory        *JobFactory     `json:"-"`
 	stop              chan struct{}   `json:"-"`
 	lock              sync.Mutex      `json:"-"`
 }
@@ -110,6 +110,8 @@ func NewJobFromService(name string, src, dest base.Spec, db storage.DB) (*Job, e
 		job.SyncType = TableSync
 	}
 
+	job.jobFactory = NewJobFactory()
+
 	return job, nil
 }
 
@@ -126,6 +128,7 @@ func NewJobFromJson(jsonData string, db storage.DB) (*Job, error) {
 	job.progress = nil
 	job.db = db
 	job.stop = make(chan struct{})
+	job.jobFactory = NewJobFactory()
 	return &job, nil
 }
 
@@ -513,193 +516,20 @@ func (j *Job) getReleatedTableRecords(upsert *record.Upsert) ([]*record.TableRec
 func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*ttypes.TTabletCommitInfo, error) {
 	log.Infof("ingestBinlog, txnId: %d", txnId)
 
-	var wg sync.WaitGroup
-	var srcBackendMap map[int64]*base.Backend
-	var err error
-	srcBackendMap, err = j.srcMeta.GetBackendMap()
-	if err != nil {
-		return nil, err
-	}
-	var destBackendMap map[int64]*base.Backend
-	destBackendMap, err = j.destMeta.GetBackendMap()
+	job, err := j.jobFactory.CreateJob(NewIngestContext(txnId, tableRecords), j, "IngestBinlog")
 	if err != nil {
 		return nil, err
 	}
 
-	var lastErr error
-	var lastErrLock sync.RWMutex
-	updateLastError := func(err error) {
-		lastErrLock.Lock()
-		lastErr = err
-		lastErrLock.Unlock()
+	ingestBinlogJob, ok := job.(*IngestBinlogJob)
+	if !ok {
+		return nil, errors.Errorf("invalid job type, job: %+v", job)
 	}
-	getLastError := func() error {
-		lastErrLock.RLock()
-		defer lastErrLock.RUnlock()
-		return lastErr
+	job.Run()
+	if job.Error() != nil {
+		return nil, job.Error()
 	}
-	commitInfos := make([]*ttypes.TTabletCommitInfo, 0)
-	var commitInfosLock sync.Mutex
-	updateCommitInfos := func(commitInfo *ttypes.TTabletCommitInfo) {
-		commitInfosLock.Lock()
-		commitInfos = append(commitInfos, commitInfo)
-		commitInfosLock.Unlock()
-	}
-
-	for _, tableRecord := range tableRecords {
-		if getLastError() != nil {
-			break
-		}
-
-		log.Debugf("tableRecord: %v", tableRecord)
-		// TODO: check it before ingestBinlog
-		var srcTableId int64
-		var destTableId int64
-
-		var err error
-		switch j.SyncType {
-		case TableSync:
-			srcTableId = j.Src.TableId
-			destTableId = j.Dest.TableId
-		case DBSync:
-			srcTableId = tableRecord.Id
-			destTableId, err = j.getDestTableIdBySrc(tableRecord.Id)
-			if err != nil {
-				break
-			}
-		default:
-			err = errors.Errorf("invalid sync type: %s", j.SyncType)
-		}
-		if err != nil {
-			updateLastError(err)
-			break
-		}
-
-		for _, partitionRecord := range tableRecord.PartitionRecords {
-			log.Debugf("partitionRecord: %v", partitionRecord)
-			binlogVersion := partitionRecord.Version
-
-			srcPartitionId := partitionRecord.PartitionID
-			var srcPartitionRange string
-			srcPartitionRange, err = j.srcMeta.GetPartitionRange(srcTableId, srcPartitionId)
-			if err != nil {
-				updateLastError(err)
-				break
-			}
-			var destPartitionId int64
-			destPartitionId, err = j.destMeta.GetPartitionIdByRange(destTableId, srcPartitionRange)
-			if err != nil {
-				updateLastError(err)
-				break
-			}
-
-			var srcTablets []*TabletMeta
-			srcTablets, err = j.srcMeta.GetTabletList(srcTableId, srcPartitionId)
-			if err != nil {
-				updateLastError(err)
-				break
-			}
-			var destTablets []*TabletMeta
-			destTablets, err = j.destMeta.GetTabletList(destTableId, destPartitionId)
-			if err != nil {
-				updateLastError(err)
-				break
-			}
-			if len(srcTablets) != len(destTablets) {
-				updateLastError(errors.Errorf("tablet count not match, src: %d, dest: %d", len(srcTablets), len(destTablets)))
-				break
-			}
-
-			for tabletIndex, destTablet := range destTablets {
-				srcTablet := srcTablets[tabletIndex]
-				log.Debugf("handle tablet index: %v, src tablet: %v, dest tablet: %v, dest replicas length: %d", tabletIndex, srcTablet, destTablet, destTablet.ReplicaMetas.Len()) // TODO: remove it
-
-				// iterate dest replicas
-				destTablet.ReplicaMetas.Scan(func(destReplicaId int64, destReplica *ReplicaMeta) bool {
-					log.Debugf("handle dest replica id: %v", destReplicaId)
-					destBackend, ok := destBackendMap[destReplica.BackendId]
-					if !ok {
-						lastErr = errors.Errorf("backend not found, backend id: %d", destReplica.BackendId)
-						return false
-					}
-					destTabletId := destReplica.TabletId
-
-					destRpc, err := rpc.NewBeThriftRpc(destBackend)
-					if err != nil {
-						updateLastError(err)
-						return false
-					}
-					loadId := ttypes.NewTUniqueId()
-					loadId.SetHi(-1)
-					loadId.SetLo(-1)
-
-					srcReplicas := srcTablet.ReplicaMetas
-					iter := srcReplicas.Iter()
-					if ok := iter.First(); !ok {
-						updateLastError(errors.Errorf("src replicas is empty"))
-						return false
-					}
-					srcBackendId := iter.Value().BackendId
-					var srcBackend *base.Backend
-					srcBackend, ok = srcBackendMap[srcBackendId]
-					if !ok {
-						updateLastError(errors.Errorf("backend not found, backend id: %d", srcBackendId))
-						return false
-					}
-					req := &bestruct.TIngestBinlogRequest{
-						TxnId:          utils.ThriftValueWrapper(txnId),
-						RemoteTabletId: utils.ThriftValueWrapper[int64](srcTablet.Id),
-						BinlogVersion:  utils.ThriftValueWrapper(binlogVersion),
-						RemoteHost:     utils.ThriftValueWrapper(srcBackend.Host),
-						RemotePort:     utils.ThriftValueWrapper(srcBackend.GetHttpPortStr()),
-						PartitionId:    utils.ThriftValueWrapper[int64](destPartitionId),
-						LocalTabletId:  utils.ThriftValueWrapper[int64](destTabletId),
-						LoadId:         loadId,
-					}
-					commitInfo := &ttypes.TTabletCommitInfo{
-						TabletId:  destTabletId,
-						BackendId: destBackend.Id,
-					}
-
-					wg.Add(1)
-					go func() {
-						defer wg.Done()
-
-						resp, err := destRpc.IngestBinlog(req)
-						if err != nil {
-							updateLastError(err)
-							return
-						}
-
-						log.Infof("ingest resp: %v", resp)
-						if !resp.IsSetStatus() {
-							err = errors.Errorf("ingest resp status not set")
-							updateLastError(err)
-							return
-						} else if resp.Status.StatusCode != tstatus.TStatusCode_OK {
-							err = errors.Errorf("ingest resp status code: %v, msg: %v", resp.Status.StatusCode, resp.Status.ErrorMsgs)
-							updateLastError(err)
-							return
-						} else {
-							updateCommitInfos(commitInfo)
-						}
-					}()
-
-					return true
-				})
-				if getLastError() != nil {
-					break
-				}
-			}
-		}
-	}
-
-	wg.Wait()
-
-	if lastErr != nil {
-		return nil, lastErr
-	}
-	return commitInfos, nil
+	return ingestBinlogJob.CommitInfos(), nil
 }
 
 // TODO: handle error by abort txn
