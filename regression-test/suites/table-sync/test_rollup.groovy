@@ -68,10 +68,6 @@ suite("test_rollup_sync") {
         return ret
     }
 
-    def exist = { res -> Boolean
-        return res.size() != 0
-    }
-
     sql """
         CREATE TABLE if NOT EXISTS ${tableName} 
         (
@@ -90,17 +86,26 @@ suite("test_rollup_sync") {
     """
     sql """
         ALTER TABLE ${tableName} 
-        ADD ROLLUP rollup_${tableName}(id, col2, col4)
+        ADD ROLLUP rollup_${tableName}_full (id, col2, col4)
         """
 
-    
+    def rollupFullFinished = { res -> Boolean
+        for (List<Object> row : res) {
+            if ((row[5] as String).contains("rollup_${tableName}_full")) {
+                return true
+            }
+        }
+        return false
+    }
     assertTrue(checkShowTimesOf("""
                                 SHOW ALTER TABLE ROLLUP 
                                 FROM ${context.dbName}
                                 WHERE TableName = "${tableName}" AND State = "FINISHED"
                                 """, 
-                                exist, 30))
+                                rollupFullFinished, 30))
+    sql """ALTER TABLE ${tableName} set ("binlog.enable" = "true")"""
 
+    logger.info("=== Test 1: full update rollup ===")
     httpTest {
         uri "/create_ccr"
         endpoint syncerAddress
@@ -112,9 +117,9 @@ suite("test_rollup_sync") {
 
     assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
 
-    def hasRollup = { res -> Boolean
+    def hasRollupFull = { res -> Boolean
         for (List<Object> row : res) {
-            if ((row[0] as String) == "rollup_${tableName}") {
+            if ((row[0] as String) == "rollup_${tableName}_full") {
                 return true
             }
         }
@@ -122,5 +127,22 @@ suite("test_rollup_sync") {
         return false
     }
     assertTrue(checkShowTimesOf("DESC TEST_${context.dbName}.${tableName} ALL", 
-                                hasRollup, 30, "target"))
+                                hasRollupFull, 30, "target"))
+
+
+    logger.info("=== Test 2: incremental update rollup ===")
+    sql """
+        ALTER TABLE ${tableName} 
+        ADD ROLLUP rollup_${tableName}_incr (id, col1, col3)
+        """
+    def hasRollupIncremental = { res -> Boolean
+        for (List<Object> row : res) {
+            if ((row[0] as String) == "rollup_${tableName}_incr") {
+                return true
+            }
+        }
+        return false
+    }
+    assertTrue(checkShowTimesOf("DESC TEST_${context.dbName}.${tableName} ALL", 
+                                hasRollupIncremental, 30, "target"))
 }

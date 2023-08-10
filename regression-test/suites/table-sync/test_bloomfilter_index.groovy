@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_materialized_index") {
+suite("test_bloomfilter_index") {
 
-    def tableName = "tbl_materialized_sync_" + UUID.randomUUID().toString().replace("-", "")
+    def tableName = "tbl_bloomfilter_index_" + UUID.randomUUID().toString().replace("-", "")
     def syncerAddress = "127.0.0.1:9190"
     def test_num = 0
     def insert_num = 5
@@ -55,7 +55,7 @@ suite("test_materialized_index") {
             def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
             for (List<Object> row : sqlInfo) {
                 if ((row[10] as String).contains(checkTable)) {
-                    ret = (row[4] as String) == "FINISHED"
+                    ret = row[4] == "FINISHED"
                 }
             }
 
@@ -70,43 +70,30 @@ suite("test_materialized_index") {
     }
 
     sql """
-        CREATE TABLE if NOT EXISTS ${tableName} 
+        CREATE TABLE if NOT EXISTS ${tableName}
         (
+            `test` INT,
             `id` INT,
-            `col1` INT,
-            `col2` INT,
-            `col3` INT,
-            `col4` INT,
+            `username` varchar(32) NULL DEFAULT "",
+            `only4test` varchar(32) NULL DEFAULT "",
+            INDEX idx_ngrambf (`username`) USING NGRAM_BF PROPERTIES("gram_size"="3", "bf_size"="256")
         )
         ENGINE=OLAP
-        DISTRIBUTED BY HASH(id) BUCKETS 1 
-        PROPERTIES ( 
-            "replication_allocation" = "tag.location.default: 1"
+        DUPLICATE KEY(`test`, `id`)
+        DISTRIBUTED BY HASH(id) BUCKETS 1
+        PROPERTIES (
+            "replication_allocation" = "tag.location.default: 1",
+            "bloom_filter_columns" = "id"
         )
     """
-    sql """
-        CREATE MATERIALIZED VIEW mtr_${tableName}_full AS
-        SELECT id, col1, col3 FROM ${tableName}
-        """
-
-    def materializedFinished = { res -> Boolean
-        for (List<Object> row : res) {
-            if ((row[5] as String).contains("mtr_${tableName}_full")) {
-                return true
-            }
-        }
-        return false
+    for (int index = 0; index < insert_num; index++) {
+        sql """
+            INSERT INTO ${tableName} VALUES (${test_num}, ${index}, "test_${index}", "${index}_test")
+            """
     }
-    assertTrue(checkShowTimesOf("""
-                                SHOW ALTER TABLE ROLLUP 
-                                FROM ${context.dbName}
-                                WHERE TableName = "${tableName}" AND State = "FINISHED"
-                                """, 
-                                materializedFinished, 30))
     sql """ALTER TABLE ${tableName} set ("binlog.enable" = "true")"""
 
-
-    logger.info("=== Test 1: full update rollup ===")
+    logger.info("=== Test 1: full update bloom filter ===")
     httpTest {
         uri "/create_ccr"
         endpoint syncerAddress
@@ -117,25 +104,46 @@ suite("test_materialized_index") {
     }
 
     assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
-
+    def checkNgramBf = { inputRes -> Boolean
+        for (List<Object> row : inputRes) {
+            if (row[2] == "idx_ngrambf" && row[10] == "NGRAM_BF") {
+                return true
+            }
+        }
+        return false
+    }
     assertTrue(checkShowTimesOf("""
-                                SHOW ALTER TABLE ROLLUP 
-                                FROM ${context.dbName}
-                                WHERE TableName = "${tableName}" AND State = "FINISHED"
+                                SHOW INDEXES FROM TEST_${context.dbName}.${tableName}
                                 """, 
-                                materializedFinished, 30, "target"))
-
-
-    logger.info("=== Test 2: incremental update rollup ===")
-    sql """
-        CREATE MATERIALIZED VIEW ${tableName}_incr AS
-        SELECT id, col2, col4 FROM ${tableName}
-        """
+                                checkNgramBf, 30, "target"))
+    def checkBloomFilter = { inputRes -> Boolean
+        for (List<Object> row : inputRes) {
+            if ((row[1] as String).contains("\"bloom_filter_columns\" = \"id\"")) {
+                return true
+            }
+        }
+        return false
+    }
     assertTrue(checkShowTimesOf("""
-                                SHOW ALTER TABLE ROLLUP 
-                                FROM ${context.dbName}
-                                WHERE TableName = "${tableName}" AND State = "FINISHED"
+                                SHOW CREATE TABLE TEST_${context.dbName}.${tableName}
                                 """, 
-                                materializedFinished, 30, "target"))
+                                checkBloomFilter, 30, "target"))
     
+    logger.info("=== Test 2: incremental update Ngram bloom filter ===")
+    sql """
+        ALTER TABLE ${tableName} 
+        ADD INDEX idx_only4test(`only4test`) USING NGRAM_BF PROPERTIES("gram_size"="3", "bf_size"="256")
+        """
+    def checkNgramBf1 = { inputRes -> Boolean
+        for (List<Object> row : inputRes) {
+            if (row[2] == "idx_only4test" && row[10] == "NGRAM_BF") {
+                return true
+            }
+        }
+        return false
+    }
+    assertTrue(checkShowTimesOf("""
+                                SHOW INDEXES FROM TEST_${context.dbName}.${tableName}
+                                """, 
+                                checkNgramBf1, 30, "target"))
 }
