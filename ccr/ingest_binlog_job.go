@@ -87,8 +87,7 @@ func (j *IngestBinlogJob) CommitInfos() []*ttypes.TTabletCommitInfo {
 	return j.commitInfos
 }
 
-// impl Jober
-func (j *IngestBinlogJob) Run() {
+func (j *IngestBinlogJob) run() {
 	job := j.job
 
 	var srcBackendMap map[int64]*base.Backend
@@ -250,6 +249,9 @@ func (j *IngestBinlogJob) Run() {
 			}
 		}
 	}
+}
 
+func (j *IngestBinlogJob) Run() {
+	j.run()
 	j.wg.Wait()
 }
