@@ -41,6 +41,7 @@ type Client interface {
 	RestoreSnapshot(ctx context.Context, request *frontendservice.TRestoreSnapshotRequest, callOptions ...callopt.Option) (r *frontendservice.TRestoreSnapshotResult_, err error)
 	WaitingTxnStatus(ctx context.Context, request *frontendservice.TWaitingTxnStatusRequest, callOptions ...callopt.Option) (r *frontendservice.TWaitingTxnStatusResult_, err error)
 	StreamLoadPut(ctx context.Context, request *frontendservice.TStreamLoadPutRequest, callOptions ...callopt.Option) (r *frontendservice.TStreamLoadPutResult_, err error)
+	StreamLoadWithLoadStatus(ctx context.Context, request *frontendservice.TStreamLoadWithLoadStatusRequest, callOptions ...callopt.Option) (r *frontendservice.TStreamLoadWithLoadStatusResult_, err error)
 	StreamLoadMultiTablePut(ctx context.Context, request *frontendservice.TStreamLoadPutRequest, callOptions ...callopt.Option) (r *frontendservice.TStreamLoadMultiTablePutResult_, err error)
 	SnapshotLoaderReport(ctx context.Context, request *frontendservice.TSnapshotLoaderReportRequest, callOptions ...callopt.Option) (r *status.TStatus, err error)
 	Ping(ctx context.Context, request *frontendservice.TFrontendPingFrontendRequest, callOptions ...callopt.Option) (r *frontendservice.TFrontendPingFrontendResult_, err error)
@@ -225,6 +226,11 @@ func (p *kFrontendServiceClient) WaitingTxnStatus(ctx context.Context, request *
 func (p *kFrontendServiceClient) StreamLoadPut(ctx context.Context, request *frontendservice.TStreamLoadPutRequest, callOptions ...callopt.Option) (r *frontendservice.TStreamLoadPutResult_, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.StreamLoadPut(ctx, request)
+}
+
+func (p *kFrontendServiceClient) StreamLoadWithLoadStatus(ctx context.Context, request *frontendservice.TStreamLoadWithLoadStatusRequest, callOptions ...callopt.Option) (r *frontendservice.TStreamLoadWithLoadStatusResult_, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.StreamLoadWithLoadStatus(ctx, request)
 }
 
 func (p *kFrontendServiceClient) StreamLoadMultiTablePut(ctx context.Context, request *frontendservice.TStreamLoadPutRequest, callOptions ...callopt.Option) (r *frontendservice.TStreamLoadMultiTablePutResult_, err error) {

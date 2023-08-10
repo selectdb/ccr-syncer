@@ -1619,6 +1619,7 @@ type TQueryOptions struct {
 	ScanQueueMemLimit                      *int64          `thrift:"scan_queue_mem_limit,73,optional" frugal:"73,optional,i64" json:"scan_queue_mem_limit,omitempty"`
 	EnableScanNodeRunSerial                bool            `thrift:"enable_scan_node_run_serial,74,optional" frugal:"74,optional,bool" json:"enable_scan_node_run_serial,omitempty"`
 	EnableInsertStrict                     bool            `thrift:"enable_insert_strict,75,optional" frugal:"75,optional,bool" json:"enable_insert_strict,omitempty"`
+	EnableInvertedIndexQuery               bool            `thrift:"enable_inverted_index_query,76,optional" frugal:"76,optional,bool" json:"enable_inverted_index_query,omitempty"`
 }
 
 func NewTQueryOptions() *TQueryOptions {
@@ -1680,6 +1681,7 @@ func NewTQueryOptions() *TQueryOptions {
 		EnableOrcLazyMat:                       true,
 		EnableScanNodeRunSerial:                false,
 		EnableInsertStrict:                     false,
+		EnableInvertedIndexQuery:               true,
 	}
 }
 
@@ -1742,6 +1744,7 @@ func (p *TQueryOptions) InitDefault() {
 		EnableOrcLazyMat:                       true,
 		EnableScanNodeRunSerial:                false,
 		EnableInsertStrict:                     false,
+		EnableInvertedIndexQuery:               true,
 	}
 }
 
@@ -2338,6 +2341,15 @@ func (p *TQueryOptions) GetEnableInsertStrict() (v bool) {
 	}
 	return p.EnableInsertStrict
 }
+
+var TQueryOptions_EnableInvertedIndexQuery_DEFAULT bool = true
+
+func (p *TQueryOptions) GetEnableInvertedIndexQuery() (v bool) {
+	if !p.IsSetEnableInvertedIndexQuery() {
+		return TQueryOptions_EnableInvertedIndexQuery_DEFAULT
+	}
+	return p.EnableInvertedIndexQuery
+}
 func (p *TQueryOptions) SetAbortOnError(val bool) {
 	p.AbortOnError = val
 }
@@ -2536,6 +2548,9 @@ func (p *TQueryOptions) SetEnableScanNodeRunSerial(val bool) {
 func (p *TQueryOptions) SetEnableInsertStrict(val bool) {
 	p.EnableInsertStrict = val
 }
+func (p *TQueryOptions) SetEnableInvertedIndexQuery(val bool) {
+	p.EnableInvertedIndexQuery = val
+}
 
 var fieldIDToName_TQueryOptions = map[int16]string{
 	1:  "abort_on_error",
@@ -2604,6 +2619,7 @@ var fieldIDToName_TQueryOptions = map[int16]string{
 	73: "scan_queue_mem_limit",
 	74: "enable_scan_node_run_serial",
 	75: "enable_insert_strict",
+	76: "enable_inverted_index_query",
 }
 
 func (p *TQueryOptions) IsSetAbortOnError() bool {
@@ -2868,6 +2884,10 @@ func (p *TQueryOptions) IsSetEnableScanNodeRunSerial() bool {
 
 func (p *TQueryOptions) IsSetEnableInsertStrict() bool {
 	return p.EnableInsertStrict != TQueryOptions_EnableInsertStrict_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableInvertedIndexQuery() bool {
+	return p.EnableInvertedIndexQuery != TQueryOptions_EnableInvertedIndexQuery_DEFAULT
 }
 
 func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
@@ -3549,6 +3569,16 @@ func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
 					goto SkipFieldError
 				}
 			}
+		case 76:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField76(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
@@ -4172,6 +4202,15 @@ func (p *TQueryOptions) ReadField75(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TQueryOptions) ReadField76(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.EnableInvertedIndexQuery = v
+	}
+	return nil
+}
+
 func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TQueryOptions"); err != nil {
@@ -4440,6 +4479,10 @@ func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField75(oprot); err != nil {
 			fieldId = 75
+			goto WriteFieldError
+		}
+		if err = p.writeField76(oprot); err != nil {
+			fieldId = 76
 			goto WriteFieldError
 		}
 
@@ -5715,6 +5758,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 75 end error: ", p), err)
 }
 
+func (p *TQueryOptions) writeField76(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableInvertedIndexQuery() {
+		if err = oprot.WriteFieldBegin("enable_inverted_index_query", thrift.BOOL, 76); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableInvertedIndexQuery); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 76 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 76 end error: ", p), err)
+}
+
 func (p *TQueryOptions) String() string {
 	if p == nil {
 		return "<nil>"
@@ -5924,6 +5986,9 @@ func (p *TQueryOptions) DeepEqual(ano *TQueryOptions) bool {
 		return false
 	}
 	if !p.Field75DeepEqual(ano.EnableInsertStrict) {
+		return false
+	}
+	if !p.Field76DeepEqual(ano.EnableInvertedIndexQuery) {
 		return false
 	}
 	return true
@@ -6432,6 +6497,13 @@ func (p *TQueryOptions) Field74DeepEqual(src bool) bool {
 func (p *TQueryOptions) Field75DeepEqual(src bool) bool {
 
 	if p.EnableInsertStrict != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field76DeepEqual(src bool) bool {
+
+	if p.EnableInvertedIndexQuery != src {
 		return false
 	}
 	return true

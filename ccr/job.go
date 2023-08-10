@@ -829,12 +829,12 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		if err := j.handleAddPartition(binlog); err != nil {
 			return err
 		}
-	case festruct.TBinlogType_DROP_PARTITION:
-		if err := j.handleDropPartition(binlog); err != nil {
-			return err
-		}
 	case festruct.TBinlogType_CREATE_TABLE:
 		if err := j.handleCreateTable(binlog); err != nil {
+			return err
+		}
+	case festruct.TBinlogType_DROP_PARTITION:
+		if err := j.handleDropPartition(binlog); err != nil {
 			return err
 		}
 	case festruct.TBinlogType_DROP_TABLE:
@@ -853,6 +853,12 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		if err := j.handleDummy(binlog); err != nil {
 			return err
 		}
+	case festruct.TBinlogType_ALTER_DATABASE_PROPERTY:
+		// TODO(Drogon)
+	case festruct.TBinlogType_MODIFY_TABLE_PROPERTY:
+		// TODO(Drogon)
+	case festruct.TBinlogType_BARRIER:
+		// TODO(Drogon)
 	default:
 		return errors.Errorf("unknown binlog type: %v", binlog.GetType())
 	}

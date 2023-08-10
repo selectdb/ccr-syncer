@@ -49,6 +49,7 @@ func NewServiceInfo() *kitex.ServiceInfo {
 		"restoreSnapshot":           kitex.NewMethodInfo(restoreSnapshotHandler, newFrontendServiceRestoreSnapshotArgs, newFrontendServiceRestoreSnapshotResult, false),
 		"waitingTxnStatus":          kitex.NewMethodInfo(waitingTxnStatusHandler, newFrontendServiceWaitingTxnStatusArgs, newFrontendServiceWaitingTxnStatusResult, false),
 		"streamLoadPut":             kitex.NewMethodInfo(streamLoadPutHandler, newFrontendServiceStreamLoadPutArgs, newFrontendServiceStreamLoadPutResult, false),
+		"streamLoadWithLoadStatus":  kitex.NewMethodInfo(streamLoadWithLoadStatusHandler, newFrontendServiceStreamLoadWithLoadStatusArgs, newFrontendServiceStreamLoadWithLoadStatusResult, false),
 		"streamLoadMultiTablePut":   kitex.NewMethodInfo(streamLoadMultiTablePutHandler, newFrontendServiceStreamLoadMultiTablePutArgs, newFrontendServiceStreamLoadMultiTablePutResult, false),
 		"snapshotLoaderReport":      kitex.NewMethodInfo(snapshotLoaderReportHandler, newFrontendServiceSnapshotLoaderReportArgs, newFrontendServiceSnapshotLoaderReportResult, false),
 		"ping":                      kitex.NewMethodInfo(pingHandler, newFrontendServicePingArgs, newFrontendServicePingResult, false),
@@ -581,6 +582,24 @@ func newFrontendServiceStreamLoadPutArgs() interface{} {
 
 func newFrontendServiceStreamLoadPutResult() interface{} {
 	return frontendservice.NewFrontendServiceStreamLoadPutResult()
+}
+
+func streamLoadWithLoadStatusHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*frontendservice.FrontendServiceStreamLoadWithLoadStatusArgs)
+	realResult := result.(*frontendservice.FrontendServiceStreamLoadWithLoadStatusResult)
+	success, err := handler.(frontendservice.FrontendService).StreamLoadWithLoadStatus(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newFrontendServiceStreamLoadWithLoadStatusArgs() interface{} {
+	return frontendservice.NewFrontendServiceStreamLoadWithLoadStatusArgs()
+}
+
+func newFrontendServiceStreamLoadWithLoadStatusResult() interface{} {
+	return frontendservice.NewFrontendServiceStreamLoadWithLoadStatusResult()
 }
 
 func streamLoadMultiTablePutHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1137,6 +1156,16 @@ func (p *kClient) StreamLoadPut(ctx context.Context, request *frontendservice.TS
 	_args.Request = request
 	var _result frontendservice.FrontendServiceStreamLoadPutResult
 	if err = p.c.Call(ctx, "streamLoadPut", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) StreamLoadWithLoadStatus(ctx context.Context, request *frontendservice.TStreamLoadWithLoadStatusRequest) (r *frontendservice.TStreamLoadWithLoadStatusResult_, err error) {
+	var _args frontendservice.FrontendServiceStreamLoadWithLoadStatusArgs
+	_args.Request = request
+	var _result frontendservice.FrontendServiceStreamLoadWithLoadStatusResult
+	if err = p.c.Call(ctx, "streamLoadWithLoadStatus", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

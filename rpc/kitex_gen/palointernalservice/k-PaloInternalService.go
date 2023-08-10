@@ -2060,6 +2060,20 @@ func (p *TQueryOptions) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 76:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField76(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -3009,6 +3023,20 @@ func (p *TQueryOptions) FastReadField75(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TQueryOptions) FastReadField76(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.EnableInvertedIndexQuery = v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TQueryOptions) FastWrite(buf []byte) int {
 	return 0
@@ -3080,6 +3108,7 @@ func (p *TQueryOptions) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryW
 		offset += p.fastWriteField73(buf[offset:], binaryWriter)
 		offset += p.fastWriteField74(buf[offset:], binaryWriter)
 		offset += p.fastWriteField75(buf[offset:], binaryWriter)
+		offset += p.fastWriteField76(buf[offset:], binaryWriter)
 		offset += p.fastWriteField18(buf[offset:], binaryWriter)
 		offset += p.fastWriteField42(buf[offset:], binaryWriter)
 		offset += p.fastWriteField46(buf[offset:], binaryWriter)
@@ -3160,6 +3189,7 @@ func (p *TQueryOptions) BLength() int {
 		l += p.field73Length()
 		l += p.field74Length()
 		l += p.field75Length()
+		l += p.field76Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -3891,6 +3921,17 @@ func (p *TQueryOptions) fastWriteField75(buf []byte, binaryWriter bthrift.Binary
 	return offset
 }
 
+func (p *TQueryOptions) fastWriteField76(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetEnableInvertedIndexQuery() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_inverted_index_query", thrift.BOOL, 76)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableInvertedIndexQuery)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TQueryOptions) field1Length() int {
 	l := 0
 	if p.IsSetAbortOnError() {
@@ -4610,6 +4651,17 @@ func (p *TQueryOptions) field75Length() int {
 	if p.IsSetEnableInsertStrict() {
 		l += bthrift.Binary.FieldBeginLength("enable_insert_strict", thrift.BOOL, 75)
 		l += bthrift.Binary.BoolLength(p.EnableInsertStrict)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field76Length() int {
+	l := 0
+	if p.IsSetEnableInvertedIndexQuery() {
+		l += bthrift.Binary.FieldBeginLength("enable_inverted_index_query", thrift.BOOL, 76)
+		l += bthrift.Binary.BoolLength(p.EnableInvertedIndexQuery)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

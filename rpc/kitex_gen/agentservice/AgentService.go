@@ -116,6 +116,7 @@ const (
 	TCompressionType_LZ4F                TCompressionType = 5
 	TCompressionType_ZLIB                TCompressionType = 6
 	TCompressionType_ZSTD                TCompressionType = 7
+	TCompressionType_LZ4HC               TCompressionType = 8
 )
 
 func (p TCompressionType) String() string {
@@ -136,6 +137,8 @@ func (p TCompressionType) String() string {
 		return "ZLIB"
 	case TCompressionType_ZSTD:
 		return "ZSTD"
+	case TCompressionType_LZ4HC:
+		return "LZ4HC"
 	}
 	return "<UNSET>"
 }
@@ -158,6 +161,8 @@ func TCompressionTypeFromString(s string) (TCompressionType, error) {
 		return TCompressionType_ZLIB, nil
 	case "ZSTD":
 		return TCompressionType_ZSTD, nil
+	case "LZ4HC":
+		return TCompressionType_LZ4HC, nil
 	}
 	return TCompressionType(0), fmt.Errorf("not a valid TCompressionType string")
 }
@@ -1795,6 +1800,7 @@ type TS3StorageParam struct {
 	ConnTimeoutMs    int32   `thrift:"conn_timeout_ms,7,optional" frugal:"7,optional,i32" json:"conn_timeout_ms,omitempty"`
 	RootPath         *string `thrift:"root_path,8,optional" frugal:"8,optional,string" json:"root_path,omitempty"`
 	Bucket           *string `thrift:"bucket,9,optional" frugal:"9,optional,string" json:"bucket,omitempty"`
+	UsePathStyle     bool    `thrift:"use_path_style,10,optional" frugal:"10,optional,bool" json:"use_path_style,omitempty"`
 }
 
 func NewTS3StorageParam() *TS3StorageParam {
@@ -1803,6 +1809,7 @@ func NewTS3StorageParam() *TS3StorageParam {
 		MaxConn:          50,
 		RequestTimeoutMs: 3000,
 		ConnTimeoutMs:    1000,
+		UsePathStyle:     false,
 	}
 }
 
@@ -1812,6 +1819,7 @@ func (p *TS3StorageParam) InitDefault() {
 		MaxConn:          50,
 		RequestTimeoutMs: 3000,
 		ConnTimeoutMs:    1000,
+		UsePathStyle:     false,
 	}
 }
 
@@ -1895,6 +1903,15 @@ func (p *TS3StorageParam) GetBucket() (v string) {
 	}
 	return *p.Bucket
 }
+
+var TS3StorageParam_UsePathStyle_DEFAULT bool = false
+
+func (p *TS3StorageParam) GetUsePathStyle() (v bool) {
+	if !p.IsSetUsePathStyle() {
+		return TS3StorageParam_UsePathStyle_DEFAULT
+	}
+	return p.UsePathStyle
+}
 func (p *TS3StorageParam) SetEndpoint(val *string) {
 	p.Endpoint = val
 }
@@ -1922,17 +1939,21 @@ func (p *TS3StorageParam) SetRootPath(val *string) {
 func (p *TS3StorageParam) SetBucket(val *string) {
 	p.Bucket = val
 }
+func (p *TS3StorageParam) SetUsePathStyle(val bool) {
+	p.UsePathStyle = val
+}
 
 var fieldIDToName_TS3StorageParam = map[int16]string{
-	1: "endpoint",
-	2: "region",
-	3: "ak",
-	4: "sk",
-	5: "max_conn",
-	6: "request_timeout_ms",
-	7: "conn_timeout_ms",
-	8: "root_path",
-	9: "bucket",
+	1:  "endpoint",
+	2:  "region",
+	3:  "ak",
+	4:  "sk",
+	5:  "max_conn",
+	6:  "request_timeout_ms",
+	7:  "conn_timeout_ms",
+	8:  "root_path",
+	9:  "bucket",
+	10: "use_path_style",
 }
 
 func (p *TS3StorageParam) IsSetEndpoint() bool {
@@ -1969,6 +1990,10 @@ func (p *TS3StorageParam) IsSetRootPath() bool {
 
 func (p *TS3StorageParam) IsSetBucket() bool {
 	return p.Bucket != nil
+}
+
+func (p *TS3StorageParam) IsSetUsePathStyle() bool {
+	return p.UsePathStyle != TS3StorageParam_UsePathStyle_DEFAULT
 }
 
 func (p *TS3StorageParam) Read(iprot thrift.TProtocol) (err error) {
@@ -2073,6 +2098,16 @@ func (p *TS3StorageParam) Read(iprot thrift.TProtocol) (err error) {
 		case 9:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 10:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -2191,6 +2226,15 @@ func (p *TS3StorageParam) ReadField9(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TS3StorageParam) ReadField10(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.UsePathStyle = v
+	}
+	return nil
+}
+
 func (p *TS3StorageParam) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TS3StorageParam"); err != nil {
@@ -2231,6 +2275,10 @@ func (p *TS3StorageParam) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField9(oprot); err != nil {
 			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 
@@ -2423,6 +2471,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
 
+func (p *TS3StorageParam) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetUsePathStyle() {
+		if err = oprot.WriteFieldBegin("use_path_style", thrift.BOOL, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.UsePathStyle); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
 func (p *TS3StorageParam) String() string {
 	if p == nil {
 		return "<nil>"
@@ -2461,6 +2528,9 @@ func (p *TS3StorageParam) DeepEqual(ano *TS3StorageParam) bool {
 		return false
 	}
 	if !p.Field9DeepEqual(ano.Bucket) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.UsePathStyle) {
 		return false
 	}
 	return true
@@ -2555,6 +2625,13 @@ func (p *TS3StorageParam) Field9DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Bucket, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TS3StorageParam) Field10DeepEqual(src bool) bool {
+
+	if p.UsePathStyle != src {
 		return false
 	}
 	return true
@@ -4312,42 +4389,54 @@ func (p *TBinlogConfig) Field4DeepEqual(src *int64) bool {
 }
 
 type TCreateTabletReq struct {
-	TabletId                    types.TTabletId       `thrift:"tablet_id,1,required" frugal:"1,required,i64" json:"tablet_id"`
-	TabletSchema                *TTabletSchema        `thrift:"tablet_schema,2,required" frugal:"2,required,TTabletSchema" json:"tablet_schema"`
-	Version                     *types.TVersion       `thrift:"version,3,optional" frugal:"3,optional,i64" json:"version,omitempty"`
-	VersionHash                 *types.TVersionHash   `thrift:"version_hash,4,optional" frugal:"4,optional,i64" json:"version_hash,omitempty"`
-	StorageMedium               *types.TStorageMedium `thrift:"storage_medium,5,optional" frugal:"5,optional,TStorageMedium" json:"storage_medium,omitempty"`
-	InRestoreMode               *bool                 `thrift:"in_restore_mode,6,optional" frugal:"6,optional,bool" json:"in_restore_mode,omitempty"`
-	BaseTabletId                *types.TTabletId      `thrift:"base_tablet_id,7,optional" frugal:"7,optional,i64" json:"base_tablet_id,omitempty"`
-	BaseSchemaHash              *types.TSchemaHash    `thrift:"base_schema_hash,8,optional" frugal:"8,optional,i32" json:"base_schema_hash,omitempty"`
-	TableId                     *int64                `thrift:"table_id,9,optional" frugal:"9,optional,i64" json:"table_id,omitempty"`
-	PartitionId                 *int64                `thrift:"partition_id,10,optional" frugal:"10,optional,i64" json:"partition_id,omitempty"`
-	AllocationTerm              *int64                `thrift:"allocation_term,11,optional" frugal:"11,optional,i64" json:"allocation_term,omitempty"`
-	IsEcoMode                   *bool                 `thrift:"is_eco_mode,12,optional" frugal:"12,optional,bool" json:"is_eco_mode,omitempty"`
-	StorageFormat               *TStorageFormat       `thrift:"storage_format,13,optional" frugal:"13,optional,TStorageFormat" json:"storage_format,omitempty"`
-	TabletType                  *TTabletType          `thrift:"tablet_type,14,optional" frugal:"14,optional,TTabletType" json:"tablet_type,omitempty"`
-	CompressionType             TCompressionType      `thrift:"compression_type,16,optional" frugal:"16,optional,TCompressionType" json:"compression_type,omitempty"`
-	ReplicaId                   types.TReplicaId      `thrift:"replica_id,17,optional" frugal:"17,optional,i64" json:"replica_id,omitempty"`
-	EnableUniqueKeyMergeOnWrite bool                  `thrift:"enable_unique_key_merge_on_write,19,optional" frugal:"19,optional,bool" json:"enable_unique_key_merge_on_write,omitempty"`
-	StoragePolicyId             *int64                `thrift:"storage_policy_id,20,optional" frugal:"20,optional,i64" json:"storage_policy_id,omitempty"`
-	BinlogConfig                *TBinlogConfig        `thrift:"binlog_config,21,optional" frugal:"21,optional,TBinlogConfig" json:"binlog_config,omitempty"`
+	TabletId                                 types.TTabletId       `thrift:"tablet_id,1,required" frugal:"1,required,i64" json:"tablet_id"`
+	TabletSchema                             *TTabletSchema        `thrift:"tablet_schema,2,required" frugal:"2,required,TTabletSchema" json:"tablet_schema"`
+	Version                                  *types.TVersion       `thrift:"version,3,optional" frugal:"3,optional,i64" json:"version,omitempty"`
+	VersionHash                              *types.TVersionHash   `thrift:"version_hash,4,optional" frugal:"4,optional,i64" json:"version_hash,omitempty"`
+	StorageMedium                            *types.TStorageMedium `thrift:"storage_medium,5,optional" frugal:"5,optional,TStorageMedium" json:"storage_medium,omitempty"`
+	InRestoreMode                            *bool                 `thrift:"in_restore_mode,6,optional" frugal:"6,optional,bool" json:"in_restore_mode,omitempty"`
+	BaseTabletId                             *types.TTabletId      `thrift:"base_tablet_id,7,optional" frugal:"7,optional,i64" json:"base_tablet_id,omitempty"`
+	BaseSchemaHash                           *types.TSchemaHash    `thrift:"base_schema_hash,8,optional" frugal:"8,optional,i32" json:"base_schema_hash,omitempty"`
+	TableId                                  *int64                `thrift:"table_id,9,optional" frugal:"9,optional,i64" json:"table_id,omitempty"`
+	PartitionId                              *int64                `thrift:"partition_id,10,optional" frugal:"10,optional,i64" json:"partition_id,omitempty"`
+	AllocationTerm                           *int64                `thrift:"allocation_term,11,optional" frugal:"11,optional,i64" json:"allocation_term,omitempty"`
+	IsEcoMode                                *bool                 `thrift:"is_eco_mode,12,optional" frugal:"12,optional,bool" json:"is_eco_mode,omitempty"`
+	StorageFormat                            *TStorageFormat       `thrift:"storage_format,13,optional" frugal:"13,optional,TStorageFormat" json:"storage_format,omitempty"`
+	TabletType                               *TTabletType          `thrift:"tablet_type,14,optional" frugal:"14,optional,TTabletType" json:"tablet_type,omitempty"`
+	CompressionType                          TCompressionType      `thrift:"compression_type,16,optional" frugal:"16,optional,TCompressionType" json:"compression_type,omitempty"`
+	ReplicaId                                types.TReplicaId      `thrift:"replica_id,17,optional" frugal:"17,optional,i64" json:"replica_id,omitempty"`
+	EnableUniqueKeyMergeOnWrite              bool                  `thrift:"enable_unique_key_merge_on_write,19,optional" frugal:"19,optional,bool" json:"enable_unique_key_merge_on_write,omitempty"`
+	StoragePolicyId                          *int64                `thrift:"storage_policy_id,20,optional" frugal:"20,optional,i64" json:"storage_policy_id,omitempty"`
+	BinlogConfig                             *TBinlogConfig        `thrift:"binlog_config,21,optional" frugal:"21,optional,TBinlogConfig" json:"binlog_config,omitempty"`
+	CompactionPolicy                         string                `thrift:"compaction_policy,22,optional" frugal:"22,optional,string" json:"compaction_policy,omitempty"`
+	TimeSeriesCompactionGoalSizeMbytes       int64                 `thrift:"time_series_compaction_goal_size_mbytes,23,optional" frugal:"23,optional,i64" json:"time_series_compaction_goal_size_mbytes,omitempty"`
+	TimeSeriesCompactionFileCountThreshold   int64                 `thrift:"time_series_compaction_file_count_threshold,24,optional" frugal:"24,optional,i64" json:"time_series_compaction_file_count_threshold,omitempty"`
+	TimeSeriesCompactionTimeThresholdSeconds int64                 `thrift:"time_series_compaction_time_threshold_seconds,25,optional" frugal:"25,optional,i64" json:"time_series_compaction_time_threshold_seconds,omitempty"`
 }
 
 func NewTCreateTabletReq() *TCreateTabletReq {
 	return &TCreateTabletReq{
 
-		CompressionType:             TCompressionType_LZ4F,
-		ReplicaId:                   0,
-		EnableUniqueKeyMergeOnWrite: false,
+		CompressionType:                          TCompressionType_LZ4F,
+		ReplicaId:                                0,
+		EnableUniqueKeyMergeOnWrite:              false,
+		CompactionPolicy:                         "size_based",
+		TimeSeriesCompactionGoalSizeMbytes:       1024,
+		TimeSeriesCompactionFileCountThreshold:   2000,
+		TimeSeriesCompactionTimeThresholdSeconds: 3600,
 	}
 }
 
 func (p *TCreateTabletReq) InitDefault() {
 	*p = TCreateTabletReq{
 
-		CompressionType:             TCompressionType_LZ4F,
-		ReplicaId:                   0,
-		EnableUniqueKeyMergeOnWrite: false,
+		CompressionType:                          TCompressionType_LZ4F,
+		ReplicaId:                                0,
+		EnableUniqueKeyMergeOnWrite:              false,
+		CompactionPolicy:                         "size_based",
+		TimeSeriesCompactionGoalSizeMbytes:       1024,
+		TimeSeriesCompactionFileCountThreshold:   2000,
+		TimeSeriesCompactionTimeThresholdSeconds: 3600,
 	}
 }
 
@@ -4516,6 +4605,42 @@ func (p *TCreateTabletReq) GetBinlogConfig() (v *TBinlogConfig) {
 	}
 	return p.BinlogConfig
 }
+
+var TCreateTabletReq_CompactionPolicy_DEFAULT string = "size_based"
+
+func (p *TCreateTabletReq) GetCompactionPolicy() (v string) {
+	if !p.IsSetCompactionPolicy() {
+		return TCreateTabletReq_CompactionPolicy_DEFAULT
+	}
+	return p.CompactionPolicy
+}
+
+var TCreateTabletReq_TimeSeriesCompactionGoalSizeMbytes_DEFAULT int64 = 1024
+
+func (p *TCreateTabletReq) GetTimeSeriesCompactionGoalSizeMbytes() (v int64) {
+	if !p.IsSetTimeSeriesCompactionGoalSizeMbytes() {
+		return TCreateTabletReq_TimeSeriesCompactionGoalSizeMbytes_DEFAULT
+	}
+	return p.TimeSeriesCompactionGoalSizeMbytes
+}
+
+var TCreateTabletReq_TimeSeriesCompactionFileCountThreshold_DEFAULT int64 = 2000
+
+func (p *TCreateTabletReq) GetTimeSeriesCompactionFileCountThreshold() (v int64) {
+	if !p.IsSetTimeSeriesCompactionFileCountThreshold() {
+		return TCreateTabletReq_TimeSeriesCompactionFileCountThreshold_DEFAULT
+	}
+	return p.TimeSeriesCompactionFileCountThreshold
+}
+
+var TCreateTabletReq_TimeSeriesCompactionTimeThresholdSeconds_DEFAULT int64 = 3600
+
+func (p *TCreateTabletReq) GetTimeSeriesCompactionTimeThresholdSeconds() (v int64) {
+	if !p.IsSetTimeSeriesCompactionTimeThresholdSeconds() {
+		return TCreateTabletReq_TimeSeriesCompactionTimeThresholdSeconds_DEFAULT
+	}
+	return p.TimeSeriesCompactionTimeThresholdSeconds
+}
 func (p *TCreateTabletReq) SetTabletId(val types.TTabletId) {
 	p.TabletId = val
 }
@@ -4573,6 +4698,18 @@ func (p *TCreateTabletReq) SetStoragePolicyId(val *int64) {
 func (p *TCreateTabletReq) SetBinlogConfig(val *TBinlogConfig) {
 	p.BinlogConfig = val
 }
+func (p *TCreateTabletReq) SetCompactionPolicy(val string) {
+	p.CompactionPolicy = val
+}
+func (p *TCreateTabletReq) SetTimeSeriesCompactionGoalSizeMbytes(val int64) {
+	p.TimeSeriesCompactionGoalSizeMbytes = val
+}
+func (p *TCreateTabletReq) SetTimeSeriesCompactionFileCountThreshold(val int64) {
+	p.TimeSeriesCompactionFileCountThreshold = val
+}
+func (p *TCreateTabletReq) SetTimeSeriesCompactionTimeThresholdSeconds(val int64) {
+	p.TimeSeriesCompactionTimeThresholdSeconds = val
+}
 
 var fieldIDToName_TCreateTabletReq = map[int16]string{
 	1:  "tablet_id",
@@ -4594,6 +4731,10 @@ var fieldIDToName_TCreateTabletReq = map[int16]string{
 	19: "enable_unique_key_merge_on_write",
 	20: "storage_policy_id",
 	21: "binlog_config",
+	22: "compaction_policy",
+	23: "time_series_compaction_goal_size_mbytes",
+	24: "time_series_compaction_file_count_threshold",
+	25: "time_series_compaction_time_threshold_seconds",
 }
 
 func (p *TCreateTabletReq) IsSetTabletSchema() bool {
@@ -4666,6 +4807,22 @@ func (p *TCreateTabletReq) IsSetStoragePolicyId() bool {
 
 func (p *TCreateTabletReq) IsSetBinlogConfig() bool {
 	return p.BinlogConfig != nil
+}
+
+func (p *TCreateTabletReq) IsSetCompactionPolicy() bool {
+	return p.CompactionPolicy != TCreateTabletReq_CompactionPolicy_DEFAULT
+}
+
+func (p *TCreateTabletReq) IsSetTimeSeriesCompactionGoalSizeMbytes() bool {
+	return p.TimeSeriesCompactionGoalSizeMbytes != TCreateTabletReq_TimeSeriesCompactionGoalSizeMbytes_DEFAULT
+}
+
+func (p *TCreateTabletReq) IsSetTimeSeriesCompactionFileCountThreshold() bool {
+	return p.TimeSeriesCompactionFileCountThreshold != TCreateTabletReq_TimeSeriesCompactionFileCountThreshold_DEFAULT
+}
+
+func (p *TCreateTabletReq) IsSetTimeSeriesCompactionTimeThresholdSeconds() bool {
+	return p.TimeSeriesCompactionTimeThresholdSeconds != TCreateTabletReq_TimeSeriesCompactionTimeThresholdSeconds_DEFAULT
 }
 
 func (p *TCreateTabletReq) Read(iprot thrift.TProtocol) (err error) {
@@ -4874,6 +5031,46 @@ func (p *TCreateTabletReq) Read(iprot thrift.TProtocol) (err error) {
 		case 21:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField21(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 22:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField22(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 23:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField23(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 24:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField24(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 25:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField25(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -5094,6 +5291,42 @@ func (p *TCreateTabletReq) ReadField21(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TCreateTabletReq) ReadField22(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		p.CompactionPolicy = v
+	}
+	return nil
+}
+
+func (p *TCreateTabletReq) ReadField23(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.TimeSeriesCompactionGoalSizeMbytes = v
+	}
+	return nil
+}
+
+func (p *TCreateTabletReq) ReadField24(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.TimeSeriesCompactionFileCountThreshold = v
+	}
+	return nil
+}
+
+func (p *TCreateTabletReq) ReadField25(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.TimeSeriesCompactionTimeThresholdSeconds = v
+	}
+	return nil
+}
+
 func (p *TCreateTabletReq) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TCreateTabletReq"); err != nil {
@@ -5174,6 +5407,22 @@ func (p *TCreateTabletReq) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField21(oprot); err != nil {
 			fieldId = 21
+			goto WriteFieldError
+		}
+		if err = p.writeField22(oprot); err != nil {
+			fieldId = 22
+			goto WriteFieldError
+		}
+		if err = p.writeField23(oprot); err != nil {
+			fieldId = 23
+			goto WriteFieldError
+		}
+		if err = p.writeField24(oprot); err != nil {
+			fieldId = 24
+			goto WriteFieldError
+		}
+		if err = p.writeField25(oprot); err != nil {
+			fieldId = 25
 			goto WriteFieldError
 		}
 
@@ -5552,6 +5801,82 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
 }
 
+func (p *TCreateTabletReq) writeField22(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCompactionPolicy() {
+		if err = oprot.WriteFieldBegin("compaction_policy", thrift.STRING, 22); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(p.CompactionPolicy); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
+}
+
+func (p *TCreateTabletReq) writeField23(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTimeSeriesCompactionGoalSizeMbytes() {
+		if err = oprot.WriteFieldBegin("time_series_compaction_goal_size_mbytes", thrift.I64, 23); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.TimeSeriesCompactionGoalSizeMbytes); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
+}
+
+func (p *TCreateTabletReq) writeField24(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTimeSeriesCompactionFileCountThreshold() {
+		if err = oprot.WriteFieldBegin("time_series_compaction_file_count_threshold", thrift.I64, 24); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.TimeSeriesCompactionFileCountThreshold); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 24 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 24 end error: ", p), err)
+}
+
+func (p *TCreateTabletReq) writeField25(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTimeSeriesCompactionTimeThresholdSeconds() {
+		if err = oprot.WriteFieldBegin("time_series_compaction_time_threshold_seconds", thrift.I64, 25); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.TimeSeriesCompactionTimeThresholdSeconds); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 25 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 25 end error: ", p), err)
+}
+
 func (p *TCreateTabletReq) String() string {
 	if p == nil {
 		return "<nil>"
@@ -5620,6 +5945,18 @@ func (p *TCreateTabletReq) DeepEqual(ano *TCreateTabletReq) bool {
 		return false
 	}
 	if !p.Field21DeepEqual(ano.BinlogConfig) {
+		return false
+	}
+	if !p.Field22DeepEqual(ano.CompactionPolicy) {
+		return false
+	}
+	if !p.Field23DeepEqual(ano.TimeSeriesCompactionGoalSizeMbytes) {
+		return false
+	}
+	if !p.Field24DeepEqual(ano.TimeSeriesCompactionFileCountThreshold) {
+		return false
+	}
+	if !p.Field25DeepEqual(ano.TimeSeriesCompactionTimeThresholdSeconds) {
 		return false
 	}
 	return true
@@ -5819,6 +6156,34 @@ func (p *TCreateTabletReq) Field20DeepEqual(src *int64) bool {
 func (p *TCreateTabletReq) Field21DeepEqual(src *TBinlogConfig) bool {
 
 	if !p.BinlogConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TCreateTabletReq) Field22DeepEqual(src string) bool {
+
+	if strings.Compare(p.CompactionPolicy, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TCreateTabletReq) Field23DeepEqual(src int64) bool {
+
+	if p.TimeSeriesCompactionGoalSizeMbytes != src {
+		return false
+	}
+	return true
+}
+func (p *TCreateTabletReq) Field24DeepEqual(src int64) bool {
+
+	if p.TimeSeriesCompactionFileCountThreshold != src {
+		return false
+	}
+	return true
+}
+func (p *TCreateTabletReq) Field25DeepEqual(src int64) bool {
+
+	if p.TimeSeriesCompactionTimeThresholdSeconds != src {
 		return false
 	}
 	return true
@@ -18967,13 +19332,17 @@ func (p *TRecoverTabletReq) Field4DeepEqual(src *types.TVersionHash) bool {
 }
 
 type TTabletMetaInfo struct {
-	TabletId        *types.TTabletId    `thrift:"tablet_id,1,optional" frugal:"1,optional,i64" json:"tablet_id,omitempty"`
-	SchemaHash      *types.TSchemaHash  `thrift:"schema_hash,2,optional" frugal:"2,optional,i32" json:"schema_hash,omitempty"`
-	PartitionId     *types.TPartitionId `thrift:"partition_id,3,optional" frugal:"3,optional,i64" json:"partition_id,omitempty"`
-	IsInMemory      *bool               `thrift:"is_in_memory,5,optional" frugal:"5,optional,bool" json:"is_in_memory,omitempty"`
-	StoragePolicyId *int64              `thrift:"storage_policy_id,7,optional" frugal:"7,optional,i64" json:"storage_policy_id,omitempty"`
-	ReplicaId       *types.TReplicaId   `thrift:"replica_id,8,optional" frugal:"8,optional,i64" json:"replica_id,omitempty"`
-	BinlogConfig    *TBinlogConfig      `thrift:"binlog_config,9,optional" frugal:"9,optional,TBinlogConfig" json:"binlog_config,omitempty"`
+	TabletId                                 *types.TTabletId    `thrift:"tablet_id,1,optional" frugal:"1,optional,i64" json:"tablet_id,omitempty"`
+	SchemaHash                               *types.TSchemaHash  `thrift:"schema_hash,2,optional" frugal:"2,optional,i32" json:"schema_hash,omitempty"`
+	PartitionId                              *types.TPartitionId `thrift:"partition_id,3,optional" frugal:"3,optional,i64" json:"partition_id,omitempty"`
+	IsInMemory                               *bool               `thrift:"is_in_memory,5,optional" frugal:"5,optional,bool" json:"is_in_memory,omitempty"`
+	StoragePolicyId                          *int64              `thrift:"storage_policy_id,7,optional" frugal:"7,optional,i64" json:"storage_policy_id,omitempty"`
+	ReplicaId                                *types.TReplicaId   `thrift:"replica_id,8,optional" frugal:"8,optional,i64" json:"replica_id,omitempty"`
+	BinlogConfig                             *TBinlogConfig      `thrift:"binlog_config,9,optional" frugal:"9,optional,TBinlogConfig" json:"binlog_config,omitempty"`
+	CompactionPolicy                         *string             `thrift:"compaction_policy,10,optional" frugal:"10,optional,string" json:"compaction_policy,omitempty"`
+	TimeSeriesCompactionGoalSizeMbytes       *int64              `thrift:"time_series_compaction_goal_size_mbytes,11,optional" frugal:"11,optional,i64" json:"time_series_compaction_goal_size_mbytes,omitempty"`
+	TimeSeriesCompactionFileCountThreshold   *int64              `thrift:"time_series_compaction_file_count_threshold,12,optional" frugal:"12,optional,i64" json:"time_series_compaction_file_count_threshold,omitempty"`
+	TimeSeriesCompactionTimeThresholdSeconds *int64              `thrift:"time_series_compaction_time_threshold_seconds,13,optional" frugal:"13,optional,i64" json:"time_series_compaction_time_threshold_seconds,omitempty"`
 }
 
 func NewTTabletMetaInfo() *TTabletMetaInfo {
@@ -19046,6 +19415,42 @@ func (p *TTabletMetaInfo) GetBinlogConfig() (v *TBinlogConfig) {
 	}
 	return p.BinlogConfig
 }
+
+var TTabletMetaInfo_CompactionPolicy_DEFAULT string
+
+func (p *TTabletMetaInfo) GetCompactionPolicy() (v string) {
+	if !p.IsSetCompactionPolicy() {
+		return TTabletMetaInfo_CompactionPolicy_DEFAULT
+	}
+	return *p.CompactionPolicy
+}
+
+var TTabletMetaInfo_TimeSeriesCompactionGoalSizeMbytes_DEFAULT int64
+
+func (p *TTabletMetaInfo) GetTimeSeriesCompactionGoalSizeMbytes() (v int64) {
+	if !p.IsSetTimeSeriesCompactionGoalSizeMbytes() {
+		return TTabletMetaInfo_TimeSeriesCompactionGoalSizeMbytes_DEFAULT
+	}
+	return *p.TimeSeriesCompactionGoalSizeMbytes
+}
+
+var TTabletMetaInfo_TimeSeriesCompactionFileCountThreshold_DEFAULT int64
+
+func (p *TTabletMetaInfo) GetTimeSeriesCompactionFileCountThreshold() (v int64) {
+	if !p.IsSetTimeSeriesCompactionFileCountThreshold() {
+		return TTabletMetaInfo_TimeSeriesCompactionFileCountThreshold_DEFAULT
+	}
+	return *p.TimeSeriesCompactionFileCountThreshold
+}
+
+var TTabletMetaInfo_TimeSeriesCompactionTimeThresholdSeconds_DEFAULT int64
+
+func (p *TTabletMetaInfo) GetTimeSeriesCompactionTimeThresholdSeconds() (v int64) {
+	if !p.IsSetTimeSeriesCompactionTimeThresholdSeconds() {
+		return TTabletMetaInfo_TimeSeriesCompactionTimeThresholdSeconds_DEFAULT
+	}
+	return *p.TimeSeriesCompactionTimeThresholdSeconds
+}
 func (p *TTabletMetaInfo) SetTabletId(val *types.TTabletId) {
 	p.TabletId = val
 }
@@ -19067,15 +19472,31 @@ func (p *TTabletMetaInfo) SetReplicaId(val *types.TReplicaId) {
 func (p *TTabletMetaInfo) SetBinlogConfig(val *TBinlogConfig) {
 	p.BinlogConfig = val
 }
+func (p *TTabletMetaInfo) SetCompactionPolicy(val *string) {
+	p.CompactionPolicy = val
+}
+func (p *TTabletMetaInfo) SetTimeSeriesCompactionGoalSizeMbytes(val *int64) {
+	p.TimeSeriesCompactionGoalSizeMbytes = val
+}
+func (p *TTabletMetaInfo) SetTimeSeriesCompactionFileCountThreshold(val *int64) {
+	p.TimeSeriesCompactionFileCountThreshold = val
+}
+func (p *TTabletMetaInfo) SetTimeSeriesCompactionTimeThresholdSeconds(val *int64) {
+	p.TimeSeriesCompactionTimeThresholdSeconds = val
+}
 
 var fieldIDToName_TTabletMetaInfo = map[int16]string{
-	1: "tablet_id",
-	2: "schema_hash",
-	3: "partition_id",
-	5: "is_in_memory",
-	7: "storage_policy_id",
-	8: "replica_id",
-	9: "binlog_config",
+	1:  "tablet_id",
+	2:  "schema_hash",
+	3:  "partition_id",
+	5:  "is_in_memory",
+	7:  "storage_policy_id",
+	8:  "replica_id",
+	9:  "binlog_config",
+	10: "compaction_policy",
+	11: "time_series_compaction_goal_size_mbytes",
+	12: "time_series_compaction_file_count_threshold",
+	13: "time_series_compaction_time_threshold_seconds",
 }
 
 func (p *TTabletMetaInfo) IsSetTabletId() bool {
@@ -19104,6 +19525,22 @@ func (p *TTabletMetaInfo) IsSetReplicaId() bool {
 
 func (p *TTabletMetaInfo) IsSetBinlogConfig() bool {
 	return p.BinlogConfig != nil
+}
+
+func (p *TTabletMetaInfo) IsSetCompactionPolicy() bool {
+	return p.CompactionPolicy != nil
+}
+
+func (p *TTabletMetaInfo) IsSetTimeSeriesCompactionGoalSizeMbytes() bool {
+	return p.TimeSeriesCompactionGoalSizeMbytes != nil
+}
+
+func (p *TTabletMetaInfo) IsSetTimeSeriesCompactionFileCountThreshold() bool {
+	return p.TimeSeriesCompactionFileCountThreshold != nil
+}
+
+func (p *TTabletMetaInfo) IsSetTimeSeriesCompactionTimeThresholdSeconds() bool {
+	return p.TimeSeriesCompactionTimeThresholdSeconds != nil
 }
 
 func (p *TTabletMetaInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -19188,6 +19625,46 @@ func (p *TTabletMetaInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 9:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 11:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 12:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 13:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -19287,6 +19764,42 @@ func (p *TTabletMetaInfo) ReadField9(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TTabletMetaInfo) ReadField10(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		p.CompactionPolicy = &v
+	}
+	return nil
+}
+
+func (p *TTabletMetaInfo) ReadField11(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.TimeSeriesCompactionGoalSizeMbytes = &v
+	}
+	return nil
+}
+
+func (p *TTabletMetaInfo) ReadField12(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.TimeSeriesCompactionFileCountThreshold = &v
+	}
+	return nil
+}
+
+func (p *TTabletMetaInfo) ReadField13(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.TimeSeriesCompactionTimeThresholdSeconds = &v
+	}
+	return nil
+}
+
 func (p *TTabletMetaInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TTabletMetaInfo"); err != nil {
@@ -19319,6 +19832,22 @@ func (p *TTabletMetaInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField9(oprot); err != nil {
 			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 
@@ -19473,6 +20002,82 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
 
+func (p *TTabletMetaInfo) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCompactionPolicy() {
+		if err = oprot.WriteFieldBegin("compaction_policy", thrift.STRING, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.CompactionPolicy); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
+func (p *TTabletMetaInfo) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTimeSeriesCompactionGoalSizeMbytes() {
+		if err = oprot.WriteFieldBegin("time_series_compaction_goal_size_mbytes", thrift.I64, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TimeSeriesCompactionGoalSizeMbytes); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+
+func (p *TTabletMetaInfo) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTimeSeriesCompactionFileCountThreshold() {
+		if err = oprot.WriteFieldBegin("time_series_compaction_file_count_threshold", thrift.I64, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TimeSeriesCompactionFileCountThreshold); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
+
+func (p *TTabletMetaInfo) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTimeSeriesCompactionTimeThresholdSeconds() {
+		if err = oprot.WriteFieldBegin("time_series_compaction_time_threshold_seconds", thrift.I64, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TimeSeriesCompactionTimeThresholdSeconds); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
+
 func (p *TTabletMetaInfo) String() string {
 	if p == nil {
 		return "<nil>"
@@ -19505,6 +20110,18 @@ func (p *TTabletMetaInfo) DeepEqual(ano *TTabletMetaInfo) bool {
 		return false
 	}
 	if !p.Field9DeepEqual(ano.BinlogConfig) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.CompactionPolicy) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.TimeSeriesCompactionGoalSizeMbytes) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.TimeSeriesCompactionFileCountThreshold) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.TimeSeriesCompactionTimeThresholdSeconds) {
 		return false
 	}
 	return true
@@ -19585,6 +20202,54 @@ func (p *TTabletMetaInfo) Field8DeepEqual(src *types.TReplicaId) bool {
 func (p *TTabletMetaInfo) Field9DeepEqual(src *TBinlogConfig) bool {
 
 	if !p.BinlogConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TTabletMetaInfo) Field10DeepEqual(src *string) bool {
+
+	if p.CompactionPolicy == src {
+		return true
+	} else if p.CompactionPolicy == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.CompactionPolicy, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TTabletMetaInfo) Field11DeepEqual(src *int64) bool {
+
+	if p.TimeSeriesCompactionGoalSizeMbytes == src {
+		return true
+	} else if p.TimeSeriesCompactionGoalSizeMbytes == nil || src == nil {
+		return false
+	}
+	if *p.TimeSeriesCompactionGoalSizeMbytes != *src {
+		return false
+	}
+	return true
+}
+func (p *TTabletMetaInfo) Field12DeepEqual(src *int64) bool {
+
+	if p.TimeSeriesCompactionFileCountThreshold == src {
+		return true
+	} else if p.TimeSeriesCompactionFileCountThreshold == nil || src == nil {
+		return false
+	}
+	if *p.TimeSeriesCompactionFileCountThreshold != *src {
+		return false
+	}
+	return true
+}
+func (p *TTabletMetaInfo) Field13DeepEqual(src *int64) bool {
+
+	if p.TimeSeriesCompactionTimeThresholdSeconds == src {
+		return true
+	} else if p.TimeSeriesCompactionTimeThresholdSeconds == nil || src == nil {
+		return false
+	}
+	if *p.TimeSeriesCompactionTimeThresholdSeconds != *src {
 		return false
 	}
 	return true

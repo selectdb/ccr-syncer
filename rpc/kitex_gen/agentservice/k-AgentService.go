@@ -1260,6 +1260,20 @@ func (p *TS3StorageParam) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 10:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1415,6 +1429,20 @@ func (p *TS3StorageParam) FastReadField9(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TS3StorageParam) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.UsePathStyle = v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TS3StorageParam) FastWrite(buf []byte) int {
 	return 0
@@ -1427,6 +1455,7 @@ func (p *TS3StorageParam) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binar
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 		offset += p.fastWriteField7(buf[offset:], binaryWriter)
+		offset += p.fastWriteField10(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -1452,6 +1481,7 @@ func (p *TS3StorageParam) BLength() int {
 		l += p.field7Length()
 		l += p.field8Length()
 		l += p.field9Length()
+		l += p.field10Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -1557,6 +1587,17 @@ func (p *TS3StorageParam) fastWriteField9(buf []byte, binaryWriter bthrift.Binar
 	return offset
 }
 
+func (p *TS3StorageParam) fastWriteField10(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetUsePathStyle() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "use_path_style", thrift.BOOL, 10)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.UsePathStyle)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TS3StorageParam) field1Length() int {
 	l := 0
 	if p.IsSetEndpoint() {
@@ -1650,6 +1691,17 @@ func (p *TS3StorageParam) field9Length() int {
 	if p.IsSetBucket() {
 		l += bthrift.Binary.FieldBeginLength("bucket", thrift.STRING, 9)
 		l += bthrift.Binary.StringLengthNocopy(*p.Bucket)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TS3StorageParam) field10Length() int {
+	l := 0
+	if p.IsSetUsePathStyle() {
+		l += bthrift.Binary.FieldBeginLength("use_path_style", thrift.BOOL, 10)
+		l += bthrift.Binary.BoolLength(p.UsePathStyle)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -3216,6 +3268,62 @@ func (p *TCreateTabletReq) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 22:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField22(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 23:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField23(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 24:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField24(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 25:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField25(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -3519,6 +3627,62 @@ func (p *TCreateTabletReq) FastReadField21(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TCreateTabletReq) FastReadField22(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.CompactionPolicy = v
+
+	}
+	return offset, nil
+}
+
+func (p *TCreateTabletReq) FastReadField23(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.TimeSeriesCompactionGoalSizeMbytes = v
+
+	}
+	return offset, nil
+}
+
+func (p *TCreateTabletReq) FastReadField24(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.TimeSeriesCompactionFileCountThreshold = v
+
+	}
+	return offset, nil
+}
+
+func (p *TCreateTabletReq) FastReadField25(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.TimeSeriesCompactionTimeThresholdSeconds = v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TCreateTabletReq) FastWrite(buf []byte) int {
 	return 0
@@ -3541,12 +3705,16 @@ func (p *TCreateTabletReq) FastWriteNocopy(buf []byte, binaryWriter bthrift.Bina
 		offset += p.fastWriteField17(buf[offset:], binaryWriter)
 		offset += p.fastWriteField19(buf[offset:], binaryWriter)
 		offset += p.fastWriteField20(buf[offset:], binaryWriter)
+		offset += p.fastWriteField23(buf[offset:], binaryWriter)
+		offset += p.fastWriteField24(buf[offset:], binaryWriter)
+		offset += p.fastWriteField25(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 		offset += p.fastWriteField13(buf[offset:], binaryWriter)
 		offset += p.fastWriteField14(buf[offset:], binaryWriter)
 		offset += p.fastWriteField16(buf[offset:], binaryWriter)
 		offset += p.fastWriteField21(buf[offset:], binaryWriter)
+		offset += p.fastWriteField22(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -3576,6 +3744,10 @@ func (p *TCreateTabletReq) BLength() int {
 		l += p.field19Length()
 		l += p.field20Length()
 		l += p.field21Length()
+		l += p.field22Length()
+		l += p.field23Length()
+		l += p.field24Length()
+		l += p.field25Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -3785,6 +3957,50 @@ func (p *TCreateTabletReq) fastWriteField21(buf []byte, binaryWriter bthrift.Bin
 	return offset
 }
 
+func (p *TCreateTabletReq) fastWriteField22(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetCompactionPolicy() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "compaction_policy", thrift.STRING, 22)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, p.CompactionPolicy)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TCreateTabletReq) fastWriteField23(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTimeSeriesCompactionGoalSizeMbytes() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "time_series_compaction_goal_size_mbytes", thrift.I64, 23)
+		offset += bthrift.Binary.WriteI64(buf[offset:], p.TimeSeriesCompactionGoalSizeMbytes)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TCreateTabletReq) fastWriteField24(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTimeSeriesCompactionFileCountThreshold() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "time_series_compaction_file_count_threshold", thrift.I64, 24)
+		offset += bthrift.Binary.WriteI64(buf[offset:], p.TimeSeriesCompactionFileCountThreshold)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TCreateTabletReq) fastWriteField25(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTimeSeriesCompactionTimeThresholdSeconds() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "time_series_compaction_time_threshold_seconds", thrift.I64, 25)
+		offset += bthrift.Binary.WriteI64(buf[offset:], p.TimeSeriesCompactionTimeThresholdSeconds)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TCreateTabletReq) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("tablet_id", thrift.I64, 1)
@@ -3983,6 +4199,50 @@ func (p *TCreateTabletReq) field21Length() int {
 	if p.IsSetBinlogConfig() {
 		l += bthrift.Binary.FieldBeginLength("binlog_config", thrift.STRUCT, 21)
 		l += p.BinlogConfig.BLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TCreateTabletReq) field22Length() int {
+	l := 0
+	if p.IsSetCompactionPolicy() {
+		l += bthrift.Binary.FieldBeginLength("compaction_policy", thrift.STRING, 22)
+		l += bthrift.Binary.StringLengthNocopy(p.CompactionPolicy)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TCreateTabletReq) field23Length() int {
+	l := 0
+	if p.IsSetTimeSeriesCompactionGoalSizeMbytes() {
+		l += bthrift.Binary.FieldBeginLength("time_series_compaction_goal_size_mbytes", thrift.I64, 23)
+		l += bthrift.Binary.I64Length(p.TimeSeriesCompactionGoalSizeMbytes)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TCreateTabletReq) field24Length() int {
+	l := 0
+	if p.IsSetTimeSeriesCompactionFileCountThreshold() {
+		l += bthrift.Binary.FieldBeginLength("time_series_compaction_file_count_threshold", thrift.I64, 24)
+		l += bthrift.Binary.I64Length(p.TimeSeriesCompactionFileCountThreshold)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TCreateTabletReq) field25Length() int {
+	l := 0
+	if p.IsSetTimeSeriesCompactionTimeThresholdSeconds() {
+		l += bthrift.Binary.FieldBeginLength("time_series_compaction_time_threshold_seconds", thrift.I64, 25)
+		l += bthrift.Binary.I64Length(p.TimeSeriesCompactionTimeThresholdSeconds)
+
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l
@@ -14144,6 +14404,62 @@ func (p *TTabletMetaInfo) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 11:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField11(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 12:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField12(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 13:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField13(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -14270,6 +14586,58 @@ func (p *TTabletMetaInfo) FastReadField9(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TTabletMetaInfo) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.CompactionPolicy = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TTabletMetaInfo) FastReadField11(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.TimeSeriesCompactionGoalSizeMbytes = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TTabletMetaInfo) FastReadField12(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.TimeSeriesCompactionFileCountThreshold = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TTabletMetaInfo) FastReadField13(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.TimeSeriesCompactionTimeThresholdSeconds = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TTabletMetaInfo) FastWrite(buf []byte) int {
 	return 0
@@ -14285,7 +14653,11 @@ func (p *TTabletMetaInfo) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binar
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 		offset += p.fastWriteField7(buf[offset:], binaryWriter)
 		offset += p.fastWriteField8(buf[offset:], binaryWriter)
+		offset += p.fastWriteField11(buf[offset:], binaryWriter)
+		offset += p.fastWriteField12(buf[offset:], binaryWriter)
+		offset += p.fastWriteField13(buf[offset:], binaryWriter)
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
+		offset += p.fastWriteField10(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -14303,6 +14675,10 @@ func (p *TTabletMetaInfo) BLength() int {
 		l += p.field7Length()
 		l += p.field8Length()
 		l += p.field9Length()
+		l += p.field10Length()
+		l += p.field11Length()
+		l += p.field12Length()
+		l += p.field13Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -14385,6 +14761,50 @@ func (p *TTabletMetaInfo) fastWriteField9(buf []byte, binaryWriter bthrift.Binar
 	return offset
 }
 
+func (p *TTabletMetaInfo) fastWriteField10(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetCompactionPolicy() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "compaction_policy", thrift.STRING, 10)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.CompactionPolicy)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TTabletMetaInfo) fastWriteField11(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTimeSeriesCompactionGoalSizeMbytes() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "time_series_compaction_goal_size_mbytes", thrift.I64, 11)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.TimeSeriesCompactionGoalSizeMbytes)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TTabletMetaInfo) fastWriteField12(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTimeSeriesCompactionFileCountThreshold() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "time_series_compaction_file_count_threshold", thrift.I64, 12)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.TimeSeriesCompactionFileCountThreshold)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TTabletMetaInfo) fastWriteField13(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTimeSeriesCompactionTimeThresholdSeconds() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "time_series_compaction_time_threshold_seconds", thrift.I64, 13)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.TimeSeriesCompactionTimeThresholdSeconds)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TTabletMetaInfo) field1Length() int {
 	l := 0
 	if p.IsSetTabletId() {
@@ -14456,6 +14876,50 @@ func (p *TTabletMetaInfo) field9Length() int {
 	if p.IsSetBinlogConfig() {
 		l += bthrift.Binary.FieldBeginLength("binlog_config", thrift.STRUCT, 9)
 		l += p.BinlogConfig.BLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TTabletMetaInfo) field10Length() int {
+	l := 0
+	if p.IsSetCompactionPolicy() {
+		l += bthrift.Binary.FieldBeginLength("compaction_policy", thrift.STRING, 10)
+		l += bthrift.Binary.StringLengthNocopy(*p.CompactionPolicy)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TTabletMetaInfo) field11Length() int {
+	l := 0
+	if p.IsSetTimeSeriesCompactionGoalSizeMbytes() {
+		l += bthrift.Binary.FieldBeginLength("time_series_compaction_goal_size_mbytes", thrift.I64, 11)
+		l += bthrift.Binary.I64Length(*p.TimeSeriesCompactionGoalSizeMbytes)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TTabletMetaInfo) field12Length() int {
+	l := 0
+	if p.IsSetTimeSeriesCompactionFileCountThreshold() {
+		l += bthrift.Binary.FieldBeginLength("time_series_compaction_file_count_threshold", thrift.I64, 12)
+		l += bthrift.Binary.I64Length(*p.TimeSeriesCompactionFileCountThreshold)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TTabletMetaInfo) field13Length() int {
+	l := 0
+	if p.IsSetTimeSeriesCompactionTimeThresholdSeconds() {
+		l += bthrift.Binary.FieldBeginLength("time_series_compaction_time_threshold_seconds", thrift.I64, 13)
+		l += bthrift.Binary.I64Length(*p.TimeSeriesCompactionTimeThresholdSeconds)
+
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l
