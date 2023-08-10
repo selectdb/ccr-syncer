@@ -59,7 +59,7 @@ func (j *IngestBinlogJob) GetTabletCommitInfos() []*ttypes.TTabletCommitInfo {
 	return j.commitInfos
 }
 
-func (j *IngestBinlogJob) updateError(err error) {
+func (j *IngestBinlogJob) setError(err error) {
 	j.errLock.Lock()
 	defer j.errLock.Unlock()
 
@@ -73,7 +73,7 @@ func (j *IngestBinlogJob) Error() error {
 	return j.err
 }
 
-func (j *IngestBinlogJob) updateCommitInfos(commitInfo *ttypes.TTabletCommitInfo) {
+func (j *IngestBinlogJob) appendCommitInfos(commitInfo *ttypes.TTabletCommitInfo) {
 	j.commitInfosLock.Lock()
 	defer j.commitInfosLock.Unlock()
 
@@ -90,23 +90,22 @@ func (j *IngestBinlogJob) CommitInfos() []*ttypes.TTabletCommitInfo {
 func (j *IngestBinlogJob) run() {
 	job := j.job
 
-	var srcBackendMap map[int64]*base.Backend
 	var err error
+	var srcBackendMap map[int64]*base.Backend
 	srcBackendMap, err = job.srcMeta.GetBackendMap()
 	if err != nil {
+		j.setError(err)
 		return
 	}
+
 	var destBackendMap map[int64]*base.Backend
 	destBackendMap, err = job.destMeta.GetBackendMap()
 	if err != nil {
+		j.setError(err)
 		return
 	}
 
 	for _, tableRecord := range j.tableRecords {
-		if j.Error() != nil {
-			break
-		}
-
 		log.Debugf("tableRecord: %v", tableRecord)
 		// TODO: check it before ingestBinlog
 		var srcTableId int64
@@ -127,7 +126,7 @@ func (j *IngestBinlogJob) run() {
 			err = errors.Errorf("invalid sync type: %s", job.SyncType)
 		}
 		if err != nil {
-			j.updateError(err)
+			j.setError(err)
 			break
 		}
 
@@ -139,30 +138,30 @@ func (j *IngestBinlogJob) run() {
 			var srcPartitionRange string
 			srcPartitionRange, err = job.srcMeta.GetPartitionRange(srcTableId, srcPartitionId)
 			if err != nil {
-				j.updateError(err)
+				j.setError(err)
 				break
 			}
 			var destPartitionId int64
 			destPartitionId, err = job.destMeta.GetPartitionIdByRange(destTableId, srcPartitionRange)
 			if err != nil {
-				j.updateError(err)
+				j.setError(err)
 				break
 			}
 
 			var srcTablets []*TabletMeta
 			srcTablets, err = job.srcMeta.GetTabletList(srcTableId, srcPartitionId)
 			if err != nil {
-				j.updateError(err)
+				j.setError(err)
 				break
 			}
 			var destTablets []*TabletMeta
 			destTablets, err = job.destMeta.GetTabletList(destTableId, destPartitionId)
 			if err != nil {
-				j.updateError(err)
+				j.setError(err)
 				break
 			}
 			if len(srcTablets) != len(destTablets) {
-				j.updateError(errors.Errorf("tablet count not match, src: %d, dest: %d", len(srcTablets), len(destTablets)))
+				j.setError(errors.Errorf("tablet count not match, src: %d, dest: %d", len(srcTablets), len(destTablets)))
 				break
 			}
 
@@ -175,14 +174,14 @@ func (j *IngestBinlogJob) run() {
 					log.Debugf("handle dest replica id: %v", destReplicaId)
 					destBackend, ok := destBackendMap[destReplica.BackendId]
 					if !ok {
-						j.updateError(errors.Errorf("backend not found, backend id: %d", destReplica.BackendId))
+						j.setError(errors.Errorf("backend not found, backend id: %d", destReplica.BackendId))
 						return false
 					}
 					destTabletId := destReplica.TabletId
 
 					destRpc, err := rpc.NewBeRpc(destBackend)
 					if err != nil {
-						j.updateError(err)
+						j.setError(err)
 						return false
 					}
 					loadId := ttypes.NewTUniqueId()
@@ -192,14 +191,14 @@ func (j *IngestBinlogJob) run() {
 					srcReplicas := srcTablet.ReplicaMetas
 					iter := srcReplicas.Iter()
 					if ok := iter.First(); !ok {
-						j.updateError(errors.Errorf("src replicas is empty"))
+						j.setError(errors.Errorf("src replicas is empty"))
 						return false
 					}
 					srcBackendId := iter.Value().BackendId
 					var srcBackend *base.Backend
 					srcBackend, ok = srcBackendMap[srcBackendId]
 					if !ok {
-						j.updateError(errors.Errorf("backend not found, backend id: %d", srcBackendId))
+						j.setError(errors.Errorf("backend not found, backend id: %d", srcBackendId))
 						return false
 					}
 					req := &bestruct.TIngestBinlogRequest{
@@ -223,21 +222,21 @@ func (j *IngestBinlogJob) run() {
 
 						resp, err := destRpc.IngestBinlog(req)
 						if err != nil {
-							j.updateError(err)
+							j.setError(err)
 							return
 						}
 
 						log.Infof("ingest resp: %v", resp)
 						if !resp.IsSetStatus() {
 							err = errors.Errorf("ingest resp status not set")
-							j.updateError(err)
+							j.setError(err)
 							return
 						} else if resp.Status.StatusCode != tstatus.TStatusCode_OK {
 							err = errors.Errorf("ingest resp status code: %v, msg: %v", resp.Status.StatusCode, resp.Status.ErrorMsgs)
-							j.updateError(err)
+							j.setError(err)
 							return
 						} else {
-							j.updateCommitInfos(commitInfo)
+							j.appendCommitInfos(commitInfo)
 						}
 					}()
 
