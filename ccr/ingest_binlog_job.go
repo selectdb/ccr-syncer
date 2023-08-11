@@ -252,6 +252,17 @@ func (j *IngestBinlogJob) handleTable(tableRecord *record.TableRecord) {
 		return
 	}
 
+	// srcPartitionMap, err := job.srcMeta.GetPartitionRangeMap(srcTableId)
+	// if err != nil {
+	// 	j.setError(err)
+	// 	return
+	// }
+	// destPartitionMap, err := job.destMeta.GetPartitionRangeMap(destTableId)
+	// if err != nil {
+	// 	j.setError(err)
+	// 	return
+	// }
+
 	for _, partitionRecord := range tableRecord.PartitionRecords {
 		j.handlePartition(srcTableId, destTableId, partitionRecord)
 	}

@@ -28,91 +28,6 @@ func fmtHostPort(host string, port uint16) string {
 	return fmt.Sprintf("%s:%d", host, port)
 }
 
-type DatabaseMeta struct {
-	Id     int64
-	Tables map[int64]*TableMeta // tableId -> table
-}
-
-type TableMeta struct {
-	DatabaseMeta *DatabaseMeta
-	Id           int64
-	Name         string                   // maybe dirty, such after rename
-	Partitions   map[int64]*PartitionMeta // partitionId -> partition
-}
-
-// Stringer
-func (t *TableMeta) String() string {
-	return fmt.Sprintf("TableMeta{(id:%d), (name:%s)}", t.Id, t.Name)
-}
-
-type PartitionMeta struct {
-	TableMeta *TableMeta
-	Id        int64
-	Name      string
-	Key       string
-	Range     string
-	Indexes   map[int64]*IndexMeta // indexId -> index
-}
-
-// Stringer
-func (p *PartitionMeta) String() string {
-	return fmt.Sprintf("PartitionMeta{(id:%d), (name:%s), (key:%s), (range:%s)}", p.Id, p.Name, p.Key, p.Range)
-}
-
-type IndexMeta struct {
-	PartitionMeta *PartitionMeta
-	Id            int64
-	Name          string
-	TabletMetas   *btree.Map[int64, *TabletMeta]  // tabletId -> tablet
-	ReplicaMetas  *btree.Map[int64, *ReplicaMeta] // replicaId -> replica
-}
-
-type TabletMeta struct {
-	IndexMeta    *IndexMeta
-	Id           int64
-	ReplicaMetas *btree.Map[int64, *ReplicaMeta] // replicaId -> replica
-}
-
-type ReplicaMeta struct {
-	TabletMeta *TabletMeta
-	Id         int64
-	TabletId   int64
-	BackendId  int64
-}
-
-type IMeta interface {
-	GetDbId() (int64, error)
-	GetFullTableName(tableName string) string
-	UpdateTable(tableName string, tableId int64) (*TableMeta, error)
-	GetTable(tableId int64) (*TableMeta, error)
-	GetTableId(tableName string) (int64, error)
-	UpdatePartitions(tableId int64) error
-	GetPartitions(tableId int64) (map[int64]*PartitionMeta, error)
-	GetPartitionIds(tableName string) ([]int64, error)
-	GetPartitionName(tableId int64, partitionId int64) (string, error)
-	GetPartitionRange(tableId int64, partitionId int64) (string, error)
-	GetPartitionIdByName(tableId int64, partitionName string) (int64, error)
-	GetPartitionIdByRange(tableId int64, partitionRange string) (int64, error)
-	UpdateBackends() error
-	GetBackends() ([]*base.Backend, error)
-	GetBackendMap() (map[int64]*base.Backend, error)
-	GetBackendId(host string, portStr string) (int64, error)
-	UpdateIndexes(tableId int64, partitionId int64) error
-	GetIndexes(tableId int64, partitionId int64) (map[int64]*IndexMeta, error)
-	UpdateReplicas(tableId int64, partitionId int64) error
-	GetReplicas(tableId int64, partitionId int64) (*btree.Map[int64, *ReplicaMeta], error)
-	GetTablets(tableId int64, partitionId int64) (*btree.Map[int64, *TabletMeta], error)
-	GetTabletList(tableId int64, partitionId int64) ([]*TabletMeta, error)
-	UpdateToken() error
-	GetMasterToken() (string, error)
-	GetTableNameById(tableId int64) (string, error)
-	GetTables() (map[int64]*TableMeta, error)
-	CheckBinlogFeature() error
-	DirtyGetTables() map[int64]*TableMeta
-	// from Spec
-	DbExec(sql string) error
-}
-
 // All op is not concurrent safety
 // Meta
 type Meta struct {
@@ -241,10 +156,10 @@ func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) 
 			log.Debugf("found table:%s, tableId:%d", fullTableName, parsedTableId)
 			m.TableName2IdMap[fullTableName] = parsedTableId
 			tableMeta := &TableMeta{
-				DatabaseMeta: &m.DatabaseMeta,
-				Id:           parsedTableId,
-				Name:         parsedTableName,
-				Partitions:   make(map[int64]*PartitionMeta),
+				DatabaseMeta:   &m.DatabaseMeta,
+				Id:             parsedTableId,
+				Name:           parsedTableName,
+				PartitionIdMap: make(map[int64]*PartitionMeta),
 			}
 			m.Tables[parsedTableId] = tableMeta
 			return tableMeta, nil
@@ -346,9 +261,11 @@ func (m *Meta) UpdatePartitions(tableId int64) error {
 		return errors.Wrap(err, query)
 	}
 
-	table.Partitions = make(map[int64]*PartitionMeta)
+	table.PartitionIdMap = make(map[int64]*PartitionMeta)
+	table.PartitionRangeMap = make(map[string]*PartitionMeta)
 	for _, partition := range partitions {
-		table.Partitions[partition.Id] = partition
+		table.PartitionIdMap[partition.Id] = partition
+		table.PartitionRangeMap[partition.Range] = partition
 	}
 
 	return nil
@@ -376,15 +293,27 @@ func (m *Meta) getPartitions(tableId int64, depth int64) (map[int64]*PartitionMe
 	if err != nil {
 		return nil, err
 	}
-	if len(tableMeta.Partitions) == 0 {
+	if len(tableMeta.PartitionIdMap) == 0 {
 		return m.getPartitionsWithUpdate(tableId, depth)
 	}
 
-	return tableMeta.Partitions, nil
+	return tableMeta.PartitionIdMap, nil
 }
 
-func (m *Meta) GetPartitions(tableId int64) (map[int64]*PartitionMeta, error) {
+func (m *Meta) GetPartitionIdMap(tableId int64) (map[int64]*PartitionMeta, error) {
 	return m.getPartitions(tableId, 0)
+}
+
+func (m *Meta) GetPartitionRangeMap(tableId int64) (map[string]*PartitionMeta, error) {
+	if _, err := m.GetPartitionIdMap(tableId); err != nil {
+		return nil, err
+	}
+
+	tabletMeta, err := m.GetTable(tableId)
+	if err != nil {
+		return nil, err
+	}
+	return tabletMeta.PartitionRangeMap, nil
 }
 
 func (m *Meta) GetPartitionIds(tableName string) ([]int64, error) {
@@ -394,7 +323,7 @@ func (m *Meta) GetPartitionIds(tableName string) ([]int64, error) {
 		return nil, err
 	}
 
-	partitions, err := m.GetPartitions(tableId)
+	partitions, err := m.GetPartitionIdMap(tableId)
 	if err != nil {
 		return nil, err
 	}
@@ -411,7 +340,7 @@ func (m *Meta) GetPartitionIds(tableName string) ([]int64, error) {
 }
 
 func (m *Meta) GetPartitionName(tableId int64, partitionId int64) (string, error) {
-	partitions, err := m.GetPartitions(tableId)
+	partitions, err := m.GetPartitionIdMap(tableId)
 	if err != nil {
 		return "", err
 	}
@@ -430,7 +359,7 @@ func (m *Meta) GetPartitionName(tableId int64, partitionId int64) (string, error
 }
 
 func (m *Meta) GetPartitionRange(tableId int64, partitionId int64) (string, error) {
-	partitions, err := m.GetPartitions(tableId)
+	partitions, err := m.GetPartitionIdMap(tableId)
 	if err != nil {
 		return "", err
 	}
@@ -450,7 +379,7 @@ func (m *Meta) GetPartitionRange(tableId int64, partitionId int64) (string, erro
 
 func (m *Meta) GetPartitionIdByName(tableId int64, partitionName string) (int64, error) {
 	// TODO: optimize performance
-	partitions, err := m.GetPartitions(tableId)
+	partitions, err := m.GetPartitionIdMap(tableId)
 	if err != nil {
 		return 0, err
 	}
@@ -475,7 +404,7 @@ func (m *Meta) GetPartitionIdByName(tableId int64, partitionName string) (int64,
 
 func (m *Meta) GetPartitionIdByRange(tableId int64, partitionRange string) (int64, error) {
 	// TODO: optimize performance
-	partitions, err := m.GetPartitions(tableId)
+	partitions, err := m.GetPartitionIdMap(tableId)
 	if err != nil {
 		return 0, err
 	}
@@ -608,7 +537,7 @@ func (m *Meta) UpdateIndexes(tableId int64, partitionId int64) error {
 	}
 
 	// Step 3: get partitions
-	partitions, err := m.GetPartitions(tableId)
+	partitions, err := m.GetPartitionIdMap(tableId)
 	if err != nil {
 		return err
 	}
@@ -674,7 +603,7 @@ func (m *Meta) UpdateIndexes(tableId int64, partitionId int64) error {
 }
 
 func (m *Meta) getIndexes(tableId int64, partitionId int64, hasUpdate bool) (map[int64]*IndexMeta, error) {
-	partitions, err := m.GetPartitions(tableId)
+	partitions, err := m.GetPartitionIdMap(tableId)
 	if err != nil {
 		return nil, err
 	}
@@ -1000,10 +929,10 @@ func (m *Meta) GetTables() (map[int64]*TableMeta, error) {
 		log.Debugf("found table:%s, tableId:%d", fullTableName, tableId)
 		tableName2IdMap[fullTableName] = tableId
 		tables[tableId] = &TableMeta{
-			DatabaseMeta: &m.DatabaseMeta,
-			Id:           tableId,
-			Name:         tableName,
-			Partitions:   make(map[int64]*PartitionMeta),
+			DatabaseMeta:   &m.DatabaseMeta,
+			Id:             tableId,
+			Name:           tableName,
+			PartitionIdMap: make(map[int64]*PartitionMeta),
 		}
 	}
 
