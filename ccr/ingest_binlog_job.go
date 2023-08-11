@@ -26,7 +26,7 @@ type tabletIngestBinlogHandler struct {
 	cancel          atomic.Bool
 	err             error
 	errLock         sync.Mutex
-	wg              *sync.WaitGroup
+	wg              sync.WaitGroup
 }
 
 func (h *tabletIngestBinlogHandler) setError(err error) {
@@ -51,7 +51,6 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 
 	j := h.job
 	binlogVersion := h.binlogVersion
-	wg := h.wg
 	srcTablet := h.srcTablet
 	destReplicaId := destReplica.Id
 	destPartitionId := h.destPartitionId
@@ -101,12 +100,12 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 		BackendId: destBackend.Id,
 	}
 
-	wg.Add(1)
+	h.wg.Add(1)
 	go func() {
 		gls.ResetGls(gls.GoID(), map[interface{}]interface{}{})
 		gls.Set("job", j.job.Name)
 
-		defer wg.Done()
+		defer h.wg.Done()
 
 		resp, err := destRpc.IngestBinlog(req)
 		if err != nil {
@@ -135,6 +134,7 @@ func (h *tabletIngestBinlogHandler) handle() {
 	h.destTablet.ReplicaMetas.Scan(func(destReplicaId int64, destReplica *ReplicaMeta) bool {
 		return h.handleReplica(destReplica)
 	})
+	h.wg.Wait()
 }
 
 type IngestContext struct {
@@ -223,7 +223,6 @@ func (j *IngestBinlogJob) prepareTablet(binlogVersion int64, srcTablet *TabletMe
 		srcTablet:       srcTablet,
 		destTablet:      destTablet,
 		destPartitionId: destPartitionId,
-		wg:              &j.wg,
 	}
 	j.tabletIngestJobs = append(j.tabletIngestJobs, tabletIngestBinlogHandler)
 }
