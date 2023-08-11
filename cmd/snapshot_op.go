@@ -27,7 +27,7 @@ func init_flags() {
 }
 
 func test_get_snapshot(spec *base.Spec) {
-	rpc, err := rpc.NewThriftRpc(spec)
+	rpc, err := rpc.NewFeRpc(spec)
 	if err != nil {
 		panic(err)
 	}
@@ -57,7 +57,7 @@ func test_get_snapshot(spec *base.Spec) {
 
 func test_restore_snapshot(src *base.Spec, dest *base.Spec) {
 	// Get snapshot from src
-	srcRpc, err := rpc.NewThriftRpc(src)
+	srcRpc, err := rpc.NewFeRpc(src)
 	if err != nil {
 		panic(err)
 	}
@@ -90,7 +90,7 @@ func test_restore_snapshot(src *base.Spec, dest *base.Spec) {
 	snapshotResp.SetJobInfo(jobInfoBytes)
 
 	// Restore snapshot to det
-	destRpc, err := rpc.NewThriftRpc(dest)
+	destRpc, err := rpc.NewFeRpc(dest)
 	if err != nil {
 		panic(err)
 	}

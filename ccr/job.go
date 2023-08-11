@@ -258,7 +258,7 @@ func (j *Job) fullSync() error {
 
 		snapshotName := j.progress.PersistData
 		src := &j.Src
-		srcRpc, err := rpc.NewThriftRpc(src)
+		srcRpc, err := rpc.NewFeRpc(src)
 		if err != nil {
 			return err
 		}
@@ -356,7 +356,7 @@ func (j *Job) fullSync() error {
 		// Step 5: restore snapshot
 		// Restore snapshot to dest
 		dest := &j.Dest
-		destRpc, err := rpc.NewThriftRpc(dest)
+		destRpc, err := rpc.NewFeRpc(dest)
 		if err != nil {
 			return err
 		}
@@ -570,7 +570,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 
 	// Step 2: begin txn
 	log.Infof("begin txn, dest: %v, commitSeq: %d", dest, commitSeq)
-	destRpc, err := rpc.NewThriftRpc(dest)
+	destRpc, err := rpc.NewFeRpc(dest)
 	if err != nil {
 		return err
 	}
@@ -870,7 +870,7 @@ func (j *Job) incrementalSync() error {
 	src := &j.Src
 
 	// Step 1: get binlog
-	srcRpc, err := rpc.NewThriftRpc(src)
+	srcRpc, err := rpc.NewFeRpc(src)
 	if err != nil {
 		return nil
 	}
@@ -1168,7 +1168,7 @@ func (j *Job) GetLag() (int64, error) {
 	defer j.lock.Unlock()
 
 	srcSpec := &j.Src
-	rpc, err := rpc.NewThriftRpc(srcSpec)
+	rpc, err := rpc.NewFeRpc(srcSpec)
 	if err != nil {
 		return 0, err
 	}

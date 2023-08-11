@@ -25,7 +25,7 @@ func init() {
 }
 
 func test_get_lag(spec *base.Spec) {
-	rpc, err := rpc.NewThriftRpc(spec)
+	rpc, err := rpc.NewFeRpc(spec)
 	if err != nil {
 		panic(err)
 	}

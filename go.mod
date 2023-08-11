@@ -6,7 +6,6 @@ require (
 	github.com/apache/thrift v0.13.0
 	github.com/cloudwego/kitex v0.4.5-0.20230228141742-02833714c355
 	github.com/go-sql-driver/mysql v1.7.0
-	github.com/google/uuid v1.1.2
 	github.com/keepeye/logrus-filename v0.0.0-20190711075016-ce01a4391dd1
 	github.com/mattn/go-sqlite3 v1.14.17
 	github.com/modern-go/gls v0.0.0-20220109145502-612d0167dce5
@@ -14,6 +13,7 @@ require (
 	github.com/sirupsen/logrus v1.9.0
 	github.com/t-tomalak/logrus-prefixed-formatter v0.5.2
 	github.com/tidwall/btree v1.6.0
+	go.uber.org/mock v0.2.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -47,11 +47,12 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/arch v0.2.0 // indirect
-	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 // indirect
-	golang.org/x/net v0.10.0 // indirect
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.8.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/crypto v0.12.0 // indirect
+	golang.org/x/net v0.14.0 // indirect
+	golang.org/x/sync v0.3.0 // indirect
+	golang.org/x/sys v0.11.0 // indirect
+	golang.org/x/term v0.11.0 // indirect
+	golang.org/x/text v0.12.0 // indirect
 	google.golang.org/genproto v0.0.0-20210513213006-bf773b8c8384 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
