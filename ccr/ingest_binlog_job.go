@@ -16,6 +16,105 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type tabletIngestBinlogHandler struct {
+	job             *IngestBinlogJob
+	binlogVersion   int64
+	srcTablet       *TabletMeta
+	destTablet      *TabletMeta
+	destPartitionId int64
+	wg              *sync.WaitGroup
+}
+
+// handle Replica
+func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool {
+	j := h.job
+	binlogVersion := h.binlogVersion
+	wg := h.wg
+	srcTablet := h.srcTablet
+	destReplicaId := destReplica.Id
+	destPartitionId := h.destPartitionId
+
+	log.Debugf("handle dest replica id: %v", destReplicaId)
+	destBackend, ok := j.destBackendMap[destReplica.BackendId]
+	if !ok {
+		j.setError(errors.Errorf("backend not found, backend id: %d", destReplica.BackendId))
+		return false
+	}
+	destTabletId := destReplica.TabletId
+
+	destRpc, err := rpc.NewBeRpc(destBackend)
+	if err != nil {
+		j.setError(err)
+		return false
+	}
+	loadId := ttypes.NewTUniqueId()
+	loadId.SetHi(-1)
+	loadId.SetLo(-1)
+
+	srcReplicas := srcTablet.ReplicaMetas
+	iter := srcReplicas.Iter()
+	if ok := iter.First(); !ok {
+		j.setError(errors.Errorf("src replicas is empty"))
+		return false
+	}
+	srcBackendId := iter.Value().BackendId
+	var srcBackend *base.Backend
+	srcBackend, ok = j.srcBackendMap[srcBackendId]
+	if !ok {
+		j.setError(errors.Errorf("backend not found, backend id: %d", srcBackendId))
+		return false
+	}
+	req := &bestruct.TIngestBinlogRequest{
+		TxnId:          utils.ThriftValueWrapper(j.txnId),
+		RemoteTabletId: utils.ThriftValueWrapper[int64](srcTablet.Id),
+		BinlogVersion:  utils.ThriftValueWrapper(binlogVersion),
+		RemoteHost:     utils.ThriftValueWrapper(srcBackend.Host),
+		RemotePort:     utils.ThriftValueWrapper(srcBackend.GetHttpPortStr()),
+		PartitionId:    utils.ThriftValueWrapper[int64](destPartitionId),
+		LocalTabletId:  utils.ThriftValueWrapper[int64](destTabletId),
+		LoadId:         loadId,
+	}
+	commitInfo := &ttypes.TTabletCommitInfo{
+		TabletId:  destTabletId,
+		BackendId: destBackend.Id,
+	}
+
+	wg.Add(1)
+	go func() {
+		gls.ResetGls(gls.GoID(), map[interface{}]interface{}{})
+		gls.Set("job", j.job.Name)
+
+		defer wg.Done()
+
+		resp, err := destRpc.IngestBinlog(req)
+		if err != nil {
+			j.setError(err)
+			return
+		}
+
+		log.Infof("ingest resp: %v", resp)
+		if !resp.IsSetStatus() {
+			err = errors.Errorf("ingest resp status not set")
+			j.setError(err)
+			return
+		} else if resp.Status.StatusCode != tstatus.TStatusCode_OK {
+			err = errors.Errorf("ingest resp status code: %v, msg: %v", resp.Status.StatusCode, resp.Status.ErrorMsgs)
+			j.setError(err)
+			return
+		} else {
+			j.appendCommitInfos(commitInfo)
+		}
+	}()
+
+	return true
+}
+
+func (h *tabletIngestBinlogHandler) handle() {
+	h.destTablet.ReplicaMetas.Scan(func(destReplicaId int64, destReplica *ReplicaMeta) bool {
+		return h.handleReplica(destReplica)
+	})
+}
+
 type IngestContext struct {
 	context.Context
 	txnId        int64
@@ -94,86 +193,15 @@ func (j *IngestBinlogJob) CommitInfos() []*ttypes.TTabletCommitInfo {
 	return j.commitInfos
 }
 
-func (j *IngestBinlogJob) handleReplica(binlogVersion int64, srcTablet *TabletMeta, destPartitionId int64, destReplicaId int64, destReplica *ReplicaMeta) bool {
-	log.Debugf("handle dest replica id: %v", destReplicaId)
-	destBackend, ok := j.destBackendMap[destReplica.BackendId]
-	if !ok {
-		j.setError(errors.Errorf("backend not found, backend id: %d", destReplica.BackendId))
-		return false
-	}
-	destTabletId := destReplica.TabletId
-
-	destRpc, err := rpc.NewBeRpc(destBackend)
-	if err != nil {
-		j.setError(err)
-		return false
-	}
-	loadId := ttypes.NewTUniqueId()
-	loadId.SetHi(-1)
-	loadId.SetLo(-1)
-
-	srcReplicas := srcTablet.ReplicaMetas
-	iter := srcReplicas.Iter()
-	if ok := iter.First(); !ok {
-		j.setError(errors.Errorf("src replicas is empty"))
-		return false
-	}
-	srcBackendId := iter.Value().BackendId
-	var srcBackend *base.Backend
-	srcBackend, ok = j.srcBackendMap[srcBackendId]
-	if !ok {
-		j.setError(errors.Errorf("backend not found, backend id: %d", srcBackendId))
-		return false
-	}
-	req := &bestruct.TIngestBinlogRequest{
-		TxnId:          utils.ThriftValueWrapper(j.txnId),
-		RemoteTabletId: utils.ThriftValueWrapper[int64](srcTablet.Id),
-		BinlogVersion:  utils.ThriftValueWrapper(binlogVersion),
-		RemoteHost:     utils.ThriftValueWrapper(srcBackend.Host),
-		RemotePort:     utils.ThriftValueWrapper(srcBackend.GetHttpPortStr()),
-		PartitionId:    utils.ThriftValueWrapper[int64](destPartitionId),
-		LocalTabletId:  utils.ThriftValueWrapper[int64](destTabletId),
-		LoadId:         loadId,
-	}
-	commitInfo := &ttypes.TTabletCommitInfo{
-		TabletId:  destTabletId,
-		BackendId: destBackend.Id,
-	}
-
-	j.wg.Add(1)
-	go func() {
-		gls.ResetGls(gls.GoID(), map[interface{}]interface{}{})
-		gls.Set("job", j.job.Name)
-
-		defer j.wg.Done()
-
-		resp, err := destRpc.IngestBinlog(req)
-		if err != nil {
-			j.setError(err)
-			return
-		}
-
-		log.Infof("ingest resp: %v", resp)
-		if !resp.IsSetStatus() {
-			err = errors.Errorf("ingest resp status not set")
-			j.setError(err)
-			return
-		} else if resp.Status.StatusCode != tstatus.TStatusCode_OK {
-			err = errors.Errorf("ingest resp status code: %v, msg: %v", resp.Status.StatusCode, resp.Status.ErrorMsgs)
-			j.setError(err)
-			return
-		} else {
-			j.appendCommitInfos(commitInfo)
-		}
-	}()
-
-	return true
-}
-
 func (j *IngestBinlogJob) handleTablet(binlogVersion int64, srcTablet *TabletMeta, destPartitionId int64, destTablet *TabletMeta) {
-	destTablet.ReplicaMetas.Scan(func(destReplicaId int64, destReplica *ReplicaMeta) bool {
-		return j.handleReplica(binlogVersion, srcTablet, destPartitionId, destReplicaId, destReplica)
-	})
+	tabletIngestBinlogHandler := &tabletIngestBinlogHandler{
+		binlogVersion:   binlogVersion,
+		srcTablet:       srcTablet,
+		destTablet:      destTablet,
+		destPartitionId: destPartitionId,
+		wg:              &j.wg,
+	}
+	tabletIngestBinlogHandler.handle()
 }
 
 func (j *IngestBinlogJob) handleIndex() {
@@ -184,7 +212,7 @@ func (j *IngestBinlogJob) handlePartition(srcTableId, destTableId int64, partiti
 
 	job := j.job
 	binlogVersion := partitionRecord.Version
-	srcPartitionId := partitionRecord.PartitionID
+	srcPartitionId := partitionRecord.Id
 	srcPartitionRange, err := job.srcMeta.GetPartitionRange(srcTableId, srcPartitionId)
 	if err != nil {
 		j.setError(err)
@@ -252,16 +280,32 @@ func (j *IngestBinlogJob) handleTable(tableRecord *record.TableRecord) {
 		return
 	}
 
-	// srcPartitionMap, err := job.srcMeta.GetPartitionRangeMap(srcTableId)
-	// if err != nil {
-	// 	j.setError(err)
-	// 	return
-	// }
-	// destPartitionMap, err := job.destMeta.GetPartitionRangeMap(destTableId)
-	// if err != nil {
-	// 	j.setError(err)
-	// 	return
-	// }
+	// Step 1: check all partitions in partition records are in src/dest cluster
+	for _, partitionRecord := range tableRecord.PartitionRecords {
+		srcPartitionMap, err := job.srcMeta.GetPartitionRangeMap(srcTableId)
+		if err != nil {
+			j.setError(err)
+			return
+		}
+		destPartitionMap, err := job.destMeta.GetPartitionRangeMap(destTableId)
+		if err != nil {
+			j.setError(err)
+			return
+		}
+
+		rangeKey := partitionRecord.Range
+		// TODO(Improvment, Fix): this may happen after drop partition, can seek partition for more time, check from recycle bin
+		if _, ok := srcPartitionMap[rangeKey]; !ok {
+			err = errors.Errorf("partition range: %v not in src cluster", rangeKey)
+			j.setError(err)
+			return
+		}
+		if _, ok := destPartitionMap[rangeKey]; !ok {
+			err = errors.Errorf("partition range: %v not in dest cluster", rangeKey)
+			j.setError(err)
+			return
+		}
+	}
 
 	for _, partitionRecord := range tableRecord.PartitionRecords {
 		j.handlePartition(srcTableId, destTableId, partitionRecord)

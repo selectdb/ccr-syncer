@@ -8,12 +8,13 @@ import (
 )
 
 type PartitionRecord struct {
-	PartitionID int64 `json:"partitionId"`
-	Version     int64 `json:"version"`
+	Id      int64  `json:"partitionId"`
+	Range   string `json:"range"`
+	Version int64  `json:"version"`
 }
 
 func (p PartitionRecord) String() string {
-	return fmt.Sprintf("PartitionRecord{PartitionID: %d, Version: %d}", p.PartitionID, p.Version)
+	return fmt.Sprintf("PartitionRecord{Id: %d, Range: %s, Version: %d}", p.Id, p.Range, p.Version)
 }
 
 type TableRecord struct {

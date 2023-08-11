@@ -63,32 +63,42 @@ type ReplicaMeta struct {
 type IMeta interface {
 	GetDbId() (int64, error)
 	GetFullTableName(tableName string) string
+
 	UpdateTable(tableName string, tableId int64) (*TableMeta, error)
 	GetTable(tableId int64) (*TableMeta, error)
 	GetTableId(tableName string) (int64, error)
+	GetTableNameById(tableId int64) (string, error)
+	GetTables() (map[int64]*TableMeta, error)
+
 	UpdatePartitions(tableId int64) error
 	GetPartitionIdMap(tableId int64) (map[int64]*PartitionMeta, error)
+	GetPartitionRangeMap(tableId int64) (map[string]*PartitionMeta, error)
 	GetPartitionIds(tableName string) ([]int64, error)
 	GetPartitionName(tableId int64, partitionId int64) (string, error)
 	GetPartitionRange(tableId int64, partitionId int64) (string, error)
 	GetPartitionIdByName(tableId int64, partitionName string) (int64, error)
 	GetPartitionIdByRange(tableId int64, partitionRange string) (int64, error)
+
 	UpdateBackends() error
 	GetBackends() ([]*base.Backend, error)
 	GetBackendMap() (map[int64]*base.Backend, error)
 	GetBackendId(host string, portStr string) (int64, error)
+
 	UpdateIndexes(tableId int64, partitionId int64) error
 	GetIndexes(tableId int64, partitionId int64) (map[int64]*IndexMeta, error)
+
 	UpdateReplicas(tableId int64, partitionId int64) error
 	GetReplicas(tableId int64, partitionId int64) (*btree.Map[int64, *ReplicaMeta], error)
+
 	GetTablets(tableId int64, partitionId int64) (*btree.Map[int64, *TabletMeta], error)
 	GetTabletList(tableId int64, partitionId int64) ([]*TabletMeta, error)
+
 	UpdateToken() error
 	GetMasterToken() (string, error)
-	GetTableNameById(tableId int64) (string, error)
-	GetTables() (map[int64]*TableMeta, error)
+
 	CheckBinlogFeature() error
 	DirtyGetTables() map[int64]*TableMeta
+
 	// from Spec
 	DbExec(sql string) error
 }
