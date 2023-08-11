@@ -109,6 +109,8 @@ type IMeta interface {
 	GetTables() (map[int64]*TableMeta, error)
 	CheckBinlogFeature() error
 	DirtyGetTables() map[int64]*TableMeta
+	// from Spec
+	DbExec(sql string) error
 }
 
 // All op is not concurrent safety

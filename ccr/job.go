@@ -73,9 +73,9 @@ type Job struct {
 	SyncType          SyncType        `json:"sync_type"`
 	Name              string          `json:"name"`
 	Src               base.Spec       `json:"src"`
-	srcMeta           *Meta           `json:"-"`
+	srcMeta           IMeta           `json:"-"`
 	Dest              base.Spec       `json:"dest"`
-	destMeta          *Meta           `json:"-"`
+	destMeta          IMeta           `json:"-"`
 	State             JobState        `json:"state"`
 	destSrcTableIdMap map[int64]int64 `json:"-"`
 	progress          *JobProgress    `json:"-"`
