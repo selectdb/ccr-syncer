@@ -3,6 +3,7 @@ package ccr
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 
 	"github.com/modern-go/gls"
 	"github.com/pkg/errors"
@@ -22,11 +23,32 @@ type tabletIngestBinlogHandler struct {
 	srcTablet       *TabletMeta
 	destTablet      *TabletMeta
 	destPartitionId int64
+	cancel          atomic.Bool
+	err             error
+	errLock         sync.Mutex
 	wg              *sync.WaitGroup
+}
+
+func (h *tabletIngestBinlogHandler) setError(err error) {
+	h.errLock.Lock()
+	defer h.errLock.Unlock()
+
+	h.err = err
+}
+
+func (h *tabletIngestBinlogHandler) error() error {
+	h.errLock.Lock()
+	defer h.errLock.Unlock()
+
+	return h.err
 }
 
 // handle Replica
 func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool {
+	if h.cancel.Load() {
+		return true
+	}
+
 	j := h.job
 	binlogVersion := h.binlogVersion
 	wg := h.wg
@@ -137,6 +159,8 @@ type IngestBinlogJob struct {
 	srcBackendMap  map[int64]*base.Backend
 	destBackendMap map[int64]*base.Backend
 
+	tabletIngestJobs []*tabletIngestBinlogHandler
+
 	commitInfos     []*ttypes.TTabletCommitInfo
 	commitInfosLock sync.Mutex
 
@@ -193,7 +217,7 @@ func (j *IngestBinlogJob) CommitInfos() []*ttypes.TTabletCommitInfo {
 	return j.commitInfos
 }
 
-func (j *IngestBinlogJob) handleTablet(binlogVersion int64, srcTablet *TabletMeta, destPartitionId int64, destTablet *TabletMeta) {
+func (j *IngestBinlogJob) prepareTablet(binlogVersion int64, srcTablet *TabletMeta, destPartitionId int64, destTablet *TabletMeta) {
 	tabletIngestBinlogHandler := &tabletIngestBinlogHandler{
 		binlogVersion:   binlogVersion,
 		srcTablet:       srcTablet,
@@ -201,13 +225,13 @@ func (j *IngestBinlogJob) handleTablet(binlogVersion int64, srcTablet *TabletMet
 		destPartitionId: destPartitionId,
 		wg:              &j.wg,
 	}
-	tabletIngestBinlogHandler.handle()
+	j.tabletIngestJobs = append(j.tabletIngestJobs, tabletIngestBinlogHandler)
 }
 
 func (j *IngestBinlogJob) handleIndex() {
 }
 
-func (j *IngestBinlogJob) handlePartition(srcTableId, destTableId int64, partitionRecord record.PartitionRecord) {
+func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partitionRecord record.PartitionRecord) {
 	log.Debugf("partitionRecord: %v", partitionRecord)
 
 	job := j.job
@@ -247,14 +271,14 @@ func (j *IngestBinlogJob) handlePartition(srcTableId, destTableId int64, partiti
 		log.Debugf("handle tablet index: %v, src tablet: %v, dest tablet: %v, dest replicas length: %d", tabletIndex, srcTablet, destTablet, destTablet.ReplicaMetas.Len()) // TODO: remove it
 
 		// iterate dest replicas
-		j.handleTablet(binlogVersion, srcTablet, destPartitionId, destTablet)
+		j.prepareTablet(binlogVersion, srcTablet, destPartitionId, destTablet)
 		if j.Error() != nil {
 			return
 		}
 	}
 }
 
-func (j *IngestBinlogJob) handleTable(tableRecord *record.TableRecord) {
+func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 	log.Debugf("tableRecord: %v", tableRecord)
 	job := j.job
 	// TODO: check it before ingestBinlog
@@ -308,38 +332,63 @@ func (j *IngestBinlogJob) handleTable(tableRecord *record.TableRecord) {
 	}
 
 	for _, partitionRecord := range tableRecord.PartitionRecords {
-		j.handlePartition(srcTableId, destTableId, partitionRecord)
+		j.preparePartition(srcTableId, destTableId, partitionRecord)
 	}
 }
 
-func (j *IngestBinlogJob) prepareBackendMap() error {
+func (j *IngestBinlogJob) prepareBackendMap() {
 	job := j.job
 
 	var err error
 	j.srcBackendMap, err = job.srcMeta.GetBackendMap()
 	if err != nil {
-		return err
-	}
-
-	j.destBackendMap, err = job.destMeta.GetBackendMap()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (j *IngestBinlogJob) run() {
-	if err := j.prepareBackendMap(); err != nil {
 		j.setError(err)
 		return
 	}
 
+	j.destBackendMap, err = job.destMeta.GetBackendMap()
+	if err != nil {
+		j.setError(err)
+		return
+	}
+}
+
+func (j *IngestBinlogJob) prepareTabletIngestJobs() {
+	j.tabletIngestJobs = make([]*tabletIngestBinlogHandler, 0)
 	for _, tableRecord := range j.tableRecords {
-		j.handleTable(tableRecord)
+		j.prepareTable(tableRecord)
 		if j.Error() != nil {
 			return
 		}
+	}
+}
+
+func (j *IngestBinlogJob) runTabletIngestJobs() {
+	for _, tabletIngestJob := range j.tabletIngestJobs {
+		j.wg.Add(1)
+		go func(tabletIngestJob *tabletIngestBinlogHandler) {
+			tabletIngestJob.handle()
+			j.wg.Done()
+		}(tabletIngestJob)
+	}
+}
+
+// TODO(Drogon): use monad error handle
+func (j *IngestBinlogJob) run() {
+	j.prepareBackendMap()
+	if err := j.Error(); err != nil {
+		j.setError(err)
+		return
+	}
+
+	j.prepareTabletIngestJobs()
+	if err := j.Error(); err != nil {
+		return
+	}
+
+	j.runTabletIngestJobs()
+	if err := j.Error(); err != nil {
+		return
 	}
 }
 
