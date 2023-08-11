@@ -181,7 +181,7 @@ func (j *IngestBinlogJob) Run() {
 					}
 					destTabletId := destReplica.TabletId
 
-					destRpc, err := rpc.NewBeThriftRpc(destBackend)
+					destRpc, err := rpc.NewBeRpc(destBackend)
 					if err != nil {
 						j.updateError(err)
 						return false
