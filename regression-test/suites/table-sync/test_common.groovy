@@ -214,4 +214,58 @@ suite("test_common") {
     assertTrue(checkSelectTimesOf("SELECT * FROM ${duplicateTable} WHERE test=0",
                                    2 * insert_num, 30))
 
+
+
+
+    logger.info("=== Test 3: pause and resume ===")
+    httpTest {
+        uri "/pause"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body "${uniqueTable}"
+        body "${bodyJson}"
+        op "post"
+        result respone
+    }
+
+    test_num = 3
+    for (int index = 0; index < insert_num; index++) {
+        sql """
+            INSERT INTO ${uniqueTable} VALUES (${test_num}, ${index})
+            """
+    }
+
+    assertTrue(!checkSelectTimesOf("SELECT * FROM ${uniqueTable} WHERE test=${test_num}",
+                                   insert_num, 3))
+
+    httpTest {
+        uri "/resume"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body "${uniqueTable}"
+        body "${bodyJson}"
+        op "post"
+        result respone
+    }
+    assertTrue(checkSelectTimesOf("SELECT * FROM ${uniqueTable} WHERE test=${test_num}",
+                                   insert_num, 30))
+    
+
+    logger.info("=== Test 4: delete job ===")
+    test_num = 4
+    httpTest {
+        uri "/delete"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body "${uniqueTable}"
+        body "${bodyJson}"
+        op "post"
+        result respone
+    }
+
+    for (int index = 0; index < insert_num; index++) {
+        sql """
+            INSERT INTO ${uniqueTable} VALUES (${test_num}, ${index})
+            """
+    }
+
+    assertTrue(!checkSelectTimesOf("SELECT * FROM ${uniqueTable} WHERE test=${test_num}",
+                                   insert_num, 5))
 }

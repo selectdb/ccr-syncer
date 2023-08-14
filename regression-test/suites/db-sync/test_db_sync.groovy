@@ -268,4 +268,56 @@ suite("test_db_sync") {
                                 notExist, 30, "target"))
     assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${tableDuplicate1}'", 
                                 notExist, 30, "target"))
+    
+    logger.info("=== Test 4: pause and resume ===")
+    httpTest {
+        uri "/pause"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body ""
+        body "${bodyJson}"
+        op "post"
+        result respone
+    }
+
+    test_num = 4
+    for (int index = 0; index < insert_num; index++) {
+        sql """
+            INSERT INTO ${tableUnique0} VALUES (${test_num}, ${index})
+            """
+    }
+
+    assertTrue(!checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
+                                   insert_num, 3))
+
+    httpTest {
+        uri "/resume"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body ""
+        body "${bodyJson}"
+        op "post"
+        result respone
+    }
+    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
+                                   insert_num, 30))
+
+
+     logger.info("=== Test 5: delete job ===")
+     test_num = 5
+     httpTest {
+        uri "/delete"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body ""
+        body "${bodyJson}"
+        op "post"
+        result respone
+    }
+
+    for (int index = 0; index < insert_num; index++) {
+        sql """
+            INSERT INTO ${tableUnique0} VALUES (${test_num}, ${index})
+            """
+    }
+
+    assertTrue(!checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
+                                   insert_num, 5))
 }
