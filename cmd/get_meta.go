@@ -67,15 +67,6 @@ func test_init_meta(m *ccr.Meta) {
 		log.Infof("partitionid: %d, found indexes: %v", partitionId, indexes)
 	}
 
-	// if tablets, err := m.GetTabletList(tableId, partitionId); err != nil {
-	// 	panic(err)
-	// } else {
-	// 	log.Infof("partitionid: %d, found tablets: %v", partitionId, tablets)
-	// 	for _, tablet := range tablets {
-	// 		log.Infof("tablet: %d, replica len: %d", tablet.Id, tablet.ReplicaMetas.Len())
-	// 	}
-	// }
-
 	if replicas, err := m.GetReplicas(tableId, partitionId); err != nil {
 		panic(err)
 	} else {
