@@ -229,8 +229,17 @@ type prepareIndexArg struct {
 
 func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 	// Step 1: check tablets
-	srcTablets := arg.srcIndexMeta.TabletMetas
-	destTablets := arg.destIndexMeta.TabletMetas
+	job := j.job
+	srcTablets, err := job.srcMeta.GetTablets(arg.srcTableId, arg.srcPartitionId, arg.srcIndexMeta.Id)
+	if err != nil {
+		j.setError(err)
+		return
+	}
+	destTablets, err := job.destMeta.GetTablets(arg.destTableId, arg.destPartitionId, arg.destIndexMeta.Id)
+	if err != nil {
+		j.setError(err)
+		return
+	}
 	if srcTablets.Len() != destTablets.Len() {
 		j.setError(errors.Errorf("src tablets length: %v not equal to dest tablets length: %v", srcTablets.Len(), destTablets.Len()))
 		return
@@ -252,6 +261,7 @@ func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 		return
 	}
 
+	// Step 2: add tablet ingest jobs
 	for {
 		srcTablet := srcIter.Value()
 		destTablet := destIter.Value()
@@ -427,7 +437,6 @@ func (j *IngestBinlogJob) runTabletIngestJobs() {
 func (j *IngestBinlogJob) run() {
 	j.prepareBackendMap()
 	if err := j.Error(); err != nil {
-		j.setError(err)
 		return
 	}
 
