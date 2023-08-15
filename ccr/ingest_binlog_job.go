@@ -217,63 +217,114 @@ func (j *IngestBinlogJob) CommitInfos() []*ttypes.TTabletCommitInfo {
 	return j.commitInfos
 }
 
-func (j *IngestBinlogJob) prepareTablet(binlogVersion int64, srcTablet *TabletMeta, destPartitionId int64, destTablet *TabletMeta) {
-	tabletIngestBinlogHandler := &tabletIngestBinlogHandler{
-		binlogVersion:   binlogVersion,
-		srcTablet:       srcTablet,
-		destTablet:      destTablet,
-		destPartitionId: destPartitionId,
+type prepareIndexArg struct {
+	binlogVersion   int64
+	srcTableId      int64
+	srcPartitionId  int64
+	destTableId     int64
+	destPartitionId int64
+	srcIndexMeta    *IndexMeta
+	destIndexMeta   *IndexMeta
+}
+
+func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
+	// Step 1: check tablets
+	srcTablets := arg.srcIndexMeta.TabletMetas
+	destTablets := arg.destIndexMeta.TabletMetas
+	if srcTablets.Len() != destTablets.Len() {
+		j.setError(errors.Errorf("src tablets length: %v not equal to dest tablets length: %v", srcTablets.Len(), destTablets.Len()))
+		return
 	}
-	j.tabletIngestJobs = append(j.tabletIngestJobs, tabletIngestBinlogHandler)
+
+	if srcTablets.Len() == 0 {
+		log.Warn("src tablets length: 0, skip")
+		return
+	}
+
+	srcIter := srcTablets.IterMut()
+	if !srcIter.First() {
+		j.setError(errors.Errorf("src tablets First() failed"))
+		return
+	}
+	destIter := destTablets.IterMut()
+	if !destIter.First() {
+		j.setError(errors.Errorf("dest tablets First() failed"))
+		return
+	}
+
+	for {
+		srcTablet := srcIter.Value()
+		destTablet := destIter.Value()
+		tabletIngestBinlogHandler := &tabletIngestBinlogHandler{
+			binlogVersion:   arg.binlogVersion,
+			srcTablet:       srcTablet,
+			destTablet:      destTablet,
+			destPartitionId: arg.destPartitionId,
+		}
+		j.tabletIngestJobs = append(j.tabletIngestJobs, tabletIngestBinlogHandler)
+
+		if !srcIter.Next() {
+			break
+		} else {
+			destIter.Next()
+		}
+	}
 }
 
-func (j *IngestBinlogJob) handleIndex() {
-}
-
-func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partitionRecord record.PartitionRecord) {
+func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partitionRecord record.PartitionRecord, indexIds []int64) {
 	log.Debugf("partitionRecord: %v", partitionRecord)
-
+	// 废弃 preparePartition， 上面index的那部分是这里的实现
+	// 还是要求一下和下游对齐的index length，这个是不可以recover的
+	// 思考那些是recover用的，主要就是tablet那块的
 	job := j.job
-	binlogVersion := partitionRecord.Version
+
 	srcPartitionId := partitionRecord.Id
-	srcPartitionRange, err := job.srcMeta.GetPartitionRange(srcTableId, srcPartitionId)
-	if err != nil {
-		j.setError(err)
-		return
-	}
-	var destPartitionId int64
-	destPartitionId, err = job.destMeta.GetPartitionIdByRange(destTableId, srcPartitionRange)
+	srcPartitionRange := partitionRecord.Range
+	destPartitionId, err := job.destMeta.GetPartitionIdByRange(destTableId, srcPartitionRange)
 	if err != nil {
 		j.setError(err)
 		return
 	}
 
-	var srcTablets []*TabletMeta
-	srcTablets, err = job.srcMeta.GetTabletList(srcTableId, srcPartitionId)
+	// Step 1: check index id
+	srcIndexIdMap, err := j.job.srcMeta.GetIndexIdMap(srcTableId, srcPartitionId)
 	if err != nil {
 		j.setError(err)
 		return
 	}
-	var destTablets []*TabletMeta
-	destTablets, err = job.destMeta.GetTabletList(destTableId, destPartitionId)
+	destIndexNameMap, err := j.job.destMeta.GetIndexNameMap(destTableId, destPartitionId)
 	if err != nil {
 		j.setError(err)
 		return
 	}
-	if len(srcTablets) != len(destTablets) {
-		j.setError(errors.Errorf("tablet count not match, src: %d, dest: %d", len(srcTablets), len(destTablets)))
-		return
-	}
-
-	for tabletIndex, destTablet := range destTablets {
-		srcTablet := srcTablets[tabletIndex]
-		log.Debugf("handle tablet index: %v, src tablet: %v, dest tablet: %v, dest replicas length: %d", tabletIndex, srcTablet, destTablet, destTablet.ReplicaMetas.Len()) // TODO: remove it
-
-		// iterate dest replicas
-		j.prepareTablet(binlogVersion, srcTablet, destPartitionId, destTablet)
-		if j.Error() != nil {
+	for _, indexId := range indexIds {
+		srcIndexMeta, ok := srcIndexIdMap[indexId]
+		if !ok {
+			j.setError(errors.Errorf("index id %v not found in src meta", indexId))
 			return
 		}
+		srcIndexName := srcIndexMeta.Name
+
+		if _, ok := destIndexNameMap[srcIndexName]; !ok {
+			j.setError(errors.Errorf("index name %v not found in dest meta", srcIndexName))
+			return
+		}
+	}
+
+	// Step 2: prepare indexes
+	prepareIndexArg := prepareIndexArg{
+		binlogVersion:   partitionRecord.Version,
+		srcTableId:      srcTableId,
+		srcPartitionId:  srcPartitionId,
+		destTableId:     destTableId,
+		destPartitionId: destPartitionId,
+	}
+	for _, indexId := range indexIds {
+		srcIndexMeta := srcIndexIdMap[indexId]
+		destIndexMeta := destIndexNameMap[srcIndexMeta.Name]
+		prepareIndexArg.srcIndexMeta = srcIndexMeta
+		prepareIndexArg.destIndexMeta = destIndexMeta
+		j.prepareIndex(&prepareIndexArg)
 	}
 }
 
@@ -304,18 +355,17 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 	}
 
 	// Step 1: check all partitions in partition records are in src/dest cluster
+	srcPartitionMap, err := job.srcMeta.GetPartitionRangeMap(srcTableId)
+	if err != nil {
+		j.setError(err)
+		return
+	}
+	destPartitionMap, err := job.destMeta.GetPartitionRangeMap(destTableId)
+	if err != nil {
+		j.setError(err)
+		return
+	}
 	for _, partitionRecord := range tableRecord.PartitionRecords {
-		srcPartitionMap, err := job.srcMeta.GetPartitionRangeMap(srcTableId)
-		if err != nil {
-			j.setError(err)
-			return
-		}
-		destPartitionMap, err := job.destMeta.GetPartitionRangeMap(destTableId)
-		if err != nil {
-			j.setError(err)
-			return
-		}
-
 		rangeKey := partitionRecord.Range
 		// TODO(Improvment, Fix): this may happen after drop partition, can seek partition for more time, check from recycle bin
 		if _, ok := srcPartitionMap[rangeKey]; !ok {
@@ -330,8 +380,9 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 		}
 	}
 
+	// Step 2: prepare partitions
 	for _, partitionRecord := range tableRecord.PartitionRecords {
-		j.preparePartition(srcTableId, destTableId, partitionRecord)
+		j.preparePartition(srcTableId, destTableId, partitionRecord, tableRecord.IndexIds)
 	}
 }
 

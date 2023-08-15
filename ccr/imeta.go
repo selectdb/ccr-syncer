@@ -26,12 +26,13 @@ func (t *TableMeta) String() string {
 }
 
 type PartitionMeta struct {
-	TableMeta *TableMeta
-	Id        int64
-	Name      string
-	Key       string
-	Range     string
-	Indexes   map[int64]*IndexMeta // indexId -> index
+	TableMeta    *TableMeta
+	Id           int64
+	Name         string
+	Key          string
+	Range        string
+	IndexIdMap   map[int64]*IndexMeta  // indexId -> indexMeta
+	IndexNameMap map[string]*IndexMeta // indexName -> indexMeta
 }
 
 // Stringer
@@ -82,16 +83,16 @@ type IMeta interface {
 	UpdateBackends() error
 	GetBackends() ([]*base.Backend, error)
 	GetBackendMap() (map[int64]*base.Backend, error)
-	GetBackendId(host string, portStr string) (int64, error)
+	GetBackendId(host, portStr string) (int64, error)
 
-	UpdateIndexes(tableId int64, partitionId int64) error
-	GetIndexes(tableId int64, partitionId int64) (map[int64]*IndexMeta, error)
+	UpdateIndexes(tableId, partitionId int64) error
+	GetIndexIdMap(tableId, partitionId int64) (map[int64]*IndexMeta, error)
+	GetIndexNameMap(tableId, partitionId int64) (map[string]*IndexMeta, error)
 
-	UpdateReplicas(tableId int64, partitionId int64) error
-	GetReplicas(tableId int64, partitionId int64) (*btree.Map[int64, *ReplicaMeta], error)
+	UpdateReplicas(tableId, partitionId int64) error
+	GetReplicas(tableId, partitionId int64) (*btree.Map[int64, *ReplicaMeta], error)
 
-	GetTablets(tableId int64, partitionId int64) (*btree.Map[int64, *TabletMeta], error)
-	GetTabletList(tableId int64, partitionId int64) ([]*TabletMeta, error)
+	GetTablets(tableId, partitionId, indexId int64) (*btree.Map[int64, *TabletMeta], error)
 
 	UpdateToken() error
 	GetMasterToken() (string, error)

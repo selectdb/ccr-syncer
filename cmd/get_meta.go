@@ -36,7 +36,7 @@ func test_init_meta(m *ccr.Meta) {
 	}
 
 	var partitionId int64
-	if partitions, err := m.GetPartitions(tableId); err != nil {
+	if partitions, err := m.GetPartitionIdMap(tableId); err != nil {
 		panic(err)
 	} else {
 		if len(partitions) == 0 {
@@ -61,20 +61,20 @@ func test_init_meta(m *ccr.Meta) {
 	}
 	log.Infof("meta: %#v", m)
 
-	if indexes, err := m.GetIndexes(tableId, partitionId); err != nil {
+	if indexes, err := m.GetIndexIdMap(tableId, partitionId); err != nil {
 		panic(err)
 	} else {
 		log.Infof("partitionid: %d, found indexes: %v", partitionId, indexes)
 	}
 
-	if tablets, err := m.GetTabletList(tableId, partitionId); err != nil {
-		panic(err)
-	} else {
-		log.Infof("partitionid: %d, found tablets: %v", partitionId, tablets)
-		for _, tablet := range tablets {
-			log.Infof("tablet: %d, replica len: %d", tablet.Id, tablet.ReplicaMetas.Len())
-		}
-	}
+	// if tablets, err := m.GetTabletList(tableId, partitionId); err != nil {
+	// 	panic(err)
+	// } else {
+	// 	log.Infof("partitionid: %d, found tablets: %v", partitionId, tablets)
+	// 	for _, tablet := range tablets {
+	// 		log.Infof("tablet: %d, replica len: %d", tablet.Id, tablet.ReplicaMetas.Len())
+	// 	}
+	// }
 
 	if replicas, err := m.GetReplicas(tableId, partitionId); err != nil {
 		panic(err)

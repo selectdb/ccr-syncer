@@ -594,9 +594,11 @@ func (m *Meta) UpdateIndexes(tableId int64, partitionId int64) error {
 		return errors.Wrap(err, query)
 	}
 
-	partition.Indexes = make(map[int64]*IndexMeta)
+	partition.IndexIdMap = make(map[int64]*IndexMeta)
+	partition.IndexNameMap = make(map[string]*IndexMeta)
 	for _, index := range indexes {
-		partition.Indexes[index.Id] = index
+		partition.IndexIdMap[index.Id] = index
+		partition.IndexNameMap[index.Name] = index
 	}
 
 	return nil
@@ -609,7 +611,7 @@ func (m *Meta) getIndexes(tableId int64, partitionId int64, hasUpdate bool) (map
 	}
 
 	partition, ok := partitions[partitionId]
-	if !ok || len(partition.Indexes) == 0 {
+	if !ok || len(partition.IndexIdMap) == 0 {
 		if hasUpdate {
 			return nil, errors.Errorf("partitionId: %d not found", partitionId)
 		}
@@ -621,11 +623,25 @@ func (m *Meta) getIndexes(tableId int64, partitionId int64, hasUpdate bool) (map
 		return m.getIndexes(tableId, partitionId, true)
 	}
 
-	return partition.Indexes, nil
+	return partition.IndexIdMap, nil
 }
 
-func (m *Meta) GetIndexes(tableId int64, partitionId int64) (map[int64]*IndexMeta, error) {
+func (m *Meta) GetIndexIdMap(tableId int64, partitionId int64) (map[int64]*IndexMeta, error) {
 	return m.getIndexes(tableId, partitionId, false)
+}
+
+func (m *Meta) GetIndexNameMap(tableId int64, partitionId int64) (map[string]*IndexMeta, error) {
+	if _, err := m.getIndexes(tableId, partitionId, false); err != nil {
+		return nil, err
+	}
+
+	partitions, err := m.GetPartitionIdMap(tableId)
+	if err != nil {
+		return nil, err
+	}
+
+	partition := partitions[partitionId]
+	return partition.IndexNameMap, nil
 }
 
 func (m *Meta) updateReplica(index *IndexMeta) error {
@@ -701,7 +717,7 @@ func (m *Meta) updateReplica(index *IndexMeta) error {
 }
 
 func (m *Meta) UpdateReplicas(tableId int64, partitionId int64) error {
-	indexes, err := m.GetIndexes(tableId, partitionId)
+	indexes, err := m.GetIndexIdMap(tableId, partitionId)
 	if err != nil {
 		return err
 	}
@@ -721,7 +737,7 @@ func (m *Meta) UpdateReplicas(tableId int64, partitionId int64) error {
 }
 
 func (m *Meta) GetReplicas(tableId int64, partitionId int64) (*btree.Map[int64, *ReplicaMeta], error) {
-	indexes, err := m.GetIndexes(tableId, partitionId)
+	indexes, err := m.GetIndexIdMap(tableId, partitionId)
 	if err != nil {
 		return nil, err
 	}
@@ -764,59 +780,22 @@ func (m *Meta) GetReplicas(tableId int64, partitionId int64) (*btree.Map[int64, 
 	return replicas, nil
 }
 
-func (m *Meta) GetTablets(tableId int64, partitionId int64) (*btree.Map[int64, *TabletMeta], error) {
+func (m *Meta) GetTablets(tableId, partitionId, indexId int64) (*btree.Map[int64, *TabletMeta], error) {
 	_, err := m.GetReplicas(tableId, partitionId)
 	if err != nil {
 		return nil, err
 	}
 
-	indexes, err := m.GetIndexes(tableId, partitionId)
+	indexes, err := m.GetIndexIdMap(tableId, partitionId)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(indexes) == 0 {
-		return nil, errors.Errorf("indexes is empty")
+	if tablets, ok := indexes[indexId]; ok {
+		return tablets.TabletMetas, nil
+	} else {
+		return nil, errors.Errorf("index %d not found", indexId)
 	}
-
-	// fast path, no rollup
-	if len(indexes) == 1 {
-		var indexId int64
-		for id := range indexes {
-			indexId = id
-			break
-		}
-
-		index := indexes[indexId]
-		return index.TabletMetas, nil
-	}
-
-	// slow path, rollup
-	tablets := btree.NewMap[int64, *TabletMeta](degree)
-	for _, index := range indexes {
-		for _, tablet := range index.TabletMetas.Values() {
-			log.Debugf("tablet: %d, replica len: %d", tablet.Id, tablet.ReplicaMetas.Len()) // TODO: remove it
-			tablets.Set(tablet.Id, tablet)
-		}
-	}
-
-	return tablets, nil
-}
-
-func (m *Meta) GetTabletList(tableId int64, partitionId int64) ([]*TabletMeta, error) {
-	tablets, err := m.GetTablets(tableId, partitionId)
-	if err != nil {
-		return nil, err
-	}
-
-	if tablets.Len() == 0 {
-		return nil, errors.Errorf("tablets is empty")
-	}
-
-	list := make([]*TabletMeta, 0, tablets.Len())
-	list = append(list, tablets.Values()...)
-
-	return list, nil
 }
 
 func (m *Meta) UpdateToken() error {
