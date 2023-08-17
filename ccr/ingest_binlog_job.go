@@ -23,10 +23,12 @@ type tabletIngestBinlogHandler struct {
 	srcTablet       *TabletMeta
 	destTablet      *TabletMeta
 	destPartitionId int64
-	cancel          atomic.Bool
-	err             error
-	errLock         sync.Mutex
-	wg              sync.WaitGroup
+
+	err     error
+	errLock sync.Mutex
+
+	cancel atomic.Bool
+	wg     sync.WaitGroup
 }
 
 func (h *tabletIngestBinlogHandler) setError(err error) {
@@ -181,7 +183,8 @@ func NewIngestBinlogJob(ctx context.Context, job *Job) (*IngestBinlogJob, error)
 		job:          job,
 		txnId:        ingestCtx.txnId,
 		tableRecords: ingestCtx.tableRecords,
-		commitInfos:  make([]*ttypes.TTabletCommitInfo, 0),
+
+		commitInfos: make([]*ttypes.TTabletCommitInfo, 0),
 	}, nil
 }
 
@@ -266,6 +269,7 @@ func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 		srcTablet := srcIter.Value()
 		destTablet := destIter.Value()
 		tabletIngestBinlogHandler := &tabletIngestBinlogHandler{
+			job:             j,
 			binlogVersion:   arg.binlogVersion,
 			srcTablet:       srcTablet,
 			destTablet:      destTablet,
@@ -397,6 +401,8 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 }
 
 func (j *IngestBinlogJob) prepareBackendMap() {
+	log.Debug("prepareBackendMap")
+
 	job := j.job
 
 	var err error
