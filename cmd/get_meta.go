@@ -11,10 +11,12 @@ import (
 )
 
 var (
+	dbName    string
 	tableName string
 )
 
 func init() {
+	flag.StringVar(&dbName, "db", "ccr", "database name")
 	flag.StringVar(&tableName, "table", "enable_binlog", "table name")
 	flag.Parse()
 
@@ -95,7 +97,7 @@ func main() {
 		ThriftPort: "9020",
 		User:       "root",
 		Password:   "",
-		Database:   "ccr",
+		Database:   dbName,
 		Table:      tableName,
 	}
 
