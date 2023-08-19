@@ -27,7 +27,8 @@ func init_flags() {
 }
 
 func test_get_snapshot(spec *base.Spec) {
-	rpc, err := rpc.NewFeRpc(spec)
+	rpcFactory := rpc.NewRpcFactory()
+	rpc, err := rpcFactory.NewFeRpc(spec)
 	if err != nil {
 		panic(err)
 	}
@@ -57,7 +58,8 @@ func test_get_snapshot(spec *base.Spec) {
 
 func test_restore_snapshot(src *base.Spec, dest *base.Spec) {
 	// Get snapshot from src
-	srcRpc, err := rpc.NewFeRpc(src)
+	rpcFactory := rpc.NewRpcFactory()
+	srcRpc, err := rpcFactory.NewFeRpc(src)
 	if err != nil {
 		panic(err)
 	}
@@ -90,7 +92,7 @@ func test_restore_snapshot(src *base.Spec, dest *base.Spec) {
 	snapshotResp.SetJobInfo(jobInfoBytes)
 
 	// Restore snapshot to det
-	destRpc, err := rpc.NewFeRpc(dest)
+	destRpc, err := rpcFactory.NewFeRpc(dest)
 	if err != nil {
 		panic(err)
 	}
@@ -120,7 +122,8 @@ func init() {
 type JobInfo map[string]interface{}
 
 func genExtraInfo(src *base.Spec, token string) *base.ExtraInfo {
-	meta := ccr.NewMeta(src)
+	metaFactory := ccr.NewMetaFactory()
+	meta := metaFactory.NewMeta(src)
 	backends, err := meta.GetBackends()
 	if err != nil {
 		panic(err)

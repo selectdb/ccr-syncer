@@ -31,26 +31,13 @@ func fmtHostPort(host string, port uint16) string {
 // All op is not concurrent safety
 // Meta
 type Meta struct {
-	base.Spec
+	*base.Spec
 	DatabaseMeta
 	token                 string
 	Backends              map[int64]*base.Backend // backendId -> backend
 	DatabaseName2IdMap    map[string]int64
 	TableName2IdMap       map[string]int64
 	BackendHostPort2IdMap map[string]int64
-}
-
-func NewMeta(tableSpec *base.Spec) *Meta {
-	return &Meta{
-		Spec: *tableSpec,
-		DatabaseMeta: DatabaseMeta{
-			Tables: make(map[int64]*TableMeta),
-		},
-		Backends:              make(map[int64]*base.Backend),
-		DatabaseName2IdMap:    make(map[string]int64),
-		TableName2IdMap:       make(map[string]int64),
-		BackendHostPort2IdMap: make(map[string]int64),
-	}
 }
 
 func (m *Meta) GetDbId() (int64, error) {
@@ -798,10 +785,10 @@ func (m *Meta) GetTablets(tableId, partitionId, indexId int64) (*btree.Map[int64
 	}
 }
 
-func (m *Meta) UpdateToken() error {
-	spec := &m.Spec
+func (m *Meta) UpdateToken(rpcFactory rpc.IRpcFactory) error {
+	spec := m.Spec
 
-	rpc, err := rpc.NewFeRpc(spec)
+	rpc, err := rpcFactory.NewFeRpc(spec)
 	if err != nil {
 		return err
 	}
@@ -814,12 +801,12 @@ func (m *Meta) UpdateToken() error {
 	}
 }
 
-func (m *Meta) GetMasterToken() (string, error) {
+func (m *Meta) GetMasterToken(rpcFactory rpc.IRpcFactory) (string, error) {
 	if m.token != "" {
 		return m.token, nil
 	}
 
-	if err := m.UpdateToken(); err != nil {
+	if err := m.UpdateToken(rpcFactory); err != nil {
 		return "", err
 	}
 

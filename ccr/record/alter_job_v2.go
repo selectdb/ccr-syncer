@@ -12,7 +12,6 @@ type AlterJobV2 struct {
 	DbId      int64  `json:"dbId"`
 	TableId   int64  `json:"tableId"`
 	TableName string `json:"tableName"`
-	State     string `json:"state"`
 	JobId     int64  `json:"jobId"`
 	JobState  string `json:"jobState"`
 	RawSql    string `json:"rawSql"`
@@ -44,6 +43,6 @@ func (a *AlterJobV2) IsFinished() bool {
 
 // String
 func (a *AlterJobV2) String() string {
-	return fmt.Sprintf("AlterJobV2: DbId: %d, TableId: %d, TableName: %s, State: %s, JobId: %d, JobState: %s, RawSql: %s",
-		a.DbId, a.TableId, a.TableName, a.State, a.JobId, a.JobState, a.RawSql)
+	return fmt.Sprintf("AlterJobV2: DbId: %d, TableId: %d, TableName: %s, JobId: %d, JobState: %s, RawSql: %s",
+		a.DbId, a.TableId, a.TableName, a.JobId, a.JobState, a.RawSql)
 }

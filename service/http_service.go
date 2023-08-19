@@ -47,7 +47,8 @@ func (s *HttpService) createCcr(request *CreateCcrRequest) error {
 	log.Infof("create ccr %s", request)
 
 	// _job
-	job, err := ccr.NewJobFromService(request.Name, request.Src, request.Dest, s.db)
+	ctx := ccr.NewJobContext(request.Src, request.Dest, s.db, s.jobManager.GetFactory())
+	job, err := ccr.NewJobFromService(request.Name, ctx)
 	if err != nil {
 		return err
 	}

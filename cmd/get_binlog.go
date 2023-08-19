@@ -33,7 +33,8 @@ func init() {
 }
 
 func test_get_binlog(spec *base.Spec) {
-	rpc, err := rpc.NewFeRpc(spec)
+	rpcFactory := rpc.NewRpcFactory()
+	rpc, err := rpcFactory.NewFeRpc(spec)
 	if err != nil {
 		panic(err)
 	}

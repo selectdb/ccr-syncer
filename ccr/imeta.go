@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	base "github.com/selectdb/ccr_syncer/ccr/base"
+	"github.com/selectdb/ccr_syncer/rpc"
 	"github.com/tidwall/btree"
 )
 
@@ -94,8 +95,8 @@ type IMeta interface {
 
 	GetTablets(tableId, partitionId, indexId int64) (*btree.Map[int64, *TabletMeta], error)
 
-	UpdateToken() error
-	GetMasterToken() (string, error)
+	UpdateToken(rpcFactory rpc.IRpcFactory) error
+	GetMasterToken(rpcFactory rpc.IRpcFactory) (string, error)
 
 	CheckBinlogFeature() error
 	DirtyGetTables() map[int64]*TableMeta

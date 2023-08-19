@@ -15,19 +15,25 @@ const (
 
 // job manager is thread safety
 type JobManager struct {
-	db   storage.DB
-	jobs map[string]*Job
-	lock sync.RWMutex
-	stop chan struct{}
-	wg   sync.WaitGroup
+	db      storage.DB
+	jobs    map[string]*Job
+	lock    sync.RWMutex
+	factory *Factory
+	stop    chan struct{}
+	wg      sync.WaitGroup
 }
 
-func NewJobManager(db storage.DB) *JobManager {
+func NewJobManager(db storage.DB, factory *Factory) *JobManager {
 	return &JobManager{
-		db:   db,
-		jobs: make(map[string]*Job),
-		stop: make(chan struct{}),
+		db:      db,
+		jobs:    make(map[string]*Job),
+		factory: factory,
+		stop:    make(chan struct{}),
 	}
+}
+
+func (jm *JobManager) GetFactory() *Factory {
+	return jm.factory
 }
 
 // add job to job manager && run job
@@ -78,7 +84,7 @@ func (jm *JobManager) Recover() error {
 	for jobName, jobData := range jobMap {
 		log.Infof("recover job: %s", jobName)
 
-		if job, err := NewJobFromJson(jobData, jm.db); err == nil {
+		if job, err := NewJobFromJson(jobData, jm.db, jm.factory); err == nil {
 			jobs = append(jobs, job)
 		} else {
 			return err

@@ -8,7 +8,6 @@ import (
 	feservice "github.com/selectdb/ccr_syncer/rpc/kitex_gen/frontendservice/frontendservice"
 	festruct_types "github.com/selectdb/ccr_syncer/rpc/kitex_gen/types"
 
-	"github.com/cloudwego/kitex/client"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -43,25 +42,6 @@ func setAuthInfo[T Request](request T, spec *base.Spec) {
 	request.SetUser(&spec.User)
 	request.SetPasswd(&spec.Password)
 	request.SetDb(&spec.Database)
-}
-
-// TODO(Drogon): remove
-// var _ *ccr.FeRpc = (*FeRpc)(nil)
-
-func NewFeRpc(spec *base.Spec) (*FeRpc, error) {
-	// valid spec
-	if err := spec.Valid(); err != nil {
-		return nil, err
-	}
-
-	// create kitex FrontendService client
-	if fe_client, err := feservice.NewClient("FrontendService", client.WithHostPorts(spec.Host+":"+spec.ThriftPort)); err != nil {
-		return nil, errors.Wrapf(err, "NewFeClient error: %v, spec: %s", err, spec)
-	} else {
-		return &FeRpc{
-			client: fe_client,
-		}, nil
-	}
 }
 
 // begin transaction
