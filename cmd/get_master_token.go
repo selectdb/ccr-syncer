@@ -8,7 +8,8 @@ import (
 )
 
 func test_get_master_token(spec *base.Spec) {
-	rpc, err := rpc.NewFeRpc(spec)
+	rpcFactory := rpc.NewRpcFactory()
+	rpc, err := rpcFactory.NewFeRpc(spec)
 	if err != nil {
 		panic(err)
 	}

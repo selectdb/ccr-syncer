@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/selectdb/ccr_syncer/ccr"
+	"github.com/selectdb/ccr_syncer/ccr/base"
+	"github.com/selectdb/ccr_syncer/rpc"
 	"github.com/selectdb/ccr_syncer/service"
 	"github.com/selectdb/ccr_syncer/storage"
 	"github.com/selectdb/ccr_syncer/utils"
@@ -33,8 +35,11 @@ func main() {
 		log.Fatalf("new sqlite db error: %+v", err)
 	}
 
+	// Step 2: init factory
+	factory := ccr.NewFactory(rpc.NewRpcFactory(), ccr.NewMetaFactory(), base.NewISpecFactory())
+
 	// Step 2: create job manager && http service
-	jobManager := ccr.NewJobManager(db)
+	jobManager := ccr.NewJobManager(db, factory)
 	httpService := service.NewHttpServer(9190, db, jobManager)
 
 	// Step 3: http service start

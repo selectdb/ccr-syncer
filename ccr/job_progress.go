@@ -245,6 +245,7 @@ func (j *JobProgress) CommitNextSubWithPersist(commitSeq int64, subSyncState Sub
 }
 
 func (j *JobProgress) NextWithPersist(commitSeq int64, syncState SyncState, subSyncState SubSyncState, persistData string) {
+	j.CommitSeq = commitSeq
 	j.SyncState = syncState
 	j.SubSyncState = subSyncState
 	j.PersistData = persistData

@@ -3,6 +3,7 @@ package ccr
 // TODO: rewrite by state machine, such as first sync, full/incremental sync
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -73,30 +74,61 @@ type Job struct {
 	SyncType          SyncType        `json:"sync_type"`
 	Name              string          `json:"name"`
 	Src               base.Spec       `json:"src"`
+	ISrc              base.ISpec      `json:"-"`
 	srcMeta           IMeta           `json:"-"`
 	Dest              base.Spec       `json:"dest"`
+	IDest             base.ISpec      `json:"-"`
 	destMeta          IMeta           `json:"-"`
 	State             JobState        `json:"state"`
 	destSrcTableIdMap map[int64]int64 `json:"-"`
 	progress          *JobProgress    `json:"-"`
 	db                storage.DB      `json:"-"`
 	jobFactory        *JobFactory     `json:"-"`
+	rpcFactory        rpc.IRpcFactory `json:"-"`
 	stop              chan struct{}   `json:"-"`
 	lock              sync.Mutex      `json:"-"`
 }
 
+type JobContext struct {
+	context.Context
+	src     base.Spec
+	dest    base.Spec
+	db      storage.DB
+	factory *Factory
+}
+
+func NewJobContext(src, dest base.Spec, db storage.DB, factory *Factory) *JobContext {
+	return &JobContext{
+		Context: context.Background(),
+		src:     src,
+		dest:    dest,
+		db:      db,
+		factory: factory,
+	}
+}
+
 // new job
-func NewJobFromService(name string, src, dest base.Spec, db storage.DB) (*Job, error) {
+func NewJobFromService(name string, ctx context.Context) (*Job, error) {
+	jobContext, ok := ctx.(*JobContext)
+	if !ok {
+		return nil, errors.Errorf("invalid context type: %T", ctx)
+	}
+	metaFactory := jobContext.factory.MetaFactory
+	iSpecFactory := jobContext.factory.ISpecFactory
+	iSrc := iSpecFactory.NewISpec(&jobContext.src)
+	iDest := iSpecFactory.NewISpec(&jobContext.dest)
 	job := &Job{
 		Name:              name,
-		Src:               src,
-		srcMeta:           NewMeta(&src),
-		Dest:              dest,
-		destMeta:          NewMeta(&dest),
+		Src:               jobContext.src,
+		ISrc:              iSrc,
+		srcMeta:           metaFactory.NewMeta(&jobContext.src),
+		Dest:              jobContext.dest,
+		IDest:             iDest,
+		destMeta:          metaFactory.NewMeta(&jobContext.dest),
 		State:             JobRunning,
 		destSrcTableIdMap: make(map[int64]int64),
 		progress:          nil,
-		db:                db,
+		db:                jobContext.db,
 		stop:              make(chan struct{}),
 	}
 
@@ -111,24 +143,27 @@ func NewJobFromService(name string, src, dest base.Spec, db storage.DB) (*Job, e
 	}
 
 	job.jobFactory = NewJobFactory()
+	job.rpcFactory = jobContext.factory.RpcFactory
 
 	return job, nil
 }
 
-func NewJobFromJson(jsonData string, db storage.DB) (*Job, error) {
+func NewJobFromJson(jsonData string, db storage.DB, factory *Factory) (*Job, error) {
 	var job Job
 	err := json.Unmarshal([]byte(jsonData), &job)
 	if err != nil {
 		return nil, errors.Wrapf(err, "unmarshal json failed, json: %s", jsonData)
 	}
-
-	job.srcMeta = NewMeta(&job.Src)
-	job.destMeta = NewMeta(&job.Dest)
+	job.ISrc = factory.ISpecFactory.NewISpec(&job.Src)
+	job.IDest = factory.ISpecFactory.NewISpec(&job.Dest)
+	job.srcMeta = factory.MetaFactory.NewMeta(&job.Src)
+	job.destMeta = factory.MetaFactory.NewMeta(&job.Dest)
 	job.destSrcTableIdMap = make(map[int64]int64)
 	job.progress = nil
 	job.db = db
 	job.stop = make(chan struct{})
 	job.jobFactory = NewJobFactory()
+	job.rpcFactory = factory.RpcFactory
 	return &job, nil
 }
 
@@ -144,12 +179,12 @@ func (j *Job) valid() error {
 		return errors.New("name is empty")
 	}
 
-	err = j.Src.Valid()
+	err = j.ISrc.Valid()
 	if err != nil {
 		return errors.Wrap(err, "src spec is invalid")
 	}
 
-	err = j.Dest.Valid()
+	err = j.IDest.Valid()
 	if err != nil {
 		return errors.Wrap(err, "dest spec is invalid")
 	}
@@ -170,7 +205,7 @@ func (j *Job) RecoverDatabaseSync() error {
 func (j *Job) DatabaseOldDataSync() error {
 	// TODO(Drogon): impl
 	// Step 1: drop all tables
-	err := j.Dest.ClearDB()
+	err := j.IDest.ClearDB()
 	if err != nil {
 		return err
 	}
@@ -188,7 +223,7 @@ func (j *Job) DatabaseSync() error {
 
 func (j *Job) genExtraInfo() (*base.ExtraInfo, error) {
 	meta := j.srcMeta
-	masterToken, err := meta.GetMasterToken()
+	masterToken, err := meta.GetMasterToken(j.rpcFactory)
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +280,7 @@ func (j *Job) fullSync() error {
 		default:
 			return errors.Errorf("invalid sync type %s", j.SyncType)
 		}
-		snapshotName, err := j.Src.CreateSnapshotAndWaitForDone(backupTableList)
+		snapshotName, err := j.ISrc.CreateSnapshotAndWaitForDone(backupTableList)
 		if err != nil {
 			return err
 		}
@@ -258,7 +293,7 @@ func (j *Job) fullSync() error {
 
 		snapshotName := j.progress.PersistData
 		src := &j.Src
-		srcRpc, err := rpc.NewFeRpc(src)
+		srcRpc, err := j.rpcFactory.NewFeRpc(src)
 		if err != nil {
 			return err
 		}
@@ -356,7 +391,7 @@ func (j *Job) fullSync() error {
 		// Step 5: restore snapshot
 		// Restore snapshot to dest
 		dest := &j.Dest
-		destRpc, err := rpc.NewFeRpc(dest)
+		destRpc, err := j.rpcFactory.NewFeRpc(dest)
 		if err != nil {
 			return err
 		}
@@ -367,7 +402,7 @@ func (j *Job) fullSync() error {
 		}
 		log.Infof("resp: %v", restoreResp)
 		// TODO: impl wait for done, use show restore
-		restoreFinished, err := j.Dest.CheckRestoreFinished(snapshotName)
+		restoreFinished, err := j.IDest.CheckRestoreFinished(snapshotName)
 		if err != nil {
 			return err
 		}
@@ -570,7 +605,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 
 	// Step 2: begin txn
 	log.Infof("begin txn, dest: %v, commitSeq: %d", dest, commitSeq)
-	destRpc, err := rpc.NewFeRpc(dest)
+	destRpc, err := j.rpcFactory.NewFeRpc(dest)
 	if err != nil {
 		return err
 	}
@@ -648,7 +683,7 @@ func (j *Job) handleAddPartition(binlog *festruct.TBinlog) error {
 	// addPartitionSql = "ALTER TABLE " + sql
 	addPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s", destDbName, destTableName, addPartition.Sql)
 	log.Infof("addPartitionSql: %s", addPartitionSql)
-	return j.Dest.Exec(addPartitionSql)
+	return j.IDest.Exec(addPartitionSql)
 }
 
 // handleDropPartition
@@ -675,7 +710,7 @@ func (j *Job) handleDropPartition(binlog *festruct.TBinlog) error {
 	// dropPartitionSql = "ALTER TABLE " + sql
 	dropPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s", destDbName, destTableName, dropPartition.Sql)
 	log.Infof("dropPartitionSql: %s", dropPartitionSql)
-	return j.Dest.Exec(dropPartitionSql)
+	return j.IDest.Exec(dropPartitionSql)
 }
 
 // handleCreateTable
@@ -695,7 +730,7 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 	sql := createTable.Sql
 	log.Infof("createTableSql: %s", sql)
 	// HACK: for drop table
-	err = j.Dest.DbExec(sql)
+	err = j.IDest.DbExec(sql)
 	j.srcMeta.GetTables()
 	j.destMeta.GetTables()
 	return err
@@ -716,6 +751,7 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 	}
 
 	tableName := dropTable.TableName
+	// depreated
 	if tableName == "" {
 		dirtySrcTables := j.srcMeta.DirtyGetTables()
 		srcTable, ok := dirtySrcTables[dropTable.TableId]
@@ -728,7 +764,7 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 
 	sql := fmt.Sprintf("DROP TABLE %s FORCE", tableName)
 	log.Infof("dropTableSql: %s", sql)
-	err = j.Dest.DbExec(sql)
+	err = j.IDest.DbExec(sql)
 	j.srcMeta.GetTables()
 	j.destMeta.GetTables()
 	return err
@@ -803,18 +839,22 @@ func (j *Job) handleLightningSchemaChange(binlog *festruct.TBinlog) error {
 		return err
 	}
 
+	log.Infof("[deadlinefen] lightningSchemaChange %v", lightningSchemaChange)
+
 	rawSql := lightningSchemaChange.RawSql
 	//   "rawSql": "ALTER TABLE `default_cluster:ccr`.`test_ddl` ADD COLUMN `nid1` int(11) NULL COMMENT \"\""
 	// replace `default_cluster:${Src.Database}`.`test_ddl` to `test_ddl`
 	sql := strings.Replace(rawSql, fmt.Sprintf("`default_cluster:%s`.", j.Src.Database), "", 1)
 	log.Infof("lightningSchemaChangeSql, rawSql: %s, sql: %s", rawSql, sql)
-	return j.Dest.DbExec(sql)
+	return j.IDest.DbExec(sql)
 }
 
 func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 	if binlog == nil || !binlog.IsSetCommitSeq() {
 		return errors.Errorf("invalid binlog: %v", binlog)
 	}
+
+	log.Infof("[deadlinefen] binlog data: %s", binlog.GetData())
 
 	// Step 2: update job progress
 	j.progress.StartHandle(binlog.GetCommitSeq())
@@ -870,7 +910,7 @@ func (j *Job) incrementalSync() error {
 	src := &j.Src
 
 	// Step 1: get binlog
-	srcRpc, err := rpc.NewFeRpc(src)
+	srcRpc, err := j.rpcFactory.NewFeRpc(src)
 	if err != nil {
 		return nil
 	}
@@ -909,6 +949,7 @@ func (j *Job) incrementalSync() error {
 		}
 
 		for _, binlog := range binlogs {
+
 			// Step 3.1: handle binlog
 			if err := j.handleBinlog(binlog); err != nil {
 				return err
@@ -1094,13 +1135,13 @@ func (j *Job) FirstRun() error {
 	}
 
 	// Step 2: check src database
-	if src_db_exists, err := j.Src.CheckDatabaseExists(); err != nil {
+	if src_db_exists, err := j.ISrc.CheckDatabaseExists(); err != nil {
 		return err
 	} else if !src_db_exists {
 		return errors.Errorf("src database %s not exists", j.Src.Database)
 	}
 	if j.SyncType == DBSync {
-		if enable, err := j.Src.IsDatabaseEnableBinlog(); err != nil {
+		if enable, err := j.ISrc.IsDatabaseEnableBinlog(); err != nil {
 			return err
 		} else if !enable {
 			return errors.Errorf("src database %s not enable binlog", j.Src.Database)
@@ -1114,13 +1155,13 @@ func (j *Job) FirstRun() error {
 
 	// Step 3: check src table exists, if not exists, return err
 	if j.SyncType == TableSync {
-		if src_table_exists, err := j.Src.CheckTableExists(); err != nil {
+		if src_table_exists, err := j.ISrc.CheckTableExists(); err != nil {
 			return err
 		} else if !src_table_exists {
 			return errors.Errorf("src table %s.%s not exists", j.Src.Database, j.Src.Table)
 		}
 
-		if enable, err := j.Src.IsTableEnableBinlog(); err != nil {
+		if enable, err := j.ISrc.IsTableEnableBinlog(); err != nil {
 			return err
 		} else if !enable {
 			return errors.Errorf("src table %s.%s not enable binlog", j.Src.Database, j.Src.Table)
@@ -1135,12 +1176,12 @@ func (j *Job) FirstRun() error {
 
 	// Step 4: check dest database && table exists
 	// if dest database && table exists, return err
-	dest_db_exists, err := j.Dest.CheckDatabaseExists()
+	dest_db_exists, err := j.IDest.CheckDatabaseExists()
 	if err != nil {
 		return err
 	}
 	if !dest_db_exists {
-		if err := j.Dest.CreateDatabase(); err != nil {
+		if err := j.IDest.CreateDatabase(); err != nil {
 			return err
 		}
 	}
@@ -1150,7 +1191,7 @@ func (j *Job) FirstRun() error {
 		j.Dest.DbId = destDbId
 	}
 	if j.SyncType == TableSync {
-		dest_table_exists, err := j.Dest.CheckTableExists()
+		dest_table_exists, err := j.IDest.CheckTableExists()
 		if err != nil {
 			return err
 		}
@@ -1168,7 +1209,7 @@ func (j *Job) GetLag() (int64, error) {
 	defer j.lock.Unlock()
 
 	srcSpec := &j.Src
-	rpc, err := rpc.NewFeRpc(srcSpec)
+	rpc, err := j.rpcFactory.NewFeRpc(srcSpec)
 	if err != nil {
 		return 0, err
 	}

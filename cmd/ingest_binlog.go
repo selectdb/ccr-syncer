@@ -45,7 +45,8 @@ func newCommitInfos() []*festruct_types.TTabletCommitInfo {
 }
 
 func test_get(t *base.Spec) {
-	rpc, err := rpc.NewFeRpc(t)
+	rpcFactory := rpc.NewRpcFactory()
+	rpc, err := rpcFactory.NewFeRpc(t)
 	if err != nil {
 		panic(err)
 	}
@@ -62,7 +63,8 @@ func new_label(t *base.Spec, commitSeq int64) string {
 }
 
 func test_begin(t *base.Spec) {
-	rpc, err := rpc.NewFeRpc(t)
+	rpcFactory := rpc.NewRpcFactory()
+	rpc, err := rpcFactory.NewFeRpc(t)
 	if err != nil {
 		panic(err)
 	}
@@ -80,7 +82,8 @@ func test_begin(t *base.Spec) {
 }
 
 func test_commit(t *base.Spec) {
-	rpc, err := rpc.NewFeRpc(t)
+	rpcFactory := rpc.NewRpcFactory()
+	rpc, err := rpcFactory.NewFeRpc(t)
 	if err != nil {
 		panic(err)
 	}
@@ -112,8 +115,8 @@ func test_ingest_be() {
 		HttpPort:      8040,
 		BrpcPort:      8060,
 	}
-
-	rpc, err := rpc.NewBeRpc(&backend)
+	rpcFactory := rpc.NewRpcFactory()
+	rpc, err := rpcFactory.NewBeRpc(&backend)
 	if err != nil {
 		panic(err)
 	}

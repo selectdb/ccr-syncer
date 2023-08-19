@@ -21,18 +21,18 @@ func init() {
 	utils.InitLog()
 }
 
-func test_init_meta(m *ccr.Meta) {
+func test_init_meta(m ccr.IMeta, spec *base.Spec) {
 	if dbId, err := m.GetDbId(); err != nil {
 		panic(err)
 	} else {
-		log.Infof("found db: %s, dbId: %d", m.Database, dbId)
+		log.Infof("found db: %s, dbId: %d", spec.Database, dbId)
 	}
 
-	tableId, err := m.GetTableId(m.Table)
+	tableId, err := m.GetTableId(spec.Table)
 	if err != nil {
 		panic(err)
 	} else {
-		log.Infof("found table: %s, tableId: %d", m.Table, tableId)
+		log.Infof("found table: %s, tableId: %d", spec.Table, tableId)
 	}
 
 	var partitionId int64
@@ -99,7 +99,8 @@ func main() {
 		Table:      tableName,
 	}
 
-	meta := ccr.NewMeta(src)
+	metaFactory := ccr.NewMetaFactory()
+	meta := metaFactory.NewMeta(src)
 
-	test_init_meta(meta)
+	test_init_meta(meta, src)
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/selectdb/ccr_syncer/ccr/base"
 	"github.com/selectdb/ccr_syncer/ccr/record"
-	"github.com/selectdb/ccr_syncer/rpc"
 	bestruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/backendservice"
 	tstatus "github.com/selectdb/ccr_syncer/rpc/kitex_gen/status"
 	ttypes "github.com/selectdb/ccr_syncer/rpc/kitex_gen/types"
@@ -18,7 +17,7 @@ import (
 )
 
 type tabletIngestBinlogHandler struct {
-	job             *IngestBinlogJob
+	ingestJob       *IngestBinlogJob
 	binlogVersion   int64
 	srcTablet       *TabletMeta
 	destTablet      *TabletMeta
@@ -51,7 +50,7 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 		return true
 	}
 
-	j := h.job
+	j := h.ingestJob
 	binlogVersion := h.binlogVersion
 	srcTablet := h.srcTablet
 	destReplicaId := destReplica.Id
@@ -65,7 +64,7 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 	}
 	destTabletId := destReplica.TabletId
 
-	destRpc, err := rpc.NewBeRpc(destBackend)
+	destRpc, err := h.ingestJob.ccrJob.rpcFactory.NewBeRpc(destBackend)
 	if err != nil {
 		j.setError(err)
 		return false
@@ -105,7 +104,7 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 	h.wg.Add(1)
 	go func() {
 		gls.ResetGls(gls.GoID(), map[interface{}]interface{}{})
-		gls.Set("job", j.job.Name)
+		gls.Set("job", j.ccrJob.Name)
 
 		defer h.wg.Done()
 
@@ -154,7 +153,7 @@ func NewIngestContext(txnId int64, tableRecords []*record.TableRecord) *IngestCo
 }
 
 type IngestBinlogJob struct {
-	job          *Job // ccr job
+	ccrJob       *Job // ccr job
 	txnId        int64
 	tableRecords []*record.TableRecord
 
@@ -172,7 +171,7 @@ type IngestBinlogJob struct {
 	wg sync.WaitGroup
 }
 
-func NewIngestBinlogJob(ctx context.Context, job *Job) (*IngestBinlogJob, error) {
+func NewIngestBinlogJob(ctx context.Context, ccrJob *Job) (*IngestBinlogJob, error) {
 	// convert ctx to IngestContext
 	ingestCtx, ok := ctx.(*IngestContext)
 	if !ok {
@@ -180,7 +179,7 @@ func NewIngestBinlogJob(ctx context.Context, job *Job) (*IngestBinlogJob, error)
 	}
 
 	return &IngestBinlogJob{
-		job:          job,
+		ccrJob:       ccrJob,
 		txnId:        ingestCtx.txnId,
 		tableRecords: ingestCtx.tableRecords,
 
@@ -232,7 +231,7 @@ type prepareIndexArg struct {
 
 func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 	// Step 1: check tablets
-	job := j.job
+	job := j.ccrJob
 	srcTablets, err := job.srcMeta.GetTablets(arg.srcTableId, arg.srcPartitionId, arg.srcIndexMeta.Id)
 	if err != nil {
 		j.setError(err)
@@ -269,7 +268,7 @@ func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 		srcTablet := srcIter.Value()
 		destTablet := destIter.Value()
 		tabletIngestBinlogHandler := &tabletIngestBinlogHandler{
-			job:             j,
+			ingestJob:       j,
 			binlogVersion:   arg.binlogVersion,
 			srcTablet:       srcTablet,
 			destTablet:      destTablet,
@@ -290,7 +289,7 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 	// 废弃 preparePartition， 上面index的那部分是这里的实现
 	// 还是要求一下和下游对齐的index length，这个是不可以recover的
 	// 思考那些是recover用的，主要就是tablet那块的
-	job := j.job
+	job := j.ccrJob
 
 	srcPartitionId := partitionRecord.Id
 	srcPartitionRange := partitionRecord.Range
@@ -301,12 +300,12 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 	}
 
 	// Step 1: check index id
-	srcIndexIdMap, err := j.job.srcMeta.GetIndexIdMap(srcTableId, srcPartitionId)
+	srcIndexIdMap, err := j.ccrJob.srcMeta.GetIndexIdMap(srcTableId, srcPartitionId)
 	if err != nil {
 		j.setError(err)
 		return
 	}
-	destIndexNameMap, err := j.job.destMeta.GetIndexNameMap(destTableId, destPartitionId)
+	destIndexNameMap, err := j.ccrJob.destMeta.GetIndexNameMap(destTableId, destPartitionId)
 	if err != nil {
 		j.setError(err)
 		return
@@ -344,7 +343,7 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 
 func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 	log.Debugf("tableRecord: %v", tableRecord)
-	job := j.job
+	job := j.ccrJob
 	// TODO: check it before ingestBinlog
 	var srcTableId int64
 	var destTableId int64
@@ -403,7 +402,7 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 func (j *IngestBinlogJob) prepareBackendMap() {
 	log.Debug("prepareBackendMap")
 
-	job := j.job
+	job := j.ccrJob
 
 	var err error
 	j.srcBackendMap, err = job.srcMeta.GetBackendMap()
