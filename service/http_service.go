@@ -221,7 +221,7 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/pause", s.pauseHandler)
 	s.mux.HandleFunc("/resume", s.resumeHandler)
 	s.mux.HandleFunc("/delete", s.deleteHandler)
-	s.mux.HandleFunc("/status", s.statusHandler)
+	s.mux.HandleFunc("/job_status", s.statusHandler)
 }
 
 func (s *HttpService) Start() error {
