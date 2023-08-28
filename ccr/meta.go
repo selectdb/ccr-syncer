@@ -101,6 +101,8 @@ func (m *Meta) GetFullTableName(tableName string) string {
 }
 
 func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) {
+	log.Infof("UpdateTable tableName: %s, tableId: %d", tableName, tableId)
+
 	dbId, err := m.GetDbId()
 	if err != nil {
 		return nil, err
@@ -158,7 +160,7 @@ func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) 
 	}
 
 	// not found
-	return nil, errors.Errorf("%v not found table", tableId)
+	return nil, errors.Errorf("tableId %v not found table", tableId)
 }
 
 func (m *Meta) GetTable(tableId int64) (*TableMeta, error) {

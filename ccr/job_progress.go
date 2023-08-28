@@ -2,6 +2,7 @@ package ccr
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/selectdb/ccr_syncer/storage"
@@ -69,6 +70,10 @@ type JobProgress struct {
 	TableCommitSeqMap map[int64]int64 `json:"table_commit_seq_map"` // only for DBTablesIncrementalSync
 	InMemoryData      any             `json:"-"`
 	PersistData       string          `json:"data"` // this often for binlog or snapshot info
+}
+
+func (j *JobProgress) String() string {
+	return fmt.Sprintf("JobProgress{JobName: %s, ProgressState: %d, SyncState: %d, SubSyncState: %d, CommitSeq: %d, TransactionId: %d, TableCommitSeqMap: %v, InMemoryData: %v, PersistData: %s}", j.JobName, j.ProgressState, j.SyncState, j.SubSyncState, j.CommitSeq, j.TransactionId, j.TableCommitSeqMap, j.InMemoryData, j.PersistData)
 }
 
 func NewJobProgress(jobName string, syncType SyncType, db storage.DB) *JobProgress {
@@ -170,7 +175,8 @@ func (j *JobProgress) BeginTransaction(txnId int64) {
 // write progress to db, busy loop until success
 // TODO: add timeout check
 func (j *JobProgress) Persist() {
-	log.Debugf("update job progress: %v", j)
+	log.Debugf("update job progress: %s", j)
+
 	for {
 		// Step 1: to json
 		// TODO: fix to json error
@@ -191,7 +197,8 @@ func (j *JobProgress) Persist() {
 
 		break
 	}
-	log.Debugf("update job progress done: %v", j)
+
+	log.Debugf("update job progress done: %s", j)
 }
 
 // func (j *JobProgress) Done() {
