@@ -11,11 +11,21 @@ import (
 )
 
 var (
-	dbName    string
-	tableName string
+	host       string
+	port       string
+	thriftPort string
+	user       string
+	password   string
+	dbName     string
+	tableName  string
 )
 
 func init() {
+	flag.StringVar(&host, "host", "localhost", "host")
+	flag.StringVar(&port, "port", "9030", "port")
+	flag.StringVar(&thriftPort, "thrift_port", "9020", "thrift port")
+	flag.StringVar(&user, "user", "root", "user")
+	flag.StringVar(&password, "password", "", "password")
 	flag.StringVar(&dbName, "db", "ccr", "database name")
 	flag.StringVar(&tableName, "table", "enable_binlog", "table name")
 	flag.Parse()
@@ -92,11 +102,11 @@ func test_init_meta(m ccr.IMeta, spec *base.Spec) {
 
 func main() {
 	src := &base.Spec{
-		Host:       "localhost",
-		Port:       "9030",
-		ThriftPort: "9020",
-		User:       "root",
-		Password:   "",
+		Host:       host,
+		Port:       port,
+		ThriftPort: thriftPort,
+		User:       user,
+		Password:   password,
 		Database:   dbName,
 		Table:      tableName,
 	}
