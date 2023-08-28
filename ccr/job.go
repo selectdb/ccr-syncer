@@ -1254,3 +1254,23 @@ func (j *Job) Resume() error {
 
 	return j.changeJobState(JobRunning)
 }
+
+type JobStatus struct {
+	Name          string `json:"name"`
+	State         string `json:"state"`
+	ProgressState string `json:"progress_state"`
+}
+
+func (j *Job) Status() *JobStatus {
+	j.lock.Lock()
+	defer j.lock.Unlock()
+
+	state := j.State.String()
+	progress_state := j.progress.SyncState.String()
+
+	return &JobStatus{
+		Name:          j.Name,
+		State:         state,
+		ProgressState: progress_state,
+	}
+}

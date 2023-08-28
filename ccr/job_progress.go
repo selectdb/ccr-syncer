@@ -44,6 +44,26 @@ const (
 	// TODO: add timeout state for restart full sync
 )
 
+// SyncState Stringer
+func (s SyncState) String() string {
+	switch s {
+	case DBFullSync:
+		return "DBFullSync"
+	case DBTablesIncrementalSync:
+		return "DBTablesIncrementalSync"
+	case DBSpecificTableFullSync:
+		return "DBSpecificTableFullSync"
+	case DBIncrementalSync:
+		return "DBIncrementalSync"
+	case TableFullSync:
+		return "TableFullSync"
+	case TableIncrementalSync:
+		return "TableIncrementalSync"
+	default:
+		return fmt.Sprintf("Unknown SyncState: %d", s)
+	}
+}
+
 type SubSyncState int
 
 const (

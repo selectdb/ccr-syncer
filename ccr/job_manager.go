@@ -191,3 +191,14 @@ func (jm *JobManager) Resume(jobName string) error {
 		return job.Resume()
 	})
 }
+
+func (jm *JobManager) JobStatus(jobName string) (*JobStatus, error) {
+	jm.lock.RLock()
+	defer jm.lock.RUnlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return job.Status(), nil
+	} else {
+		return nil, errors.Errorf("job not exist: %s", jobName)
+	}
+}

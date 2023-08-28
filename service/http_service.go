@@ -184,7 +184,35 @@ func (s *HttpService) deleteHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Write([]byte("resume success"))
+	w.Write([]byte("delete success"))
+}
+
+func (s *HttpService) statusHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("get job status")
+
+	// Parse the JSON request body
+	var request CcrCommonRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if request.Name == "" {
+		http.Error(w, "name is empty", http.StatusBadRequest)
+		return
+	}
+
+	jobStatus, err := s.jobManager.JobStatus(request.Name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// write jobStatus as json
+	if data, err := json.Marshal(jobStatus); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	} else {
+		w.Write(data)
+	}
 }
 
 func (s *HttpService) RegisterHandlers() {
@@ -193,6 +221,7 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/pause", s.pauseHandler)
 	s.mux.HandleFunc("/resume", s.resumeHandler)
 	s.mux.HandleFunc("/delete", s.deleteHandler)
+	s.mux.HandleFunc("/status", s.statusHandler)
 }
 
 func (s *HttpService) Start() error {
