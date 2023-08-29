@@ -50,6 +50,8 @@ make -j ${PARALLEL}
 
 cp ${SYNCER_HOME}/bin/ccr_syncer ${SYNCER_OUTPUT}/bin/
 cp ${SYNCER_HOME}/shell/* ${SYNCER_OUTPUT}/bin/
+cp -r ${SYNCER_HOME}/doc ${SYNCER_OUTPUT}/
 cp ${SYNCER_HOME}/CHANGELOG.md ${SYNCER_OUTPUT}/
+cp ${SYNCER_HOME}/README.md ${SYNCER_OUTPUT}/
 
 
