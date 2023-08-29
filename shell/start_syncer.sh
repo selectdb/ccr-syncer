@@ -14,6 +14,11 @@ PID_DIR="$(
 )"
 export PID_DIR
 
+usage() {
+    echo "Usage: $0 [--deamon] [--log_level [info|debug]] [--log_dir dir] [--db_dir dir]"
+    exit 1
+}
+
 OPTS="$(getopt \
     -n "$0" \
     -o '' \
@@ -53,6 +58,7 @@ while true; do
         ;;
     *)
         echo "Internal error, opt: $1"
+        usage
         exit 1
         ;;
     esac
