@@ -230,6 +230,8 @@ type prepareIndexArg struct {
 }
 
 func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
+	log.Debugf("prepareIndex: %v", arg)
+
 	// Step 1: check tablets
 	job := j.ccrJob
 	srcTablets, err := job.srcMeta.GetTablets(arg.srcTableId, arg.srcPartitionId, arg.srcIndexMeta.Id)
@@ -436,10 +438,11 @@ func (j *IngestBinlogJob) runTabletIngestJobs() {
 			j.wg.Done()
 		}(tabletIngestJob)
 	}
+	j.wg.Wait()
 }
 
 // TODO(Drogon): use monad error handle
-func (j *IngestBinlogJob) run() {
+func (j *IngestBinlogJob) Run() {
 	j.prepareBackendMap()
 	if err := j.Error(); err != nil {
 		return
@@ -454,9 +457,4 @@ func (j *IngestBinlogJob) run() {
 	if err := j.Error(); err != nil {
 		return
 	}
-}
-
-func (j *IngestBinlogJob) Run() {
-	j.run()
-	j.wg.Wait()
 }
