@@ -46,17 +46,19 @@ func (h *tabletIngestBinlogHandler) error() error {
 
 // handle Replica
 func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool {
+	destReplicaId := destReplica.Id
+	log.Debugf("handle dest replica id: %d", destReplicaId)
+
 	if h.cancel.Load() {
+		log.Infof("job canceled, replica id: %d", destReplicaId)
 		return true
 	}
 
 	j := h.ingestJob
 	binlogVersion := h.binlogVersion
 	srcTablet := h.srcTablet
-	destReplicaId := destReplica.Id
 	destPartitionId := h.destPartitionId
 
-	log.Debugf("handle dest replica id: %v", destReplicaId)
 	destBackend, ok := j.destBackendMap[destReplica.BackendId]
 	if !ok {
 		j.setError(errors.Errorf("backend not found, backend id: %d", destReplica.BackendId))
@@ -103,10 +105,11 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 
 	h.wg.Add(1)
 	go func() {
+		defer h.wg.Done()
+
 		gls.ResetGls(gls.GoID(), map[interface{}]interface{}{})
 		gls.Set("job", j.ccrJob.Name)
-
-		defer h.wg.Done()
+		defer gls.ResetGls(gls.GoID(), map[interface{}]interface{}{})
 
 		resp, err := destRpc.IngestBinlog(req)
 		if err != nil {
@@ -114,7 +117,7 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 			return
 		}
 
-		log.Infof("ingest resp: %v", resp)
+		log.Debugf("ingest resp: %v", resp)
 		if !resp.IsSetStatus() {
 			err = errors.Errorf("ingest resp status not set")
 			j.setError(err)
@@ -132,6 +135,8 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 }
 
 func (h *tabletIngestBinlogHandler) handle() {
+	log.Debugf("handle tablet ingest binlog, src tablet id: %d, dest tablet id: %d", h.srcTablet.Id, h.destTablet.Id)
+
 	h.destTablet.ReplicaMetas.Scan(func(destReplicaId int64, destReplica *ReplicaMeta) bool {
 		return h.handleReplica(destReplica)
 	})
@@ -345,6 +350,7 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 
 func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 	log.Debugf("tableRecord: %v", tableRecord)
+
 	job := j.ccrJob
 	// TODO: check it before ingestBinlog
 	var srcTableId int64
@@ -421,6 +427,8 @@ func (j *IngestBinlogJob) prepareBackendMap() {
 }
 
 func (j *IngestBinlogJob) prepareTabletIngestJobs() {
+	log.Debugf("prepareTabletIngestJobs, table length: %d", len(j.tableRecords))
+
 	j.tabletIngestJobs = make([]*tabletIngestBinlogHandler, 0)
 	for _, tableRecord := range j.tableRecords {
 		j.prepareTable(tableRecord)
@@ -431,6 +439,8 @@ func (j *IngestBinlogJob) prepareTabletIngestJobs() {
 }
 
 func (j *IngestBinlogJob) runTabletIngestJobs() {
+	log.Debugf("runTabletIngestJobs, job length: %d", len(j.tabletIngestJobs))
+
 	for _, tabletIngestJob := range j.tabletIngestJobs {
 		j.wg.Add(1)
 		go func(tabletIngestJob *tabletIngestBinlogHandler) {

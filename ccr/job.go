@@ -560,6 +560,7 @@ func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*
 	if !ok {
 		return nil, errors.Errorf("invalid job type, job: %+v", job)
 	}
+
 	job.Run()
 	if err := job.Error(); err != nil {
 		return nil, err
