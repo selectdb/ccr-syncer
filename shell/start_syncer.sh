@@ -12,30 +12,44 @@ PID_DIR="$(
     cd "${curdir}"
     pwd
 )"
-export PID_DIR
 
 usage() {
-    echo "Usage: $0 [--deamon] [--log_level [info|debug]] [--log_dir dir] [--db_dir dir]"
+    echo "
+Usage: $0 [--deamon] [--log_level [info|debug]] [--log_dir dir] [--db_dir dir]
+          [--host host] [--port port] [--pid_dir dir]
+        "
     exit 1
 }
 
 OPTS="$(getopt \
     -n "$0" \
     -o '' \
+    -o 'h' \
+    -l 'help' \
     -l 'daemon' \
     -l 'log_level:' \
     -l 'log_dir:' \
     -l 'db_dir:' \
+    -l 'host:' \
+    -l 'port:' \
+    -l 'pid_dir:' \
     -- "$@")"
 
 eval set -- "${OPTS}"
 
 RUN_DAEMON=0
+HOST="127.0.0.1"
+PORT="9190"
 LOG_LEVEL=""
-LOG_DIR="${SYNCER_HOME}/log/ccr_syncer.log"
 DB_DIR="${SYNCER_HOME}/db/ccr.db"
 while true; do
     case "$1" in
+    -h)
+        usage
+        ;;
+    --help)
+        usage
+        ;;
     --daemon)
         RUN_DAEMON=1
         shift
@@ -52,17 +66,27 @@ while true; do
         DB_DIR=$2
         shift 2
         ;;
+    --host)
+        HOST=$2
+        shift 2
+        ;;
+    --port)
+        PORT=$2
+        shift 2
+        ;;
+    --pid_dir)
+        PID_DIR=$2
+        shift 2
+        ;;
     --)
         shift
         break
         ;;
-    *)
-        echo "Internal error, opt: $1"
-        usage
-        exit 1
-        ;;
     esac
 done
+
+export PID_DIR
+PID_FILENAME="${HOST}_${PORT}" 
 
 if [[ RUN_DAEMON -eq 0 ]]; then
     if [[ -z "${LOG_LEVEL}" ]]; then
@@ -74,7 +98,11 @@ else
     fi
 fi
 
-pidfile="${PID_DIR}/syncer.pid"
+if [[ -z "${LOG_DIR}" ]]; then
+    LOG_DIR="${SYNCER_HOME}/log/${PID_FILENAME}.log"
+fi
+
+pidfile="${PID_DIR}/${PID_FILENAME}.pid"
 if [[ -f "${pidfile}" ]]; then
     if kill -0 "$(cat "${pidfile}")" >/dev/null 2>&1; then
         echo "Syncer running as process $(cat "${pidfile}"). Stop it first."
@@ -90,10 +118,16 @@ echo "start time: $(date)" >>"${LOG_DIR}"
 if [[ "${RUN_DAEMON}" -eq 1 ]]; then
     nohup "${SYNCER_HOME}/bin/ccr_syncer" \
           "-db_dir=${DB_DIR}" \
+          "-host=${HOST}" \
+          "-port=${PORT}" \
           "-log_level=${LOG_LEVEL}" \
           "-log_filename=${LOG_DIR}" \
           "$@" >>"${LOG_DIR}" 2>&1 </dev/null &
-    echo $! > ${PID_DIR}/syncer.pid
+    echo $! > ${pidfile}
 else
-    "${SYNCER_HOME}/bin/ccr_syncer" "-db_dir=${DB_DIR}" "-log_level=${LOG_LEVEL}" | tee -a "${LOG_DIR}"
+    "${SYNCER_HOME}/bin/ccr_syncer" \
+        "-db_dir=${DB_DIR}" \
+        "-host=${HOST}" \
+        "-port=${PORT}" \
+        "-log_level=${LOG_LEVEL}" | tee -a "${LOG_DIR}"
 fi

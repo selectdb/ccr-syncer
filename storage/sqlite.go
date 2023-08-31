@@ -1,7 +1,10 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
+	"fmt"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
@@ -19,7 +22,7 @@ func NewSQLiteDB(dbPath string) (DB, error) {
 
 	// create table info && progress, if not exists
 	// all is tuple (string, string)
-	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS jobs (job_name TEXT PRIMARY KEY, job_info TEXT)"); err != nil {
+	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS jobs (job_name TEXT PRIMARY KEY, job_info TEXT, belong_to TEXT)"); err != nil {
 		return nil, errors.Wrapf(err, "create table jobs failed")
 	}
 
@@ -27,10 +30,14 @@ func NewSQLiteDB(dbPath string) (DB, error) {
 		return nil, errors.Wrapf(err, "create table progresses failed")
 	}
 
+	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS syncers (host_info TEXT PRIMARY KEY, timestamp INTEGER)"); err != nil {
+		return nil, errors.Wrapf(err, "create table syncers failed")
+	}
+
 	return &SQLiteDB{db: db}, nil
 }
 
-func (s *SQLiteDB) AddJob(jobName string, jobInfo string) error {
+func (s *SQLiteDB) AddJob(jobName string, jobInfo string, hostInfo string) error {
 	// check job name exists, if exists, return error
 	var count int
 	if err := s.db.QueryRow("SELECT COUNT(*) FROM jobs WHERE job_name = ?", jobName).Scan(&count); err != nil {
@@ -42,7 +49,7 @@ func (s *SQLiteDB) AddJob(jobName string, jobInfo string) error {
 	}
 
 	// insert job info
-	if _, err := s.db.Exec("INSERT INTO jobs (job_name, job_info) VALUES (?, ?)", jobName, jobInfo); err != nil {
+	if _, err := s.db.Exec("INSERT INTO jobs (job_name, job_info, belong_to) VALUES (?, ?, ?)", jobName, jobInfo, hostInfo); err != nil {
 		return errors.Wrapf(err, "insert job name %s failed", jobName)
 	} else {
 		return nil
@@ -69,6 +76,36 @@ func (s *SQLiteDB) UpdateJob(jobName string, jobInfo string) error {
 	}
 }
 
+func (s *SQLiteDB) RemoveJob(jobName string) error {
+	txn, err := s.db.BeginTx(context.Background(), &sql.TxOptions{
+		Isolation: sql.LevelRepeatableRead,
+		ReadOnly: false,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "remove job begin transaction failed, name: %s", jobName)
+	}
+
+	if _, err := txn.Exec("DELETE FROM jobs WHERE job_name = ?", jobName); err != nil {
+		if err := txn.Rollback(); err != nil {
+			return errors.Wrapf(err, "remove job failed, name: %s, and rollback failed too", jobName)
+		}
+		return errors.Wrapf(err, "remove job failed, name: %s", jobName)
+	}
+
+	if _, err := txn.Exec("DELETE FROM progresses WHERE job_name = ?", jobName); err != nil {
+		if err := txn.Rollback(); err != nil {
+			return errors.Wrapf(err, "remove progresses failed, name: %s, and rollback failed too", jobName)
+		}
+		return errors.Wrapf(err, "remove progresses failed, name: %s", jobName)
+	}
+
+	if err := txn.Commit(); err != nil {
+		return errors.Wrapf(err, "remove job txn commit failed.")
+	}
+
+	return nil
+}
+
 func (s *SQLiteDB) IsJobExist(jobName string) (bool, error) {
 	var count int
 	if err := s.db.QueryRow("SELECT COUNT(*) FROM jobs WHERE job_name = ?", jobName).Scan(&count); err != nil {
@@ -78,42 +115,32 @@ func (s *SQLiteDB) IsJobExist(jobName string) (bool, error) {
 	}
 }
 
-func (s *SQLiteDB) GetAllJobs() (map[string]string, error) {
-	rows, err := s.db.Query("SELECT job_name, job_info FROM jobs")
-	if err != nil {
-		return nil, errors.Wrapf(err, "query all jobs failed")
+func (s *SQLiteDB) GetJobInfo(jobName string) (string, error) {
+	var jobInfo string
+	if err := s.db.QueryRow("SELECT job_info FROM jobs WHERE job_name = ?", jobName).Scan(&jobInfo); err != nil {
+		return "", errors.Wrapf(err, "get job failed, name: %s", jobName)
 	}
-	defer rows.Close()
+	return jobInfo, nil
+}
 
-	result := make(map[string]string)
-	for rows.Next() {
-		var jobName, jobInfo string
-		err = rows.Scan(&jobName, &jobInfo)
-		if err != nil {
-			return nil, errors.Wrapf(err, "scan job info failed")
-		}
-		result[jobName] = jobInfo
+func (s *SQLiteDB) GetJobBelong(jobName string) (string, error) {
+	var belong string
+	if err := s.db.QueryRow("SELECT belong_to FROM jobs WHERE job_name = ?", jobName).Scan(&belong); err != nil {
+		return "", errors.Wrapf(err, "get job belong failed, name: %s", jobName)
 	}
-	return result, nil
+	return belong, nil
 }
 
 func (s *SQLiteDB) UpdateProgress(jobName string, progress string) error {
-	// check job name exists, if not exists, return error
-	var count int
-	if err := s.db.QueryRow("SELECT COUNT(*) FROM jobs WHERE job_name = ?", jobName).Scan(&count); err != nil {
-		return errors.Wrapf(err, "query job name %s failed", jobName)
-	}
-
-	if count == 0 {
-		return ErrJobNotExists
-	}
-
-	// update progress
-	if _, err := s.db.Exec("UPDATE progresses SET progress = ? WHERE job_name = ?", progress, jobName); err != nil {
+	if result, err := s.db.Exec("INSERT INTO progresses VALUES (?, ?) ON CONFLICT (job_name) DO UPDATE SET progress = ?", jobName, progress, progress); err != nil {
 		return errors.Wrapf(err, "update progress failed")
-	} else {
-		return nil
+	} else if rowNum, err := result.RowsAffected(); err != nil {
+		return errors.Wrapf(err, "update progress get affected rows failed")
+	} else if rowNum != 1 {
+		return errors.Wrapf(err, "update progress affected rows error, rows: %d", rowNum)
 	}
+
+	return nil
 }
 
 func (s *SQLiteDB) IsProgressExist(jobName string) (bool, error) {
@@ -130,4 +157,222 @@ func (s *SQLiteDB) GetProgress(jobName string) (string, error) {
 		return "", errors.Wrapf(err, "query progress failed")
 	}
 	return progress, nil
+}
+
+func (s *SQLiteDB) AddSyncer(hostInfo string) error {
+	timestamp := time.Now().UnixNano()
+	if result, err := s.db.Exec("INSERT INTO syncers VALUES (?, ?) ON CONFLICT (host_info) DO UPDATE SET timestamp = ?", hostInfo, timestamp, timestamp); err != nil {
+		return errors.Wrapf(err, "add syncer failed")
+	} else if rowNum, err := result.RowsAffected(); err != nil {
+		return errors.Wrapf(err, "add syncer get affected rows failed")
+	} else if rowNum != 1 {
+		return errors.Wrapf(err, "add syncer affected rows error, rows: %d", rowNum)
+	}
+
+	return nil
+}
+
+func (s *SQLiteDB) RefreshSyncer(hostInfo string, lastStamp int64) (int64, error) {
+	nowTime := time.Now().UnixNano()
+	result, err := s.db.Exec("UPDATE syncers SET timestamp = ? WHERE host_info = ? AND timestamp = ?", nowTime, hostInfo, lastStamp)
+	if err != nil {
+		return -1, errors.Wrapf(err, "refresh syncer failed.")
+	}
+
+	if rowNum, err := result.RowsAffected(); err != nil {
+		return -1, errors.Wrapf(err, "get RowsAffected failed.")
+	} else if rowNum != 1 {
+		return -1, nil
+	} else {
+		return nowTime, nil
+	}
+}
+
+func (s *SQLiteDB) GetStampAndJobs(hostInfo string) (int64, []string, error) {
+	txn, err := s.db.BeginTx(context.Background(), &sql.TxOptions{
+		Isolation: sql.LevelRepeatableRead,
+		ReadOnly:  true,
+	})
+	if err != nil {
+		return -1, nil, errors.Wrapf(err, "begin IMMEDIATE transaction failed.")
+	}
+
+	var timestamp int64
+	if err := txn.QueryRow("SELECT timestamp FROM syncers WHERE host_info = ?", hostInfo).Scan(&timestamp); err != nil {
+		return -1, nil, errors.Wrapf(err, "get stamp failed.")
+	}
+
+	jobs := make([]string, 0)
+	rows, err := s.db.Query("SELECT job_name FROM jobs WHERE belong_to = ?", hostInfo)
+	if err != nil {
+		return -1, nil, errors.Wrapf(err, "get job_nums failed.")
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var jobName string
+		if err := rows.Scan(&jobName); err != nil {
+			return -1, nil, errors.Wrapf(err, "scan job_name failed.")
+		}
+		jobs = append(jobs, jobName)
+	}
+
+	if err := txn.Commit(); err != nil {
+		return -1, nil, errors.Wrapf(err, "get jobs & stamp txn commit failed.")
+	}
+
+	return timestamp, jobs, nil
+}
+
+func (s *SQLiteDB) GetDeadSyncers(expiredTime int64) ([]string, error) {
+	row, err := s.db.Query("SELECT host_info FROM syncers WHERE timestamp < ?", expiredTime)
+	if err != nil {
+		return nil, errors.Wrapf(err, "get orphan job info failed.")
+	}
+	defer row.Close()
+	deadSyncers := make([]string, 0)
+	for row.Next() {
+		var hostInfo string
+		if err := row.Scan(&hostInfo); err != nil {
+			return nil, errors.Wrapf(err, "scan host_info and jobs failed")
+		}
+		deadSyncers = append(deadSyncers, hostInfo)
+	}
+	return deadSyncers, nil
+}
+
+func (s *SQLiteDB) getOrphanJobs(txn *sql.Tx, syncers []string) ([]string, error) {
+	orphanJobs := make([]string, 0)
+	for _, deadSyncer := range syncers {
+		rows, err := txn.Query("SELECT job_name FROM jobs WHERE belong_to = ?", deadSyncer)
+		if err != nil {
+			return nil, errors.Wrapf(err, "get orphan jobs failed.")
+		}
+
+		for rows.Next() {
+			var jobName string
+			if err := rows.Scan(&jobName); err != nil {
+				return nil, errors.Wrapf(err, "scan orphan job name failed.")
+			}
+			orphanJobs = append(orphanJobs, jobName)
+		}
+		rows.Close()
+
+		if _, err := txn.Exec("DELETE FROM syncers WHERE host_info = ?", deadSyncer); err != nil {
+			return nil, errors.Wrapf(err, "delete dead syncer failed, name: %s", deadSyncer)
+		}
+	}
+	return orphanJobs, nil
+}
+
+func (s *SQLiteDB) getLoadInfo(txn *sql.Tx) (LoadSlice, int, error) {
+	load := make(LoadSlice, 0)
+	sumLoad := 0
+	host_rows, err := txn.Query("SELECT host_info FROM syncers")
+	if err != nil {
+		return nil, -1, errors.Wrapf(err, "get all syncers failed.")
+	}
+	defer host_rows.Close()
+	for host_rows.Next() {
+		loadInfo := LoadInfo{AddedLoad: 0}
+		if err := host_rows.Scan(&loadInfo.HostInfo); err != nil {
+			return nil, -1, errors.Wrapf(err, "scan load info failed.")
+		}
+		if err := txn.QueryRow("SELECT COUNT(*) FROM jobs WHERE belong_to = ?", loadInfo.HostInfo).Scan(&loadInfo.NowLoad); err != nil {
+			return nil, -1, errors.Wrapf(err, "get syncer %s load failed.", loadInfo.HostInfo)
+		}
+		sumLoad += loadInfo.NowLoad
+		load = append(load, loadInfo)
+	}
+
+	return load, sumLoad, nil
+}
+
+func (s *SQLiteDB) dispatchJobs(txn *sql.Tx, hostInfo string, additionalJobs []string) error {
+	for _, jobName := range additionalJobs {
+		if _, err := txn.Exec("UPDATE jobs SET belong_to = ? WHERE job_name = ?", hostInfo, jobName); err != nil {
+			return errors.Wrapf(err, "update job belong_to failed, name: %s", jobName)
+		}
+	}
+	if _, err := txn.Exec("UPDATE syncers SET timestamp = ? WHERE host_info = ?", time.Now().UnixNano(), hostInfo); err != nil {
+		return errors.Wrapf(err, "update syncer timestamp failed, host: %s", hostInfo)
+	}
+	return nil
+}
+
+func (s *SQLiteDB) RebalanceLoadFromDeadSyncers(syncers []string) error {
+	txn, err := s.db.BeginTx(context.Background(), &sql.TxOptions{
+		Isolation: sql.LevelRepeatableRead,
+		ReadOnly:  false,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "rebalance load begin txn failed")
+	}
+
+	orphanJobs, err := s.getOrphanJobs(txn, syncers)
+	if err != nil {
+		return err
+	}
+
+	additionalLoad := len(orphanJobs)
+	loadList, currentLoad, err := s.getLoadInfo(txn)
+	if err != nil {
+		return err
+	}
+
+	loadList = RebalanceLoad(additionalLoad, currentLoad, loadList)
+	for i := range loadList {
+		beginIdx := additionalLoad - loadList[i].AddedLoad
+		if err := s.dispatchJobs(txn, loadList[i].HostInfo, orphanJobs[beginIdx:additionalLoad]); err != nil {
+			if err := txn.Rollback(); err != nil {
+				return errors.Wrapf(err, "rebalance rollback failed.")
+			}
+			return err
+		}
+		additionalLoad = beginIdx
+	}
+
+	if err := txn.Commit(); err != nil {
+		return errors.Wrapf(err, "rebalance txn commit failed.")
+	}
+
+	return nil
+}
+
+func (s *SQLiteDB) GetAllData() (map[string][]string, error) {
+	ans := make(map[string][]string)
+
+	jobRows, err := s.db.Query("SELECT job_name, belong_to FROM jobs")
+	if err != nil {
+		return nil, errors.Wrapf(err, "get jobs data failed.")
+	}
+	jobData := make([]string, 0)
+	for jobRows.Next() {
+		var jobName string
+		var belong_to string
+		if err := jobRows.Scan(&jobName, &belong_to); err != nil {
+			return nil, errors.Wrapf(err, "scan jobs row failed.")
+		}
+		jobData = append(jobData, fmt.Sprintf("%s, %s", jobName, belong_to))
+	}
+	ans["jobs"] = jobData
+	jobRows.Close()
+
+	syncerRows, err := s.db.Query("SELECT * FROM syncers")
+	if err != nil {
+		return nil, errors.Wrapf(err, "get jobs data failed.")
+	}
+	syncerData := make([]string, 0)
+	for syncerRows.Next() {
+		var hostInfo string
+		var timestamp int64
+		if err := syncerRows.Scan(&hostInfo, &timestamp); err != nil {
+			return nil, errors.Wrapf(err, "scan syncers row failed.")
+		}
+		syncerData = append(syncerData, fmt.Sprintf("%s, %d", hostInfo, timestamp))
+	}
+	ans["syncers"] = syncerData
+	syncerRows.Close()
+
+	return ans, nil
 }

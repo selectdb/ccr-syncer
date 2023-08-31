@@ -12,6 +12,7 @@ import (
 	bestruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/backendservice"
 	festruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/frontendservice"
 	"github.com/selectdb/ccr_syncer/rpc/kitex_gen/status"
+	"github.com/selectdb/ccr_syncer/storage"
 	"github.com/tidwall/btree"
 	"go.uber.org/mock/gomock"
 )
@@ -153,7 +154,7 @@ func newMeta(spec *base.Spec, backends *map[int64]*base.Backend) *DatabaseMeta {
 		replicaBaseId := getReplicaBaseId(indexId)
 		backendNum := len(*backends)
 		backendIds := make([]int64, 0, backendNum)
-		for backendId, _ := range *backends {
+		for backendId := range *backends {
 			backendIds = append(backendIds, backendId)
 		}
 		for i := 0; i < backendNum; i++ {
@@ -305,7 +306,7 @@ func TestHandleUpsertInTableSync(t *testing.T) {
 	destMeta := newMeta(&tblDestSpec, &backendMap)
 
 	// init db_mock
-	db := NewMockDB(ctrl)
+	db := storage.NewMockDB(ctrl)
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 	db.EXPECT().UpdateProgress("Test", gomock.Any()).DoAndReturn(
 		func(_ string, progressJson string) error {
@@ -472,7 +473,7 @@ func TestHandleUpsertInDbSync(t *testing.T) {
 	destMeta := newMeta(&dbDestSpec, &backendMap)
 
 	// init db_mock
-	db := NewMockDB(ctrl)
+	db := storage.NewMockDB(ctrl)
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 	db.EXPECT().UpdateProgress("Test", gomock.Any()).DoAndReturn(
 		func(_ string, progressJson string) error {
@@ -630,7 +631,7 @@ func TestHandleAddPartitionInTableSync(t *testing.T) {
 	testSql := "ADD PARTITION `zero_to_five` VALUES [(\"0\"), (\"5\"))(\"version_info\" \u003d \"1\");"
 
 	// init db_mock
-	db := NewMockDB(ctrl)
+	db := storage.NewMockDB(ctrl)
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 
 	// init factory
@@ -686,7 +687,7 @@ func TestHandleAddPartitionInDbSync(t *testing.T) {
 	testSql := "ADD PARTITION `zero_to_five` VALUES [(\"0\"), (\"5\"))(\"version_info\" \u003d \"1\");"
 
 	// init db_mock
-	db := NewMockDB(ctrl)
+	db := storage.NewMockDB(ctrl)
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 
 	// init factory
@@ -751,7 +752,7 @@ func TestHandleDropPartitionInTableSync(t *testing.T) {
 	testSql := "DROP PARTITION `zero_to_five`"
 
 	// init db_mock
-	db := NewMockDB(ctrl)
+	db := storage.NewMockDB(ctrl)
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 
 	// init factory
@@ -807,7 +808,7 @@ func TestHandleDropPartitionInDbSync(t *testing.T) {
 	testSql := "DROP PARTITION `zero_to_five`"
 
 	// init db_mock
-	db := NewMockDB(ctrl)
+	db := storage.NewMockDB(ctrl)
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 
 	// init factory
@@ -872,7 +873,7 @@ func TestHandleCreateTable(t *testing.T) {
 	testSql := "A CREATE TABLE SQL"
 
 	// init db_mock
-	db := NewMockDB(ctrl)
+	db := storage.NewMockDB(ctrl)
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 
 	// init factory
@@ -941,7 +942,7 @@ func TestHandleDropTable(t *testing.T) {
 	testSql := "A DROP TABLE SQL"
 
 	// init db_mock
-	db := NewMockDB(ctrl)
+	db := storage.NewMockDB(ctrl)
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 
 	// init factory
@@ -1012,7 +1013,7 @@ func TestHandleDummyInTableSync(t *testing.T) {
 	dummyCommitSeq := int64(114514)
 
 	// init db_mock
-	db := NewMockDB(ctrl)
+	db := storage.NewMockDB(ctrl)
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 	db.EXPECT().UpdateProgress("Test", gomock.Any()).DoAndReturn(
 		func(_ string, progressJson string) error {
@@ -1058,7 +1059,7 @@ func TestHandleDummyInDbSync(t *testing.T) {
 	dummyCommitSeq := int64(114514)
 
 	// init db_mock
-	db := NewMockDB(ctrl)
+	db := storage.NewMockDB(ctrl)
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 	db.EXPECT().UpdateProgress("Test", gomock.Any()).DoAndReturn(
 		func(_ string, progressJson string) error {
@@ -1108,7 +1109,7 @@ func TestHandleAlterJobInTableSync(t *testing.T) {
 	rawSql := "A blank SQL"
 
 	// init db_mock
-	db := NewMockDB(ctrl)
+	db := storage.NewMockDB(ctrl)
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 	db.EXPECT().UpdateProgress("Test", gomock.Any()).DoAndReturn(
 		func(_ string, progressJson string) error {
@@ -1182,7 +1183,7 @@ func TestHandleAlterJobInDbSync(t *testing.T) {
 	rawSql := "A blank SQL"
 
 	// init db_mock
-	db := NewMockDB(ctrl)
+	db := storage.NewMockDB(ctrl)
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 	db.EXPECT().UpdateProgress("Test", gomock.Any()).DoAndReturn(
 		func(_ string, progressJson string) error {
@@ -1252,7 +1253,7 @@ func TestHandleLightningSchemaChange(t *testing.T) {
 	testSql := fmt.Sprintf("`default_cluster:%s`.`%s` a test sql", tblSrcSpec.Database, tblSrcSpec.Table)
 
 	// init db_mock
-	db := NewMockDB(ctrl)
+	db := storage.NewMockDB(ctrl)
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 
 	// init factory
