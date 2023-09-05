@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -14,12 +15,20 @@ import (
 	"github.com/selectdb/ccr_syncer/utils"
 )
 
+type Syncer struct {
+	Host string
+	Port int
+}
+
 var (
 	dbPath string
+	syncer Syncer
 )
 
 func init() {
 	flag.StringVar(&dbPath, "db_dir", "ccr.db", "sqlite3 db file")
+	flag.StringVar(&syncer.Host, "host", "127.0.0.1", "syncer host")
+	flag.IntVar(&syncer.Port, "port", 9190, "syncer port")
 	flag.Parse()
 
 	utils.InitLog()
@@ -38,11 +47,13 @@ func main() {
 	// Step 2: init factory
 	factory := ccr.NewFactory(rpc.NewRpcFactory(), ccr.NewMetaFactory(), base.NewISpecFactory())
 
-	// Step 2: create job manager && http service
-	jobManager := ccr.NewJobManager(db, factory)
-	httpService := service.NewHttpServer(9190, db, jobManager)
+	// Step 3: create job manager && http service && checker
+	hostInfo := fmt.Sprintf("%s:%d", syncer.Host, syncer.Port)
+	jobManager := ccr.NewJobManager(db, factory, hostInfo)
+	httpService := service.NewHttpServer(syncer.Host, syncer.Port, db, jobManager)
+	checker := ccr.NewChecker(hostInfo, db, jobManager)
 
-	// Step 3: http service start
+	// Step 4: http service start
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -54,16 +65,20 @@ func main() {
 	}()
 	time.Sleep(1 * time.Second) // only for check http service start, if not, will log.Fatal
 
-	// Step 4: job manager recover
-	if err := jobManager.Recover(); err != nil {
-		log.Fatalf("recover job manager error: %+v", err)
-	}
+	// Step 5: start job manager
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		jobManager.Start()
 	}()
 
-	// Step 5: wait for all task done
+	// Step 6: start checker
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		checker.Start()
+	}()
+
+	// Step 6: wait for all task done
 	wg.Wait()
 }

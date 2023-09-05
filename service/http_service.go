@@ -16,15 +16,17 @@ import (
 type HttpService struct {
 	port int
 	mux  *http.ServeMux
+	hostInfo string
 
 	db         storage.DB
 	jobManager *ccr.JobManager
 }
 
-func NewHttpServer(port int, db storage.DB, jobManager *ccr.JobManager) *HttpService {
+func NewHttpServer(host string, port int, db storage.DB, jobManager *ccr.JobManager) *HttpService {
 	return &HttpService{
 		port: port,
 		mux:  http.NewServeMux(),
+		hostInfo: fmt.Sprintf("%s:%d", host, port),
 
 		db:         db,
 		jobManager: jobManager,
@@ -60,6 +62,20 @@ func (s *HttpService) createCcr(request *CreateCcrRequest) error {
 	}
 
 	return nil
+}
+
+func (s *HttpService) isRedirected(jobName string, w http.ResponseWriter) (bool, error) {
+	belong, err := s.db.GetJobBelong(jobName)
+	if err != nil {
+		return false, err
+	}
+
+	if belong != s.hostInfo {
+		w.Write([]byte(fmt.Sprintf("%s is located in syncer %s, please redirect to %s", jobName, belong, belong)))
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // HttpServer serving /create_ccr by json http rpc
@@ -108,6 +124,12 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if isRedirected, err := s.isRedirected(request.Name, w); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	} else if isRedirected {
+		return
+	}
+
 	lag, err := s.jobManager.GetLag(request.Name)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -129,6 +151,12 @@ func (s *HttpService) pauseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if request.Name == "" {
 		http.Error(w, "name is empty", http.StatusBadRequest)
+		return
+	}
+
+	if isRedirected, err := s.isRedirected(request.Name, w); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	} else if isRedirected {
 		return
 	}
 
@@ -156,6 +184,12 @@ func (s *HttpService) resumeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if isRedirected, err := s.isRedirected(request.Name, w); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	} else if isRedirected {
+		return
+	}
+
 	err = s.jobManager.Resume(request.Name)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -179,6 +213,12 @@ func (s *HttpService) deleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if isRedirected, err := s.isRedirected(request.Name, w); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	} else if isRedirected {
+		return
+	}
+
 	err = s.jobManager.RemoveJob(request.Name)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -199,6 +239,12 @@ func (s *HttpService) statusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if request.Name == "" {
 		http.Error(w, "name is empty", http.StatusBadRequest)
+		return
+	}
+
+	if isRedirected, err := s.isRedirected(request.Name, w); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	} else if isRedirected {
 		return
 	}
 

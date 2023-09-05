@@ -34,7 +34,7 @@ Syncer从源集群批量获取库/表的binlog，并根据binlog中的信息在�
     # 停止syncer
     bash bin/stop_syncer.sh
     ```
-    更多选项相见[启动配置](doc/start_syncer.md)
+    更多启动选项相见[启动配置](doc/start_syncer.md)，停止Syncer请见[stop说明](doc/stop_syncer.md)
 4. 打开源集群中被同步库/表的binlog
     ```sql
     -- enable database binlog

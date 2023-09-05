@@ -19,15 +19,17 @@ type JobManager struct {
 	jobs    map[string]*Job
 	lock    sync.RWMutex
 	factory *Factory
+	hostInfo string
 	stop    chan struct{}
 	wg      sync.WaitGroup
 }
 
-func NewJobManager(db storage.DB, factory *Factory) *JobManager {
+func NewJobManager(db storage.DB, factory *Factory, hostInfo string) *JobManager {
 	return &JobManager{
 		db:      db,
 		jobs:    make(map[string]*Job),
 		factory: factory,
+		hostInfo: hostInfo,
 		stop:    make(chan struct{}),
 	}
 }
@@ -58,7 +60,7 @@ func (jm *JobManager) AddJob(job *Job) error {
 	if err != nil {
 		return errors.Wrap(err, "marshal job error")
 	}
-	if err := jm.db.AddJob(job.Name, string(data)); err != nil {
+	if err := jm.db.AddJob(job.Name, string(data), jm.hostInfo); err != nil {
 		return err
 	}
 
@@ -69,25 +71,25 @@ func (jm *JobManager) AddJob(job *Job) error {
 	return nil
 }
 
-func (jm *JobManager) Recover() error {
+func (jm *JobManager) Recover(jobNames []string) error {
 	log.Info("job manager recover")
 
 	jm.lock.Lock()
 	defer jm.lock.Unlock()
 
-	jobMap, err := jm.db.GetAllJobs()
-	if err != nil {
-		return err
-	}
-
 	jobs := make([]*Job, 0)
-	for jobName, jobData := range jobMap {
+	for _, jobName := range jobNames {
+		if _, ok := jm.jobs[jobName]; ok {
+			continue
+		}
 		log.Infof("recover job: %s", jobName)
 
-		if job, err := NewJobFromJson(jobData, jm.db, jm.factory); err == nil {
-			jobs = append(jobs, job)
-		} else {
+		if jobInfo, err := jm.db.GetJobInfo(jobName); err != nil {
 			return err
+		} else if job, err := NewJobFromJson(jobInfo, jm.db, jm.factory); err != nil {
+			return err
+		} else {
+			jobs = append(jobs, job)
 		}
 	}
 
@@ -110,7 +112,7 @@ func (jm *JobManager) RemoveJob(name string) error {
 		// stop job
 		job.Stop()
 		delete(jm.jobs, name)
-		return nil
+		return jm.db.RemoveJob(name)
 	} else {
 		return errors.Errorf("job not exist: %s", name)
 	}
