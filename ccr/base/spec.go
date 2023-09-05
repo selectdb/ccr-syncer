@@ -598,3 +598,13 @@ func (s *Spec) Notify(event specEvent) {
 		o.Update(event)
 	}
 }
+
+func (s *Spec) Update(event specEvent) {
+	switch event {
+	case feNotMasterEvent:
+		log.Infof("frontend %s:%s is not master, try next", s.Host, s.Port)
+		// TODO(Drogon): impl switch fe
+	default:
+		break
+	}
+}
