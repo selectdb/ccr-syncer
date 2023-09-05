@@ -105,7 +105,7 @@ type Frontend struct {
 type Spec struct {
 	// embed Frontend as current master frontend
 	Frontend
-	frontends []Frontend `json:"frontends"`
+	Frontends []Frontend `json:"frontends"`
 
 	User     string `json:"user"`
 	Password string `json:"password"`
