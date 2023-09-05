@@ -149,23 +149,27 @@ func genExtraInfo(src *base.Spec, token string) *base.ExtraInfo {
 
 func main() {
 	src := &base.Spec{
-		Host:       "localhost",
-		Port:       "9030",
-		ThriftPort: "9020",
-		User:       "root",
-		Password:   "",
-		Database:   "ccr",
-		Table:      "src_1",
+		Frontend: base.Frontend{
+			Host:       "localhost",
+			Port:       "9030",
+			ThriftPort: "9020",
+		},
+		User:     "root",
+		Password: "",
+		Database: "ccr",
+		Table:    "src_1",
 	}
 
 	dest := &base.Spec{
-		Host:       "localhost",
-		Port:       "29030",
-		ThriftPort: "29020",
-		User:       "root",
-		Password:   "",
-		Database:   "ccr",
-		Table:      "dest_1",
+		Frontend: base.Frontend{
+			Host:       "localhost",
+			Port:       "29030",
+			ThriftPort: "29020",
+		},
+		User:     "root",
+		Password: "",
+		Database: "ccr",
+		Table:    "dest_1",
 	}
 
 	test_snapshot_op(src, dest)

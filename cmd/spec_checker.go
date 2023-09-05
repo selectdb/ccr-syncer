@@ -8,13 +8,15 @@ import (
 
 func checkDBEnableBinlog(db string) {
 	src := &base.Spec{
-		Host:       "localhost",
-		Port:       "9030",
-		ThriftPort: "9020",
-		User:       "root",
-		Password:   "",
-		Database:   db,
-		Table:      "enable_binlog",
+		Frontend: base.Frontend{
+			Host:       "localhost",
+			Port:       "9030",
+			ThriftPort: "9020",
+		},
+		User:     "root",
+		Password: "",
+		Database: db,
+		Table:    "enable_binlog",
 	}
 
 	if dbEnableBinlog, err := src.IsDatabaseEnableBinlog(); err != nil {
@@ -26,13 +28,15 @@ func checkDBEnableBinlog(db string) {
 
 func checkTableEnableBinlog(table string) {
 	src := &base.Spec{
-		Host:       "localhost",
-		Port:       "9030",
-		ThriftPort: "9020",
-		User:       "root",
-		Password:   "",
-		Database:   "ccr",
-		Table:      table,
+		Frontend: base.Frontend{
+			Host:       "localhost",
+			Port:       "9030",
+			ThriftPort: "9020",
+		},
+		User:     "root",
+		Password: "",
+		Database: "ccr",
+		Table:    table,
 	}
 
 	if dbEnableBinlog, err := src.IsTableEnableBinlog(); err != nil {
@@ -54,13 +58,15 @@ func testTableEnableBinlog() {
 
 func testGetAllTables() {
 	src := &base.Spec{
-		Host:       "localhost",
-		Port:       "9030",
-		ThriftPort: "9020",
-		User:       "root",
-		Password:   "",
-		Database:   "ccr",
-		Table:      "",
+		Frontend: base.Frontend{
+			Host:       "localhost",
+			Port:       "9030",
+			ThriftPort: "9020",
+		},
+		User:     "root",
+		Password: "",
+		Database: "ccr",
+		Table:    "",
 	}
 
 	tables, err := src.GetAllTables()

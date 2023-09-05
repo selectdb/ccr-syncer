@@ -93,13 +93,15 @@ func test_get_binlog(spec *base.Spec) {
 
 func main() {
 	src := &base.Spec{
-		Host:       "localhost",
-		Port:       "9030",
-		ThriftPort: "9020",
-		User:       "root",
-		Password:   "",
-		Database:   db,
-		Table:      table,
+		Frontend: base.Frontend{
+			Host:       "localhost",
+			Port:       "9030",
+			ThriftPort: "9020",
+		},
+		User:     "root",
+		Password: "",
+		Database: db,
+		Table:    table,
 	}
 
 	test_get_binlog(src)

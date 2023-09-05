@@ -102,13 +102,15 @@ func test_init_meta(m ccr.IMeta, spec *base.Spec) {
 
 func main() {
 	src := &base.Spec{
-		Host:       host,
-		Port:       port,
-		ThriftPort: thriftPort,
-		User:       user,
-		Password:   password,
-		Database:   dbName,
-		Table:      tableName,
+		Frontend: base.Frontend{
+			Host:       host,
+			Port:       port,
+			ThriftPort: thriftPort,
+		},
+		User:     user,
+		Password: password,
+		Database: dbName,
+		Table:    tableName,
 	}
 
 	metaFactory := ccr.NewMetaFactory()

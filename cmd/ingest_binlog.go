@@ -180,23 +180,27 @@ func main() {
 	init_log()
 
 	src := &base.Spec{
-		Host:       "localhost",
-		Port:       "9030",
-		ThriftPort: "9020",
-		User:       "root",
-		Password:   "",
-		Database:   "ccr",
-		Table:      "src_1",
+		Frontend: base.Frontend{
+			Host:       "localhost",
+			Port:       "9030",
+			ThriftPort: "9020",
+		},
+		User:     "root",
+		Password: "",
+		Database: "ccr",
+		Table:    "src_1",
 	}
 
 	dest := &base.Spec{
-		Host:       "localhost",
-		Port:       "9030",
-		ThriftPort: "9020",
-		User:       "root",
-		Password:   "",
-		Database:   "ccr",
-		Table:      "dest_1",
+		Frontend: base.Frontend{
+			Host:       "localhost",
+			Port:       "9030",
+			ThriftPort: "9020",
+		},
+		User:     "root",
+		Password: "",
+		Database: "ccr",
+		Table:    "dest_1",
 	}
 
 	test_ingrest_binlog(src, dest)
