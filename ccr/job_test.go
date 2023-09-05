@@ -32,46 +32,54 @@ var (
 
 func init() {
 	dbSrcSpec = base.Spec{
-		Host:       "localhost",
-		Port:       "9030",
-		ThriftPort: "9020",
-		User:       "root",
-		Password:   "",
-		Database:   "src_db_case",
-		DbId:       dbBaseId,
-		Table:      "",
+		Frontend: base.Frontend{
+			Host:       "localhost",
+			Port:       "9030",
+			ThriftPort: "9020",
+		},
+		User:     "root",
+		Password: "",
+		Database: "src_db_case",
+		DbId:     dbBaseId,
+		Table:    "",
 	}
 	dbDestSpec = base.Spec{
-		Host:       "localhost",
-		Port:       "9030",
-		ThriftPort: "9020",
-		User:       "root",
-		Password:   "",
-		Database:   "dest_db_case",
-		DbId:       dbBaseId,
-		Table:      "",
+		Frontend: base.Frontend{
+			Host:       "localhost",
+			Port:       "9030",
+			ThriftPort: "9020",
+		},
+		User:     "root",
+		Password: "",
+		Database: "dest_db_case",
+		DbId:     dbBaseId,
+		Table:    "",
 	}
 	tblSrcSpec = base.Spec{
-		Host:       "localhost",
-		Port:       "9030",
-		ThriftPort: "9020",
-		User:       "root",
-		Password:   "",
-		Database:   "src_tbl_case",
-		DbId:       dbBaseId,
-		Table:      fmt.Sprint(tableBaseId),
-		TableId:    tableBaseId,
+		Frontend: base.Frontend{
+			Host:       "localhost",
+			Port:       "9030",
+			ThriftPort: "9020",
+		},
+		User:     "root",
+		Password: "",
+		Database: "src_tbl_case",
+		DbId:     dbBaseId,
+		Table:    fmt.Sprint(tableBaseId),
+		TableId:  tableBaseId,
 	}
 	tblDestSpec = base.Spec{
-		Host:       "localhost",
-		Port:       "9030",
-		ThriftPort: "9020",
-		User:       "root",
-		Password:   "",
-		Database:   "dest_tbl_case",
-		DbId:       dbBaseId,
-		Table:      fmt.Sprint(tableBaseId),
-		TableId:    tableBaseId,
+		Frontend: base.Frontend{
+			Host:       "localhost",
+			Port:       "9030",
+			ThriftPort: "9020",
+		},
+		User:     "root",
+		Password: "",
+		Database: "dest_tbl_case",
+		DbId:     dbBaseId,
+		Table:    fmt.Sprint(tableBaseId),
+		TableId:  tableBaseId,
 	}
 }
 
