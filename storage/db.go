@@ -1,6 +1,9 @@
 package storage
 
-import "errors"
+import (
+	"context"
+	"errors"
+)
 
 var (
 	ErrJobExists    = errors.New("job exists")
@@ -9,7 +12,16 @@ var (
 
 const (
 	InvalidCheckTimestamp int64 = -1
+	remoteDBName string = "ccr"
 )
+
+type DBContext struct {
+	context.Context
+	host string
+	port string
+	userName string
+	password string
+}
 
 type DB interface {
 	// Add ccr job

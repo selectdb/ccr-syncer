@@ -440,7 +440,7 @@ func (m *Meta) UpdateBackends() error {
 	for rows.Next() {
 		// total 23, backend 6
 		var backend base.Backend
-		discardCols := make([]sql.RawBytes, 17)
+		discardCols := make([]sql.RawBytes, 18)
 		scanArgs := []interface{}{&backend.Id, &backend.Host, &backend.HeartbeatPort, &backend.BePort, &backend.HttpPort, &backend.BrpcPort}
 		for i := range discardCols {
 			scanArgs = append(scanArgs, &discardCols[i])
@@ -979,7 +979,7 @@ func (m *Meta) checkBEsBinlogFeature() error {
 				backend.Host, backend.HttpPort, configs)
 		}
 
-		if configs[0][2] != "1" {
+		if configs[0][2] != "true" {
 			disabledBinlogBEs = append(disabledBinlogBEs, fmt.Sprintf("%v:%v", backend.Host, backend.HttpPort))
 		}
 	}
