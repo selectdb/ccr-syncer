@@ -303,8 +303,12 @@ func (j *Job) fullSync() error {
 		if err != nil {
 			return err
 		}
-		log.Debugf("job: %s", string(snapshotResp.GetJobInfo()))
 
+		if snapshotResp.Status.GetStatusCode() != tstatus.TStatusCode_OK {
+			log.Errorf("get snapshot failed, status: %v", snapshotResp.Status)
+		}
+
+		log.Debugf("job: %s", string(snapshotResp.GetJobInfo()))
 		if !snapshotResp.IsSetJobInfo() {
 			return errors.New("jobInfo is not set")
 		}
@@ -840,7 +844,7 @@ func (j *Job) handleLightningSchemaChange(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	log.Infof("[deadlinefen] lightningSchemaChange %v", lightningSchemaChange)
+	log.Debugf("lightningSchemaChange %v", lightningSchemaChange)
 
 	rawSql := lightningSchemaChange.RawSql
 	//   "rawSql": "ALTER TABLE `default_cluster:ccr`.`test_ddl` ADD COLUMN `nid1` int(11) NULL COMMENT \"\""
@@ -855,7 +859,7 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		return errors.Errorf("invalid binlog: %v", binlog)
 	}
 
-	log.Infof("[deadlinefen] binlog data: %s", binlog.GetData())
+	log.Debugf("binlog data: %s", binlog.GetData())
 
 	// Step 2: update job progress
 	j.progress.StartHandle(binlog.GetCommitSeq())
