@@ -296,6 +296,13 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 	// 废弃 preparePartition， 上面index的那部分是这里的实现
 	// 还是要求一下和下游对齐的index length，这个是不可以recover的
 	// 思考那些是recover用的，主要就是tablet那块的
+
+	// TODO(Drogon): add use Backup/Restore to handle this
+	if len(indexIds) == 0 {
+		j.setError(errors.Errorf("index ids is empty"))
+		return
+	}
+
 	job := j.ccrJob
 
 	srcPartitionId := partitionRecord.Id
@@ -351,11 +358,17 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 	log.Debugf("tableRecord: %v", tableRecord)
 
+	if len(tableRecord.PartitionRecords) == 0 {
+		j.setError(errors.Errorf("partition records is empty"))
+		return
+	}
+
 	job := j.ccrJob
 	// TODO: check it before ingestBinlog
 	var srcTableId int64
 	var destTableId int64
 
+	// TODO: maybe use defer to setError
 	var err error
 	switch job.SyncType {
 	case TableSync:
