@@ -315,20 +315,22 @@ func (p *TDebugAction) Value() (driver.Value, error) {
 type TFileFormatType int64
 
 const (
-	TFileFormatType_FORMAT_UNKNOWN      TFileFormatType = -1
-	TFileFormatType_FORMAT_CSV_PLAIN    TFileFormatType = 0
-	TFileFormatType_FORMAT_CSV_GZ       TFileFormatType = 1
-	TFileFormatType_FORMAT_CSV_LZO      TFileFormatType = 2
-	TFileFormatType_FORMAT_CSV_BZ2      TFileFormatType = 3
-	TFileFormatType_FORMAT_CSV_LZ4FRAME TFileFormatType = 4
-	TFileFormatType_FORMAT_CSV_LZOP     TFileFormatType = 5
-	TFileFormatType_FORMAT_PARQUET      TFileFormatType = 6
-	TFileFormatType_FORMAT_CSV_DEFLATE  TFileFormatType = 7
-	TFileFormatType_FORMAT_ORC          TFileFormatType = 8
-	TFileFormatType_FORMAT_JSON         TFileFormatType = 9
-	TFileFormatType_FORMAT_PROTO        TFileFormatType = 10
-	TFileFormatType_FORMAT_JNI          TFileFormatType = 11
-	TFileFormatType_FORMAT_AVRO         TFileFormatType = 12
+	TFileFormatType_FORMAT_UNKNOWN         TFileFormatType = -1
+	TFileFormatType_FORMAT_CSV_PLAIN       TFileFormatType = 0
+	TFileFormatType_FORMAT_CSV_GZ          TFileFormatType = 1
+	TFileFormatType_FORMAT_CSV_LZO         TFileFormatType = 2
+	TFileFormatType_FORMAT_CSV_BZ2         TFileFormatType = 3
+	TFileFormatType_FORMAT_CSV_LZ4FRAME    TFileFormatType = 4
+	TFileFormatType_FORMAT_CSV_LZOP        TFileFormatType = 5
+	TFileFormatType_FORMAT_PARQUET         TFileFormatType = 6
+	TFileFormatType_FORMAT_CSV_DEFLATE     TFileFormatType = 7
+	TFileFormatType_FORMAT_ORC             TFileFormatType = 8
+	TFileFormatType_FORMAT_JSON            TFileFormatType = 9
+	TFileFormatType_FORMAT_PROTO           TFileFormatType = 10
+	TFileFormatType_FORMAT_JNI             TFileFormatType = 11
+	TFileFormatType_FORMAT_AVRO            TFileFormatType = 12
+	TFileFormatType_FORMAT_CSV_LZ4BLOCK    TFileFormatType = 13
+	TFileFormatType_FORMAT_CSV_SNAPPYBLOCK TFileFormatType = 14
 )
 
 func (p TFileFormatType) String() string {
@@ -361,6 +363,10 @@ func (p TFileFormatType) String() string {
 		return "FORMAT_JNI"
 	case TFileFormatType_FORMAT_AVRO:
 		return "FORMAT_AVRO"
+	case TFileFormatType_FORMAT_CSV_LZ4BLOCK:
+		return "FORMAT_CSV_LZ4BLOCK"
+	case TFileFormatType_FORMAT_CSV_SNAPPYBLOCK:
+		return "FORMAT_CSV_SNAPPYBLOCK"
 	}
 	return "<UNSET>"
 }
@@ -395,6 +401,10 @@ func TFileFormatTypeFromString(s string) (TFileFormatType, error) {
 		return TFileFormatType_FORMAT_JNI, nil
 	case "FORMAT_AVRO":
 		return TFileFormatType_FORMAT_AVRO, nil
+	case "FORMAT_CSV_LZ4BLOCK":
+		return TFileFormatType_FORMAT_CSV_LZ4BLOCK, nil
+	case "FORMAT_CSV_SNAPPYBLOCK":
+		return TFileFormatType_FORMAT_CSV_SNAPPYBLOCK, nil
 	}
 	return TFileFormatType(0), fmt.Errorf("not a valid TFileFormatType string")
 }
@@ -417,14 +427,16 @@ func (p *TFileFormatType) Value() (driver.Value, error) {
 type TFileCompressType int64
 
 const (
-	TFileCompressType_UNKNOWN  TFileCompressType = 0
-	TFileCompressType_PLAIN    TFileCompressType = 1
-	TFileCompressType_GZ       TFileCompressType = 2
-	TFileCompressType_LZO      TFileCompressType = 3
-	TFileCompressType_BZ2      TFileCompressType = 4
-	TFileCompressType_LZ4FRAME TFileCompressType = 5
-	TFileCompressType_DEFLATE  TFileCompressType = 6
-	TFileCompressType_LZOP     TFileCompressType = 7
+	TFileCompressType_UNKNOWN     TFileCompressType = 0
+	TFileCompressType_PLAIN       TFileCompressType = 1
+	TFileCompressType_GZ          TFileCompressType = 2
+	TFileCompressType_LZO         TFileCompressType = 3
+	TFileCompressType_BZ2         TFileCompressType = 4
+	TFileCompressType_LZ4FRAME    TFileCompressType = 5
+	TFileCompressType_DEFLATE     TFileCompressType = 6
+	TFileCompressType_LZOP        TFileCompressType = 7
+	TFileCompressType_LZ4BLOCK    TFileCompressType = 8
+	TFileCompressType_SNAPPYBLOCK TFileCompressType = 9
 )
 
 func (p TFileCompressType) String() string {
@@ -445,6 +457,10 @@ func (p TFileCompressType) String() string {
 		return "DEFLATE"
 	case TFileCompressType_LZOP:
 		return "LZOP"
+	case TFileCompressType_LZ4BLOCK:
+		return "LZ4BLOCK"
+	case TFileCompressType_SNAPPYBLOCK:
+		return "SNAPPYBLOCK"
 	}
 	return "<UNSET>"
 }
@@ -467,6 +483,10 @@ func TFileCompressTypeFromString(s string) (TFileCompressType, error) {
 		return TFileCompressType_DEFLATE, nil
 	case "LZOP":
 		return TFileCompressType_LZOP, nil
+	case "LZ4BLOCK":
+		return TFileCompressType_LZ4BLOCK, nil
+	case "SNAPPYBLOCK":
+		return TFileCompressType_SNAPPYBLOCK, nil
 	}
 	return TFileCompressType(0), fmt.Errorf("not a valid TFileCompressType string")
 }
@@ -6597,9 +6617,12 @@ func (p *TEsScanRange) Field4DeepEqual(src int32) bool {
 }
 
 type TFileTextScanRangeParams struct {
-	ColumnSeparator *string `thrift:"column_separator,1,optional" frugal:"1,optional,string" json:"column_separator,omitempty"`
-	LineDelimiter   *string `thrift:"line_delimiter,2,optional" frugal:"2,optional,string" json:"line_delimiter,omitempty"`
-	ArrayDelimiter  *string `thrift:"array_delimiter,3,optional" frugal:"3,optional,string" json:"array_delimiter,omitempty"`
+	ColumnSeparator     *string `thrift:"column_separator,1,optional" frugal:"1,optional,string" json:"column_separator,omitempty"`
+	LineDelimiter       *string `thrift:"line_delimiter,2,optional" frugal:"2,optional,string" json:"line_delimiter,omitempty"`
+	CollectionDelimiter *string `thrift:"collection_delimiter,3,optional" frugal:"3,optional,string" json:"collection_delimiter,omitempty"`
+	MapkvDelimiter      *string `thrift:"mapkv_delimiter,4,optional" frugal:"4,optional,string" json:"mapkv_delimiter,omitempty"`
+	Enclose             *int8   `thrift:"enclose,5,optional" frugal:"5,optional,i8" json:"enclose,omitempty"`
+	Escape              *int8   `thrift:"escape,6,optional" frugal:"6,optional,i8" json:"escape,omitempty"`
 }
 
 func NewTFileTextScanRangeParams() *TFileTextScanRangeParams {
@@ -6628,13 +6651,40 @@ func (p *TFileTextScanRangeParams) GetLineDelimiter() (v string) {
 	return *p.LineDelimiter
 }
 
-var TFileTextScanRangeParams_ArrayDelimiter_DEFAULT string
+var TFileTextScanRangeParams_CollectionDelimiter_DEFAULT string
 
-func (p *TFileTextScanRangeParams) GetArrayDelimiter() (v string) {
-	if !p.IsSetArrayDelimiter() {
-		return TFileTextScanRangeParams_ArrayDelimiter_DEFAULT
+func (p *TFileTextScanRangeParams) GetCollectionDelimiter() (v string) {
+	if !p.IsSetCollectionDelimiter() {
+		return TFileTextScanRangeParams_CollectionDelimiter_DEFAULT
 	}
-	return *p.ArrayDelimiter
+	return *p.CollectionDelimiter
+}
+
+var TFileTextScanRangeParams_MapkvDelimiter_DEFAULT string
+
+func (p *TFileTextScanRangeParams) GetMapkvDelimiter() (v string) {
+	if !p.IsSetMapkvDelimiter() {
+		return TFileTextScanRangeParams_MapkvDelimiter_DEFAULT
+	}
+	return *p.MapkvDelimiter
+}
+
+var TFileTextScanRangeParams_Enclose_DEFAULT int8
+
+func (p *TFileTextScanRangeParams) GetEnclose() (v int8) {
+	if !p.IsSetEnclose() {
+		return TFileTextScanRangeParams_Enclose_DEFAULT
+	}
+	return *p.Enclose
+}
+
+var TFileTextScanRangeParams_Escape_DEFAULT int8
+
+func (p *TFileTextScanRangeParams) GetEscape() (v int8) {
+	if !p.IsSetEscape() {
+		return TFileTextScanRangeParams_Escape_DEFAULT
+	}
+	return *p.Escape
 }
 func (p *TFileTextScanRangeParams) SetColumnSeparator(val *string) {
 	p.ColumnSeparator = val
@@ -6642,14 +6692,26 @@ func (p *TFileTextScanRangeParams) SetColumnSeparator(val *string) {
 func (p *TFileTextScanRangeParams) SetLineDelimiter(val *string) {
 	p.LineDelimiter = val
 }
-func (p *TFileTextScanRangeParams) SetArrayDelimiter(val *string) {
-	p.ArrayDelimiter = val
+func (p *TFileTextScanRangeParams) SetCollectionDelimiter(val *string) {
+	p.CollectionDelimiter = val
+}
+func (p *TFileTextScanRangeParams) SetMapkvDelimiter(val *string) {
+	p.MapkvDelimiter = val
+}
+func (p *TFileTextScanRangeParams) SetEnclose(val *int8) {
+	p.Enclose = val
+}
+func (p *TFileTextScanRangeParams) SetEscape(val *int8) {
+	p.Escape = val
 }
 
 var fieldIDToName_TFileTextScanRangeParams = map[int16]string{
 	1: "column_separator",
 	2: "line_delimiter",
-	3: "array_delimiter",
+	3: "collection_delimiter",
+	4: "mapkv_delimiter",
+	5: "enclose",
+	6: "escape",
 }
 
 func (p *TFileTextScanRangeParams) IsSetColumnSeparator() bool {
@@ -6660,8 +6722,20 @@ func (p *TFileTextScanRangeParams) IsSetLineDelimiter() bool {
 	return p.LineDelimiter != nil
 }
 
-func (p *TFileTextScanRangeParams) IsSetArrayDelimiter() bool {
-	return p.ArrayDelimiter != nil
+func (p *TFileTextScanRangeParams) IsSetCollectionDelimiter() bool {
+	return p.CollectionDelimiter != nil
+}
+
+func (p *TFileTextScanRangeParams) IsSetMapkvDelimiter() bool {
+	return p.MapkvDelimiter != nil
+}
+
+func (p *TFileTextScanRangeParams) IsSetEnclose() bool {
+	return p.Enclose != nil
+}
+
+func (p *TFileTextScanRangeParams) IsSetEscape() bool {
+	return p.Escape != nil
 }
 
 func (p *TFileTextScanRangeParams) Read(iprot thrift.TProtocol) (err error) {
@@ -6706,6 +6780,36 @@ func (p *TFileTextScanRangeParams) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.BYTE {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.BYTE {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -6765,7 +6869,34 @@ func (p *TFileTextScanRangeParams) ReadField3(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
-		p.ArrayDelimiter = &v
+		p.CollectionDelimiter = &v
+	}
+	return nil
+}
+
+func (p *TFileTextScanRangeParams) ReadField4(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		p.MapkvDelimiter = &v
+	}
+	return nil
+}
+
+func (p *TFileTextScanRangeParams) ReadField5(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadByte(); err != nil {
+		return err
+	} else {
+		p.Enclose = &v
+	}
+	return nil
+}
+
+func (p *TFileTextScanRangeParams) ReadField6(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadByte(); err != nil {
+		return err
+	} else {
+		p.Escape = &v
 	}
 	return nil
 }
@@ -6786,6 +6917,18 @@ func (p *TFileTextScanRangeParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 
@@ -6846,11 +6989,11 @@ WriteFieldEndError:
 }
 
 func (p *TFileTextScanRangeParams) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetArrayDelimiter() {
-		if err = oprot.WriteFieldBegin("array_delimiter", thrift.STRING, 3); err != nil {
+	if p.IsSetCollectionDelimiter() {
+		if err = oprot.WriteFieldBegin("collection_delimiter", thrift.STRING, 3); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.ArrayDelimiter); err != nil {
+		if err := oprot.WriteString(*p.CollectionDelimiter); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -6862,6 +7005,63 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *TFileTextScanRangeParams) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMapkvDelimiter() {
+		if err = oprot.WriteFieldBegin("mapkv_delimiter", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.MapkvDelimiter); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *TFileTextScanRangeParams) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnclose() {
+		if err = oprot.WriteFieldBegin("enclose", thrift.BYTE, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteByte(*p.Enclose); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *TFileTextScanRangeParams) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEscape() {
+		if err = oprot.WriteFieldBegin("escape", thrift.BYTE, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteByte(*p.Escape); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 
 func (p *TFileTextScanRangeParams) String() string {
@@ -6883,7 +7083,16 @@ func (p *TFileTextScanRangeParams) DeepEqual(ano *TFileTextScanRangeParams) bool
 	if !p.Field2DeepEqual(ano.LineDelimiter) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.ArrayDelimiter) {
+	if !p.Field3DeepEqual(ano.CollectionDelimiter) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.MapkvDelimiter) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.Enclose) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.Escape) {
 		return false
 	}
 	return true
@@ -6915,12 +7124,48 @@ func (p *TFileTextScanRangeParams) Field2DeepEqual(src *string) bool {
 }
 func (p *TFileTextScanRangeParams) Field3DeepEqual(src *string) bool {
 
-	if p.ArrayDelimiter == src {
+	if p.CollectionDelimiter == src {
 		return true
-	} else if p.ArrayDelimiter == nil || src == nil {
+	} else if p.CollectionDelimiter == nil || src == nil {
 		return false
 	}
-	if strings.Compare(*p.ArrayDelimiter, *src) != 0 {
+	if strings.Compare(*p.CollectionDelimiter, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TFileTextScanRangeParams) Field4DeepEqual(src *string) bool {
+
+	if p.MapkvDelimiter == src {
+		return true
+	} else if p.MapkvDelimiter == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.MapkvDelimiter, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TFileTextScanRangeParams) Field5DeepEqual(src *int8) bool {
+
+	if p.Enclose == src {
+		return true
+	} else if p.Enclose == nil || src == nil {
+		return false
+	}
+	if *p.Enclose != *src {
+		return false
+	}
+	return true
+}
+func (p *TFileTextScanRangeParams) Field6DeepEqual(src *int8) bool {
+
+	if p.Escape == src {
+		return true
+	} else if p.Escape == nil || src == nil {
+		return false
+	}
+	if *p.Escape != *src {
 		return false
 	}
 	return true
@@ -13477,6 +13722,7 @@ type TFileRangeDesc struct {
 	ModificationTime    *int64                `thrift:"modification_time,9,optional" frugal:"9,optional,i64" json:"modification_time,omitempty"`
 	FileType            *types.TFileType      `thrift:"file_type,10,optional" frugal:"10,optional,TFileType" json:"file_type,omitempty"`
 	CompressType        *TFileCompressType    `thrift:"compress_type,11,optional" frugal:"11,optional,TFileCompressType" json:"compress_type,omitempty"`
+	FsName              *string               `thrift:"fs_name,12,optional" frugal:"12,optional,string" json:"fs_name,omitempty"`
 }
 
 func NewTFileRangeDesc() *TFileRangeDesc {
@@ -13591,6 +13837,15 @@ func (p *TFileRangeDesc) GetCompressType() (v TFileCompressType) {
 	}
 	return *p.CompressType
 }
+
+var TFileRangeDesc_FsName_DEFAULT string
+
+func (p *TFileRangeDesc) GetFsName() (v string) {
+	if !p.IsSetFsName() {
+		return TFileRangeDesc_FsName_DEFAULT
+	}
+	return *p.FsName
+}
 func (p *TFileRangeDesc) SetLoadId(val *types.TUniqueId) {
 	p.LoadId = val
 }
@@ -13624,6 +13879,9 @@ func (p *TFileRangeDesc) SetFileType(val *types.TFileType) {
 func (p *TFileRangeDesc) SetCompressType(val *TFileCompressType) {
 	p.CompressType = val
 }
+func (p *TFileRangeDesc) SetFsName(val *string) {
+	p.FsName = val
+}
 
 var fieldIDToName_TFileRangeDesc = map[int16]string{
 	1:  "load_id",
@@ -13637,6 +13895,7 @@ var fieldIDToName_TFileRangeDesc = map[int16]string{
 	9:  "modification_time",
 	10: "file_type",
 	11: "compress_type",
+	12: "fs_name",
 }
 
 func (p *TFileRangeDesc) IsSetLoadId() bool {
@@ -13681,6 +13940,10 @@ func (p *TFileRangeDesc) IsSetFileType() bool {
 
 func (p *TFileRangeDesc) IsSetCompressType() bool {
 	return p.CompressType != nil
+}
+
+func (p *TFileRangeDesc) IsSetFsName() bool {
+	return p.FsName != nil
 }
 
 func (p *TFileRangeDesc) Read(iprot thrift.TProtocol) (err error) {
@@ -13805,6 +14068,16 @@ func (p *TFileRangeDesc) Read(iprot thrift.TProtocol) (err error) {
 		case 11:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 12:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -13967,6 +14240,15 @@ func (p *TFileRangeDesc) ReadField11(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TFileRangeDesc) ReadField12(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		p.FsName = &v
+	}
+	return nil
+}
+
 func (p *TFileRangeDesc) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TFileRangeDesc"); err != nil {
@@ -14015,6 +14297,10 @@ func (p *TFileRangeDesc) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 
@@ -14261,6 +14547,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
 
+func (p *TFileRangeDesc) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFsName() {
+		if err = oprot.WriteFieldBegin("fs_name", thrift.STRING, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.FsName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
+
 func (p *TFileRangeDesc) String() string {
 	if p == nil {
 		return "<nil>"
@@ -14305,6 +14610,9 @@ func (p *TFileRangeDesc) DeepEqual(ano *TFileRangeDesc) bool {
 		return false
 	}
 	if !p.Field11DeepEqual(ano.CompressType) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.FsName) {
 		return false
 	}
 	return true
@@ -14425,6 +14733,18 @@ func (p *TFileRangeDesc) Field11DeepEqual(src *TFileCompressType) bool {
 		return false
 	}
 	if *p.CompressType != *src {
+		return false
+	}
+	return true
+}
+func (p *TFileRangeDesc) Field12DeepEqual(src *string) bool {
+
+	if p.FsName == src {
+		return true
+	} else if p.FsName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.FsName, *src) != 0 {
 		return false
 	}
 	return true
@@ -36080,6 +36400,7 @@ type TPlanNode struct {
 	NestedLoopJoinNode   *TNestedLoopJoinNode     `thrift:"nested_loop_join_node,46,optional" frugal:"46,optional,TNestedLoopJoinNode" json:"nested_loop_join_node,omitempty"`
 	TestExternalScanNode *TTestExternalScanNode   `thrift:"test_external_scan_node,47,optional" frugal:"47,optional,TTestExternalScanNode" json:"test_external_scan_node,omitempty"`
 	PushDownAggTypeOpt   *TPushAggOp              `thrift:"push_down_agg_type_opt,48,optional" frugal:"48,optional,TPushAggOp" json:"push_down_agg_type_opt,omitempty"`
+	PushDownCount        *int64                   `thrift:"push_down_count,49,optional" frugal:"49,optional,i64" json:"push_down_count,omitempty"`
 	Projections          []*exprs.TExpr           `thrift:"projections,101,optional" frugal:"101,optional,list<exprs.TExpr>" json:"projections,omitempty"`
 	OutputTupleId        *types.TTupleId          `thrift:"output_tuple_id,102,optional" frugal:"102,optional,i32" json:"output_tuple_id,omitempty"`
 	PartitionSortNode    *TPartitionSortNode      `thrift:"partition_sort_node,103,optional" frugal:"103,optional,TPartitionSortNode" json:"partition_sort_node,omitempty"`
@@ -36427,6 +36748,15 @@ func (p *TPlanNode) GetPushDownAggTypeOpt() (v TPushAggOp) {
 	return *p.PushDownAggTypeOpt
 }
 
+var TPlanNode_PushDownCount_DEFAULT int64
+
+func (p *TPlanNode) GetPushDownCount() (v int64) {
+	if !p.IsSetPushDownCount() {
+		return TPlanNode_PushDownCount_DEFAULT
+	}
+	return *p.PushDownCount
+}
+
 var TPlanNode_Projections_DEFAULT []*exprs.TExpr
 
 func (p *TPlanNode) GetProjections() (v []*exprs.TExpr) {
@@ -36576,6 +36906,9 @@ func (p *TPlanNode) SetTestExternalScanNode(val *TTestExternalScanNode) {
 func (p *TPlanNode) SetPushDownAggTypeOpt(val *TPushAggOp) {
 	p.PushDownAggTypeOpt = val
 }
+func (p *TPlanNode) SetPushDownCount(val *int64) {
+	p.PushDownCount = val
+}
 func (p *TPlanNode) SetProjections(val []*exprs.TExpr) {
 	p.Projections = val
 }
@@ -36628,6 +36961,7 @@ var fieldIDToName_TPlanNode = map[int16]string{
 	46:  "nested_loop_join_node",
 	47:  "test_external_scan_node",
 	48:  "push_down_agg_type_opt",
+	49:  "push_down_count",
 	101: "projections",
 	102: "output_tuple_id",
 	103: "partition_sort_node",
@@ -36767,6 +37101,10 @@ func (p *TPlanNode) IsSetTestExternalScanNode() bool {
 
 func (p *TPlanNode) IsSetPushDownAggTypeOpt() bool {
 	return p.PushDownAggTypeOpt != nil
+}
+
+func (p *TPlanNode) IsSetPushDownCount() bool {
+	return p.PushDownCount != nil
 }
 
 func (p *TPlanNode) IsSetProjections() bool {
@@ -37217,6 +37555,16 @@ func (p *TPlanNode) Read(iprot thrift.TProtocol) (err error) {
 		case 48:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField48(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 49:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField49(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -37721,6 +38069,15 @@ func (p *TPlanNode) ReadField48(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TPlanNode) ReadField49(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.PushDownCount = &v
+	}
+	return nil
+}
+
 func (p *TPlanNode) ReadField101(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
@@ -37926,6 +38283,10 @@ func (p *TPlanNode) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField48(oprot); err != nil {
 			fieldId = 48
+			goto WriteFieldError
+		}
+		if err = p.writeField49(oprot); err != nil {
+			fieldId = 49
 			goto WriteFieldError
 		}
 		if err = p.writeField101(oprot); err != nil {
@@ -38764,6 +39125,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 48 end error: ", p), err)
 }
 
+func (p *TPlanNode) writeField49(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPushDownCount() {
+		if err = oprot.WriteFieldBegin("push_down_count", thrift.I64, 49); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.PushDownCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 49 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 49 end error: ", p), err)
+}
+
 func (p *TPlanNode) writeField101(oprot thrift.TProtocol) (err error) {
 	if p.IsSetProjections() {
 		if err = oprot.WriteFieldBegin("projections", thrift.LIST, 101); err != nil {
@@ -38963,6 +39343,9 @@ func (p *TPlanNode) DeepEqual(ano *TPlanNode) bool {
 		return false
 	}
 	if !p.Field48DeepEqual(ano.PushDownAggTypeOpt) {
+		return false
+	}
+	if !p.Field49DeepEqual(ano.PushDownCount) {
 		return false
 	}
 	if !p.Field101DeepEqual(ano.Projections) {
@@ -39295,6 +39678,18 @@ func (p *TPlanNode) Field48DeepEqual(src *TPushAggOp) bool {
 		return false
 	}
 	if *p.PushDownAggTypeOpt != *src {
+		return false
+	}
+	return true
+}
+func (p *TPlanNode) Field49DeepEqual(src *int64) bool {
+
+	if p.PushDownCount == src {
+		return true
+	} else if p.PushDownCount == nil || src == nil {
+		return false
+	}
+	if *p.PushDownCount != *src {
 		return false
 	}
 	return true

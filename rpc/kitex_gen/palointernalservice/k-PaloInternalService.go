@@ -2074,6 +2074,90 @@ func (p *TQueryOptions) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 77:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField77(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 78:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField78(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 79:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField79(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 80:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField80(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 81:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField81(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 82:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField82(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -3037,6 +3121,90 @@ func (p *TQueryOptions) FastReadField76(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TQueryOptions) FastReadField77(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.TruncateCharOrVarcharColumns = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField78(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.EnableHashJoinEarlyStartProbe = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField79(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.EnablePipelineXEngine = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField80(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.EnableMemtableOnSinkNode = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField81(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.EnableDeleteSubPredicateV2 = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField82(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.FeProcessUuid = v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TQueryOptions) FastWrite(buf []byte) int {
 	return 0
@@ -3109,6 +3277,12 @@ func (p *TQueryOptions) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryW
 		offset += p.fastWriteField74(buf[offset:], binaryWriter)
 		offset += p.fastWriteField75(buf[offset:], binaryWriter)
 		offset += p.fastWriteField76(buf[offset:], binaryWriter)
+		offset += p.fastWriteField77(buf[offset:], binaryWriter)
+		offset += p.fastWriteField78(buf[offset:], binaryWriter)
+		offset += p.fastWriteField79(buf[offset:], binaryWriter)
+		offset += p.fastWriteField80(buf[offset:], binaryWriter)
+		offset += p.fastWriteField81(buf[offset:], binaryWriter)
+		offset += p.fastWriteField82(buf[offset:], binaryWriter)
 		offset += p.fastWriteField18(buf[offset:], binaryWriter)
 		offset += p.fastWriteField42(buf[offset:], binaryWriter)
 		offset += p.fastWriteField46(buf[offset:], binaryWriter)
@@ -3190,6 +3364,12 @@ func (p *TQueryOptions) BLength() int {
 		l += p.field74Length()
 		l += p.field75Length()
 		l += p.field76Length()
+		l += p.field77Length()
+		l += p.field78Length()
+		l += p.field79Length()
+		l += p.field80Length()
+		l += p.field81Length()
+		l += p.field82Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -3932,6 +4112,72 @@ func (p *TQueryOptions) fastWriteField76(buf []byte, binaryWriter bthrift.Binary
 	return offset
 }
 
+func (p *TQueryOptions) fastWriteField77(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTruncateCharOrVarcharColumns() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "truncate_char_or_varchar_columns", thrift.BOOL, 77)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.TruncateCharOrVarcharColumns)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField78(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetEnableHashJoinEarlyStartProbe() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_hash_join_early_start_probe", thrift.BOOL, 78)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableHashJoinEarlyStartProbe)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField79(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetEnablePipelineXEngine() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_pipeline_x_engine", thrift.BOOL, 79)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnablePipelineXEngine)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField80(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetEnableMemtableOnSinkNode() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_memtable_on_sink_node", thrift.BOOL, 80)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableMemtableOnSinkNode)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField81(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetEnableDeleteSubPredicateV2() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_delete_sub_predicate_v2", thrift.BOOL, 81)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableDeleteSubPredicateV2)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField82(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetFeProcessUuid() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "fe_process_uuid", thrift.I64, 82)
+		offset += bthrift.Binary.WriteI64(buf[offset:], p.FeProcessUuid)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TQueryOptions) field1Length() int {
 	l := 0
 	if p.IsSetAbortOnError() {
@@ -4662,6 +4908,72 @@ func (p *TQueryOptions) field76Length() int {
 	if p.IsSetEnableInvertedIndexQuery() {
 		l += bthrift.Binary.FieldBeginLength("enable_inverted_index_query", thrift.BOOL, 76)
 		l += bthrift.Binary.BoolLength(p.EnableInvertedIndexQuery)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field77Length() int {
+	l := 0
+	if p.IsSetTruncateCharOrVarcharColumns() {
+		l += bthrift.Binary.FieldBeginLength("truncate_char_or_varchar_columns", thrift.BOOL, 77)
+		l += bthrift.Binary.BoolLength(p.TruncateCharOrVarcharColumns)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field78Length() int {
+	l := 0
+	if p.IsSetEnableHashJoinEarlyStartProbe() {
+		l += bthrift.Binary.FieldBeginLength("enable_hash_join_early_start_probe", thrift.BOOL, 78)
+		l += bthrift.Binary.BoolLength(p.EnableHashJoinEarlyStartProbe)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field79Length() int {
+	l := 0
+	if p.IsSetEnablePipelineXEngine() {
+		l += bthrift.Binary.FieldBeginLength("enable_pipeline_x_engine", thrift.BOOL, 79)
+		l += bthrift.Binary.BoolLength(p.EnablePipelineXEngine)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field80Length() int {
+	l := 0
+	if p.IsSetEnableMemtableOnSinkNode() {
+		l += bthrift.Binary.FieldBeginLength("enable_memtable_on_sink_node", thrift.BOOL, 80)
+		l += bthrift.Binary.BoolLength(p.EnableMemtableOnSinkNode)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field81Length() int {
+	l := 0
+	if p.IsSetEnableDeleteSubPredicateV2() {
+		l += bthrift.Binary.FieldBeginLength("enable_delete_sub_predicate_v2", thrift.BOOL, 81)
+		l += bthrift.Binary.BoolLength(p.EnableDeleteSubPredicateV2)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field82Length() int {
+	l := 0
+	if p.IsSetFeProcessUuid() {
+		l += bthrift.Binary.FieldBeginLength("fe_process_uuid", thrift.I64, 82)
+		l += bthrift.Binary.I64Length(p.FeProcessUuid)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

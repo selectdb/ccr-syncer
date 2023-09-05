@@ -27,7 +27,7 @@ fmt:
 .PHONY: test
 ## test : Run test
 test:
-	$(V)cargo test --workspace
+	$(V)go test .
 
 .PHONY: help
 ## help : Print help message

@@ -1620,6 +1620,12 @@ type TQueryOptions struct {
 	EnableScanNodeRunSerial                bool            `thrift:"enable_scan_node_run_serial,74,optional" frugal:"74,optional,bool" json:"enable_scan_node_run_serial,omitempty"`
 	EnableInsertStrict                     bool            `thrift:"enable_insert_strict,75,optional" frugal:"75,optional,bool" json:"enable_insert_strict,omitempty"`
 	EnableInvertedIndexQuery               bool            `thrift:"enable_inverted_index_query,76,optional" frugal:"76,optional,bool" json:"enable_inverted_index_query,omitempty"`
+	TruncateCharOrVarcharColumns           bool            `thrift:"truncate_char_or_varchar_columns,77,optional" frugal:"77,optional,bool" json:"truncate_char_or_varchar_columns,omitempty"`
+	EnableHashJoinEarlyStartProbe          bool            `thrift:"enable_hash_join_early_start_probe,78,optional" frugal:"78,optional,bool" json:"enable_hash_join_early_start_probe,omitempty"`
+	EnablePipelineXEngine                  bool            `thrift:"enable_pipeline_x_engine,79,optional" frugal:"79,optional,bool" json:"enable_pipeline_x_engine,omitempty"`
+	EnableMemtableOnSinkNode               bool            `thrift:"enable_memtable_on_sink_node,80,optional" frugal:"80,optional,bool" json:"enable_memtable_on_sink_node,omitempty"`
+	EnableDeleteSubPredicateV2             bool            `thrift:"enable_delete_sub_predicate_v2,81,optional" frugal:"81,optional,bool" json:"enable_delete_sub_predicate_v2,omitempty"`
+	FeProcessUuid                          int64           `thrift:"fe_process_uuid,82,optional" frugal:"82,optional,i64" json:"fe_process_uuid,omitempty"`
 }
 
 func NewTQueryOptions() *TQueryOptions {
@@ -1682,6 +1688,12 @@ func NewTQueryOptions() *TQueryOptions {
 		EnableScanNodeRunSerial:                false,
 		EnableInsertStrict:                     false,
 		EnableInvertedIndexQuery:               true,
+		TruncateCharOrVarcharColumns:           false,
+		EnableHashJoinEarlyStartProbe:          false,
+		EnablePipelineXEngine:                  false,
+		EnableMemtableOnSinkNode:               false,
+		EnableDeleteSubPredicateV2:             false,
+		FeProcessUuid:                          0,
 	}
 }
 
@@ -1745,6 +1757,12 @@ func (p *TQueryOptions) InitDefault() {
 		EnableScanNodeRunSerial:                false,
 		EnableInsertStrict:                     false,
 		EnableInvertedIndexQuery:               true,
+		TruncateCharOrVarcharColumns:           false,
+		EnableHashJoinEarlyStartProbe:          false,
+		EnablePipelineXEngine:                  false,
+		EnableMemtableOnSinkNode:               false,
+		EnableDeleteSubPredicateV2:             false,
+		FeProcessUuid:                          0,
 	}
 }
 
@@ -2350,6 +2368,60 @@ func (p *TQueryOptions) GetEnableInvertedIndexQuery() (v bool) {
 	}
 	return p.EnableInvertedIndexQuery
 }
+
+var TQueryOptions_TruncateCharOrVarcharColumns_DEFAULT bool = false
+
+func (p *TQueryOptions) GetTruncateCharOrVarcharColumns() (v bool) {
+	if !p.IsSetTruncateCharOrVarcharColumns() {
+		return TQueryOptions_TruncateCharOrVarcharColumns_DEFAULT
+	}
+	return p.TruncateCharOrVarcharColumns
+}
+
+var TQueryOptions_EnableHashJoinEarlyStartProbe_DEFAULT bool = false
+
+func (p *TQueryOptions) GetEnableHashJoinEarlyStartProbe() (v bool) {
+	if !p.IsSetEnableHashJoinEarlyStartProbe() {
+		return TQueryOptions_EnableHashJoinEarlyStartProbe_DEFAULT
+	}
+	return p.EnableHashJoinEarlyStartProbe
+}
+
+var TQueryOptions_EnablePipelineXEngine_DEFAULT bool = false
+
+func (p *TQueryOptions) GetEnablePipelineXEngine() (v bool) {
+	if !p.IsSetEnablePipelineXEngine() {
+		return TQueryOptions_EnablePipelineXEngine_DEFAULT
+	}
+	return p.EnablePipelineXEngine
+}
+
+var TQueryOptions_EnableMemtableOnSinkNode_DEFAULT bool = false
+
+func (p *TQueryOptions) GetEnableMemtableOnSinkNode() (v bool) {
+	if !p.IsSetEnableMemtableOnSinkNode() {
+		return TQueryOptions_EnableMemtableOnSinkNode_DEFAULT
+	}
+	return p.EnableMemtableOnSinkNode
+}
+
+var TQueryOptions_EnableDeleteSubPredicateV2_DEFAULT bool = false
+
+func (p *TQueryOptions) GetEnableDeleteSubPredicateV2() (v bool) {
+	if !p.IsSetEnableDeleteSubPredicateV2() {
+		return TQueryOptions_EnableDeleteSubPredicateV2_DEFAULT
+	}
+	return p.EnableDeleteSubPredicateV2
+}
+
+var TQueryOptions_FeProcessUuid_DEFAULT int64 = 0
+
+func (p *TQueryOptions) GetFeProcessUuid() (v int64) {
+	if !p.IsSetFeProcessUuid() {
+		return TQueryOptions_FeProcessUuid_DEFAULT
+	}
+	return p.FeProcessUuid
+}
 func (p *TQueryOptions) SetAbortOnError(val bool) {
 	p.AbortOnError = val
 }
@@ -2551,6 +2623,24 @@ func (p *TQueryOptions) SetEnableInsertStrict(val bool) {
 func (p *TQueryOptions) SetEnableInvertedIndexQuery(val bool) {
 	p.EnableInvertedIndexQuery = val
 }
+func (p *TQueryOptions) SetTruncateCharOrVarcharColumns(val bool) {
+	p.TruncateCharOrVarcharColumns = val
+}
+func (p *TQueryOptions) SetEnableHashJoinEarlyStartProbe(val bool) {
+	p.EnableHashJoinEarlyStartProbe = val
+}
+func (p *TQueryOptions) SetEnablePipelineXEngine(val bool) {
+	p.EnablePipelineXEngine = val
+}
+func (p *TQueryOptions) SetEnableMemtableOnSinkNode(val bool) {
+	p.EnableMemtableOnSinkNode = val
+}
+func (p *TQueryOptions) SetEnableDeleteSubPredicateV2(val bool) {
+	p.EnableDeleteSubPredicateV2 = val
+}
+func (p *TQueryOptions) SetFeProcessUuid(val int64) {
+	p.FeProcessUuid = val
+}
 
 var fieldIDToName_TQueryOptions = map[int16]string{
 	1:  "abort_on_error",
@@ -2620,6 +2710,12 @@ var fieldIDToName_TQueryOptions = map[int16]string{
 	74: "enable_scan_node_run_serial",
 	75: "enable_insert_strict",
 	76: "enable_inverted_index_query",
+	77: "truncate_char_or_varchar_columns",
+	78: "enable_hash_join_early_start_probe",
+	79: "enable_pipeline_x_engine",
+	80: "enable_memtable_on_sink_node",
+	81: "enable_delete_sub_predicate_v2",
+	82: "fe_process_uuid",
 }
 
 func (p *TQueryOptions) IsSetAbortOnError() bool {
@@ -2888,6 +2984,30 @@ func (p *TQueryOptions) IsSetEnableInsertStrict() bool {
 
 func (p *TQueryOptions) IsSetEnableInvertedIndexQuery() bool {
 	return p.EnableInvertedIndexQuery != TQueryOptions_EnableInvertedIndexQuery_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetTruncateCharOrVarcharColumns() bool {
+	return p.TruncateCharOrVarcharColumns != TQueryOptions_TruncateCharOrVarcharColumns_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableHashJoinEarlyStartProbe() bool {
+	return p.EnableHashJoinEarlyStartProbe != TQueryOptions_EnableHashJoinEarlyStartProbe_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnablePipelineXEngine() bool {
+	return p.EnablePipelineXEngine != TQueryOptions_EnablePipelineXEngine_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableMemtableOnSinkNode() bool {
+	return p.EnableMemtableOnSinkNode != TQueryOptions_EnableMemtableOnSinkNode_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableDeleteSubPredicateV2() bool {
+	return p.EnableDeleteSubPredicateV2 != TQueryOptions_EnableDeleteSubPredicateV2_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetFeProcessUuid() bool {
+	return p.FeProcessUuid != TQueryOptions_FeProcessUuid_DEFAULT
 }
 
 func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
@@ -3579,6 +3699,66 @@ func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
 					goto SkipFieldError
 				}
 			}
+		case 77:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField77(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 78:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField78(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 79:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField79(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 80:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField80(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 81:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField81(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 82:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField82(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
@@ -4211,6 +4391,60 @@ func (p *TQueryOptions) ReadField76(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TQueryOptions) ReadField77(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.TruncateCharOrVarcharColumns = v
+	}
+	return nil
+}
+
+func (p *TQueryOptions) ReadField78(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.EnableHashJoinEarlyStartProbe = v
+	}
+	return nil
+}
+
+func (p *TQueryOptions) ReadField79(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.EnablePipelineXEngine = v
+	}
+	return nil
+}
+
+func (p *TQueryOptions) ReadField80(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.EnableMemtableOnSinkNode = v
+	}
+	return nil
+}
+
+func (p *TQueryOptions) ReadField81(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.EnableDeleteSubPredicateV2 = v
+	}
+	return nil
+}
+
+func (p *TQueryOptions) ReadField82(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.FeProcessUuid = v
+	}
+	return nil
+}
+
 func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TQueryOptions"); err != nil {
@@ -4483,6 +4717,30 @@ func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField76(oprot); err != nil {
 			fieldId = 76
+			goto WriteFieldError
+		}
+		if err = p.writeField77(oprot); err != nil {
+			fieldId = 77
+			goto WriteFieldError
+		}
+		if err = p.writeField78(oprot); err != nil {
+			fieldId = 78
+			goto WriteFieldError
+		}
+		if err = p.writeField79(oprot); err != nil {
+			fieldId = 79
+			goto WriteFieldError
+		}
+		if err = p.writeField80(oprot); err != nil {
+			fieldId = 80
+			goto WriteFieldError
+		}
+		if err = p.writeField81(oprot); err != nil {
+			fieldId = 81
+			goto WriteFieldError
+		}
+		if err = p.writeField82(oprot); err != nil {
+			fieldId = 82
 			goto WriteFieldError
 		}
 
@@ -5777,6 +6035,120 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 76 end error: ", p), err)
 }
 
+func (p *TQueryOptions) writeField77(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTruncateCharOrVarcharColumns() {
+		if err = oprot.WriteFieldBegin("truncate_char_or_varchar_columns", thrift.BOOL, 77); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.TruncateCharOrVarcharColumns); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 77 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 77 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField78(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableHashJoinEarlyStartProbe() {
+		if err = oprot.WriteFieldBegin("enable_hash_join_early_start_probe", thrift.BOOL, 78); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableHashJoinEarlyStartProbe); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 78 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 78 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField79(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnablePipelineXEngine() {
+		if err = oprot.WriteFieldBegin("enable_pipeline_x_engine", thrift.BOOL, 79); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnablePipelineXEngine); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 79 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 79 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField80(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableMemtableOnSinkNode() {
+		if err = oprot.WriteFieldBegin("enable_memtable_on_sink_node", thrift.BOOL, 80); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableMemtableOnSinkNode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 80 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 80 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField81(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableDeleteSubPredicateV2() {
+		if err = oprot.WriteFieldBegin("enable_delete_sub_predicate_v2", thrift.BOOL, 81); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableDeleteSubPredicateV2); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 81 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 81 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField82(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFeProcessUuid() {
+		if err = oprot.WriteFieldBegin("fe_process_uuid", thrift.I64, 82); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.FeProcessUuid); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 82 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 82 end error: ", p), err)
+}
+
 func (p *TQueryOptions) String() string {
 	if p == nil {
 		return "<nil>"
@@ -5989,6 +6361,24 @@ func (p *TQueryOptions) DeepEqual(ano *TQueryOptions) bool {
 		return false
 	}
 	if !p.Field76DeepEqual(ano.EnableInvertedIndexQuery) {
+		return false
+	}
+	if !p.Field77DeepEqual(ano.TruncateCharOrVarcharColumns) {
+		return false
+	}
+	if !p.Field78DeepEqual(ano.EnableHashJoinEarlyStartProbe) {
+		return false
+	}
+	if !p.Field79DeepEqual(ano.EnablePipelineXEngine) {
+		return false
+	}
+	if !p.Field80DeepEqual(ano.EnableMemtableOnSinkNode) {
+		return false
+	}
+	if !p.Field81DeepEqual(ano.EnableDeleteSubPredicateV2) {
+		return false
+	}
+	if !p.Field82DeepEqual(ano.FeProcessUuid) {
 		return false
 	}
 	return true
@@ -6504,6 +6894,48 @@ func (p *TQueryOptions) Field75DeepEqual(src bool) bool {
 func (p *TQueryOptions) Field76DeepEqual(src bool) bool {
 
 	if p.EnableInvertedIndexQuery != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field77DeepEqual(src bool) bool {
+
+	if p.TruncateCharOrVarcharColumns != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field78DeepEqual(src bool) bool {
+
+	if p.EnableHashJoinEarlyStartProbe != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field79DeepEqual(src bool) bool {
+
+	if p.EnablePipelineXEngine != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field80DeepEqual(src bool) bool {
+
+	if p.EnableMemtableOnSinkNode != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field81DeepEqual(src bool) bool {
+
+	if p.EnableDeleteSubPredicateV2 != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field82DeepEqual(src int64) bool {
+
+	if p.FeProcessUuid != src {
 		return false
 	}
 	return true

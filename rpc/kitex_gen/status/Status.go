@@ -68,6 +68,7 @@ const (
 	TStatusCode_BINLOG_NOT_FOUND_TABLE          TStatusCode = 64
 	TStatusCode_SNAPSHOT_NOT_EXIST              TStatusCode = 70
 	TStatusCode_HTTP_ERROR                      TStatusCode = 71
+	TStatusCode_TABLET_MISSING                  TStatusCode = 72
 )
 
 func (p TStatusCode) String() string {
@@ -182,6 +183,8 @@ func (p TStatusCode) String() string {
 		return "SNAPSHOT_NOT_EXIST"
 	case TStatusCode_HTTP_ERROR:
 		return "HTTP_ERROR"
+	case TStatusCode_TABLET_MISSING:
+		return "TABLET_MISSING"
 	}
 	return "<UNSET>"
 }
@@ -298,6 +301,8 @@ func TStatusCodeFromString(s string) (TStatusCode, error) {
 		return TStatusCode_SNAPSHOT_NOT_EXIST, nil
 	case "HTTP_ERROR":
 		return TStatusCode_HTTP_ERROR, nil
+	case "TABLET_MISSING":
+		return TStatusCode_TABLET_MISSING, nil
 	}
 	return TStatusCode(0), fmt.Errorf("not a valid TStatusCode string")
 }

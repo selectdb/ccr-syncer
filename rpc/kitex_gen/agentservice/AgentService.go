@@ -19343,6 +19343,8 @@ type TTabletMetaInfo struct {
 	TimeSeriesCompactionGoalSizeMbytes       *int64              `thrift:"time_series_compaction_goal_size_mbytes,11,optional" frugal:"11,optional,i64" json:"time_series_compaction_goal_size_mbytes,omitempty"`
 	TimeSeriesCompactionFileCountThreshold   *int64              `thrift:"time_series_compaction_file_count_threshold,12,optional" frugal:"12,optional,i64" json:"time_series_compaction_file_count_threshold,omitempty"`
 	TimeSeriesCompactionTimeThresholdSeconds *int64              `thrift:"time_series_compaction_time_threshold_seconds,13,optional" frugal:"13,optional,i64" json:"time_series_compaction_time_threshold_seconds,omitempty"`
+	EnableSingleReplicaCompaction            *bool               `thrift:"enable_single_replica_compaction,14,optional" frugal:"14,optional,bool" json:"enable_single_replica_compaction,omitempty"`
+	SkipWriteIndexOnLoad                     *bool               `thrift:"skip_write_index_on_load,15,optional" frugal:"15,optional,bool" json:"skip_write_index_on_load,omitempty"`
 }
 
 func NewTTabletMetaInfo() *TTabletMetaInfo {
@@ -19451,6 +19453,24 @@ func (p *TTabletMetaInfo) GetTimeSeriesCompactionTimeThresholdSeconds() (v int64
 	}
 	return *p.TimeSeriesCompactionTimeThresholdSeconds
 }
+
+var TTabletMetaInfo_EnableSingleReplicaCompaction_DEFAULT bool
+
+func (p *TTabletMetaInfo) GetEnableSingleReplicaCompaction() (v bool) {
+	if !p.IsSetEnableSingleReplicaCompaction() {
+		return TTabletMetaInfo_EnableSingleReplicaCompaction_DEFAULT
+	}
+	return *p.EnableSingleReplicaCompaction
+}
+
+var TTabletMetaInfo_SkipWriteIndexOnLoad_DEFAULT bool
+
+func (p *TTabletMetaInfo) GetSkipWriteIndexOnLoad() (v bool) {
+	if !p.IsSetSkipWriteIndexOnLoad() {
+		return TTabletMetaInfo_SkipWriteIndexOnLoad_DEFAULT
+	}
+	return *p.SkipWriteIndexOnLoad
+}
 func (p *TTabletMetaInfo) SetTabletId(val *types.TTabletId) {
 	p.TabletId = val
 }
@@ -19484,6 +19504,12 @@ func (p *TTabletMetaInfo) SetTimeSeriesCompactionFileCountThreshold(val *int64) 
 func (p *TTabletMetaInfo) SetTimeSeriesCompactionTimeThresholdSeconds(val *int64) {
 	p.TimeSeriesCompactionTimeThresholdSeconds = val
 }
+func (p *TTabletMetaInfo) SetEnableSingleReplicaCompaction(val *bool) {
+	p.EnableSingleReplicaCompaction = val
+}
+func (p *TTabletMetaInfo) SetSkipWriteIndexOnLoad(val *bool) {
+	p.SkipWriteIndexOnLoad = val
+}
 
 var fieldIDToName_TTabletMetaInfo = map[int16]string{
 	1:  "tablet_id",
@@ -19497,6 +19523,8 @@ var fieldIDToName_TTabletMetaInfo = map[int16]string{
 	11: "time_series_compaction_goal_size_mbytes",
 	12: "time_series_compaction_file_count_threshold",
 	13: "time_series_compaction_time_threshold_seconds",
+	14: "enable_single_replica_compaction",
+	15: "skip_write_index_on_load",
 }
 
 func (p *TTabletMetaInfo) IsSetTabletId() bool {
@@ -19541,6 +19569,14 @@ func (p *TTabletMetaInfo) IsSetTimeSeriesCompactionFileCountThreshold() bool {
 
 func (p *TTabletMetaInfo) IsSetTimeSeriesCompactionTimeThresholdSeconds() bool {
 	return p.TimeSeriesCompactionTimeThresholdSeconds != nil
+}
+
+func (p *TTabletMetaInfo) IsSetEnableSingleReplicaCompaction() bool {
+	return p.EnableSingleReplicaCompaction != nil
+}
+
+func (p *TTabletMetaInfo) IsSetSkipWriteIndexOnLoad() bool {
+	return p.SkipWriteIndexOnLoad != nil
 }
 
 func (p *TTabletMetaInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -19665,6 +19701,26 @@ func (p *TTabletMetaInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 13:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 14:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField14(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 15:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField15(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -19800,6 +19856,24 @@ func (p *TTabletMetaInfo) ReadField13(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TTabletMetaInfo) ReadField14(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.EnableSingleReplicaCompaction = &v
+	}
+	return nil
+}
+
+func (p *TTabletMetaInfo) ReadField15(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.SkipWriteIndexOnLoad = &v
+	}
+	return nil
+}
+
 func (p *TTabletMetaInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TTabletMetaInfo"); err != nil {
@@ -19848,6 +19922,14 @@ func (p *TTabletMetaInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField13(oprot); err != nil {
 			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
+			goto WriteFieldError
+		}
+		if err = p.writeField15(oprot); err != nil {
+			fieldId = 15
 			goto WriteFieldError
 		}
 
@@ -20078,6 +20160,44 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
 
+func (p *TTabletMetaInfo) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableSingleReplicaCompaction() {
+		if err = oprot.WriteFieldBegin("enable_single_replica_compaction", thrift.BOOL, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.EnableSingleReplicaCompaction); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
+
+func (p *TTabletMetaInfo) writeField15(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSkipWriteIndexOnLoad() {
+		if err = oprot.WriteFieldBegin("skip_write_index_on_load", thrift.BOOL, 15); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.SkipWriteIndexOnLoad); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
+}
+
 func (p *TTabletMetaInfo) String() string {
 	if p == nil {
 		return "<nil>"
@@ -20122,6 +20242,12 @@ func (p *TTabletMetaInfo) DeepEqual(ano *TTabletMetaInfo) bool {
 		return false
 	}
 	if !p.Field13DeepEqual(ano.TimeSeriesCompactionTimeThresholdSeconds) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.EnableSingleReplicaCompaction) {
+		return false
+	}
+	if !p.Field15DeepEqual(ano.SkipWriteIndexOnLoad) {
 		return false
 	}
 	return true
@@ -20250,6 +20376,30 @@ func (p *TTabletMetaInfo) Field13DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.TimeSeriesCompactionTimeThresholdSeconds != *src {
+		return false
+	}
+	return true
+}
+func (p *TTabletMetaInfo) Field14DeepEqual(src *bool) bool {
+
+	if p.EnableSingleReplicaCompaction == src {
+		return true
+	} else if p.EnableSingleReplicaCompaction == nil || src == nil {
+		return false
+	}
+	if *p.EnableSingleReplicaCompaction != *src {
+		return false
+	}
+	return true
+}
+func (p *TTabletMetaInfo) Field15DeepEqual(src *bool) bool {
+
+	if p.SkipWriteIndexOnLoad == src {
+		return true
+	} else if p.SkipWriteIndexOnLoad == nil || src == nil {
+		return false
+	}
+	if *p.SkipWriteIndexOnLoad != *src {
 		return false
 	}
 	return true

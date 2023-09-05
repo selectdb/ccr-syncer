@@ -32,6 +32,7 @@ func NewServiceInfo() *kitex.ServiceInfo {
 		"fetchResource":             kitex.NewMethodInfo(fetchResourceHandler, newFrontendServiceFetchResourceArgs, newFrontendServiceFetchResourceResult, false),
 		"forward":                   kitex.NewMethodInfo(forwardHandler, newFrontendServiceForwardArgs, newFrontendServiceForwardResult, false),
 		"listTableStatus":           kitex.NewMethodInfo(listTableStatusHandler, newFrontendServiceListTableStatusArgs, newFrontendServiceListTableStatusResult, false),
+		"listTableMetadataNameIds":  kitex.NewMethodInfo(listTableMetadataNameIdsHandler, newFrontendServiceListTableMetadataNameIdsArgs, newFrontendServiceListTableMetadataNameIdsResult, false),
 		"listTablePrivilegeStatus":  kitex.NewMethodInfo(listTablePrivilegeStatusHandler, newFrontendServiceListTablePrivilegeStatusArgs, newFrontendServiceListTablePrivilegeStatusResult, false),
 		"listSchemaPrivilegeStatus": kitex.NewMethodInfo(listSchemaPrivilegeStatusHandler, newFrontendServiceListSchemaPrivilegeStatusArgs, newFrontendServiceListSchemaPrivilegeStatusResult, false),
 		"listUserPrivilegeStatus":   kitex.NewMethodInfo(listUserPrivilegeStatusHandler, newFrontendServiceListUserPrivilegeStatusArgs, newFrontendServiceListUserPrivilegeStatusResult, false),
@@ -49,7 +50,6 @@ func NewServiceInfo() *kitex.ServiceInfo {
 		"restoreSnapshot":           kitex.NewMethodInfo(restoreSnapshotHandler, newFrontendServiceRestoreSnapshotArgs, newFrontendServiceRestoreSnapshotResult, false),
 		"waitingTxnStatus":          kitex.NewMethodInfo(waitingTxnStatusHandler, newFrontendServiceWaitingTxnStatusArgs, newFrontendServiceWaitingTxnStatusResult, false),
 		"streamLoadPut":             kitex.NewMethodInfo(streamLoadPutHandler, newFrontendServiceStreamLoadPutArgs, newFrontendServiceStreamLoadPutResult, false),
-		"streamLoadWithLoadStatus":  kitex.NewMethodInfo(streamLoadWithLoadStatusHandler, newFrontendServiceStreamLoadWithLoadStatusArgs, newFrontendServiceStreamLoadWithLoadStatusResult, false),
 		"streamLoadMultiTablePut":   kitex.NewMethodInfo(streamLoadMultiTablePutHandler, newFrontendServiceStreamLoadMultiTablePutArgs, newFrontendServiceStreamLoadMultiTablePutResult, false),
 		"snapshotLoaderReport":      kitex.NewMethodInfo(snapshotLoaderReportHandler, newFrontendServiceSnapshotLoaderReportArgs, newFrontendServiceSnapshotLoaderReportResult, false),
 		"ping":                      kitex.NewMethodInfo(pingHandler, newFrontendServicePingArgs, newFrontendServicePingResult, false),
@@ -276,6 +276,24 @@ func newFrontendServiceListTableStatusArgs() interface{} {
 
 func newFrontendServiceListTableStatusResult() interface{} {
 	return frontendservice.NewFrontendServiceListTableStatusResult()
+}
+
+func listTableMetadataNameIdsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*frontendservice.FrontendServiceListTableMetadataNameIdsArgs)
+	realResult := result.(*frontendservice.FrontendServiceListTableMetadataNameIdsResult)
+	success, err := handler.(frontendservice.FrontendService).ListTableMetadataNameIds(ctx, realArg.Params)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newFrontendServiceListTableMetadataNameIdsArgs() interface{} {
+	return frontendservice.NewFrontendServiceListTableMetadataNameIdsArgs()
+}
+
+func newFrontendServiceListTableMetadataNameIdsResult() interface{} {
+	return frontendservice.NewFrontendServiceListTableMetadataNameIdsResult()
 }
 
 func listTablePrivilegeStatusHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -582,24 +600,6 @@ func newFrontendServiceStreamLoadPutArgs() interface{} {
 
 func newFrontendServiceStreamLoadPutResult() interface{} {
 	return frontendservice.NewFrontendServiceStreamLoadPutResult()
-}
-
-func streamLoadWithLoadStatusHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*frontendservice.FrontendServiceStreamLoadWithLoadStatusArgs)
-	realResult := result.(*frontendservice.FrontendServiceStreamLoadWithLoadStatusResult)
-	success, err := handler.(frontendservice.FrontendService).StreamLoadWithLoadStatus(ctx, realArg.Request)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-func newFrontendServiceStreamLoadWithLoadStatusArgs() interface{} {
-	return frontendservice.NewFrontendServiceStreamLoadWithLoadStatusArgs()
-}
-
-func newFrontendServiceStreamLoadWithLoadStatusResult() interface{} {
-	return frontendservice.NewFrontendServiceStreamLoadWithLoadStatusResult()
 }
 
 func streamLoadMultiTablePutHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -991,6 +991,16 @@ func (p *kClient) ListTableStatus(ctx context.Context, params *frontendservice.T
 	return _result.GetSuccess(), nil
 }
 
+func (p *kClient) ListTableMetadataNameIds(ctx context.Context, params *frontendservice.TGetTablesParams) (r *frontendservice.TListTableMetadataNameIdsResult_, err error) {
+	var _args frontendservice.FrontendServiceListTableMetadataNameIdsArgs
+	_args.Params = params
+	var _result frontendservice.FrontendServiceListTableMetadataNameIdsResult
+	if err = p.c.Call(ctx, "listTableMetadataNameIds", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
 func (p *kClient) ListTablePrivilegeStatus(ctx context.Context, params *frontendservice.TGetTablesParams) (r *frontendservice.TListPrivilegesResult_, err error) {
 	var _args frontendservice.FrontendServiceListTablePrivilegeStatusArgs
 	_args.Params = params
@@ -1156,16 +1166,6 @@ func (p *kClient) StreamLoadPut(ctx context.Context, request *frontendservice.TS
 	_args.Request = request
 	var _result frontendservice.FrontendServiceStreamLoadPutResult
 	if err = p.c.Call(ctx, "streamLoadPut", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) StreamLoadWithLoadStatus(ctx context.Context, request *frontendservice.TStreamLoadWithLoadStatusRequest) (r *frontendservice.TStreamLoadWithLoadStatusResult_, err error) {
-	var _args frontendservice.FrontendServiceStreamLoadWithLoadStatusArgs
-	_args.Request = request
-	var _result frontendservice.FrontendServiceStreamLoadWithLoadStatusResult
-	if err = p.c.Call(ctx, "streamLoadWithLoadStatus", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

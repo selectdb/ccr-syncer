@@ -14460,6 +14460,34 @@ func (p *TTabletMetaInfo) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 14:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField14(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 15:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField15(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -14638,6 +14666,32 @@ func (p *TTabletMetaInfo) FastReadField13(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TTabletMetaInfo) FastReadField14(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.EnableSingleReplicaCompaction = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TTabletMetaInfo) FastReadField15(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.SkipWriteIndexOnLoad = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TTabletMetaInfo) FastWrite(buf []byte) int {
 	return 0
@@ -14656,6 +14710,8 @@ func (p *TTabletMetaInfo) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binar
 		offset += p.fastWriteField11(buf[offset:], binaryWriter)
 		offset += p.fastWriteField12(buf[offset:], binaryWriter)
 		offset += p.fastWriteField13(buf[offset:], binaryWriter)
+		offset += p.fastWriteField14(buf[offset:], binaryWriter)
+		offset += p.fastWriteField15(buf[offset:], binaryWriter)
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
 		offset += p.fastWriteField10(buf[offset:], binaryWriter)
 	}
@@ -14679,6 +14735,8 @@ func (p *TTabletMetaInfo) BLength() int {
 		l += p.field11Length()
 		l += p.field12Length()
 		l += p.field13Length()
+		l += p.field14Length()
+		l += p.field15Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -14805,6 +14863,28 @@ func (p *TTabletMetaInfo) fastWriteField13(buf []byte, binaryWriter bthrift.Bina
 	return offset
 }
 
+func (p *TTabletMetaInfo) fastWriteField14(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetEnableSingleReplicaCompaction() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_single_replica_compaction", thrift.BOOL, 14)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.EnableSingleReplicaCompaction)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TTabletMetaInfo) fastWriteField15(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetSkipWriteIndexOnLoad() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "skip_write_index_on_load", thrift.BOOL, 15)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.SkipWriteIndexOnLoad)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TTabletMetaInfo) field1Length() int {
 	l := 0
 	if p.IsSetTabletId() {
@@ -14919,6 +14999,28 @@ func (p *TTabletMetaInfo) field13Length() int {
 	if p.IsSetTimeSeriesCompactionTimeThresholdSeconds() {
 		l += bthrift.Binary.FieldBeginLength("time_series_compaction_time_threshold_seconds", thrift.I64, 13)
 		l += bthrift.Binary.I64Length(*p.TimeSeriesCompactionTimeThresholdSeconds)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TTabletMetaInfo) field14Length() int {
+	l := 0
+	if p.IsSetEnableSingleReplicaCompaction() {
+		l += bthrift.Binary.FieldBeginLength("enable_single_replica_compaction", thrift.BOOL, 14)
+		l += bthrift.Binary.BoolLength(*p.EnableSingleReplicaCompaction)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TTabletMetaInfo) field15Length() int {
+	l := 0
+	if p.IsSetSkipWriteIndexOnLoad() {
+		l += bthrift.Binary.FieldBeginLength("skip_write_index_on_load", thrift.BOOL, 15)
+		l += bthrift.Binary.BoolLength(*p.SkipWriteIndexOnLoad)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

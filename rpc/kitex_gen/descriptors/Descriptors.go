@@ -127,6 +127,8 @@ const (
 	TSchemaTableType_SCH_BACKENDS                              TSchemaTableType = 36
 	TSchemaTableType_SCH_COLUMN_STATISTICS                     TSchemaTableType = 37
 	TSchemaTableType_SCH_PARAMETERS                            TSchemaTableType = 38
+	TSchemaTableType_SCH_METADATA_NAME_IDS                     TSchemaTableType = 39
+	TSchemaTableType_SCH_PROFILING                             TSchemaTableType = 40
 )
 
 func (p TSchemaTableType) String() string {
@@ -209,6 +211,10 @@ func (p TSchemaTableType) String() string {
 		return "SCH_COLUMN_STATISTICS"
 	case TSchemaTableType_SCH_PARAMETERS:
 		return "SCH_PARAMETERS"
+	case TSchemaTableType_SCH_METADATA_NAME_IDS:
+		return "SCH_METADATA_NAME_IDS"
+	case TSchemaTableType_SCH_PROFILING:
+		return "SCH_PROFILING"
 	}
 	return "<UNSET>"
 }
@@ -293,6 +299,10 @@ func TSchemaTableTypeFromString(s string) (TSchemaTableType, error) {
 		return TSchemaTableType_SCH_COLUMN_STATISTICS, nil
 	case "SCH_PARAMETERS":
 		return TSchemaTableType_SCH_PARAMETERS, nil
+	case "SCH_METADATA_NAME_IDS":
+		return TSchemaTableType_SCH_METADATA_NAME_IDS, nil
+	case "SCH_PROFILING":
+		return TSchemaTableType_SCH_PROFILING, nil
 	}
 	return TSchemaTableType(0), fmt.Errorf("not a valid TSchemaTableType string")
 }

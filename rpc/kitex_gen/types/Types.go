@@ -1877,6 +1877,7 @@ const (
 	TMetadataType_WORKLOAD_GROUPS TMetadataType = 2
 	TMetadataType_FRONTENDS       TMetadataType = 3
 	TMetadataType_CATALOGS        TMetadataType = 4
+	TMetadataType_FRONTENDS_DISKS TMetadataType = 5
 )
 
 func (p TMetadataType) String() string {
@@ -1891,6 +1892,8 @@ func (p TMetadataType) String() string {
 		return "FRONTENDS"
 	case TMetadataType_CATALOGS:
 		return "CATALOGS"
+	case TMetadataType_FRONTENDS_DISKS:
+		return "FRONTENDS_DISKS"
 	}
 	return "<UNSET>"
 }
@@ -1907,6 +1910,8 @@ func TMetadataTypeFromString(s string) (TMetadataType, error) {
 		return TMetadataType_FRONTENDS, nil
 	case "CATALOGS":
 		return TMetadataType_CATALOGS, nil
+	case "FRONTENDS_DISKS":
+		return TMetadataType_FRONTENDS_DISKS, nil
 	}
 	return TMetadataType(0), fmt.Errorf("not a valid TMetadataType string")
 }
