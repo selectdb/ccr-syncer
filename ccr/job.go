@@ -113,17 +113,18 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 	if !ok {
 		return nil, errors.Errorf("invalid context type: %T", ctx)
 	}
+
 	metaFactory := jobContext.factory.MetaFactory
 	iSpecFactory := jobContext.factory.ISpecFactory
-	iSrc := iSpecFactory.NewISpec(&jobContext.src)
-	iDest := iSpecFactory.NewISpec(&jobContext.dest)
+	src := jobContext.src
+	dest := jobContext.dest
 	job := &Job{
 		Name:              name,
-		Src:               jobContext.src,
-		ISrc:              iSrc,
+		Src:               src,
+		ISrc:              iSpecFactory.NewISpec(&src),
 		srcMeta:           metaFactory.NewMeta(&jobContext.src),
-		Dest:              jobContext.dest,
-		IDest:             iDest,
+		Dest:              dest,
+		IDest:             iSpecFactory.NewISpec(&dest),
 		destMeta:          metaFactory.NewMeta(&jobContext.dest),
 		State:             JobRunning,
 		destSrcTableIdMap: make(map[int64]int64),
