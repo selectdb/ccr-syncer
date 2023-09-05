@@ -1,6 +1,13 @@
 # 更新日志
 
-## v 0.4 WIP
+## v 0.5
+
+### 支持高可用
+- 现在可以部署多个syncer节点来保证CCR功能的高可用。
+- db是Syncer集群划分的依据，同一个集群下的Syncer共用一个db。
+- Syncer集群采用对称设计，每个syncer都会相对独立的执行被分配到的job。在某个syncer节点down掉后，它的jobs会依据负载均衡算法被分给其他syncer节点。
+
+## v 0.4
 * 增加 enable_db_binlog.sh 方便用户对整库开启binlog
 
 ## v 0.3

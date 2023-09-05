@@ -16,5 +16,5 @@ output_dir
 **后文中的enable_db_binlog.sh指的是该路径下的enable_db_binlog.sh！！！**
 ### 使用说明
 ```bash
-sh bin/enable_db_binlog.sh -h host -p port -u user -P password -d db
+bash bin/enable_db_binlog.sh -h host -p port -u user -P password -d db
 ```
