@@ -1,6 +1,17 @@
 package base
 
-import "database/sql"
+import (
+	"database/sql"
+
+	"github.com/selectdb/ccr_syncer/utils"
+)
+
+type specEvent int
+
+const (
+	feNotMasterEvent  specEvent = 0
+	httpNotFoundEvent specEvent = 1
+)
 
 type ISpec interface {
 	Valid() error
@@ -21,4 +32,6 @@ type ISpec interface {
 
 	Exec(sql string) error
 	DbExec(sql string) error
+
+	utils.Subject[specEvent]
 }

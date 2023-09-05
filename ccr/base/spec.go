@@ -115,6 +115,8 @@ type Spec struct {
 	DbId     int64  `json:"db_id"`
 	Table    string `json:"table"`
 	TableId  int64  `json:"table_id"`
+
+	observers []utils.Observer[specEvent]
 }
 
 // valid table spec
@@ -569,4 +571,30 @@ func (s *Spec) DbExec(sql string) error {
 		return errors.Wrapf(err, "exec sql %s failed", sql)
 	}
 	return nil
+}
+
+// impl utils.Subject[specEvent]
+func (s *Spec) Register(observer utils.Observer[specEvent]) {
+	log.Debugf("register observer %v", observer)
+
+	s.observers = append(s.observers, observer)
+}
+
+func (s *Spec) Unregister(observer utils.Observer[specEvent]) {
+	log.Debugf("unregister observer %v", observer)
+
+	for i, o := range s.observers {
+		if o == observer {
+			s.observers = append(s.observers[:i], s.observers[i+1:]...)
+			break
+		}
+	}
+}
+
+func (s *Spec) Notify(event specEvent) {
+	log.Debugf("notify observers, event: %v", feNotMasterEvent)
+
+	for _, o := range s.observers {
+		o.Update(event)
+	}
 }
