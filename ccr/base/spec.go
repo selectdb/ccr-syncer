@@ -95,39 +95,26 @@ func ParseRestoreState(state string) RestoreState {
 	}
 }
 
-type ISpec interface {
-	Valid() error
-	Connect() (*sql.DB, error)
-	ConnectDB() (*sql.DB, error)
-	IsDatabaseEnableBinlog() (bool, error)
-	IsTableEnableBinlog() (bool, error)
-	GetAllTables() ([]string, error)
-	DropTable() error
-	DropTables(tables []string) ([]string, error)
-	ClearDB() error
-	CreateDatabase() error
-	CreateTable(stmt string) error
-	CheckDatabaseExists() (bool, error)
-	CheckTableExists() (bool, error)
-	CreateSnapshotAndWaitForDone(tables []string) (string, error)
-	CheckRestoreFinished(snapshotName string) (bool, error)
-
-	Exec(sql string) error
-	DbExec(sql string) error
+type Frontend struct {
+	Host       string `json:"host"`
+	Port       string `json:"port"`
+	ThriftPort string `json:"thrift_port"`
 }
 
 // TODO(Drogon): timeout config
 type Spec struct {
-	Host       string `json:"host"`
-	Port       string `json:"port"`
-	ThriftPort string `json:"thrift_port"`
-	User       string `json:"user"`
-	Password   string `json:"password"`
-	Cluster    string `json:"cluster"`
-	Database   string `json:"database"`
-	DbId       int64  `json:"db_id"`
-	Table      string `json:"table"`
-	TableId    int64  `json:"table_id"`
+	// embed Frontend as current master frontend
+	Frontend
+	frontends []Frontend `json:"frontends"`
+
+	User     string `json:"user"`
+	Password string `json:"password"`
+	Cluster  string `json:"cluster"`
+
+	Database string `json:"database"`
+	DbId     int64  `json:"db_id"`
+	Table    string `json:"table"`
+	TableId  int64  `json:"table_id"`
 }
 
 // valid table spec
