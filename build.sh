@@ -37,6 +37,8 @@ while true; do
     esac
 done
 
+export GOMAXPROCS=${PARALLEL}
+
 mkdir -p ${SYNCER_OUTPUT}/bin
 mkdir -p ${SYNCER_OUTPUT}/log
 mkdir -p ${SYNCER_OUTPUT}/db
@@ -46,7 +48,7 @@ if [[ "${CLEAN}" -eq 1 ]]; then
     exit 0
 fi
 
-make -j ${PARALLEL}
+make ccr_syncer
 
 cp ${SYNCER_HOME}/bin/ccr_syncer ${SYNCER_OUTPUT}/bin/
 cp ${SYNCER_HOME}/shell/* ${SYNCER_OUTPUT}/bin/
