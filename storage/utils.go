@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"sort"
 )
 
@@ -33,22 +34,25 @@ func (ls LoadSlice) Swap(i, j int) {
 	ls[i], ls[j] = ls[j], ls[i]
 }
 
-func filterHighLoadSyncer(sumLoad int, loadList LoadSlice) (LoadSlice, int) {
+func filterHighLoadSyncer(sumLoad int, loadList LoadSlice) (LoadSlice, int, error) {
 	sort.Sort(loadList)
-	averageLoad := sumLoad / len(loadList)
-	for i := len(loadList)-1; i >= 0; i-- {
-		if loadList[i].GetLoad() < averageLoad {
-			return loadList[:i+1], sumLoad
+	if len(loadList) == 0 {
+		return nil, 0, errors.Errorf("loadList is empty!")
+	}
+	averageLoad := float64(sumLoad) / float64(len(loadList))
+	for i := len(loadList) - 1; i >= 0; i-- {
+		if float64(loadList[i].GetLoad()) < averageLoad {
+			return loadList[:i+1], sumLoad, nil
 		}
 		sumLoad -= loadList[i].GetLoad()
 	}
-	return nil, 0
+	return nil, 0, errors.Errorf("There is no available syncer!")
 }
 
-func RebalanceLoad(additionalLoad int, currentLoad int, loadList LoadSlice) LoadSlice {
-	load, sumLoad := filterHighLoadSyncer(additionalLoad + currentLoad, loadList)
-	if (load == nil) {
-		return nil
+func RebalanceLoad(additionalLoad int, currentLoad int, loadList LoadSlice) (LoadSlice, error) {
+	load, sumLoad, err := filterHighLoadSyncer(additionalLoad+currentLoad, loadList)
+	if err != nil {
+		return nil, err
 	}
 
 	averageLoad := sumLoad / len(load)
@@ -63,5 +67,5 @@ func RebalanceLoad(additionalLoad int, currentLoad int, loadList LoadSlice) Load
 		additionalLoad--
 	}
 
-	return load
+	return load, nil
 }

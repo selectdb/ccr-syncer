@@ -320,7 +320,10 @@ func (s *SQLiteDB) RebalanceLoadFromDeadSyncers(syncers []string) error {
 		return err
 	}
 
-	loadList = RebalanceLoad(additionalLoad, currentLoad, loadList)
+	loadList, err = RebalanceLoad(additionalLoad, currentLoad, loadList)
+	if err != nil {
+		return err
+	}
 	for i := range loadList {
 		beginIdx := additionalLoad - loadList[i].AddedLoad
 		if err := s.dispatchJobs(txn, loadList[i].HostInfo, orphanJobs[beginIdx:additionalLoad]); err != nil {
