@@ -59,8 +59,8 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 	srcTablet := h.srcTablet
 	destPartitionId := h.destPartitionId
 
-	destBackend, ok := j.destBackendMap[destReplica.BackendId]
-	if !ok {
+	destBackend := j.GetDestBackend(destReplica.BackendId)
+	if destBackend == nil {
 		j.setError(errors.Errorf("backend not found, backend id: %d", destReplica.BackendId))
 		return false
 	}
@@ -82,9 +82,8 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 		return false
 	}
 	srcBackendId := iter.Value().BackendId
-	var srcBackend *base.Backend
-	srcBackend, ok = j.srcBackendMap[srcBackendId]
-	if !ok {
+	srcBackend := j.GetSrcBackend(srcBackendId)
+	if srcBackend == nil {
 		j.setError(errors.Errorf("backend not found, backend id: %d", srcBackendId))
 		return false
 	}
@@ -190,6 +189,22 @@ func NewIngestBinlogJob(ctx context.Context, ccrJob *Job) (*IngestBinlogJob, err
 
 		commitInfos: make([]*ttypes.TTabletCommitInfo, 0),
 	}, nil
+}
+
+func (j *IngestBinlogJob) GetSrcBackend(srcBackendId int64) *base.Backend {
+	srcBackend, ok := j.srcBackendMap[srcBackendId]
+	if !ok {
+		return nil
+	}
+	return srcBackend
+}
+
+func (j *IngestBinlogJob) GetDestBackend(destBackendId int64) *base.Backend {
+	destBackend, ok := j.destBackendMap[destBackendId]
+	if !ok {
+		return nil
+	}
+	return destBackend
 }
 
 func (j *IngestBinlogJob) GetTabletCommitInfos() []*ttypes.TTabletCommitInfo {
