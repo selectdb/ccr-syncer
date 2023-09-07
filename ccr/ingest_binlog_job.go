@@ -27,11 +27,11 @@ func newCommitInfosCollector() *commitInfosCollector {
 	}
 }
 
-func (cic *commitInfosCollector) appendCommitInfos(commitInfo *ttypes.TTabletCommitInfo) {
+func (cic *commitInfosCollector) appendCommitInfos(commitInfo ...*ttypes.TTabletCommitInfo) {
 	cic.commitInfosLock.Lock()
 	defer cic.commitInfosLock.Unlock()
 
-	cic.commitInfos = append(cic.commitInfos, commitInfo)
+	cic.commitInfos = append(cic.commitInfos, commitInfo...)
 }
 
 func (cic *commitInfosCollector) CommitInfos() []*ttypes.TTabletCommitInfo {
@@ -47,6 +47,8 @@ type tabletIngestBinlogHandler struct {
 	srcTablet       *TabletMeta
 	destTablet      *TabletMeta
 	destPartitionId int64
+
+	*commitInfosCollector
 
 	err     error
 	errLock sync.Mutex
@@ -151,7 +153,7 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 			j.setError(err)
 			return
 		} else {
-			j.appendCommitInfos(commitInfo)
+			h.appendCommitInfos(commitInfo)
 		}
 	}()
 
@@ -165,6 +167,8 @@ func (h *tabletIngestBinlogHandler) handle() {
 		return h.handleReplica(destReplica)
 	})
 	h.wg.Wait()
+
+	h.ingestJob.appendCommitInfos(h.CommitInfos()...)
 }
 
 type IngestContext struct {
@@ -305,6 +309,8 @@ func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 			srcTablet:       srcTablet,
 			destTablet:      destTablet,
 			destPartitionId: arg.destPartitionId,
+
+			commitInfosCollector: newCommitInfosCollector(),
 		}
 		j.tabletIngestJobs = append(j.tabletIngestJobs, tabletIngestBinlogHandler)
 
