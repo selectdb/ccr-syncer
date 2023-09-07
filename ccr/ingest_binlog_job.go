@@ -16,6 +16,31 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type commitInfosCollector struct {
+	commitInfos     []*ttypes.TTabletCommitInfo
+	commitInfosLock sync.Mutex
+}
+
+func newCommitInfosCollector() *commitInfosCollector {
+	return &commitInfosCollector{
+		commitInfos: make([]*ttypes.TTabletCommitInfo, 0),
+	}
+}
+
+func (cic *commitInfosCollector) appendCommitInfos(commitInfo *ttypes.TTabletCommitInfo) {
+	cic.commitInfosLock.Lock()
+	defer cic.commitInfosLock.Unlock()
+
+	cic.commitInfos = append(cic.commitInfos, commitInfo)
+}
+
+func (cic *commitInfosCollector) CommitInfos() []*ttypes.TTabletCommitInfo {
+	cic.commitInfosLock.Lock()
+	defer cic.commitInfosLock.Unlock()
+
+	return cic.commitInfos
+}
+
 type tabletIngestBinlogHandler struct {
 	ingestJob       *IngestBinlogJob
 	binlogVersion   int64
@@ -166,8 +191,7 @@ type IngestBinlogJob struct {
 
 	tabletIngestJobs []*tabletIngestBinlogHandler
 
-	commitInfos     []*ttypes.TTabletCommitInfo
-	commitInfosLock sync.Mutex
+	*commitInfosCollector
 
 	err     error
 	errLock sync.RWMutex
@@ -187,7 +211,7 @@ func NewIngestBinlogJob(ctx context.Context, ccrJob *Job) (*IngestBinlogJob, err
 		txnId:        ingestCtx.txnId,
 		tableRecords: ingestCtx.tableRecords,
 
-		commitInfos: make([]*ttypes.TTabletCommitInfo, 0),
+		commitInfosCollector: newCommitInfosCollector(),
 	}, nil
 }
 
@@ -223,20 +247,6 @@ func (j *IngestBinlogJob) Error() error {
 	defer j.errLock.RUnlock()
 
 	return j.err
-}
-
-func (j *IngestBinlogJob) appendCommitInfos(commitInfo *ttypes.TTabletCommitInfo) {
-	j.commitInfosLock.Lock()
-	defer j.commitInfosLock.Unlock()
-
-	j.commitInfos = append(j.commitInfos, commitInfo)
-}
-
-func (j *IngestBinlogJob) CommitInfos() []*ttypes.TTabletCommitInfo {
-	j.commitInfosLock.Lock()
-	defer j.commitInfosLock.Unlock()
-
-	return j.commitInfos
 }
 
 type prepareIndexArg struct {
