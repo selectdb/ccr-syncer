@@ -103,7 +103,6 @@ else
         PID_FILES+=($(basename "$file"))
     done
 fi
-echo "${PID_FILES[@]}"
 
 signum=9
 if [[ "$1" = "--grace" ]]; then

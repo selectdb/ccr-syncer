@@ -21,18 +21,34 @@ output_dir
 ```bash
 bash bin/start_syncer.sh --daemon
 ```
+
+### --db_type  
+Syncer目前能够使用两种数据库来保存自身的元数据，分别为`sqlite3`（对应本地存储）和`mysql`（本地或远端存储）  
+```bash
+bash bin/start_syncer.sh --db_type mysql
+```
+默认值为sqlite3  
+在使用mysql存储元数据时，Syncer会使用`CREATE IF NOT EXISTS`来创建一个名为`ccr`的库，ccr相关的元数据表都会保存在其中
+
 ### --db_dir  
-Syncer会使用sqlite3来保存自身元数据，可以通过此选项来指定生成的db文件名及路径。  
-默认路径为`SYNCER_OUTPUT_DIR/db`，文件名为`ccr.db`
+**这个选项仅在db使用`sqlite3`时生效**  
+可以通过此选项来指定sqlite3生成的db文件名及路径。  
 ```bash
 bash bin/start_syncer.sh --db_dir /path/to/ccr.db
 ```
+默认路径为`SYNCER_OUTPUT_DIR/db`，文件名为`ccr.db`
+### --db_host & db_port & db_user & db_password
+**这个选项仅在db使用`mysql`时生效**  
+```bash
+bash bin/start_syncer.sh --db_host 127.0.0.1 --db_port 3306 --db_user root --db_password "qwe123456"
+```
+db_host、db_port的默认值如例子中所示，db_user、db_password默认值为空
 ### --log_dir  
 日志的输出路径  
-默认路径为`SYNCER_OUTPUT_DIR/log`，文件名为`ccr_syncer.log`
 ```bash
 bash bin/start_syncer.sh --log_dir /path/to/ccr_syncer.log
 ```
+默认路径为`SYNCER_OUTPUT_DIR/log`，文件名为`ccr_syncer.log`
 ### --log_level  
 用于指定Syncer日志的输出等级。
 ```bash
