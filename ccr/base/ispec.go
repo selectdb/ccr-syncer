@@ -6,11 +6,11 @@ import (
 	"github.com/selectdb/ccr_syncer/utils"
 )
 
-type specEvent int
+type SpecEvent int
 
 const (
-	feNotMasterEvent  specEvent = 0
-	httpNotFoundEvent specEvent = 1
+	feNotMasterEvent  SpecEvent = 0
+	httpNotFoundEvent SpecEvent = 1
 )
 
 type ISpec interface {
@@ -33,5 +33,5 @@ type ISpec interface {
 	Exec(sql string) error
 	DbExec(sql string) error
 
-	utils.Subject[specEvent]
+	utils.Subject[SpecEvent]
 }

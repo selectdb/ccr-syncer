@@ -116,7 +116,7 @@ type Spec struct {
 	Table    string `json:"table"`
 	TableId  int64  `json:"table_id"`
 
-	observers []utils.Observer[specEvent]
+	observers []utils.Observer[SpecEvent]
 }
 
 // valid table spec
@@ -574,13 +574,13 @@ func (s *Spec) DbExec(sql string) error {
 }
 
 // impl utils.Subject[specEvent]
-func (s *Spec) Register(observer utils.Observer[specEvent]) {
+func (s *Spec) Register(observer utils.Observer[SpecEvent]) {
 	log.Debugf("register observer %v", observer)
 
 	s.observers = append(s.observers, observer)
 }
 
-func (s *Spec) Unregister(observer utils.Observer[specEvent]) {
+func (s *Spec) Unregister(observer utils.Observer[SpecEvent]) {
 	log.Debugf("unregister observer %v", observer)
 
 	for i, o := range s.observers {
@@ -591,7 +591,7 @@ func (s *Spec) Unregister(observer utils.Observer[specEvent]) {
 	}
 }
 
-func (s *Spec) Notify(event specEvent) {
+func (s *Spec) Notify(event SpecEvent) {
 	log.Debugf("notify observers, event: %v", feNotMasterEvent)
 
 	for _, o := range s.observers {
@@ -599,7 +599,7 @@ func (s *Spec) Notify(event specEvent) {
 	}
 }
 
-func (s *Spec) Update(event specEvent) {
+func (s *Spec) Update(event SpecEvent) {
 	switch event {
 	case feNotMasterEvent:
 		log.Infof("frontend %s:%s is not master, try next", s.Host, s.Port)

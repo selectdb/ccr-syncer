@@ -252,6 +252,10 @@ func (j *Job) genExtraInfo() (*base.ExtraInfo, error) {
 	}, nil
 }
 
+func (j *Job) isIncrementalSync() bool {
+	return j.progress.SyncState == DBIncrementalSync || j.progress.SyncState == TableIncrementalSync
+}
+
 func (j *Job) fullSync() error {
 	type inMemoryData struct {
 		SnapshotName      string                        `json:"snapshot_name"`
@@ -427,10 +431,10 @@ func (j *Job) fullSync() error {
 		case DBSync:
 			j.progress.NextWithPersist(j.progress.CommitSeq, DBTablesIncrementalSync, DB_1, "")
 		case TableSync:
-			if destTableId, err := j.destMeta.GetTableId(j.Dest.Table); err != nil {
+			if destTable, err := j.destMeta.UpdateTable(j.Dest.Table, 0); err != nil {
 				return err
 			} else {
-				j.Dest.TableId = destTableId
+				j.Dest.TableId = destTable.Id
 			}
 
 			// TODO: reload check job table id
@@ -980,6 +984,10 @@ func (j *Job) incrementalSync() error {
 			}
 			// Step 3.2: update progress to db
 			j.progress.Done()
+
+			if !j.isIncrementalSync() {
+				return nil
+			}
 		}
 	}
 }
