@@ -29,7 +29,12 @@ OPTS="$(getopt \
     -l 'daemon' \
     -l 'log_level:' \
     -l 'log_dir:' \
+    -l 'db_type:' \
     -l 'db_dir:' \
+    -l 'db_host:' \
+    -l 'db_port:' \
+    -l 'db_user:' \
+    -l 'db_password:' \
     -l 'host:' \
     -l 'port:' \
     -l 'pid_dir:' \
@@ -42,6 +47,11 @@ HOST="127.0.0.1"
 PORT="9190"
 LOG_LEVEL=""
 DB_DIR="${SYNCER_HOME}/db/ccr.db"
+DB_TYPE="sqlite3"
+DB_HOST="127.0.0.1"
+DB_PORT="3306"
+DB_USER=""
+DB_PASSWORD=""
 while true; do
     case "$1" in
     -h)
@@ -62,8 +72,28 @@ while true; do
         LOG_DIR=$2
         shift 2
         ;;
+    --db_type)
+        DB_TYPE=$2
+        shift 2
+        ;;
     --db_dir)
         DB_DIR=$2
+        shift 2
+        ;;
+    --db_host)
+        DB_HOST=$2
+        shift 2
+        ;;
+    --db_port)
+        DB_PORT=$2
+        shift 2
+        ;;
+    --db_user)
+        DB_USER=$2
+        shift 2
+        ;;
+    --db_password)
+        DB_PASSWORD=$2
         shift 2
         ;;
     --host)
@@ -112,12 +142,24 @@ if [[ -f "${pidfile}" ]]; then
     fi
 fi
 
+if [[ -n "${DB_USER}" ]]; then
+    if [[ "${DB_TYPE}" == "sqlite3" ]]; then
+        echo "sqlite3 is only for local for now"
+        exit 1
+    fi
+fi
+
 chmod 755 "${SYNCER_HOME}/bin/ccr_syncer"
 echo "start time: $(date)" >>"${LOG_DIR}"
 
 if [[ "${RUN_DAEMON}" -eq 1 ]]; then
     nohup "${SYNCER_HOME}/bin/ccr_syncer" \
           "-db_dir=${DB_DIR}" \
+          "-db_type=${DB_TYPE}" \
+          "-db_host=${DB_HOST}" \
+          "-db_port=${DB_PORT}" \
+          "-db_user=${DB_USER}" \
+          "-db_password=${DB_PASSWORD}" \
           "-host=${HOST}" \
           "-port=${PORT}" \
           "-log_level=${LOG_LEVEL}" \
@@ -127,6 +169,11 @@ if [[ "${RUN_DAEMON}" -eq 1 ]]; then
 else
     "${SYNCER_HOME}/bin/ccr_syncer" \
         "-db_dir=${DB_DIR}" \
+        "-db_type=${DB_TYPE}" \
+        "-db_host=${DB_HOST}" \
+        "-db_port=${DB_PORT}" \
+        "-db_user=${DB_USER}" \
+        "-db_password=${DB_PASSWORD}" \
         "-host=${HOST}" \
         "-port=${PORT}" \
         "-log_level=${LOG_LEVEL}" | tee -a "${LOG_DIR}"

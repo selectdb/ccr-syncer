@@ -5,7 +5,7 @@ CCR（Cross Cluster Replication）也就是跨集群数据复制，能够在库/
 **源集群 (srcCluster)**：业务写入数据的集群  
 **目标集群 (destCluster)**：跨集群复制的目标集群  
 **binlog**：源集群变更日志，记录了源集群的数据修改和操作，是目标集群数据重放和恢复的凭据  
-**Syncer**：一个轻量的CCR任务控制节点
+**Syncer**：一个轻量的CCR任务控制节点，可以单节点部署，也可以多节点高可用部署
 ### 架构说明
 ![framework](doc/pic/framework.png)  
 Syncer从源集群批量获取库/表的binlog，并根据binlog中的信息在目标集群重放，从而实现数据的全量/增量复制。  
