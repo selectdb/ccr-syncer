@@ -27,7 +27,7 @@ fmt:
 .PHONY: test
 ## test : Run test
 test:
-	$(V)go test .
+	$(V)go test $(shell go list ./... | grep -v github.com/selectdb/ccr_syncer/cmd | grep -v github.com/selectdb/ccr_syncer/rpc/kitex_gen/)
 
 .PHONY: help
 ## help : Print help message
