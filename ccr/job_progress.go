@@ -17,17 +17,6 @@ const (
 	UPDATE_JOB_PROGRESS_DURATION = time.Second * 3
 )
 
-type ProgressState int
-
-const (
-	JobStatePrepare ProgressState = 0
-	JobStateCommit  ProgressState = 1
-	JobStateAbort   ProgressState = 2
-
-	JobStateFullSync_DoneCreateSnapshot ProgressState = 31
-	JobStateFullSync_BeginRestore       ProgressState = 32
-)
-
 type SyncState int
 
 const (
@@ -68,6 +57,8 @@ type SubSyncState int
 
 const (
 	/// Sub Sync States
+	Done SubSyncState = -1
+
 	// DB/Table FullSync state machine states
 	BeginCreateSnapshot SubSyncState = 0
 	GetSnapshotInfo     SubSyncState = 1
@@ -75,16 +66,40 @@ const (
 	RestoreSnapshot     SubSyncState = 3
 	PersistRestoreInfo  SubSyncState = 4
 
+	// IncrementalSync state machine states
+
 	DB_1 SubSyncState = 10
 )
+
+// SubSyncState Stringer
+func (s SubSyncState) String() string {
+	switch s {
+	case Done:
+		return "Done"
+	case BeginCreateSnapshot:
+		return "BeginCreateSnapshot"
+	case GetSnapshotInfo:
+		return "GetSnapshotInfo"
+	case AddExtraInfo:
+		return "AddExtraInfo"
+	case RestoreSnapshot:
+		return "RestoreSnapshot"
+	case PersistRestoreInfo:
+		return "PersistRestoreInfo"
+	default:
+		return fmt.Sprintf("Unknown SubSyncState: %d", s)
+	}
+}
 
 type JobProgress struct {
 	JobName string     `json:"job_name"`
 	db      storage.DB `json:"-"`
 
-	ProgressState     ProgressState   `json:"state"`
-	SyncState         SyncState       `json:"sync_state"`
-	SubSyncState      SubSyncState    `json:"sub_sync_state"`
+	// Table/DB big sync state machine states
+	SyncState SyncState `json:"sync_state"`
+	// Sub sync state machine states
+	SubSyncState SubSyncState `json:"sub_sync_state"`
+
 	CommitSeq         int64           `json:"commit_seq"`
 	TransactionId     int64           `json:"transaction_id"`
 	TableCommitSeqMap map[int64]int64 `json:"table_commit_seq_map"` // only for DBTablesIncrementalSync
@@ -93,7 +108,7 @@ type JobProgress struct {
 }
 
 func (j *JobProgress) String() string {
-	return fmt.Sprintf("JobProgress{JobName: %s, ProgressState: %d, SyncState: %d, SubSyncState: %d, CommitSeq: %d, TransactionId: %d, TableCommitSeqMap: %v, InMemoryData: %v, PersistData: %s}", j.JobName, j.ProgressState, j.SyncState, j.SubSyncState, j.CommitSeq, j.TransactionId, j.TableCommitSeqMap, j.InMemoryData, j.PersistData)
+	return fmt.Sprintf("JobProgress{JobName: %s, SyncState: %s, SubSyncState: %s, CommitSeq: %d, TransactionId: %d, TableCommitSeqMap: %v, InMemoryData: %v, PersistData: %s}", j.JobName, j.SyncState, j.SubSyncState, j.CommitSeq, j.TransactionId, j.TableCommitSeqMap, j.InMemoryData, j.PersistData)
 }
 
 func NewJobProgress(jobName string, syncType SyncType, db storage.DB) *JobProgress {
@@ -107,7 +122,6 @@ func NewJobProgress(jobName string, syncType SyncType, db storage.DB) *JobProgre
 		JobName: jobName,
 		db:      db,
 
-		ProgressState: JobStateCommit,
 		SyncState:     syncState,
 		SubSyncState:  BeginCreateSnapshot,
 		CommitSeq:     0,
@@ -166,20 +180,12 @@ func (j *JobProgress) ToJson() (string, error) {
 // }
 
 func (j *JobProgress) DoneCreateSnapshot(snapshotName string) {
-	j.ProgressState = JobStateFullSync_DoneCreateSnapshot
 	j.PersistData = snapshotName
 
 	j.Persist()
 }
 
-func (j *JobProgress) NewIncrementalSync() {
-	j.SyncState = TableIncrementalSync
-
-	j.Persist()
-}
-
 func (j *JobProgress) StartHandle(commitSeq int64) {
-	j.ProgressState = JobStatePrepare
 	j.CommitSeq = commitSeq
 	j.TransactionId = 0
 
