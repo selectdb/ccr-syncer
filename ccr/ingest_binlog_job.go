@@ -103,6 +103,7 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 	loadId.SetLo(-1)
 
 	srcReplicas := srcTablet.ReplicaMetas
+	// srcBackendIds := make([]int64, 0, srcReplicas.Len())
 	iter := srcReplicas.Iter()
 	if ok := iter.First(); !ok {
 		j.setError(errors.Errorf("src replicas is empty"))

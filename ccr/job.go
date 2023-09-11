@@ -859,6 +859,42 @@ func (j *Job) handleLightningSchemaChange(binlog *festruct.TBinlog) error {
 	return j.IDest.DbExec(sql)
 }
 
+// return: error && bool backToRunLoop
+func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
+	for _, binlog := range binlogs {
+		// Step 1: dispatch handle binlog
+		if err := j.handleBinlog(binlog); err != nil {
+			return err, false
+		}
+
+		commitSeq := binlog.GetCommitSeq()
+		if j.SyncType == DBSync && j.progress.TableCommitSeqMap != nil {
+			// TODO: [PERFORMANCE] use largest tableCommitSeq in memorydata to acc it
+			// when all table commit seq > commitSeq, it's true
+			reachSwitchToDBIncrementalSync := true
+			for _, tableCommitSeq := range j.progress.TableCommitSeqMap {
+				if tableCommitSeq > commitSeq {
+					reachSwitchToDBIncrementalSync = false
+					break
+				}
+			}
+
+			if reachSwitchToDBIncrementalSync {
+				j.progress.TableCommitSeqMap = nil
+				j.progress.NextWithPersist(j.progress.CommitSeq, DBIncrementalSync, DB_1, "")
+			}
+		}
+		// Step 2: update progress to db
+		j.progress.Done()
+
+		// Step 3: check job state, if not incrementalSync, break
+		if !j.isIncrementalSync() {
+			return nil, true
+		}
+	}
+	return nil, false
+}
+
 func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 	if binlog == nil || !binlog.IsSetCommitSeq() {
 		return errors.Errorf("invalid binlog: %v", binlog)
@@ -925,9 +961,10 @@ func (j *Job) incrementalSync() error {
 		return nil
 	}
 
+	// Step 2: handle all binlog
 	for {
 		commitSeq := j.progress.CommitSeq
-		log.Debugf("src: %s, CommitSeq: %v", src, commitSeq)
+		log.Debugf("src: %s, commitSeq: %v", src, commitSeq)
 
 		getBinlogResp, err := srcRpc.GetBinlog(src, commitSeq)
 		if err != nil {
@@ -935,7 +972,7 @@ func (j *Job) incrementalSync() error {
 		}
 		log.Debugf("resp: %v", getBinlogResp)
 
-		// Step 2: check binlog status
+		// Step 2.1: check binlog status
 		status := getBinlogResp.GetStatus()
 		switch status.StatusCode {
 		case tstatus.TStatusCode_OK:
@@ -952,42 +989,17 @@ func (j *Job) incrementalSync() error {
 			return errors.Errorf("invalid binlog status type: %v", status.StatusCode)
 		}
 
-		// Step 3: handle binlog records if has job
+		// Step 2.2: handle binlogs records if has job
 		binlogs := getBinlogResp.GetBinlogs()
 		if len(binlogs) == 0 {
 			return errors.Errorf("no binlog, but status code is: %v", status.StatusCode)
 		}
 
-		for _, binlog := range binlogs {
-
-			// Step 3.1: handle binlog
-			if err := j.handleBinlog(binlog); err != nil {
-				return err
-			}
-
-			commitSeq := binlog.GetCommitSeq()
-			if j.SyncType == DBSync && j.progress.TableCommitSeqMap != nil {
-				// TODO: [PERFORMANCE] use largest tableCommitSeq in memorydata to acc it
-				// when all table commit seq > commitSeq, it's true
-				reachSwitchToDBIncrementalSync := true
-				for _, tableCommitSeq := range j.progress.TableCommitSeqMap {
-					if tableCommitSeq > commitSeq {
-						reachSwitchToDBIncrementalSync = false
-						break
-					}
-				}
-
-				if reachSwitchToDBIncrementalSync {
-					j.progress.TableCommitSeqMap = nil
-					j.progress.NextWithPersist(j.progress.CommitSeq, DBIncrementalSync, DB_1, "")
-				}
-			}
-			// Step 3.2: update progress to db
-			j.progress.Done()
-
-			if !j.isIncrementalSync() {
-				return nil
-			}
+		// Step 2.3: dispatch handle binlogs
+		if err, backToRunLoop := j.handleBinlogs(binlogs); err == nil {
+			return err
+		} else if backToRunLoop {
+			return nil
 		}
 	}
 }
