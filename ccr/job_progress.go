@@ -172,9 +172,8 @@ func (j *JobProgress) ToJson() (string, error) {
 // TODO: Add api, begin/commit/abort
 
 // func (j *JobProgress) BeginCreateSnapshot() {
-// 	j.SyncState = DBFullSync
-// 	j.JobState = JobStateFullSync_BeginCreateSnapshot
 // 	j.CommitSeq = 0
+// 	j.JobState = BeginCreateSnapshot
 
 // 	j.persist()
 // }

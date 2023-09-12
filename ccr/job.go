@@ -266,6 +266,11 @@ func (j *Job) fullSync() error {
 	// TODO: snapshot machine, not need create snapshot each time
 	// TODO(Drogon): check last snapshot commitSeq > first commitSeq, maybe we can reuse this snapshot
 	switch j.progress.SubSyncState {
+	case Done:
+		if err := j.newSnapshot(j.progress.CommitSeq); err != nil {
+			return err
+		}
+
 	case BeginCreateSnapshot:
 		// Step 1: Create snapshot
 		log.Infof("fullsync status: create snapshot")
@@ -785,12 +790,7 @@ func (j *Job) handleDummy(binlog *festruct.TBinlog) error {
 
 	log.Infof("handle dummy binlog, need full sync. SyncType: %v, seq: %v", j.SyncType, dummyCommitSeq)
 
-	if j.SyncType == DBSync {
-		j.progress.NextWithPersist(dummyCommitSeq, DBFullSync, BeginCreateSnapshot, "")
-	} else {
-		j.progress.NextWithPersist(dummyCommitSeq, TableFullSync, BeginCreateSnapshot, "")
-	}
-	return nil
+	return j.newSnapshot(dummyCommitSeq)
 }
 
 // handleAlterJob
@@ -827,16 +827,7 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 		}
 	}
 
-	switch j.SyncType {
-	case TableSync:
-		j.progress.NextWithPersist(j.progress.CommitSeq, TableFullSync, BeginCreateSnapshot, "")
-	case DBSync:
-		j.progress.NextWithPersist(j.progress.CommitSeq, DBFullSync, BeginCreateSnapshot, "")
-	default:
-		return errors.Errorf("unknown table sync type: %v", j.SyncType)
-	}
-
-	return nil
+	return j.newSnapshot(j.progress.CommitSeq)
 }
 
 // handleLightningSchemaChange
@@ -884,6 +875,7 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 				j.progress.NextWithPersist(j.progress.CommitSeq, DBIncrementalSync, DB_1, "")
 			}
 		}
+
 		// Step 2: update progress to db
 		j.progress.Done()
 
@@ -952,10 +944,17 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 	return nil
 }
 
+func (j *Job) recoverIncrementalSync() error {
+	return nil
+}
+
 func (j *Job) incrementalSync() error {
-	src := &j.Src
+	if j.progress.SubSyncState != Done {
+		return j.recoverIncrementalSync()
+	}
 
 	// Step 1: get binlog
+	src := &j.Src
 	srcRpc, err := j.rpcFactory.NewFeRpc(src)
 	if err != nil {
 		return nil
@@ -1031,7 +1030,6 @@ func (j *Job) tableSync() error {
 	}
 }
 
-// TODO(Drogon): impl
 func (j *Job) dbTablesIncrementalSync() error {
 	log.Debugf("db tables incremental sync")
 
@@ -1098,6 +1096,23 @@ func (j *Job) run() error {
 	}
 }
 
+func (j *Job) newSnapshot(commitSeq int64) error {
+	log.Infof("new snapshot, commitSeq: %d", commitSeq)
+
+	switch j.SyncType {
+	case TableSync:
+		j.progress.NextWithPersist(commitSeq, TableFullSync, BeginCreateSnapshot, "")
+		return nil
+	case DBSync:
+		j.progress.NextWithPersist(commitSeq, DBFullSync, BeginCreateSnapshot, "")
+		return nil
+	default:
+		err := errors.Errorf("unknown table sync type: %v", j.SyncType)
+		log.Fatalf("run %+v", err)
+		return err
+	}
+}
+
 // run job
 func (j *Job) Run() error {
 	gls.ResetGls(gls.GoID(), map[interface{}]interface{}{})
@@ -1125,13 +1140,8 @@ func (j *Job) Run() error {
 		}
 	} else {
 		j.progress = NewJobProgress(j.Name, j.SyncType, j.db)
-		switch j.SyncType {
-		case TableSync:
-			j.progress.NextWithPersist(0, TableFullSync, BeginCreateSnapshot, "")
-		case DBSync:
-			j.progress.NextWithPersist(0, DBFullSync, BeginCreateSnapshot, "")
-		default:
-			return errors.Errorf("unknown table sync type: %v", j.SyncType)
+		if err := j.newSnapshot(0); err != nil {
+			return err
 		}
 	}
 
