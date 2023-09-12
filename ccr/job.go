@@ -70,6 +70,7 @@ func (j JobState) String() string {
 	}
 }
 
+// TODO: refactor merge Src && Isrc, Dest && IDest
 type Job struct {
 	SyncType          SyncType        `json:"sync_type"`
 	Name              string          `json:"name"`
@@ -295,7 +296,7 @@ func (j *Job) fullSync() error {
 			return err
 		}
 
-		j.progress.NextSubWithPersist(GetSnapshotInfo, snapshotName)
+		j.progress.NextSubCheckpoint(GetSnapshotInfo, snapshotName)
 
 	case GetSnapshotInfo:
 		// Step 2: Get snapshot info
@@ -339,7 +340,7 @@ func (j *Job) fullSync() error {
 			SnapshotResp:      snapshotResp,
 			TableCommitSeqMap: tableCommitSeqMap,
 		}
-		j.progress.NextSub(AddExtraInfo, inMemoryData)
+		j.progress.NextSubVolatile(AddExtraInfo, inMemoryData)
 
 	case AddExtraInfo:
 		// Step 3: Add extra info
@@ -424,7 +425,7 @@ func (j *Job) fullSync() error {
 			err = errors.Errorf("check restore state timeout, max try times: %d", base.MAX_CHECK_RETRY_TIMES)
 			return err
 		}
-		j.progress.NextSubWithPersist(PersistRestoreInfo, snapshotName)
+		j.progress.NextSubCheckpoint(PersistRestoreInfo, snapshotName)
 
 	case PersistRestoreInfo:
 		// Step 6: Update job progress && dest table id
@@ -581,6 +582,39 @@ func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*
 	}
 	return ingestBinlogJob.CommitInfos(), nil
 }
+
+// func (j *Job) handleUpsertInternal() error {
+// 	dest := &j.Dest
+// 	commitSeq := j.progress.CommitSeq
+
+// 	switch j.progress.SubSyncState {
+// 	case Done:
+// 	case BeginTransaction:
+// 		log.Infof("begin txn, dest: %v, commitSeq: %d", dest, commitSeq)
+// 		destRpc, err := j.rpcFactory.NewFeRpc(dest)
+// 		if err != nil {
+// 			return err
+// 		}
+
+// 		label := j.newLabel(commitSeq)
+
+// 		beginTxnResp, err := destRpc.BeginTransaction(dest, label, destTableIds)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		log.Debugf("resp: %v", beginTxnResp)
+// 		if beginTxnResp.GetStatus().GetStatusCode() != tstatus.TStatusCode_OK {
+// 			return errors.Errorf("begin txn failed, status: %v", beginTxnResp.GetStatus())
+// 		}
+// 		txnId := beginTxnResp.GetTxnId()
+// 		log.Debugf("TxnId: %d, DbId: %d", txnId, beginTxnResp.GetDbId())
+
+// 		j.progress.BeginTransaction(txnId)
+// 	case CommitTransaction:
+
+// 	}
+// 	return nil
+// }
 
 // TODO: handle error by abort txn
 func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
@@ -877,7 +911,9 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 		}
 
 		// Step 2: update progress to db
-		j.progress.Done()
+		if !j.progress.IsDone() {
+			j.progress.Done()
+		}
 
 		// Step 3: check job state, if not incrementalSync, break
 		if !j.isIncrementalSync() {
@@ -897,7 +933,7 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 	// Step 2: update job progress
 	j.progress.StartHandle(binlog.GetCommitSeq())
 
-	// TODO: use table driven
+	// TODO: use table driven, keep this and driven, conert BinlogType to TBinlogType
 	switch binlog.GetType() {
 	case festruct.TBinlogType_UPSERT:
 		if err := j.handleUpsert(binlog); err != nil {
@@ -945,11 +981,15 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 }
 
 func (j *Job) recoverIncrementalSync() error {
+	// switch state := j.progress.SubSyncState; {
+	// case SnapshotRange.Contains(state):
+	// }
+
 	return nil
 }
 
 func (j *Job) incrementalSync() error {
-	if j.progress.SubSyncState != Done {
+	if !j.progress.IsDone() {
 		return j.recoverIncrementalSync()
 	}
 

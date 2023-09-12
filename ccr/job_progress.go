@@ -53,22 +53,48 @@ func (s SyncState) String() string {
 	}
 }
 
-type SubSyncState int
+type BinlogType int
 
 const (
+	// Binlog type
+	BinlogNone                        BinlogType = -1
+	BinlogUpsert                      BinlogType = 0
+	BinlogAddPartition                BinlogType = 1
+	BinlogCreateTable                 BinlogType = 2
+	BinlogDropPartition               BinlogType = 3
+	BinlogDropTable                   BinlogType = 4
+	BinlogAlterJob                    BinlogType = 5
+	BinlogModifyTableAddOrDropColumns BinlogType = 6
+	BinlogDummy                       BinlogType = 7
+	BinlogAlterDatabaseProperty       BinlogType = 8
+	BinlogModifyTableProperty         BinlogType = 9
+	BinlogBarrier                     BinlogType = 10
+	BinlogModifyPartitions            BinlogType = 11
+	BinlogReplacePartitions           BinlogType = 12
+)
+
+type SubSyncState struct {
+	State      int        `json:"state"`
+	BinlogType BinlogType `json:"binlog_type"`
+}
+
+var (
 	/// Sub Sync States
-	Done SubSyncState = -1
+	Done SubSyncState = SubSyncState{State: -1, BinlogType: BinlogNone}
 
 	// DB/Table FullSync state machine states
-	BeginCreateSnapshot SubSyncState = 0
-	GetSnapshotInfo     SubSyncState = 1
-	AddExtraInfo        SubSyncState = 2
-	RestoreSnapshot     SubSyncState = 3
-	PersistRestoreInfo  SubSyncState = 4
+	BeginCreateSnapshot SubSyncState = SubSyncState{State: 0, BinlogType: BinlogNone}
+	GetSnapshotInfo     SubSyncState = SubSyncState{State: 1, BinlogType: BinlogNone}
+	AddExtraInfo        SubSyncState = SubSyncState{State: 2, BinlogType: BinlogNone}
+	RestoreSnapshot     SubSyncState = SubSyncState{State: 3, BinlogType: BinlogNone}
+	PersistRestoreInfo  SubSyncState = SubSyncState{State: 4, BinlogType: BinlogNone}
+
+	BeginTransaction    SubSyncState = SubSyncState{State: 10, BinlogType: BinlogUpsert}
+	CommitTransaction   SubSyncState = SubSyncState{State: 11, BinlogType: BinlogUpsert}
+	RollbackTransaction SubSyncState = SubSyncState{State: 12, BinlogType: BinlogUpsert}
 
 	// IncrementalSync state machine states
-
-	DB_1 SubSyncState = 10
+	DB_1 SubSyncState = SubSyncState{State: 100, BinlogType: BinlogNone}
 )
 
 // SubSyncState Stringer
@@ -226,34 +252,20 @@ func (j *JobProgress) Persist() {
 	log.Debugf("update job progress done: %s", j)
 }
 
-// func (j *JobProgress) Done() {
-// 	switch j.SyncState {
-// 	case DBFullSync:
-// 		switch j.SubSyncState {
-// 		case DBFullSync_BeginCreateSnapshot:
-// 		case DBFullSync_DoneCreateSnapshot:
-// 		}
-// 	case DBTablesIncrementalSync:
-// 	case DBSpecificTableFullSync:
-// 	case DBIncrementalSync:
-
-// 	case TableFullSync:
-// 	case TableIncrementalSync:
-// 	}
-// }
-
 func (j *JobProgress) Commit() {
 	j.Done()
 	// j.persist()
 }
 
-func (j *JobProgress) NextSub(subSyncState SubSyncState, inMemoryData any) {
+// This is in memory, not persist, only for job internal use
+// need all job to be restartable
+func (j *JobProgress) NextSubVolatile(subSyncState SubSyncState, inMemoryData any) {
 	j.SubSyncState = subSyncState
 	j.InMemoryData = inMemoryData
 }
 
 // Persist is checkpint, next state only get it from persistData
-func (j *JobProgress) NextSubWithPersist(subSyncState SubSyncState, persistData string) {
+func (j *JobProgress) NextSubCheckpoint(subSyncState SubSyncState, persistData string) {
 	j.SubSyncState = subSyncState
 	j.PersistData = persistData
 
@@ -286,9 +298,12 @@ func (j *JobProgress) NextWithPersist(commitSeq int64, syncState SyncState, subS
 	j.Persist()
 }
 
+func (j *JobProgress) IsDone() bool { return j.SubSyncState == Done }
+
 // FIXME
 func (j *JobProgress) Done() {
 	// j.JobState = JobStateDone
+	j.SubSyncState = Done
 
 	j.Persist()
 }

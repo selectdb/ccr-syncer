@@ -41,12 +41,12 @@ help: Makefile
 .PHONY: ccr_syncer
 ## ccr_syncer : Build ccr_syncer binary
 ccr_syncer: bin
-	$(V)go build -o bin/ccr_syncer cmd/ccr_syncer.go
+	$(V)go build -o bin/ccr_syncer ./cmd/ccr_syncer
 
 .PHONY: get_binlog
 ## get_binlog : Build get_binlog binary
 get_binlog: bin
-	$(V)go build -o bin/get_binlog cmd/get_binlog.go
+	$(V)go build -o bin/get_binlog ./cmd/get_binlog
 
 ## run_get_binlog : Run get_binlog binary
 run_get_binlog: get_binlog
@@ -61,29 +61,29 @@ sync_thrift:
 .PHONY: ingest_binlog
 ## ingest_binlog : Build ingest_binlog binary
 ingest_binlog: bin
-	$(V)go build -o bin/ingest_binlog cmd/ingest_binlog.go
+	$(V)go build -o bin/ingest_binlog ./cmd/ingest_binlog
 
 .PHONY: get_meta
 ## get_meta : Build get_meta binary
 get_meta: bin
-	$(V)go build -o bin/get_meta cmd/get_meta.go
+	$(V)go build -o bin/get_meta ./cmd/get_meta
 
 .PHONY: snapshot_op
 ## snapshot_op : Build snapshot_op binary
 snapshot_op: bin
-	$(V)go build -o bin/snapshot_op cmd/snapshot_op.go
+	$(V)go build -o bin/snapshot_op ./cmd/snapshot_op
 
 .PHONY: get_master_token
 ## get_master_token : Build get_master_token binary
 get_master_token: bin
-	$(V)go build -o bin/get_master_token cmd/get_master_token.go
+	$(V)go build -o bin/get_master_token ./cmd/get_master_token
 
 .PHONY: spec_checker
 ## spec_checker : Build spec_checker binary
 spec_checker: bin
-	$(V)go build -o bin/spec_checker cmd/spec_checker.go
+	$(V)go build -o bin/spec_checker ./cmd/spec_checker
 
 .PHONY: get_lag
 ## get_lag : Build get_lag binary
 get_lag: bin
-	$(V)go build -o bin/get_lag cmd/get_lag.go
+	$(V)go build -o bin/get_lag ./cmd/get_lag
