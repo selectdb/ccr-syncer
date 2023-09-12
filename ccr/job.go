@@ -583,126 +583,96 @@ func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*
 	return ingestBinlogJob.CommitInfos(), nil
 }
 
-// func (j *Job) handleUpsertInternal() error {
-// 	dest := &j.Dest
-// 	commitSeq := j.progress.CommitSeq
-
-// 	switch j.progress.SubSyncState {
-// 	case Done:
-// 	case BeginTransaction:
-// 		log.Infof("begin txn, dest: %v, commitSeq: %d", dest, commitSeq)
-// 		destRpc, err := j.rpcFactory.NewFeRpc(dest)
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		label := j.newLabel(commitSeq)
-
-// 		beginTxnResp, err := destRpc.BeginTransaction(dest, label, destTableIds)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		log.Debugf("resp: %v", beginTxnResp)
-// 		if beginTxnResp.GetStatus().GetStatusCode() != tstatus.TStatusCode_OK {
-// 			return errors.Errorf("begin txn failed, status: %v", beginTxnResp.GetStatus())
-// 		}
-// 		txnId := beginTxnResp.GetTxnId()
-// 		log.Debugf("TxnId: %d, DbId: %d", txnId, beginTxnResp.GetDbId())
-
-// 		j.progress.BeginTransaction(txnId)
-// 	case CommitTransaction:
-
-// 	}
-// 	return nil
-// }
-
 // TODO: handle error by abort txn
 func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 	log.Infof("handle upsert binlog")
 
-	data := binlog.GetData()
-	upsert, err := record.NewUpsertFromJson(data)
-	if err != nil {
-		return err
-	}
-	log.Debugf("upsert: %v", upsert)
-
-	dest := &j.Dest
-	commitSeq := upsert.CommitSeq
-
-	// Step 1: get related tableRecords
-	tableRecords, err := j.getReleatedTableRecords(upsert)
-	if err != nil {
-		log.Errorf("get releated table records failed, err: %+v", err)
-	}
-	if len(tableRecords) == 0 {
-		return nil
-	}
-	log.Debugf("tableRecords: %v", tableRecords)
-	destTableIds := make([]int64, 0, len(tableRecords))
-	if j.SyncType == DBSync {
-		for _, tableRecord := range tableRecords {
-			if destTableId, err := j.getDestTableIdBySrc(tableRecord.Id); err != nil {
-				return err
-			} else {
-				destTableIds = append(destTableIds, destTableId)
-			}
+	switch j.progress.SubSyncState {
+	case Done:
+		data := binlog.GetData()
+		upsert, err := record.NewUpsertFromJson(data)
+		if err != nil {
+			return err
 		}
-	} else {
-		destTableIds = append(destTableIds, j.Dest.TableId)
-	}
+		log.Debugf("upsert: %v", upsert)
 
-	// Step 2: begin txn
-	log.Infof("begin txn, dest: %v, commitSeq: %d", dest, commitSeq)
-	destRpc, err := j.rpcFactory.NewFeRpc(dest)
-	if err != nil {
-		return err
-	}
+		dest := &j.Dest
+		commitSeq := upsert.CommitSeq
 
-	label := j.newLabel(commitSeq)
-
-	beginTxnResp, err := destRpc.BeginTransaction(dest, label, destTableIds)
-	if err != nil {
-		return err
-	}
-	log.Debugf("resp: %v", beginTxnResp)
-	if beginTxnResp.GetStatus().GetStatusCode() != tstatus.TStatusCode_OK {
-		return errors.Errorf("begin txn failed, status: %v", beginTxnResp.GetStatus())
-	}
-	txnId := beginTxnResp.GetTxnId()
-	log.Debugf("TxnId: %d, DbId: %d", txnId, beginTxnResp.GetDbId())
-
-	j.progress.BeginTransaction(txnId)
-
-	// Step 3: ingest binlog
-	var commitInfos []*ttypes.TTabletCommitInfo
-	commitInfos, err = j.ingestBinlog(txnId, tableRecords)
-	if err != nil {
-		return err
-	}
-	log.Debugf("commitInfos: %v", commitInfos)
-
-	// Step 4: commit txn
-	resp, err := destRpc.CommitTransaction(dest, txnId, commitInfos)
-	if err != nil {
-		return err
-	}
-	log.Infof("commit TxnId: %d resp: %v", txnId, resp)
-
-	if j.SyncType == DBSync && len(j.progress.TableCommitSeqMap) > 0 {
-		for tableId := range upsert.TableRecords {
-			tableCommitSeq, ok := j.progress.TableCommitSeqMap[tableId]
-			if !ok {
-				continue
+		// Step 1: get related tableRecords
+		tableRecords, err := j.getReleatedTableRecords(upsert)
+		if err != nil {
+			log.Errorf("get releated table records failed, err: %+v", err)
+		}
+		if len(tableRecords) == 0 {
+			return nil
+		}
+		log.Debugf("tableRecords: %v", tableRecords)
+		destTableIds := make([]int64, 0, len(tableRecords))
+		if j.SyncType == DBSync {
+			for _, tableRecord := range tableRecords {
+				if destTableId, err := j.getDestTableIdBySrc(tableRecord.Id); err != nil {
+					return err
+				} else {
+					destTableIds = append(destTableIds, destTableId)
+				}
 			}
-
-			if tableCommitSeq < commitSeq {
-				j.progress.TableCommitSeqMap[tableId] = commitSeq
-			}
-			// TODO: [PERFORMANCE] remove old commit seq
+		} else {
+			destTableIds = append(destTableIds, j.Dest.TableId)
 		}
 
-		j.progress.Persist()
+		// Step 2: begin txn
+		log.Infof("begin txn, dest: %v, commitSeq: %d", dest, commitSeq)
+		destRpc, err := j.rpcFactory.NewFeRpc(dest)
+		if err != nil {
+			return err
+		}
+
+		label := j.newLabel(commitSeq)
+
+		beginTxnResp, err := destRpc.BeginTransaction(dest, label, destTableIds)
+		if err != nil {
+			return err
+		}
+		log.Debugf("resp: %v", beginTxnResp)
+		if beginTxnResp.GetStatus().GetStatusCode() != tstatus.TStatusCode_OK {
+			return errors.Errorf("begin txn failed, status: %v", beginTxnResp.GetStatus())
+		}
+		txnId := beginTxnResp.GetTxnId()
+		log.Debugf("TxnId: %d, DbId: %d", txnId, beginTxnResp.GetDbId())
+
+		j.progress.BeginTransaction(txnId)
+
+		// Step 3: ingest binlog
+		var commitInfos []*ttypes.TTabletCommitInfo
+		commitInfos, err = j.ingestBinlog(txnId, tableRecords)
+		if err != nil {
+			return err
+		}
+		log.Debugf("commitInfos: %v", commitInfos)
+
+		// Step 4: commit txn
+		resp, err := destRpc.CommitTransaction(dest, txnId, commitInfos)
+		if err != nil {
+			return err
+		}
+		log.Infof("commit TxnId: %d resp: %v", txnId, resp)
+
+		if j.SyncType == DBSync && len(j.progress.TableCommitSeqMap) > 0 {
+			for tableId := range upsert.TableRecords {
+				tableCommitSeq, ok := j.progress.TableCommitSeqMap[tableId]
+				if !ok {
+					continue
+				}
+
+				if tableCommitSeq < commitSeq {
+					j.progress.TableCommitSeqMap[tableId] = commitSeq
+				}
+				// TODO: [PERFORMANCE] remove old commit seq
+			}
+
+			j.progress.Persist()
+		}
 	}
 
 	return nil

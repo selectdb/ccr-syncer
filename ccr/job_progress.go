@@ -89,9 +89,9 @@ var (
 	RestoreSnapshot     SubSyncState = SubSyncState{State: 3, BinlogType: BinlogNone}
 	PersistRestoreInfo  SubSyncState = SubSyncState{State: 4, BinlogType: BinlogNone}
 
-	BeginTransaction    SubSyncState = SubSyncState{State: 10, BinlogType: BinlogUpsert}
-	CommitTransaction   SubSyncState = SubSyncState{State: 11, BinlogType: BinlogUpsert}
-	RollbackTransaction SubSyncState = SubSyncState{State: 12, BinlogType: BinlogUpsert}
+	BeginTransaction    SubSyncState = SubSyncState{State: 11, BinlogType: BinlogUpsert}
+	CommitTransaction   SubSyncState = SubSyncState{State: 12, BinlogType: BinlogUpsert}
+	RollbackTransaction SubSyncState = SubSyncState{State: 13, BinlogType: BinlogUpsert}
 
 	// IncrementalSync state machine states
 	DB_1 SubSyncState = SubSyncState{State: 100, BinlogType: BinlogNone}
