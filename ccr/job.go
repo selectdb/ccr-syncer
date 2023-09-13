@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	SYNC_DURATION = time.Second * 5
+	SYNC_DURATION = time.Second * 3
 )
 
 type SyncType int
@@ -259,9 +259,9 @@ func (j *Job) isIncrementalSync() bool {
 
 func (j *Job) fullSync() error {
 	type inMemoryData struct {
-		SnapshotName      string                        `json:"snapshot_name"`
-		SnapshotResp      *festruct.TGetSnapshotResult_ `json:"snapshot_resp"`
-		TableCommitSeqMap map[int64]int64               `json:"table_commit_seq_map"`
+		snapshotName      string
+		snapshotResp      *festruct.TGetSnapshotResult_
+		tableCommitSeqMap map[int64]int64
 	}
 
 	// TODO: snapshot machine, not need create snapshot each time
@@ -336,9 +336,9 @@ func (j *Job) fullSync() error {
 		}
 
 		inMemoryData := &inMemoryData{
-			SnapshotName:      snapshotName,
-			SnapshotResp:      snapshotResp,
-			TableCommitSeqMap: tableCommitSeqMap,
+			snapshotName:      snapshotName,
+			snapshotResp:      snapshotResp,
+			tableCommitSeqMap: tableCommitSeqMap,
 		}
 		j.progress.NextSubVolatile(AddExtraInfo, inMemoryData)
 
@@ -347,9 +347,9 @@ func (j *Job) fullSync() error {
 		log.Infof("fullsync status: add extra info")
 
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
-		snapshotResp := inMemoryData.SnapshotResp
+		snapshotResp := inMemoryData.snapshotResp
 		jobInfo := snapshotResp.GetJobInfo()
-		tableCommitSeqMap := inMemoryData.TableCommitSeqMap
+		tableCommitSeqMap := inMemoryData.tableCommitSeqMap
 
 		var jobInfoMap map[string]interface{}
 		err := json.Unmarshal(jobInfo, &jobInfoMap)
@@ -385,7 +385,7 @@ func (j *Job) fullSync() error {
 		j.progress.CommitNextSubWithPersist(commitSeq, RestoreSnapshot, inMemoryData)
 
 	case RestoreSnapshot:
-		// Step : Restore snapshot
+		// Step 4: Restore snapshot
 		log.Infof("fullsync status: restore snapshot")
 
 		if j.progress.InMemoryData == nil {
@@ -398,13 +398,12 @@ func (j *Job) fullSync() error {
 			j.progress.InMemoryData = inMemoryData
 		}
 
-		// Step 4: start a new fullsync && persist
+		// Step 4.1: start a new fullsync && persist
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
-		snapshotName := inMemoryData.SnapshotName
-		snapshotResp := inMemoryData.SnapshotResp
+		snapshotName := inMemoryData.snapshotName
+		snapshotResp := inMemoryData.snapshotResp
 
-		// Step 5: restore snapshot
-		// Restore snapshot to dest
+		// Step 4.2: restore snapshot to dest
 		dest := &j.Dest
 		destRpc, err := j.rpcFactory.NewFeRpc(dest)
 		if err != nil {
@@ -428,7 +427,7 @@ func (j *Job) fullSync() error {
 		j.progress.NextSubCheckpoint(PersistRestoreInfo, snapshotName)
 
 	case PersistRestoreInfo:
-		// Step 6: Update job progress && dest table id
+		// Step 5: Update job progress && dest table id
 		// update job info, only for dest table id
 		log.Infof("fullsync status: persist restore info")
 
@@ -475,6 +474,7 @@ func (j *Job) persistJob() error {
 	return nil
 }
 
+// FIXME: label will conflict when commitSeq equal
 func (j *Job) newLabel(commitSeq int64) string {
 	src := &j.Src
 	dest := &j.Dest
@@ -587,8 +587,41 @@ func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*
 func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 	log.Infof("handle upsert binlog")
 
+	// inMemory will be update in state machine, but progress keep any, so progress.inMemory is also latest, well call NextSubCheckpoint don't need to upate inMemory in progress
+	// TODO(IMPROVE): some steps not need all data, so we can reset some data in progress, such as RollbackTransaction only need txnId
+	type inMemoryData struct {
+		CommitSeq    int64                       `json:"commit_seq"`
+		TxnId        int64                       `json:"txn_id"`
+		DestTableIds []int64                     `json:"dest_table_ids"`
+		TableRecords []*record.TableRecord       `json:"table_records"`
+		CommitInfos  []*ttypes.TTabletCommitInfo `json:"commit_infos"`
+	}
+
+	upateInMemory := func() error {
+		if j.progress.InMemoryData == nil {
+			persistData := j.progress.PersistData
+			inMemoryData := &inMemoryData{}
+			if err := json.Unmarshal([]byte(persistData), inMemoryData); err != nil {
+				return errors.Errorf("unmarshal persistData failed, persistData: %s", persistData)
+			}
+			j.progress.InMemoryData = inMemoryData
+		}
+		return nil
+	}
+
+	rollback := func(err error, inMemoryData *inMemoryData) {
+		log.Errorf("need rollback, err: %+v", err)
+		j.progress.NextSubCheckpoint(RollbackTransaction, inMemoryData)
+	}
+
+	dest := &j.Dest
 	switch j.progress.SubSyncState {
 	case Done:
+		if binlog == nil {
+			log.Errorf("binlog is nil, %+v", errors.Errorf("handle nil upsert binlog"))
+			return nil
+		}
+
 		data := binlog.GetData()
 		upsert, err := record.NewUpsertFromJson(data)
 		if err != nil {
@@ -596,8 +629,8 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		}
 		log.Debugf("upsert: %v", upsert)
 
-		dest := &j.Dest
-		commitSeq := upsert.CommitSeq
+		// TODO(Fix)
+		// commitSeq := upsert.CommitSeq
 
 		// Step 1: get related tableRecords
 		tableRecords, err := j.getReleatedTableRecords(upsert)
@@ -605,6 +638,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			log.Errorf("get releated table records failed, err: %+v", err)
 		}
 		if len(tableRecords) == 0 {
+			log.Debug("no releated table records")
 			return nil
 		}
 		log.Debugf("tableRecords: %v", tableRecords)
@@ -620,9 +654,19 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		} else {
 			destTableIds = append(destTableIds, j.Dest.TableId)
 		}
+		inMemoryData := &inMemoryData{
+			CommitSeq:    upsert.CommitSeq,
+			DestTableIds: destTableIds,
+			TableRecords: tableRecords,
+		}
+		j.progress.NextSubVolatile(BeginTransaction, inMemoryData)
 
+	case BeginTransaction:
 		// Step 2: begin txn
+		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
+		commitSeq := inMemoryData.CommitSeq
 		log.Infof("begin txn, dest: %v, commitSeq: %d", dest, commitSeq)
+
 		destRpc, err := j.rpcFactory.NewFeRpc(dest)
 		if err != nil {
 			return err
@@ -630,7 +674,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 
 		label := j.newLabel(commitSeq)
 
-		beginTxnResp, err := destRpc.BeginTransaction(dest, label, destTableIds)
+		beginTxnResp, err := destRpc.BeginTransaction(dest, label, inMemoryData.DestTableIds)
 		if err != nil {
 			return err
 		}
@@ -641,25 +685,57 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		txnId := beginTxnResp.GetTxnId()
 		log.Debugf("TxnId: %d, DbId: %d", txnId, beginTxnResp.GetDbId())
 
-		j.progress.BeginTransaction(txnId)
+		j.progress.NextSubCheckpoint(IngestBinlog, inMemoryData)
 
+	case IngestBinlog:
+		if err := upateInMemory(); err != nil {
+			return err
+		}
+		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
+		tableRecords := inMemoryData.TableRecords
+
+		// TODO: 反查现在的状况
 		// Step 3: ingest binlog
 		var commitInfos []*ttypes.TTabletCommitInfo
-		commitInfos, err = j.ingestBinlog(txnId, tableRecords)
+		commitInfos, err := j.ingestBinlog(j.progress.CommitSeq, tableRecords)
 		if err != nil {
+			rollback(err, inMemoryData)
+		} else {
+			log.Debugf("commitInfos: %v", commitInfos)
+			j.progress.NextSubCheckpoint(CommitTransaction, inMemoryData)
+		}
+
+	case CommitTransaction:
+		// Step 4: commit txn
+		if err := upateInMemory(); err != nil {
 			return err
 		}
-		log.Debugf("commitInfos: %v", commitInfos)
+		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
+		txnId := inMemoryData.TxnId
+		commitInfos := inMemoryData.CommitInfos
 
-		// Step 4: commit txn
+		destRpc, err := j.rpcFactory.NewFeRpc(dest)
+		if err != nil {
+			rollback(err, inMemoryData)
+			break
+		}
+
 		resp, err := destRpc.CommitTransaction(dest, txnId, commitInfos)
 		if err != nil {
-			return err
+			rollback(err, inMemoryData)
+			break
 		}
-		log.Infof("commit TxnId: %d resp: %v", txnId, resp)
+		if resp.Status.GetStatusCode() != tstatus.TStatusCode_OK {
+			err := errors.Errorf("commit txn failed, status: %v", resp.Status)
+			rollback(err, inMemoryData)
+			break
+		}
 
+		log.Infof("commit TxnId: %d resp: %v", txnId, resp)
+		commitSeq := j.progress.CommitSeq
+		destTableIds := inMemoryData.DestTableIds
 		if j.SyncType == DBSync && len(j.progress.TableCommitSeqMap) > 0 {
-			for tableId := range upsert.TableRecords {
+			for _, tableId := range destTableIds {
 				tableCommitSeq, ok := j.progress.TableCommitSeqMap[tableId]
 				if !ok {
 					continue
@@ -673,9 +749,32 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 
 			j.progress.Persist()
 		}
+
+	case RollbackTransaction:
+		// Not Step 5: just rollback txn
+		if err := upateInMemory(); err != nil {
+			return err
+		}
+		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
+		txnId := inMemoryData.TxnId
+		destRpc, err := j.rpcFactory.NewFeRpc(dest)
+		if err != nil {
+			return err
+		}
+		resp, err := destRpc.RollbackTransaction(dest, txnId)
+		if err != nil {
+			return err
+		}
+		if resp.Status.GetStatusCode() != tstatus.TStatusCode_OK {
+			return errors.Errorf("rollback txn failed, status: %v", resp.Status)
+		}
+		log.Infof("rollback TxnId: %d resp: %v", txnId, resp)
+
+	default:
+		return errors.Errorf("invalid job sub sync state %d", j.progress.SubSyncState)
 	}
 
-	return nil
+	return j.handleUpsert(binlog)
 }
 
 // handleAddPartition

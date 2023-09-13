@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/selectdb/ccr_syncer/storage"
+
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/zap"
 )
@@ -90,8 +92,9 @@ var (
 	PersistRestoreInfo  SubSyncState = SubSyncState{State: 4, BinlogType: BinlogNone}
 
 	BeginTransaction    SubSyncState = SubSyncState{State: 11, BinlogType: BinlogUpsert}
-	CommitTransaction   SubSyncState = SubSyncState{State: 12, BinlogType: BinlogUpsert}
-	RollbackTransaction SubSyncState = SubSyncState{State: 13, BinlogType: BinlogUpsert}
+	IngestBinlog        SubSyncState = SubSyncState{State: 12, BinlogType: BinlogUpsert}
+	CommitTransaction   SubSyncState = SubSyncState{State: 13, BinlogType: BinlogUpsert}
+	RollbackTransaction SubSyncState = SubSyncState{State: 14, BinlogType: BinlogUpsert}
 
 	// IncrementalSync state machine states
 	DB_1 SubSyncState = SubSyncState{State: 100, BinlogType: BinlogNone}
@@ -126,15 +129,15 @@ type JobProgress struct {
 	// Sub sync state machine states
 	SubSyncState SubSyncState `json:"sub_sync_state"`
 
+	PrevCommitSeq     int64           `json:"prev_commit_seq"`
 	CommitSeq         int64           `json:"commit_seq"`
-	TransactionId     int64           `json:"transaction_id"`
 	TableCommitSeqMap map[int64]int64 `json:"table_commit_seq_map"` // only for DBTablesIncrementalSync
 	InMemoryData      any             `json:"-"`
 	PersistData       string          `json:"data"` // this often for binlog or snapshot info
 }
 
 func (j *JobProgress) String() string {
-	return fmt.Sprintf("JobProgress{JobName: %s, SyncState: %s, SubSyncState: %s, CommitSeq: %d, TransactionId: %d, TableCommitSeqMap: %v, InMemoryData: %v, PersistData: %s}", j.JobName, j.SyncState, j.SubSyncState, j.CommitSeq, j.TransactionId, j.TableCommitSeqMap, j.InMemoryData, j.PersistData)
+	return fmt.Sprintf("JobProgress{JobName: %s, SyncState: %s, SubSyncState: %s, CommitSeq: %d, TableCommitSeqMap: %v, InMemoryData: %v, PersistData: %s}", j.JobName, j.SyncState, j.SubSyncState, j.CommitSeq, j.TableCommitSeqMap, j.InMemoryData, j.PersistData)
 }
 
 func NewJobProgress(jobName string, syncType SyncType, db storage.DB) *JobProgress {
@@ -148,10 +151,9 @@ func NewJobProgress(jobName string, syncType SyncType, db storage.DB) *JobProgre
 		JobName: jobName,
 		db:      db,
 
-		SyncState:     syncState,
-		SubSyncState:  BeginCreateSnapshot,
-		CommitSeq:     0,
-		TransactionId: 0,
+		SyncState:    syncState,
+		SubSyncState: BeginCreateSnapshot,
+		CommitSeq:    0,
 
 		TableCommitSeqMap: nil,
 		InMemoryData:      nil,
@@ -186,75 +188,11 @@ func NewJobProgressFromJson(jobName string, db storage.DB) (*JobProgress, error)
 	}
 }
 
-// ToJson
-func (j *JobProgress) ToJson() (string, error) {
-	if jsonData, err := json.Marshal(j); err != nil {
-		return "", err
-	} else {
-		return string(jsonData), nil
-	}
-}
-
-// TODO: Add api, begin/commit/abort
-
-// func (j *JobProgress) BeginCreateSnapshot() {
-// 	j.CommitSeq = 0
-// 	j.JobState = BeginCreateSnapshot
-
-// 	j.persist()
-// }
-
-func (j *JobProgress) DoneCreateSnapshot(snapshotName string) {
-	j.PersistData = snapshotName
-
-	j.Persist()
-}
-
 func (j *JobProgress) StartHandle(commitSeq int64) {
+	j.PrevCommitSeq = j.CommitSeq
 	j.CommitSeq = commitSeq
-	j.TransactionId = 0
 
 	j.Persist()
-}
-
-func (j *JobProgress) BeginTransaction(txnId int64) {
-	j.TransactionId = txnId
-
-	j.Persist()
-}
-
-// write progress to db, busy loop until success
-// TODO: add timeout check
-func (j *JobProgress) Persist() {
-	log.Debugf("update job progress: %s", j)
-
-	for {
-		// Step 1: to json
-		// TODO: fix to json error
-		progressJson, err := j.ToJson()
-		if err != nil {
-			log.Error("parse job progress failed", zap.String("job", j.JobName), zap.Error(err))
-			time.Sleep(UPDATE_JOB_PROGRESS_DURATION)
-			continue
-		}
-
-		// Step 2: write to db
-		err = j.db.UpdateProgress(j.JobName, progressJson)
-		if err != nil {
-			log.Error("update job progress failed", zap.String("job", j.JobName), zap.Error(err))
-			time.Sleep(UPDATE_JOB_PROGRESS_DURATION)
-			continue
-		}
-
-		break
-	}
-
-	log.Debugf("update job progress done: %s", j)
-}
-
-func (j *JobProgress) Commit() {
-	j.Done()
-	// j.persist()
 }
 
 // This is in memory, not persist, only for job internal use
@@ -264,10 +202,29 @@ func (j *JobProgress) NextSubVolatile(subSyncState SubSyncState, inMemoryData an
 	j.InMemoryData = inMemoryData
 }
 
+func _convertToPersistData(persistData any) string {
+	if persistData == nil {
+		return ""
+	}
+
+	// persistData is already json string
+	if _, ok := persistData.(string); ok {
+		return persistData.(string)
+	}
+
+	if persistDataJson, err := json.Marshal(persistData); err != nil {
+		log.Panicf("marshal persist data failed: %+v", errors.WithStack(err))
+		return ""
+	} else {
+		return string(persistDataJson)
+	}
+}
+
 // Persist is checkpint, next state only get it from persistData
-func (j *JobProgress) NextSubCheckpoint(subSyncState SubSyncState, persistData string) {
+func (j *JobProgress) NextSubCheckpoint(subSyncState SubSyncState, persistData any) {
 	j.SubSyncState = subSyncState
-	j.PersistData = persistData
+
+	j.PersistData = _convertToPersistData(persistData)
 
 	// TODO: check
 	j.Persist()
@@ -277,12 +234,7 @@ func (j *JobProgress) CommitNextSubWithPersist(commitSeq int64, subSyncState Sub
 	j.CommitSeq = commitSeq
 	j.SubSyncState = subSyncState
 
-	persistDataJson, err := json.Marshal(persistData)
-	if err != nil {
-		log.Panicf("marshal persist data failed: %v", err)
-	}
-
-	j.PersistData = string(persistDataJson)
+	j.PersistData = _convertToPersistData(persistData)
 
 	// TODO: check
 	j.Persist()
@@ -300,10 +252,50 @@ func (j *JobProgress) NextWithPersist(commitSeq int64, syncState SyncState, subS
 
 func (j *JobProgress) IsDone() bool { return j.SubSyncState == Done }
 
-// FIXME
+// TODO(Drogon): check reset some fields
 func (j *JobProgress) Done() {
-	// j.JobState = JobStateDone
+	log.Debugf("job %s step next", j.JobName)
+
 	j.SubSyncState = Done
+	j.PrevCommitSeq = j.CommitSeq
 
 	j.Persist()
+}
+
+func (j *JobProgress) Rollback() {
+	log.Debugf("job %s step rollback", j.JobName)
+
+	j.SubSyncState = Done
+	j.CommitSeq = j.PrevCommitSeq
+
+	j.Persist()
+}
+
+// write progress to db, busy loop until success
+// TODO: add timeout check
+func (j *JobProgress) Persist() {
+	log.Debugf("update job progress: %s", j)
+
+	for {
+		// Step 1: to json
+		// TODO: fix to json error
+		jsonBytes, err := json.Marshal(j)
+		if err != nil {
+			log.Error("parse job progress failed", zap.String("job", j.JobName), zap.Error(err))
+			time.Sleep(UPDATE_JOB_PROGRESS_DURATION)
+			continue
+		}
+
+		// Step 2: write to db
+		err = j.db.UpdateProgress(j.JobName, string(jsonBytes))
+		if err != nil {
+			log.Error("update job progress failed", zap.String("job", j.JobName), zap.Error(err))
+			time.Sleep(UPDATE_JOB_PROGRESS_DURATION)
+			continue
+		}
+
+		break
+	}
+
+	log.Debugf("update job progress done: %s", j)
 }

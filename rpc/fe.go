@@ -19,6 +19,7 @@ const (
 type IFeRpc interface {
 	BeginTransaction(*base.Spec, string, []int64) (*festruct.TBeginTxnResult_, error)
 	CommitTransaction(*base.Spec, int64, []*festruct_types.TTabletCommitInfo) (*festruct.TCommitTxnResult_, error)
+	RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.TRollbackTxnResult_, error)
 	GetBinlog(*base.Spec, int64) (*festruct.TGetBinlogResult_, error)
 	GetBinlogLag(*base.Spec, int64) (*festruct.TGetBinlogLagResult_, error)
 	GetSnapshot(*base.Spec, string) (*festruct.TGetSnapshotResult_, error)
@@ -101,9 +102,36 @@ func (rpc *FeRpc) CommitTransaction(spec *base.Spec, txnId int64, commitInfos []
 	req.TxnId = &txnId
 	req.CommitInfos = commitInfos
 
-	log.Debugf("CommitTransaction txnId: %d", req.GetTxnId())
 	if result, err := client.CommitTxn(context.Background(), req); err != nil {
 		return nil, errors.Wrapf(err, "CommitTransaction error: %v, req: %+v", err, req)
+	} else {
+		return result, nil
+	}
+}
+
+//	struct TRollbackTxnRequest {
+//	    1: optional string cluster
+//	    2: optional string user
+//	    3: optional string passwd
+//	    4: optional string db
+//	    5: optional string user_ip
+//	    6: optional i64 txn_id
+//	    7: optional string reason
+//	    9: optional i64 auth_code
+//	    10: optional TTxnCommitAttachment txn_commit_attachment
+//	    11: optional string token
+//	    12: optional i64 db_id
+//	}
+func (rpc *FeRpc) RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.TRollbackTxnResult_, error) {
+	log.Debugf("RollbackTransaction spec: %s, txnId: %d", spec, txnId)
+
+	client := rpc.client
+	req := &festruct.TRollbackTxnRequest{}
+	setAuthInfo(req, spec)
+	req.TxnId = &txnId
+
+	if result, err := client.RollbackTxn(context.Background(), req); err != nil {
+		return nil, errors.Wrapf(err, "RollbackTransaction error: %v, req: %+v", err, req)
 	} else {
 		return result, nil
 	}
