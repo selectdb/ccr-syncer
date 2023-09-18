@@ -653,6 +653,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			log.Debug("no releated table records")
 			return nil
 		}
+
 		log.Debugf("tableRecords: %v", tableRecords)
 		destTableIds := make([]int64, 0, len(tableRecords))
 		if j.SyncType == DBSync {
@@ -677,7 +678,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		// Step 2: begin txn
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
 		commitSeq := inMemoryData.CommitSeq
-		log.Infof("begin txn, dest: %v, commitSeq: %d", dest, commitSeq)
+		log.Debugf("begin txn, dest: %v, commitSeq: %d", dest, commitSeq)
 
 		destRpc, err := j.rpcFactory.NewFeRpc(dest)
 		if err != nil {
@@ -701,16 +702,18 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		j.progress.NextSubCheckpoint(IngestBinlog, inMemoryData)
 
 	case IngestBinlog:
+		log.Debug("ingest binlog")
 		if err := upateInMemory(); err != nil {
 			return err
 		}
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
 		tableRecords := inMemoryData.TableRecords
+		txnId := inMemoryData.TxnId
 
 		// TODO: 反查现在的状况
 		// Step 3: ingest binlog
 		var commitInfos []*ttypes.TTabletCommitInfo
-		commitInfos, err := j.ingestBinlog(j.progress.CommitSeq, tableRecords)
+		commitInfos, err := j.ingestBinlog(txnId, tableRecords)
 		if err != nil {
 			rollback(err, inMemoryData)
 		} else {
@@ -721,6 +724,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 
 	case CommitTransaction:
 		// Step 4: commit txn
+		log.Debug("commit txn")
 		if err := upateInMemory(); err != nil {
 			return err
 		}

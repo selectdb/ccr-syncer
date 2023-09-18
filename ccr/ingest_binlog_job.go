@@ -268,17 +268,20 @@ func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 	log.Debugf("prepareIndex: %v", arg)
 
 	// Step 1: check tablets
+	log.Debugf("arg %+v", arg)
 	job := j.ccrJob
 	srcTablets, err := job.srcMeta.GetTablets(arg.srcTableId, arg.srcPartitionId, arg.srcIndexMeta.Id)
 	if err != nil {
 		j.setError(err)
 		return
 	}
+
 	destTablets, err := job.destMeta.GetTablets(arg.destTableId, arg.destPartitionId, arg.destIndexMeta.Id)
 	if err != nil {
 		j.setError(err)
 		return
 	}
+
 	if srcTablets.Len() != destTablets.Len() {
 		j.setError(errors.Errorf("src tablets length: %v not equal to dest tablets length: %v", srcTablets.Len(), destTablets.Len()))
 		return
@@ -294,6 +297,7 @@ func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 		j.setError(errors.Errorf("src tablets First() failed"))
 		return
 	}
+
 	destIter := destTablets.IterMut()
 	if !destIter.First() {
 		j.setError(errors.Errorf("dest tablets First() failed"))
@@ -356,14 +360,24 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 		j.setError(err)
 		return
 	}
+
+	getSrcIndexName := func(ccrJob *Job, srcIndexMeta *IndexMeta) string {
+		srcIndexName := srcIndexMeta.Name
+		if ccrJob.SyncType == TableSync && srcIndexName == ccrJob.Src.Table {
+			return ccrJob.Dest.Table
+		} else {
+			return srcIndexName
+		}
+	}
+
 	for _, indexId := range indexIds {
 		srcIndexMeta, ok := srcIndexIdMap[indexId]
 		if !ok {
 			j.setError(errors.Errorf("index id %v not found in src meta", indexId))
 			return
 		}
-		srcIndexName := srcIndexMeta.Name
 
+		srcIndexName := getSrcIndexName(job, srcIndexMeta)
 		if _, ok := destIndexNameMap[srcIndexName]; !ok {
 			j.setError(errors.Errorf("index name %v not found in dest meta", srcIndexName))
 			return
@@ -380,7 +394,7 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 	}
 	for _, indexId := range indexIds {
 		srcIndexMeta := srcIndexIdMap[indexId]
-		destIndexMeta := destIndexNameMap[srcIndexMeta.Name]
+		destIndexMeta := destIndexNameMap[getSrcIndexName(job, srcIndexMeta)]
 		prepareIndexArg.srcIndexMeta = srcIndexMeta
 		prepareIndexArg.destIndexMeta = destIndexMeta
 		j.prepareIndex(&prepareIndexArg)
