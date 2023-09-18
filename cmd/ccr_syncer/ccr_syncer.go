@@ -7,23 +7,23 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/selectdb/ccr_syncer/ccr"
 	"github.com/selectdb/ccr_syncer/ccr/base"
 	"github.com/selectdb/ccr_syncer/rpc"
 	"github.com/selectdb/ccr_syncer/service"
 	"github.com/selectdb/ccr_syncer/storage"
 	"github.com/selectdb/ccr_syncer/utils"
+	"github.com/selectdb/ccr_syncer/xerror"
 )
 
 type Syncer struct {
 	Host string
 	Port int
 
-	Db_type		string
-	Db_host 	string
-	Db_port 	int
-	Db_user 	string
+	Db_type     string
+	Db_host     string
+	Db_port     int
+	Db_user     string
 	Db_password string
 }
 
@@ -60,7 +60,7 @@ func main() {
 	case "mysql":
 		db, err = storage.NewMysqlDB(syncer.Db_host, syncer.Db_port, syncer.Db_user, syncer.Db_password)
 	default:
-		err = errors.Wrapf(err, "new meta db failed.")
+		err = xerror.Wrap(err, xerror.Normal, "new meta db failed.")
 	}
 	if err != nil {
 		log.Fatalf("new meta db error: %+v", err)

@@ -119,6 +119,11 @@ type Spec struct {
 	observers []utils.Observer[SpecEvent]
 }
 
+func (s *Spec) String() string {
+	return fmt.Sprintf("host: %s, port: %s, thrift_port: %s, user: %s, cluster: %s, database: %s, database id: %d, table: %s, table id: %d",
+		s.Host, s.Port, s.ThriftPort, s.User, s.Cluster, s.Database, s.DbId, s.Table, s.TableId)
+}
+
 // valid table spec
 func (s *Spec) Valid() error {
 	if s.Host == "" {
@@ -154,9 +159,8 @@ func (s *Spec) Valid() error {
 	return nil
 }
 
-func (s *Spec) String() string {
-	return fmt.Sprintf("host: %s, port: %s, thrift_port: %s, user: %s, cluster: %s, database: %s, database id: %d, table: %s, table id: %d",
-		s.Host, s.Port, s.ThriftPort, s.User, s.Cluster, s.Database, s.DbId, s.Table, s.TableId)
+func (s *Spec) IsSameHostDB(dest *Spec) bool {
+	return s.Host == dest.Host && s.Port == dest.Port && s.ThriftPort == dest.ThriftPort && s.Database == dest.Database
 }
 
 func (s *Spec) connect(dsn string) (*sql.DB, error) {

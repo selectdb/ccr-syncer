@@ -410,11 +410,23 @@ func (j *Job) fullSync() error {
 			return err
 		}
 		log.Debugf("begin restore snapshot %s", snapshotName)
-		restoreResp, err := destRpc.RestoreSnapshot(dest, snapshotName, snapshotResp)
+
+		var tableRefs []*festruct.TTableRef
+		if j.Src.IsSameHostDB(&j.Dest) {
+			log.Debugf("same host db, table: %s, dest table: %s", j.Src.Table, j.Dest.Table)
+			tableRefs = make([]*festruct.TTableRef, 0)
+			tableRef := &festruct.TTableRef{
+				Table:     &j.Src.Table,
+				AliasName: &j.Dest.Table,
+			}
+			tableRefs = append(tableRefs, tableRef)
+		}
+		restoreResp, err := destRpc.RestoreSnapshot(dest, tableRefs, snapshotName, snapshotResp)
 		if err != nil {
 			return err
 		}
 		log.Infof("resp: %v", restoreResp)
+
 		// TODO: impl wait for done, use show restore
 		restoreFinished, err := j.IDest.CheckRestoreFinished(snapshotName)
 		if err != nil {
@@ -1066,7 +1078,8 @@ func (j *Job) incrementalSync() error {
 	src := &j.Src
 	srcRpc, err := j.rpcFactory.NewFeRpc(src)
 	if err != nil {
-		return nil
+		log.Errorf("new fe rpc failed, src: %v, err: %+v", src, err)
+		return err
 	}
 
 	// Step 2: handle all binlog

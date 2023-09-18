@@ -5,7 +5,8 @@ import (
 	"sync"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/pkg/errors"
+
+	"github.com/selectdb/ccr_syncer/xerror"
 )
 
 const (
@@ -36,7 +37,7 @@ func GetMysqlDB(dsn string) (*sql.DB, error) {
 	}
 
 	if db, err := sql.Open("mysql", dsn); err != nil {
-		return nil, errors.Wrapf(err, "connect to mysql failed, dsn: %s", dsn)
+		return nil, xerror.Wrapf(err, xerror.DB, "connect to mysql failed, dsn: %s", dsn)
 	} else {
 		db.SetMaxOpenConns(MaxOpenConns)
 		db.SetMaxIdleConns(MaxIdleConns)
