@@ -446,7 +446,7 @@ func (j *Job) fullSync() error {
 		// TODO: retry && mark it for not start a new full sync
 		switch j.SyncType {
 		case DBSync:
-			j.progress.NextWithPersist(j.progress.CommitSeq, DBTablesIncrementalSync, DB_1, "")
+			j.progress.NextWithPersist(j.progress.CommitSeq, DBTablesIncrementalSync, Done, "")
 		case TableSync:
 			if destTable, err := j.destMeta.UpdateTable(j.Dest.Table, 0); err != nil {
 				return err
@@ -460,7 +460,7 @@ func (j *Job) fullSync() error {
 			}
 
 			j.progress.TableCommitSeqMap = nil
-			j.progress.NextWithPersist(j.progress.CommitSeq, TableIncrementalSync, DB_1, "")
+			j.progress.NextWithPersist(j.progress.CommitSeq, TableIncrementalSync, Done, "")
 		default:
 			return errors.Errorf("invalid sync type %d", j.SyncType)
 		}
@@ -697,6 +697,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		txnId := beginTxnResp.GetTxnId()
 		log.Debugf("TxnId: %d, DbId: %d", txnId, beginTxnResp.GetDbId())
 
+		inMemoryData.TxnId = txnId
 		j.progress.NextSubCheckpoint(IngestBinlog, inMemoryData)
 
 	case IngestBinlog:
@@ -714,6 +715,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			rollback(err, inMemoryData)
 		} else {
 			log.Debugf("commitInfos: %v", commitInfos)
+			inMemoryData.CommitInfos = commitInfos
 			j.progress.NextSubCheckpoint(CommitTransaction, inMemoryData)
 		}
 
@@ -761,6 +763,8 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 
 			j.progress.Persist()
 		}
+		j.progress.Done()
+		return nil
 
 	case RollbackTransaction:
 		// Not Step 5: just rollback txn
@@ -781,6 +785,8 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			return errors.Errorf("rollback txn failed, status: %v", resp.Status)
 		}
 		log.Infof("rollback TxnId: %d resp: %v", txnId, resp)
+		j.progress.Done()
+		return nil
 
 	default:
 		return errors.Errorf("invalid job sub sync state %d", j.progress.SubSyncState)
@@ -987,7 +993,7 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 
 			if reachSwitchToDBIncrementalSync {
 				j.progress.TableCommitSeqMap = nil
-				j.progress.NextWithPersist(j.progress.CommitSeq, DBIncrementalSync, DB_1, "")
+				j.progress.NextWithPersist(j.progress.CommitSeq, DBIncrementalSync, Done, "")
 			}
 		}
 
@@ -1071,7 +1077,7 @@ func (j *Job) recoverIncrementalSync() error {
 
 func (j *Job) incrementalSync() error {
 	if !j.progress.IsDone() {
-		log.Infof("job progress is not done, state is (%s, need recover", j.progress.SubSyncState)
+		log.Infof("job progress is not done, state is (%s), need recover", j.progress.SubSyncState)
 
 		return j.recoverIncrementalSync()
 	}

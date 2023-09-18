@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/selectdb/ccr_syncer/utils"
+	"github.com/selectdb/ccr_syncer/xerror"
 
 	_ "github.com/go-sql-driver/mysql"
 	log "github.com/sirupsen/logrus"
@@ -127,33 +128,33 @@ func (s *Spec) String() string {
 // valid table spec
 func (s *Spec) Valid() error {
 	if s.Host == "" {
-		return errors.Errorf("host is empty")
+		return xerror.Errorf(xerror.Normal, "host is empty")
 	}
 
 	// convert port to int16 and check port in range [0, 65535]
 	port, err := strconv.ParseUint(s.Port, 10, 16)
 	if err != nil {
-		return errors.Errorf("port is invalid: %s", s.Port)
+		return xerror.Errorf(xerror.Normal, "port is invalid: %s", s.Port)
 	}
 	if port > 65535 {
-		return errors.Errorf("port is invalid: %s", s.Port)
+		return xerror.Errorf(xerror.Normal, "port is invalid: %s", s.Port)
 	}
 
 	// convert thrift port to int16 and check port in range [0, 65535]
 	thriftPort, err := strconv.ParseUint(s.ThriftPort, 10, 16)
 	if err != nil {
-		return errors.Errorf("thrift_port is invalid: %s", s.ThriftPort)
+		return xerror.Errorf(xerror.Normal, "thrift_port is invalid: %s", s.ThriftPort)
 	}
 	if thriftPort > 65535 {
-		return errors.Errorf("thrift_port is invalid: %s", s.ThriftPort)
+		return xerror.Errorf(xerror.Normal, "thrift_port is invalid: %s", s.ThriftPort)
 	}
 
 	if s.User == "" {
-		return errors.Errorf("user is empty")
+		return xerror.Errorf(xerror.Normal, "user is empty")
 	}
 
 	if s.Database == "" {
-		return errors.Errorf("database is empty")
+		return xerror.Errorf(xerror.Normal, "database is empty")
 	}
 
 	return nil
@@ -291,7 +292,7 @@ func (s *Spec) DropTables(tables []string) ([]string, error) {
 	}
 
 	if err != nil {
-		err = errors.Errorf("drop tables %s failed", tables)
+		err = xerror.Errorf(xerror.Normal, "drop tables %s failed", tables)
 	}
 	return successTables, err
 }
@@ -440,7 +441,7 @@ func (s *Spec) CreateSnapshotAndWaitForDone(tables []string) (string, error) {
 		return "", err
 	}
 	if !backupFinished {
-		err = errors.Errorf("check backup state timeout, max try times: %d, sql: %s", MAX_CHECK_RETRY_TIMES, backupSnapshotSql)
+		err = xerror.Errorf(xerror.Normal, "check backup state timeout, max try times: %d, sql: %s", MAX_CHECK_RETRY_TIMES, backupSnapshotSql)
 		return "", err
 	}
 
@@ -475,7 +476,7 @@ func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, error) {
 		log.Infof("check snapshot %s backup state: [%v]", snapshotName, backupStateStr)
 		return ParseBackupState(backupStateStr), nil
 	}
-	return BackupStateUnknown, errors.Errorf("no backup state found, sql: %s", sql)
+	return BackupStateUnknown, xerror.Errorf(xerror.Normal, "no backup state found, sql: %s", sql)
 }
 
 func (s *Spec) CheckBackupFinished(snapshotName string) (bool, error) {
@@ -487,14 +488,14 @@ func (s *Spec) CheckBackupFinished(snapshotName string) (bool, error) {
 		} else if backupState == BackupStateFinished {
 			return true, nil
 		} else if backupState == BackupStateCancelled {
-			return false, errors.Errorf("backup failed or canceled")
+			return false, xerror.Errorf(xerror.Normal, "backup failed or canceled")
 		} else {
 			// BackupStatePending, BackupStateUnknown
 			time.Sleep(BACKUP_CHECK_DURATION)
 		}
 	}
 
-	return false, errors.Errorf("check backup state timeout, max try times: %d", MAX_CHECK_RETRY_TIMES)
+	return false, xerror.Errorf(xerror.Normal, "check backup state timeout, max try times: %d", MAX_CHECK_RETRY_TIMES)
 }
 
 // TODO: Add TaskErrMsg
@@ -527,7 +528,7 @@ func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, error) {
 
 		return ParseRestoreState(restoreStateStr), nil
 	}
-	return RestoreStateUnknown, errors.Errorf("no restore state found")
+	return RestoreStateUnknown, xerror.Errorf(xerror.Normal, "no restore state found")
 }
 
 func (s *Spec) CheckRestoreFinished(snapshotName string) (bool, error) {
@@ -539,14 +540,14 @@ func (s *Spec) CheckRestoreFinished(snapshotName string) (bool, error) {
 		} else if backupState == RestoreStateFinished {
 			return true, nil
 		} else if backupState == RestoreStateCancelled {
-			return false, errors.Errorf("backup failed or canceled, spec: %s, snapshot: %s", s.String(), snapshotName)
+			return false, xerror.Errorf(xerror.Normal, "backup failed or canceled, spec: %s, snapshot: %s", s.String(), snapshotName)
 		} else {
 			// RestoreStatePending, RestoreStateUnknown
 			time.Sleep(RESTORE_CHECK_DURATION)
 		}
 	}
 
-	return false, errors.Errorf("check restore state timeout, max try times: %d, spec: %s, snapshot: %s", MAX_CHECK_RETRY_TIMES, s.String(), snapshotName)
+	return false, xerror.Errorf(xerror.Normal, "check restore state timeout, max try times: %d, spec: %s, snapshot: %s", MAX_CHECK_RETRY_TIMES, s.String(), snapshotName)
 }
 
 // Exec sql
