@@ -15,6 +15,21 @@ const (
 	BE
 )
 
+func (e ErrType) String() string {
+	switch e {
+	case Normal:
+		return "normal"
+	case DB:
+		return "db"
+	case FE:
+		return "fe"
+	case BE:
+		return "be"
+	default:
+		return "unknown"
+	}
+}
+
 // this will add one stack msg in the error msg
 
 // a wrapped error with error type
