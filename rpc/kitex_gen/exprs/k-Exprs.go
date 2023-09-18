@@ -1729,6 +1729,20 @@ func (p *TMatchPredicate) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1803,6 +1817,46 @@ func (p *TMatchPredicate) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TMatchPredicate) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := bthrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.CharFilterMap = make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_key = v
+
+		}
+
+		var _val string
+		if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_val = v
+
+		}
+
+		p.CharFilterMap[_key] = _val
+	}
+	if l, err := bthrift.Binary.ReadMapEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TMatchPredicate) FastWrite(buf []byte) int {
 	return 0
@@ -1814,6 +1868,7 @@ func (p *TMatchPredicate) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binar
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
+		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -1826,6 +1881,7 @@ func (p *TMatchPredicate) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -1850,6 +1906,28 @@ func (p *TMatchPredicate) fastWriteField2(buf []byte, binaryWriter bthrift.Binar
 	return offset
 }
 
+func (p *TMatchPredicate) fastWriteField3(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetCharFilterMap() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "char_filter_map", thrift.MAP, 3)
+		mapBeginOffset := offset
+		offset += bthrift.Binary.MapBeginLength(thrift.STRING, thrift.STRING, 0)
+		var length int
+		for k, v := range p.CharFilterMap {
+			length++
+
+			offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, k)
+
+			offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, v)
+
+		}
+		bthrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.STRING, length)
+		offset += bthrift.Binary.WriteMapEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TMatchPredicate) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("parser_type", thrift.STRING, 1)
@@ -1865,6 +1943,24 @@ func (p *TMatchPredicate) field2Length() int {
 	l += bthrift.Binary.StringLengthNocopy(p.ParserMode)
 
 	l += bthrift.Binary.FieldEndLength()
+	return l
+}
+
+func (p *TMatchPredicate) field3Length() int {
+	l := 0
+	if p.IsSetCharFilterMap() {
+		l += bthrift.Binary.FieldBeginLength("char_filter_map", thrift.MAP, 3)
+		l += bthrift.Binary.MapBeginLength(thrift.STRING, thrift.STRING, len(p.CharFilterMap))
+		for k, v := range p.CharFilterMap {
+
+			l += bthrift.Binary.StringLengthNocopy(k)
+
+			l += bthrift.Binary.StringLengthNocopy(v)
+
+		}
+		l += bthrift.Binary.MapEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
 	return l
 }
 

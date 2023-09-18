@@ -18,17 +18,18 @@ import (
 type TDataSinkType int64
 
 const (
-	TDataSinkType_DATA_STREAM_SINK            TDataSinkType = 0
-	TDataSinkType_RESULT_SINK                 TDataSinkType = 1
-	TDataSinkType_DATA_SPLIT_SINK             TDataSinkType = 2
-	TDataSinkType_MYSQL_TABLE_SINK            TDataSinkType = 3
-	TDataSinkType_EXPORT_SINK                 TDataSinkType = 4
-	TDataSinkType_OLAP_TABLE_SINK             TDataSinkType = 5
-	TDataSinkType_MEMORY_SCRATCH_SINK         TDataSinkType = 6
-	TDataSinkType_ODBC_TABLE_SINK             TDataSinkType = 7
-	TDataSinkType_RESULT_FILE_SINK            TDataSinkType = 8
-	TDataSinkType_JDBC_TABLE_SINK             TDataSinkType = 9
-	TDataSinkType_MULTI_CAST_DATA_STREAM_SINK TDataSinkType = 10
+	TDataSinkType_DATA_STREAM_SINK             TDataSinkType = 0
+	TDataSinkType_RESULT_SINK                  TDataSinkType = 1
+	TDataSinkType_DATA_SPLIT_SINK              TDataSinkType = 2
+	TDataSinkType_MYSQL_TABLE_SINK             TDataSinkType = 3
+	TDataSinkType_EXPORT_SINK                  TDataSinkType = 4
+	TDataSinkType_OLAP_TABLE_SINK              TDataSinkType = 5
+	TDataSinkType_MEMORY_SCRATCH_SINK          TDataSinkType = 6
+	TDataSinkType_ODBC_TABLE_SINK              TDataSinkType = 7
+	TDataSinkType_RESULT_FILE_SINK             TDataSinkType = 8
+	TDataSinkType_JDBC_TABLE_SINK              TDataSinkType = 9
+	TDataSinkType_MULTI_CAST_DATA_STREAM_SINK  TDataSinkType = 10
+	TDataSinkType_GROUP_COMMIT_OLAP_TABLE_SINK TDataSinkType = 11
 )
 
 func (p TDataSinkType) String() string {
@@ -55,6 +56,8 @@ func (p TDataSinkType) String() string {
 		return "JDBC_TABLE_SINK"
 	case TDataSinkType_MULTI_CAST_DATA_STREAM_SINK:
 		return "MULTI_CAST_DATA_STREAM_SINK"
+	case TDataSinkType_GROUP_COMMIT_OLAP_TABLE_SINK:
+		return "GROUP_COMMIT_OLAP_TABLE_SINK"
 	}
 	return "<UNSET>"
 }
@@ -83,6 +86,8 @@ func TDataSinkTypeFromString(s string) (TDataSinkType, error) {
 		return TDataSinkType_JDBC_TABLE_SINK, nil
 	case "MULTI_CAST_DATA_STREAM_SINK":
 		return TDataSinkType_MULTI_CAST_DATA_STREAM_SINK, nil
+	case "GROUP_COMMIT_OLAP_TABLE_SINK":
+		return TDataSinkType_GROUP_COMMIT_OLAP_TABLE_SINK, nil
 	}
 	return TDataSinkType(0), fmt.Errorf("not a valid TDataSinkType string")
 }
@@ -105,14 +110,17 @@ func (p *TDataSinkType) Value() (driver.Value, error) {
 type TResultSinkType int64
 
 const (
-	TResultSinkType_MYSQL_PROTOCAL TResultSinkType = 0
-	TResultSinkType_FILE           TResultSinkType = 1
+	TResultSinkType_MYSQL_PROTOCAL        TResultSinkType = 0
+	TResultSinkType_ARROW_FLIGHT_PROTOCAL TResultSinkType = 1
+	TResultSinkType_FILE                  TResultSinkType = 2
 )
 
 func (p TResultSinkType) String() string {
 	switch p {
 	case TResultSinkType_MYSQL_PROTOCAL:
 		return "MYSQL_PROTOCAL"
+	case TResultSinkType_ARROW_FLIGHT_PROTOCAL:
+		return "ARROW_FLIGHT_PROTOCAL"
 	case TResultSinkType_FILE:
 		return "FILE"
 	}
@@ -123,6 +131,8 @@ func TResultSinkTypeFromString(s string) (TResultSinkType, error) {
 	switch s {
 	case "MYSQL_PROTOCAL":
 		return TResultSinkType_MYSQL_PROTOCAL, nil
+	case "ARROW_FLIGHT_PROTOCAL":
+		return TResultSinkType_ARROW_FLIGHT_PROTOCAL, nil
 	case "FILE":
 		return TResultSinkType_FILE, nil
 	}

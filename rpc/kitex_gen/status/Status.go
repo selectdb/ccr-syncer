@@ -47,7 +47,6 @@ const (
 	TStatusCode_NOT_AUTHORIZED                  TStatusCode = 38
 	TStatusCode_ABORTED                         TStatusCode = 39
 	TStatusCode_REMOTE_ERROR                    TStatusCode = 40
-	TStatusCode_SERVICE_UNAVAILABLE             TStatusCode = 41
 	TStatusCode_UNINITIALIZED                   TStatusCode = 42
 	TStatusCode_CONFIGURATION_ERROR             TStatusCode = 43
 	TStatusCode_INCOMPLETE                      TStatusCode = 44
@@ -69,6 +68,7 @@ const (
 	TStatusCode_SNAPSHOT_NOT_EXIST              TStatusCode = 70
 	TStatusCode_HTTP_ERROR                      TStatusCode = 71
 	TStatusCode_TABLET_MISSING                  TStatusCode = 72
+	TStatusCode_NOT_MASTER                      TStatusCode = 73
 )
 
 func (p TStatusCode) String() string {
@@ -141,8 +141,6 @@ func (p TStatusCode) String() string {
 		return "ABORTED"
 	case TStatusCode_REMOTE_ERROR:
 		return "REMOTE_ERROR"
-	case TStatusCode_SERVICE_UNAVAILABLE:
-		return "SERVICE_UNAVAILABLE"
 	case TStatusCode_UNINITIALIZED:
 		return "UNINITIALIZED"
 	case TStatusCode_CONFIGURATION_ERROR:
@@ -185,6 +183,8 @@ func (p TStatusCode) String() string {
 		return "HTTP_ERROR"
 	case TStatusCode_TABLET_MISSING:
 		return "TABLET_MISSING"
+	case TStatusCode_NOT_MASTER:
+		return "NOT_MASTER"
 	}
 	return "<UNSET>"
 }
@@ -259,8 +259,6 @@ func TStatusCodeFromString(s string) (TStatusCode, error) {
 		return TStatusCode_ABORTED, nil
 	case "REMOTE_ERROR":
 		return TStatusCode_REMOTE_ERROR, nil
-	case "SERVICE_UNAVAILABLE":
-		return TStatusCode_SERVICE_UNAVAILABLE, nil
 	case "UNINITIALIZED":
 		return TStatusCode_UNINITIALIZED, nil
 	case "CONFIGURATION_ERROR":
@@ -303,6 +301,8 @@ func TStatusCodeFromString(s string) (TStatusCode, error) {
 		return TStatusCode_HTTP_ERROR, nil
 	case "TABLET_MISSING":
 		return TStatusCode_TABLET_MISSING, nil
+	case "NOT_MASTER":
+		return TStatusCode_NOT_MASTER, nil
 	}
 	return TStatusCode(0), fmt.Errorf("not a valid TStatusCode string")
 }

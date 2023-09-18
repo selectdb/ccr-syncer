@@ -2474,6 +2474,20 @@ func (p *TDisk) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 9:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField9(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -2640,6 +2654,19 @@ func (p *TDisk) FastReadField8(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TDisk) FastReadField9(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.TrashUsedCapacity = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TDisk) FastWrite(buf []byte) int {
 	return 0
@@ -2655,6 +2682,7 @@ func (p *TDisk) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWriter) i
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 		offset += p.fastWriteField8(buf[offset:], binaryWriter)
+		offset += p.fastWriteField9(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField7(buf[offset:], binaryWriter)
 	}
@@ -2675,6 +2703,7 @@ func (p *TDisk) BLength() int {
 		l += p.field6Length()
 		l += p.field7Length()
 		l += p.field8Length()
+		l += p.field9Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -2761,6 +2790,17 @@ func (p *TDisk) fastWriteField8(buf []byte, binaryWriter bthrift.BinaryWriter) i
 	return offset
 }
 
+func (p *TDisk) fastWriteField9(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTrashUsedCapacity() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "trash_used_capacity", thrift.I64, 9)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.TrashUsedCapacity)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TDisk) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("root_path", thrift.STRING, 1)
@@ -2835,6 +2875,17 @@ func (p *TDisk) field8Length() int {
 	if p.IsSetRemoteUsedCapacity() {
 		l += bthrift.Binary.FieldBeginLength("remote_used_capacity", thrift.I64, 8)
 		l += bthrift.Binary.I64Length(*p.RemoteUsedCapacity)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TDisk) field9Length() int {
+	l := 0
+	if p.IsSetTrashUsedCapacity() {
+		l += bthrift.Binary.FieldBeginLength("trash_used_capacity", thrift.I64, 9)
+		l += bthrift.Binary.I64Length(*p.TrashUsedCapacity)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

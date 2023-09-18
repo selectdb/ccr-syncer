@@ -1626,6 +1626,9 @@ type TQueryOptions struct {
 	EnableMemtableOnSinkNode               bool            `thrift:"enable_memtable_on_sink_node,80,optional" frugal:"80,optional,bool" json:"enable_memtable_on_sink_node,omitempty"`
 	EnableDeleteSubPredicateV2             bool            `thrift:"enable_delete_sub_predicate_v2,81,optional" frugal:"81,optional,bool" json:"enable_delete_sub_predicate_v2,omitempty"`
 	FeProcessUuid                          int64           `thrift:"fe_process_uuid,82,optional" frugal:"82,optional,i64" json:"fe_process_uuid,omitempty"`
+	InvertedIndexConjunctionOptThreshold   int32           `thrift:"inverted_index_conjunction_opt_threshold,83,optional" frugal:"83,optional,i32" json:"inverted_index_conjunction_opt_threshold,omitempty"`
+	EnableProfile                          bool            `thrift:"enable_profile,84,optional" frugal:"84,optional,bool" json:"enable_profile,omitempty"`
+	EnablePageCache                        bool            `thrift:"enable_page_cache,85,optional" frugal:"85,optional,bool" json:"enable_page_cache,omitempty"`
 }
 
 func NewTQueryOptions() *TQueryOptions {
@@ -1694,6 +1697,9 @@ func NewTQueryOptions() *TQueryOptions {
 		EnableMemtableOnSinkNode:               false,
 		EnableDeleteSubPredicateV2:             false,
 		FeProcessUuid:                          0,
+		InvertedIndexConjunctionOptThreshold:   1000,
+		EnableProfile:                          false,
+		EnablePageCache:                        false,
 	}
 }
 
@@ -1763,6 +1769,9 @@ func (p *TQueryOptions) InitDefault() {
 		EnableMemtableOnSinkNode:               false,
 		EnableDeleteSubPredicateV2:             false,
 		FeProcessUuid:                          0,
+		InvertedIndexConjunctionOptThreshold:   1000,
+		EnableProfile:                          false,
+		EnablePageCache:                        false,
 	}
 }
 
@@ -2422,6 +2431,33 @@ func (p *TQueryOptions) GetFeProcessUuid() (v int64) {
 	}
 	return p.FeProcessUuid
 }
+
+var TQueryOptions_InvertedIndexConjunctionOptThreshold_DEFAULT int32 = 1000
+
+func (p *TQueryOptions) GetInvertedIndexConjunctionOptThreshold() (v int32) {
+	if !p.IsSetInvertedIndexConjunctionOptThreshold() {
+		return TQueryOptions_InvertedIndexConjunctionOptThreshold_DEFAULT
+	}
+	return p.InvertedIndexConjunctionOptThreshold
+}
+
+var TQueryOptions_EnableProfile_DEFAULT bool = false
+
+func (p *TQueryOptions) GetEnableProfile() (v bool) {
+	if !p.IsSetEnableProfile() {
+		return TQueryOptions_EnableProfile_DEFAULT
+	}
+	return p.EnableProfile
+}
+
+var TQueryOptions_EnablePageCache_DEFAULT bool = false
+
+func (p *TQueryOptions) GetEnablePageCache() (v bool) {
+	if !p.IsSetEnablePageCache() {
+		return TQueryOptions_EnablePageCache_DEFAULT
+	}
+	return p.EnablePageCache
+}
 func (p *TQueryOptions) SetAbortOnError(val bool) {
 	p.AbortOnError = val
 }
@@ -2641,6 +2677,15 @@ func (p *TQueryOptions) SetEnableDeleteSubPredicateV2(val bool) {
 func (p *TQueryOptions) SetFeProcessUuid(val int64) {
 	p.FeProcessUuid = val
 }
+func (p *TQueryOptions) SetInvertedIndexConjunctionOptThreshold(val int32) {
+	p.InvertedIndexConjunctionOptThreshold = val
+}
+func (p *TQueryOptions) SetEnableProfile(val bool) {
+	p.EnableProfile = val
+}
+func (p *TQueryOptions) SetEnablePageCache(val bool) {
+	p.EnablePageCache = val
+}
 
 var fieldIDToName_TQueryOptions = map[int16]string{
 	1:  "abort_on_error",
@@ -2716,6 +2761,9 @@ var fieldIDToName_TQueryOptions = map[int16]string{
 	80: "enable_memtable_on_sink_node",
 	81: "enable_delete_sub_predicate_v2",
 	82: "fe_process_uuid",
+	83: "inverted_index_conjunction_opt_threshold",
+	84: "enable_profile",
+	85: "enable_page_cache",
 }
 
 func (p *TQueryOptions) IsSetAbortOnError() bool {
@@ -3008,6 +3056,18 @@ func (p *TQueryOptions) IsSetEnableDeleteSubPredicateV2() bool {
 
 func (p *TQueryOptions) IsSetFeProcessUuid() bool {
 	return p.FeProcessUuid != TQueryOptions_FeProcessUuid_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetInvertedIndexConjunctionOptThreshold() bool {
+	return p.InvertedIndexConjunctionOptThreshold != TQueryOptions_InvertedIndexConjunctionOptThreshold_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableProfile() bool {
+	return p.EnableProfile != TQueryOptions_EnableProfile_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnablePageCache() bool {
+	return p.EnablePageCache != TQueryOptions_EnablePageCache_DEFAULT
 }
 
 func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
@@ -3759,6 +3819,36 @@ func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
 					goto SkipFieldError
 				}
 			}
+		case 83:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField83(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 84:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField84(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 85:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField85(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
@@ -4445,6 +4535,33 @@ func (p *TQueryOptions) ReadField82(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TQueryOptions) ReadField83(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		p.InvertedIndexConjunctionOptThreshold = v
+	}
+	return nil
+}
+
+func (p *TQueryOptions) ReadField84(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.EnableProfile = v
+	}
+	return nil
+}
+
+func (p *TQueryOptions) ReadField85(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.EnablePageCache = v
+	}
+	return nil
+}
+
 func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TQueryOptions"); err != nil {
@@ -4741,6 +4858,18 @@ func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField82(oprot); err != nil {
 			fieldId = 82
+			goto WriteFieldError
+		}
+		if err = p.writeField83(oprot); err != nil {
+			fieldId = 83
+			goto WriteFieldError
+		}
+		if err = p.writeField84(oprot); err != nil {
+			fieldId = 84
+			goto WriteFieldError
+		}
+		if err = p.writeField85(oprot); err != nil {
+			fieldId = 85
 			goto WriteFieldError
 		}
 
@@ -6149,6 +6278,63 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 82 end error: ", p), err)
 }
 
+func (p *TQueryOptions) writeField83(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInvertedIndexConjunctionOptThreshold() {
+		if err = oprot.WriteFieldBegin("inverted_index_conjunction_opt_threshold", thrift.I32, 83); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.InvertedIndexConjunctionOptThreshold); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 83 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 83 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField84(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableProfile() {
+		if err = oprot.WriteFieldBegin("enable_profile", thrift.BOOL, 84); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableProfile); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 84 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 84 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField85(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnablePageCache() {
+		if err = oprot.WriteFieldBegin("enable_page_cache", thrift.BOOL, 85); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnablePageCache); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 85 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 85 end error: ", p), err)
+}
+
 func (p *TQueryOptions) String() string {
 	if p == nil {
 		return "<nil>"
@@ -6379,6 +6565,15 @@ func (p *TQueryOptions) DeepEqual(ano *TQueryOptions) bool {
 		return false
 	}
 	if !p.Field82DeepEqual(ano.FeProcessUuid) {
+		return false
+	}
+	if !p.Field83DeepEqual(ano.InvertedIndexConjunctionOptThreshold) {
+		return false
+	}
+	if !p.Field84DeepEqual(ano.EnableProfile) {
+		return false
+	}
+	if !p.Field85DeepEqual(ano.EnablePageCache) {
 		return false
 	}
 	return true
@@ -6936,6 +7131,27 @@ func (p *TQueryOptions) Field81DeepEqual(src bool) bool {
 func (p *TQueryOptions) Field82DeepEqual(src int64) bool {
 
 	if p.FeProcessUuid != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field83DeepEqual(src int32) bool {
+
+	if p.InvertedIndexConjunctionOptThreshold != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field84DeepEqual(src bool) bool {
+
+	if p.EnableProfile != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field85DeepEqual(src bool) bool {
+
+	if p.EnablePageCache != src {
 		return false
 	}
 	return true
@@ -8387,6 +8603,7 @@ type TPlanFragmentExecParams struct {
 	NumSenders                        *int32                                    `thrift:"num_senders,10,optional" frugal:"10,optional,i32" json:"num_senders,omitempty"`
 	SendQueryStatisticsWithEveryBatch *bool                                     `thrift:"send_query_statistics_with_every_batch,11,optional" frugal:"11,optional,bool" json:"send_query_statistics_with_every_batch,omitempty"`
 	RuntimeFilterParams               *TRuntimeFilterParams                     `thrift:"runtime_filter_params,12,optional" frugal:"12,optional,TRuntimeFilterParams" json:"runtime_filter_params,omitempty"`
+	GroupCommit                       *bool                                     `thrift:"group_commit,13,optional" frugal:"13,optional,bool" json:"group_commit,omitempty"`
 }
 
 func NewTPlanFragmentExecParams() *TPlanFragmentExecParams {
@@ -8462,6 +8679,15 @@ func (p *TPlanFragmentExecParams) GetRuntimeFilterParams() (v *TRuntimeFilterPar
 	}
 	return p.RuntimeFilterParams
 }
+
+var TPlanFragmentExecParams_GroupCommit_DEFAULT bool
+
+func (p *TPlanFragmentExecParams) GetGroupCommit() (v bool) {
+	if !p.IsSetGroupCommit() {
+		return TPlanFragmentExecParams_GroupCommit_DEFAULT
+	}
+	return *p.GroupCommit
+}
 func (p *TPlanFragmentExecParams) SetQueryId(val *types.TUniqueId) {
 	p.QueryId = val
 }
@@ -8489,6 +8715,9 @@ func (p *TPlanFragmentExecParams) SetSendQueryStatisticsWithEveryBatch(val *bool
 func (p *TPlanFragmentExecParams) SetRuntimeFilterParams(val *TRuntimeFilterParams) {
 	p.RuntimeFilterParams = val
 }
+func (p *TPlanFragmentExecParams) SetGroupCommit(val *bool) {
+	p.GroupCommit = val
+}
 
 var fieldIDToName_TPlanFragmentExecParams = map[int16]string{
 	1:  "query_id",
@@ -8500,6 +8729,7 @@ var fieldIDToName_TPlanFragmentExecParams = map[int16]string{
 	10: "num_senders",
 	11: "send_query_statistics_with_every_batch",
 	12: "runtime_filter_params",
+	13: "group_commit",
 }
 
 func (p *TPlanFragmentExecParams) IsSetQueryId() bool {
@@ -8524,6 +8754,10 @@ func (p *TPlanFragmentExecParams) IsSetSendQueryStatisticsWithEveryBatch() bool 
 
 func (p *TPlanFragmentExecParams) IsSetRuntimeFilterParams() bool {
 	return p.RuntimeFilterParams != nil
+}
+
+func (p *TPlanFragmentExecParams) IsSetGroupCommit() bool {
+	return p.GroupCommit != nil
 }
 
 func (p *TPlanFragmentExecParams) Read(iprot thrift.TProtocol) (err error) {
@@ -8636,6 +8870,16 @@ func (p *TPlanFragmentExecParams) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 13:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -8833,6 +9077,15 @@ func (p *TPlanFragmentExecParams) ReadField12(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TPlanFragmentExecParams) ReadField13(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.GroupCommit = &v
+	}
+	return nil
+}
+
 func (p *TPlanFragmentExecParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TPlanFragmentExecParams"); err != nil {
@@ -8873,6 +9126,10 @@ func (p *TPlanFragmentExecParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 
@@ -9097,6 +9354,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
 
+func (p *TPlanFragmentExecParams) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetGroupCommit() {
+		if err = oprot.WriteFieldBegin("group_commit", thrift.BOOL, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.GroupCommit); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
+
 func (p *TPlanFragmentExecParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -9135,6 +9411,9 @@ func (p *TPlanFragmentExecParams) DeepEqual(ano *TPlanFragmentExecParams) bool {
 		return false
 	}
 	if !p.Field12DeepEqual(ano.RuntimeFilterParams) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.GroupCommit) {
 		return false
 	}
 	return true
@@ -9238,6 +9517,18 @@ func (p *TPlanFragmentExecParams) Field11DeepEqual(src *bool) bool {
 func (p *TPlanFragmentExecParams) Field12DeepEqual(src *TRuntimeFilterParams) bool {
 
 	if !p.RuntimeFilterParams.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TPlanFragmentExecParams) Field13DeepEqual(src *bool) bool {
+
+	if p.GroupCommit == src {
+		return true
+	} else if p.GroupCommit == nil || src == nil {
+		return false
+	}
+	if *p.GroupCommit != *src {
 		return false
 	}
 	return true
@@ -20936,6 +21227,7 @@ type TPipelineFragmentParams struct {
 	TxnConf                           *TTxnParams                                           `thrift:"txn_conf,27,optional" frugal:"27,optional,TTxnParams" json:"txn_conf,omitempty"`
 	TableName                         *string                                               `thrift:"table_name,28,optional" frugal:"28,optional,string" json:"table_name,omitempty"`
 	FileScanParams                    map[types.TPlanNodeId]*plannodes.TFileScanRangeParams `thrift:"file_scan_params,29,optional" frugal:"29,optional,map<i32:plannodes.TFileScanRangeParams>" json:"file_scan_params,omitempty"`
+	GroupCommit                       bool                                                  `thrift:"group_commit,30,optional" frugal:"30,optional,bool" json:"group_commit,omitempty"`
 }
 
 func NewTPipelineFragmentParams() *TPipelineFragmentParams {
@@ -20943,6 +21235,7 @@ func NewTPipelineFragmentParams() *TPipelineFragmentParams {
 
 		NeedWaitExecutionTrigger: false,
 		IsSimplifiedParam:        false,
+		GroupCommit:              false,
 	}
 }
 
@@ -20951,6 +21244,7 @@ func (p *TPipelineFragmentParams) InitDefault() {
 
 		NeedWaitExecutionTrigger: false,
 		IsSimplifiedParam:        false,
+		GroupCommit:              false,
 	}
 }
 
@@ -21185,6 +21479,15 @@ func (p *TPipelineFragmentParams) GetFileScanParams() (v map[types.TPlanNodeId]*
 	}
 	return p.FileScanParams
 }
+
+var TPipelineFragmentParams_GroupCommit_DEFAULT bool = false
+
+func (p *TPipelineFragmentParams) GetGroupCommit() (v bool) {
+	if !p.IsSetGroupCommit() {
+		return TPipelineFragmentParams_GroupCommit_DEFAULT
+	}
+	return p.GroupCommit
+}
 func (p *TPipelineFragmentParams) SetProtocolVersion(val PaloInternalServiceVersion) {
 	p.ProtocolVersion = val
 }
@@ -21269,6 +21572,9 @@ func (p *TPipelineFragmentParams) SetTableName(val *string) {
 func (p *TPipelineFragmentParams) SetFileScanParams(val map[types.TPlanNodeId]*plannodes.TFileScanRangeParams) {
 	p.FileScanParams = val
 }
+func (p *TPipelineFragmentParams) SetGroupCommit(val bool) {
+	p.GroupCommit = val
+}
 
 var fieldIDToName_TPipelineFragmentParams = map[int16]string{
 	1:  "protocol_version",
@@ -21299,6 +21605,7 @@ var fieldIDToName_TPipelineFragmentParams = map[int16]string{
 	27: "txn_conf",
 	28: "table_name",
 	29: "file_scan_params",
+	30: "group_commit",
 }
 
 func (p *TPipelineFragmentParams) IsSetQueryId() bool {
@@ -21395,6 +21702,10 @@ func (p *TPipelineFragmentParams) IsSetTableName() bool {
 
 func (p *TPipelineFragmentParams) IsSetFileScanParams() bool {
 	return p.FileScanParams != nil
+}
+
+func (p *TPipelineFragmentParams) IsSetGroupCommit() bool {
+	return p.GroupCommit != TPipelineFragmentParams_GroupCommit_DEFAULT
 }
 
 func (p *TPipelineFragmentParams) Read(iprot thrift.TProtocol) (err error) {
@@ -21695,6 +22006,16 @@ func (p *TPipelineFragmentParams) Read(iprot thrift.TProtocol) (err error) {
 		case 29:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField29(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 30:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField30(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -22071,6 +22392,15 @@ func (p *TPipelineFragmentParams) ReadField29(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TPipelineFragmentParams) ReadField30(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.GroupCommit = v
+	}
+	return nil
+}
+
 func (p *TPipelineFragmentParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TPipelineFragmentParams"); err != nil {
@@ -22187,6 +22517,10 @@ func (p *TPipelineFragmentParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField29(oprot); err != nil {
 			fieldId = 29
+			goto WriteFieldError
+		}
+		if err = p.writeField30(oprot); err != nil {
+			fieldId = 30
 			goto WriteFieldError
 		}
 
@@ -22788,6 +23122,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 29 end error: ", p), err)
 }
 
+func (p *TPipelineFragmentParams) writeField30(oprot thrift.TProtocol) (err error) {
+	if p.IsSetGroupCommit() {
+		if err = oprot.WriteFieldBegin("group_commit", thrift.BOOL, 30); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.GroupCommit); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 30 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 30 end error: ", p), err)
+}
+
 func (p *TPipelineFragmentParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -22883,6 +23236,9 @@ func (p *TPipelineFragmentParams) DeepEqual(ano *TPipelineFragmentParams) bool {
 		return false
 	}
 	if !p.Field29DeepEqual(ano.FileScanParams) {
+		return false
+	}
+	if !p.Field30DeepEqual(ano.GroupCommit) {
 		return false
 	}
 	return true
@@ -23162,6 +23518,13 @@ func (p *TPipelineFragmentParams) Field29DeepEqual(src map[types.TPlanNodeId]*pl
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *TPipelineFragmentParams) Field30DeepEqual(src bool) bool {
+
+	if p.GroupCommit != src {
+		return false
 	}
 	return true
 }

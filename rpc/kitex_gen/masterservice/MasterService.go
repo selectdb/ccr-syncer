@@ -3152,6 +3152,7 @@ type TDisk struct {
 	PathHash              *int64                `thrift:"path_hash,6,optional" frugal:"6,optional,i64" json:"path_hash,omitempty"`
 	StorageMedium         *types.TStorageMedium `thrift:"storage_medium,7,optional" frugal:"7,optional,TStorageMedium" json:"storage_medium,omitempty"`
 	RemoteUsedCapacity    *types.TSize          `thrift:"remote_used_capacity,8,optional" frugal:"8,optional,i64" json:"remote_used_capacity,omitempty"`
+	TrashUsedCapacity     *types.TSize          `thrift:"trash_used_capacity,9,optional" frugal:"9,optional,i64" json:"trash_used_capacity,omitempty"`
 }
 
 func NewTDisk() *TDisk {
@@ -3213,6 +3214,15 @@ func (p *TDisk) GetRemoteUsedCapacity() (v types.TSize) {
 	}
 	return *p.RemoteUsedCapacity
 }
+
+var TDisk_TrashUsedCapacity_DEFAULT types.TSize
+
+func (p *TDisk) GetTrashUsedCapacity() (v types.TSize) {
+	if !p.IsSetTrashUsedCapacity() {
+		return TDisk_TrashUsedCapacity_DEFAULT
+	}
+	return *p.TrashUsedCapacity
+}
 func (p *TDisk) SetRootPath(val string) {
 	p.RootPath = val
 }
@@ -3237,6 +3247,9 @@ func (p *TDisk) SetStorageMedium(val *types.TStorageMedium) {
 func (p *TDisk) SetRemoteUsedCapacity(val *types.TSize) {
 	p.RemoteUsedCapacity = val
 }
+func (p *TDisk) SetTrashUsedCapacity(val *types.TSize) {
+	p.TrashUsedCapacity = val
+}
 
 var fieldIDToName_TDisk = map[int16]string{
 	1: "root_path",
@@ -3247,6 +3260,7 @@ var fieldIDToName_TDisk = map[int16]string{
 	6: "path_hash",
 	7: "storage_medium",
 	8: "remote_used_capacity",
+	9: "trash_used_capacity",
 }
 
 func (p *TDisk) IsSetDiskAvailableCapacity() bool {
@@ -3263,6 +3277,10 @@ func (p *TDisk) IsSetStorageMedium() bool {
 
 func (p *TDisk) IsSetRemoteUsedCapacity() bool {
 	return p.RemoteUsedCapacity != nil
+}
+
+func (p *TDisk) IsSetTrashUsedCapacity() bool {
+	return p.TrashUsedCapacity != nil
 }
 
 func (p *TDisk) Read(iprot thrift.TProtocol) (err error) {
@@ -3365,6 +3383,16 @@ func (p *TDisk) Read(iprot thrift.TProtocol) (err error) {
 		case 8:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 9:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField9(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -3496,6 +3524,15 @@ func (p *TDisk) ReadField8(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TDisk) ReadField9(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.TrashUsedCapacity = &v
+	}
+	return nil
+}
+
 func (p *TDisk) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TDisk"); err != nil {
@@ -3532,6 +3569,10 @@ func (p *TDisk) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
 			goto WriteFieldError
 		}
 
@@ -3697,6 +3738,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
 
+func (p *TDisk) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTrashUsedCapacity() {
+		if err = oprot.WriteFieldBegin("trash_used_capacity", thrift.I64, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TrashUsedCapacity); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+
 func (p *TDisk) String() string {
 	if p == nil {
 		return "<nil>"
@@ -3732,6 +3792,9 @@ func (p *TDisk) DeepEqual(ano *TDisk) bool {
 		return false
 	}
 	if !p.Field8DeepEqual(ano.RemoteUsedCapacity) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.TrashUsedCapacity) {
 		return false
 	}
 	return true
@@ -3809,6 +3872,18 @@ func (p *TDisk) Field8DeepEqual(src *types.TSize) bool {
 		return false
 	}
 	if *p.RemoteUsedCapacity != *src {
+		return false
+	}
+	return true
+}
+func (p *TDisk) Field9DeepEqual(src *types.TSize) bool {
+
+	if p.TrashUsedCapacity == src {
+		return true
+	} else if p.TrashUsedCapacity == nil || src == nil {
+		return false
+	}
+	if *p.TrashUsedCapacity != *src {
 		return false
 	}
 	return true

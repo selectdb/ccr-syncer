@@ -52,6 +52,7 @@ const (
 	TPlanNodeType_JDBC_SCAN_NODE          TPlanNodeType = 30
 	TPlanNodeType_TEST_EXTERNAL_SCAN_NODE TPlanNodeType = 31
 	TPlanNodeType_PARTITION_SORT_NODE     TPlanNodeType = 32
+	TPlanNodeType_GROUP_COMMIT_SCAN_NODE  TPlanNodeType = 33
 )
 
 func (p TPlanNodeType) String() string {
@@ -122,6 +123,8 @@ func (p TPlanNodeType) String() string {
 		return "TEST_EXTERNAL_SCAN_NODE"
 	case TPlanNodeType_PARTITION_SORT_NODE:
 		return "PARTITION_SORT_NODE"
+	case TPlanNodeType_GROUP_COMMIT_SCAN_NODE:
+		return "GROUP_COMMIT_SCAN_NODE"
 	}
 	return "<UNSET>"
 }
@@ -194,6 +197,8 @@ func TPlanNodeTypeFromString(s string) (TPlanNodeType, error) {
 		return TPlanNodeType_TEST_EXTERNAL_SCAN_NODE, nil
 	case "PARTITION_SORT_NODE":
 		return TPlanNodeType_PARTITION_SORT_NODE, nil
+	case "GROUP_COMMIT_SCAN_NODE":
+		return TPlanNodeType_GROUP_COMMIT_SCAN_NODE, nil
 	}
 	return TPlanNodeType(0), fmt.Errorf("not a valid TPlanNodeType string")
 }
@@ -506,6 +511,48 @@ func (p *TFileCompressType) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+type TTextSerdeType int64
+
+const (
+	TTextSerdeType_JSON_TEXT_SERDE TTextSerdeType = 0
+	TTextSerdeType_HIVE_TEXT_SERDE TTextSerdeType = 1
+)
+
+func (p TTextSerdeType) String() string {
+	switch p {
+	case TTextSerdeType_JSON_TEXT_SERDE:
+		return "JSON_TEXT_SERDE"
+	case TTextSerdeType_HIVE_TEXT_SERDE:
+		return "HIVE_TEXT_SERDE"
+	}
+	return "<UNSET>"
+}
+
+func TTextSerdeTypeFromString(s string) (TTextSerdeType, error) {
+	switch s {
+	case "JSON_TEXT_SERDE":
+		return TTextSerdeType_JSON_TEXT_SERDE, nil
+	case "HIVE_TEXT_SERDE":
+		return TTextSerdeType_HIVE_TEXT_SERDE, nil
+	}
+	return TTextSerdeType(0), fmt.Errorf("not a valid TTextSerdeType string")
+}
+
+func TTextSerdeTypePtr(v TTextSerdeType) *TTextSerdeType { return &v }
+func (p *TTextSerdeType) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = TTextSerdeType(result.Int64)
+	return
+}
+
+func (p *TTextSerdeType) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
 type TDataGenFunctionName int64
 
 const (
@@ -546,10 +593,11 @@ func (p *TDataGenFunctionName) Value() (driver.Value, error) {
 type TPushAggOp int64
 
 const (
-	TPushAggOp_NONE   TPushAggOp = 0
-	TPushAggOp_MINMAX TPushAggOp = 1
-	TPushAggOp_COUNT  TPushAggOp = 2
-	TPushAggOp_MIX    TPushAggOp = 3
+	TPushAggOp_NONE           TPushAggOp = 0
+	TPushAggOp_MINMAX         TPushAggOp = 1
+	TPushAggOp_COUNT          TPushAggOp = 2
+	TPushAggOp_MIX            TPushAggOp = 3
+	TPushAggOp_COUNT_ON_INDEX TPushAggOp = 4
 )
 
 func (p TPushAggOp) String() string {
@@ -562,6 +610,8 @@ func (p TPushAggOp) String() string {
 		return "COUNT"
 	case TPushAggOp_MIX:
 		return "MIX"
+	case TPushAggOp_COUNT_ON_INDEX:
+		return "COUNT_ON_INDEX"
 	}
 	return "<UNSET>"
 }
@@ -576,6 +626,8 @@ func TPushAggOpFromString(s string) (TPushAggOp, error) {
 		return TPushAggOp_COUNT, nil
 	case "MIX":
 		return TPushAggOp_MIX, nil
+	case "COUNT_ON_INDEX":
+		return TPushAggOp_COUNT_ON_INDEX, nil
 	}
 	return TPushAggOp(0), fmt.Errorf("not a valid TPushAggOp string")
 }
@@ -11833,6 +11885,7 @@ type TFileScanRangeParams struct {
 	SlotNameToSchemaPos         map[string]int32                `thrift:"slot_name_to_schema_pos,19,optional" frugal:"19,optional,map<string:i32>" json:"slot_name_to_schema_pos,omitempty"`
 	PreFilterExprsList          []*exprs.TExpr                  `thrift:"pre_filter_exprs_list,20,optional" frugal:"20,optional,list<exprs.TExpr>" json:"pre_filter_exprs_list,omitempty"`
 	LoadId                      *types.TUniqueId                `thrift:"load_id,21,optional" frugal:"21,optional,types.TUniqueId" json:"load_id,omitempty"`
+	TextSerdeType               *TTextSerdeType                 `thrift:"text_serde_type,22,optional" frugal:"22,optional,TTextSerdeType" json:"text_serde_type,omitempty"`
 }
 
 func NewTFileScanRangeParams() *TFileScanRangeParams {
@@ -12031,6 +12084,15 @@ func (p *TFileScanRangeParams) GetLoadId() (v *types.TUniqueId) {
 	}
 	return p.LoadId
 }
+
+var TFileScanRangeParams_TextSerdeType_DEFAULT TTextSerdeType
+
+func (p *TFileScanRangeParams) GetTextSerdeType() (v TTextSerdeType) {
+	if !p.IsSetTextSerdeType() {
+		return TFileScanRangeParams_TextSerdeType_DEFAULT
+	}
+	return *p.TextSerdeType
+}
 func (p *TFileScanRangeParams) SetFileType(val *types.TFileType) {
 	p.FileType = val
 }
@@ -12094,6 +12156,9 @@ func (p *TFileScanRangeParams) SetPreFilterExprsList(val []*exprs.TExpr) {
 func (p *TFileScanRangeParams) SetLoadId(val *types.TUniqueId) {
 	p.LoadId = val
 }
+func (p *TFileScanRangeParams) SetTextSerdeType(val *TTextSerdeType) {
+	p.TextSerdeType = val
+}
 
 var fieldIDToName_TFileScanRangeParams = map[int16]string{
 	1:  "file_type",
@@ -12117,6 +12182,7 @@ var fieldIDToName_TFileScanRangeParams = map[int16]string{
 	19: "slot_name_to_schema_pos",
 	20: "pre_filter_exprs_list",
 	21: "load_id",
+	22: "text_serde_type",
 }
 
 func (p *TFileScanRangeParams) IsSetFileType() bool {
@@ -12201,6 +12267,10 @@ func (p *TFileScanRangeParams) IsSetPreFilterExprsList() bool {
 
 func (p *TFileScanRangeParams) IsSetLoadId() bool {
 	return p.LoadId != nil
+}
+
+func (p *TFileScanRangeParams) IsSetTextSerdeType() bool {
+	return p.TextSerdeType != nil
 }
 
 func (p *TFileScanRangeParams) Read(iprot thrift.TProtocol) (err error) {
@@ -12425,6 +12495,16 @@ func (p *TFileScanRangeParams) Read(iprot thrift.TProtocol) (err error) {
 		case 21:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField21(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 22:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField22(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -12789,6 +12869,16 @@ func (p *TFileScanRangeParams) ReadField21(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TFileScanRangeParams) ReadField22(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := TTextSerdeType(v)
+		p.TextSerdeType = &tmp
+	}
+	return nil
+}
+
 func (p *TFileScanRangeParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TFileScanRangeParams"); err != nil {
@@ -12877,6 +12967,10 @@ func (p *TFileScanRangeParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField21(oprot); err != nil {
 			fieldId = 21
+			goto WriteFieldError
+		}
+		if err = p.writeField22(oprot); err != nil {
+			fieldId = 22
 			goto WriteFieldError
 		}
 
@@ -13394,6 +13488,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
 }
 
+func (p *TFileScanRangeParams) writeField22(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTextSerdeType() {
+		if err = oprot.WriteFieldBegin("text_serde_type", thrift.I32, 22); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.TextSerdeType)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
+}
+
 func (p *TFileScanRangeParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -13468,6 +13581,9 @@ func (p *TFileScanRangeParams) DeepEqual(ano *TFileScanRangeParams) bool {
 		return false
 	}
 	if !p.Field21DeepEqual(ano.LoadId) {
+		return false
+	}
+	if !p.Field22DeepEqual(ano.TextSerdeType) {
 		return false
 	}
 	return true
@@ -13705,6 +13821,18 @@ func (p *TFileScanRangeParams) Field20DeepEqual(src []*exprs.TExpr) bool {
 func (p *TFileScanRangeParams) Field21DeepEqual(src *types.TUniqueId) bool {
 
 	if !p.LoadId.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TFileScanRangeParams) Field22DeepEqual(src *TTextSerdeType) bool {
+
+	if p.TextSerdeType == src {
+		return true
+	} else if p.TextSerdeType == nil || src == nil {
+		return false
+	}
+	if *p.TextSerdeType != *src {
 		return false
 	}
 	return true
@@ -36358,6 +36486,186 @@ func (p *TDataGenScanNode) Field2DeepEqual(src *TDataGenFunctionName) bool {
 	return true
 }
 
+type TGroupCommitScanNode struct {
+	TableId *int64 `thrift:"table_id,1,optional" frugal:"1,optional,i64" json:"table_id,omitempty"`
+}
+
+func NewTGroupCommitScanNode() *TGroupCommitScanNode {
+	return &TGroupCommitScanNode{}
+}
+
+func (p *TGroupCommitScanNode) InitDefault() {
+	*p = TGroupCommitScanNode{}
+}
+
+var TGroupCommitScanNode_TableId_DEFAULT int64
+
+func (p *TGroupCommitScanNode) GetTableId() (v int64) {
+	if !p.IsSetTableId() {
+		return TGroupCommitScanNode_TableId_DEFAULT
+	}
+	return *p.TableId
+}
+func (p *TGroupCommitScanNode) SetTableId(val *int64) {
+	p.TableId = val
+}
+
+var fieldIDToName_TGroupCommitScanNode = map[int16]string{
+	1: "table_id",
+}
+
+func (p *TGroupCommitScanNode) IsSetTableId() bool {
+	return p.TableId != nil
+}
+
+func (p *TGroupCommitScanNode) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TGroupCommitScanNode[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TGroupCommitScanNode) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.TableId = &v
+	}
+	return nil
+}
+
+func (p *TGroupCommitScanNode) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TGroupCommitScanNode"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TGroupCommitScanNode) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTableId() {
+		if err = oprot.WriteFieldBegin("table_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TableId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TGroupCommitScanNode) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TGroupCommitScanNode(%+v)", *p)
+}
+
+func (p *TGroupCommitScanNode) DeepEqual(ano *TGroupCommitScanNode) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.TableId) {
+		return false
+	}
+	return true
+}
+
+func (p *TGroupCommitScanNode) Field1DeepEqual(src *int64) bool {
+
+	if p.TableId == src {
+		return true
+	} else if p.TableId == nil || src == nil {
+		return false
+	}
+	if *p.TableId != *src {
+		return false
+	}
+	return true
+}
+
 type TPlanNode struct {
 	NodeId               types.TPlanNodeId        `thrift:"node_id,1,required" frugal:"1,required,i32" json:"node_id"`
 	NodeType             TPlanNodeType            `thrift:"node_type,2,required" frugal:"2,required,TPlanNodeType" json:"node_type"`
@@ -36391,6 +36699,7 @@ type TPlanNode struct {
 	ExceptNode           *TExceptNode             `thrift:"except_node,34,optional" frugal:"34,optional,TExceptNode" json:"except_node,omitempty"`
 	OdbcScanNode         *TOdbcScanNode           `thrift:"odbc_scan_node,35,optional" frugal:"35,optional,TOdbcScanNode" json:"odbc_scan_node,omitempty"`
 	RuntimeFilters       []*TRuntimeFilterDesc    `thrift:"runtime_filters,36,optional" frugal:"36,optional,list<TRuntimeFilterDesc>" json:"runtime_filters,omitempty"`
+	GroupCommitScanNode  *TGroupCommitScanNode    `thrift:"group_commit_scan_node,37,optional" frugal:"37,optional,TGroupCommitScanNode" json:"group_commit_scan_node,omitempty"`
 	Vconjunct            *exprs.TExpr             `thrift:"vconjunct,40,optional" frugal:"40,optional,exprs.TExpr" json:"vconjunct,omitempty"`
 	TableFunctionNode    *TTableFunctionNode      `thrift:"table_function_node,41,optional" frugal:"41,optional,TTableFunctionNode" json:"table_function_node,omitempty"`
 	OutputSlotIds        []types.TSlotId          `thrift:"output_slot_ids,42,optional" frugal:"42,optional,list<i32>" json:"output_slot_ids,omitempty"`
@@ -36667,6 +36976,15 @@ func (p *TPlanNode) GetRuntimeFilters() (v []*TRuntimeFilterDesc) {
 	return p.RuntimeFilters
 }
 
+var TPlanNode_GroupCommitScanNode_DEFAULT *TGroupCommitScanNode
+
+func (p *TPlanNode) GetGroupCommitScanNode() (v *TGroupCommitScanNode) {
+	if !p.IsSetGroupCommitScanNode() {
+		return TPlanNode_GroupCommitScanNode_DEFAULT
+	}
+	return p.GroupCommitScanNode
+}
+
 var TPlanNode_Vconjunct_DEFAULT *exprs.TExpr
 
 func (p *TPlanNode) GetVconjunct() (v *exprs.TExpr) {
@@ -36879,6 +37197,9 @@ func (p *TPlanNode) SetOdbcScanNode(val *TOdbcScanNode) {
 func (p *TPlanNode) SetRuntimeFilters(val []*TRuntimeFilterDesc) {
 	p.RuntimeFilters = val
 }
+func (p *TPlanNode) SetGroupCommitScanNode(val *TGroupCommitScanNode) {
+	p.GroupCommitScanNode = val
+}
 func (p *TPlanNode) SetVconjunct(val *exprs.TExpr) {
 	p.Vconjunct = val
 }
@@ -36952,6 +37273,7 @@ var fieldIDToName_TPlanNode = map[int16]string{
 	34:  "except_node",
 	35:  "odbc_scan_node",
 	36:  "runtime_filters",
+	37:  "group_commit_scan_node",
 	40:  "vconjunct",
 	41:  "table_function_node",
 	42:  "output_slot_ids",
@@ -37065,6 +37387,10 @@ func (p *TPlanNode) IsSetOdbcScanNode() bool {
 
 func (p *TPlanNode) IsSetRuntimeFilters() bool {
 	return p.RuntimeFilters != nil
+}
+
+func (p *TPlanNode) IsSetGroupCommitScanNode() bool {
+	return p.GroupCommitScanNode != nil
 }
 
 func (p *TPlanNode) IsSetVconjunct() bool {
@@ -37465,6 +37791,16 @@ func (p *TPlanNode) Read(iprot thrift.TProtocol) (err error) {
 		case 36:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField36(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 37:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField37(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -37981,6 +38317,14 @@ func (p *TPlanNode) ReadField36(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TPlanNode) ReadField37(iprot thrift.TProtocol) error {
+	p.GroupCommitScanNode = NewTGroupCommitScanNode()
+	if err := p.GroupCommitScanNode.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *TPlanNode) ReadField40(iprot thrift.TProtocol) error {
 	p.Vconjunct = exprs.NewTExpr()
 	if err := p.Vconjunct.Read(iprot); err != nil {
@@ -38247,6 +38591,10 @@ func (p *TPlanNode) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField36(oprot); err != nil {
 			fieldId = 36
+			goto WriteFieldError
+		}
+		if err = p.writeField37(oprot); err != nil {
+			fieldId = 37
 			goto WriteFieldError
 		}
 		if err = p.writeField40(oprot); err != nil {
@@ -38946,6 +39294,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 36 end error: ", p), err)
 }
 
+func (p *TPlanNode) writeField37(oprot thrift.TProtocol) (err error) {
+	if p.IsSetGroupCommitScanNode() {
+		if err = oprot.WriteFieldBegin("group_commit_scan_node", thrift.STRUCT, 37); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.GroupCommitScanNode.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 37 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 37 end error: ", p), err)
+}
+
 func (p *TPlanNode) writeField40(oprot thrift.TProtocol) (err error) {
 	if p.IsSetVconjunct() {
 		if err = oprot.WriteFieldBegin("vconjunct", thrift.STRUCT, 40); err != nil {
@@ -39318,6 +39685,9 @@ func (p *TPlanNode) DeepEqual(ano *TPlanNode) bool {
 	if !p.Field36DeepEqual(ano.RuntimeFilters) {
 		return false
 	}
+	if !p.Field37DeepEqual(ano.GroupCommitScanNode) {
+		return false
+	}
 	if !p.Field40DeepEqual(ano.Vconjunct) {
 		return false
 	}
@@ -39605,6 +39975,13 @@ func (p *TPlanNode) Field36DeepEqual(src []*TRuntimeFilterDesc) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *TPlanNode) Field37DeepEqual(src *TGroupCommitScanNode) bool {
+
+	if !p.GroupCommitScanNode.DeepEqual(src) {
+		return false
 	}
 	return true
 }

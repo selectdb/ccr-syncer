@@ -23,7 +23,7 @@ type IFeRpc interface {
 	GetBinlog(*base.Spec, int64) (*festruct.TGetBinlogResult_, error)
 	GetBinlogLag(*base.Spec, int64) (*festruct.TGetBinlogLagResult_, error)
 	GetSnapshot(*base.Spec, string) (*festruct.TGetSnapshotResult_, error)
-	RestoreSnapshot(*base.Spec, string, *festruct.TGetSnapshotResult_) (*festruct.TRestoreSnapshotResult_, error)
+	RestoreSnapshot(*base.Spec, []*festruct.TTableRef, string, *festruct.TGetSnapshotResult_) (*festruct.TRestoreSnapshotResult_, error)
 	GetMasterToken(*base.Spec) (string, error)
 }
 
@@ -248,7 +248,7 @@ func (rpc *FeRpc) GetSnapshot(spec *base.Spec, labelName string) (*festruct.TGet
 //	}
 //
 // Restore Snapshot rpc
-func (rpc *FeRpc) RestoreSnapshot(spec *base.Spec, label string, snapshotResult *festruct.TGetSnapshotResult_) (*festruct.TRestoreSnapshotResult_, error) {
+func (rpc *FeRpc) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableRef, label string, snapshotResult *festruct.TGetSnapshotResult_) (*festruct.TRestoreSnapshotResult_, error) {
 	log.Debugf("RestoreSnapshot, spec: %s, snapshot result: %+v", spec, snapshotResult)
 
 	client := rpc.client
@@ -260,6 +260,7 @@ func (rpc *FeRpc) RestoreSnapshot(spec *base.Spec, label string, snapshotResult 
 		Table:      &spec.Table,
 		LabelName:  &label,    // TODO: check remove
 		RepoName:   &repoName, // TODO: check remove
+		TableRefs:  tableRefs,
 		Properties: properties,
 		Meta:       snapshotResult.GetMeta(),
 		JobInfo:    snapshotResult.GetJobInfo(),

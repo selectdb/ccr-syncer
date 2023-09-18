@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/selectdb/ccr_syncer/rpc/kitex_gen/exprs"
+	"github.com/selectdb/ccr_syncer/rpc/kitex_gen/partitions"
 	"github.com/selectdb/ccr_syncer/rpc/kitex_gen/types"
 	"strings"
 )
@@ -1906,6 +1907,7 @@ type TSlotDescriptor struct {
 	IsKey             bool             `thrift:"is_key,12,optional" frugal:"12,optional,bool" json:"is_key,omitempty"`
 	NeedMaterialize   bool             `thrift:"need_materialize,13,optional" frugal:"13,optional,bool" json:"need_materialize,omitempty"`
 	IsAutoIncrement   bool             `thrift:"is_auto_increment,14,optional" frugal:"14,optional,bool" json:"is_auto_increment,omitempty"`
+	ColumnPaths       []string         `thrift:"column_paths,15,optional" frugal:"15,optional,list<string>" json:"column_paths,omitempty"`
 }
 
 func NewTSlotDescriptor() *TSlotDescriptor {
@@ -2008,6 +2010,15 @@ func (p *TSlotDescriptor) GetIsAutoIncrement() (v bool) {
 	}
 	return p.IsAutoIncrement
 }
+
+var TSlotDescriptor_ColumnPaths_DEFAULT []string
+
+func (p *TSlotDescriptor) GetColumnPaths() (v []string) {
+	if !p.IsSetColumnPaths() {
+		return TSlotDescriptor_ColumnPaths_DEFAULT
+	}
+	return p.ColumnPaths
+}
 func (p *TSlotDescriptor) SetId(val types.TSlotId) {
 	p.Id = val
 }
@@ -2050,6 +2061,9 @@ func (p *TSlotDescriptor) SetNeedMaterialize(val bool) {
 func (p *TSlotDescriptor) SetIsAutoIncrement(val bool) {
 	p.IsAutoIncrement = val
 }
+func (p *TSlotDescriptor) SetColumnPaths(val []string) {
+	p.ColumnPaths = val
+}
 
 var fieldIDToName_TSlotDescriptor = map[int16]string{
 	1:  "id",
@@ -2066,6 +2080,7 @@ var fieldIDToName_TSlotDescriptor = map[int16]string{
 	12: "is_key",
 	13: "need_materialize",
 	14: "is_auto_increment",
+	15: "column_paths",
 }
 
 func (p *TSlotDescriptor) IsSetSlotType() bool {
@@ -2086,6 +2101,10 @@ func (p *TSlotDescriptor) IsSetNeedMaterialize() bool {
 
 func (p *TSlotDescriptor) IsSetIsAutoIncrement() bool {
 	return p.IsAutoIncrement != TSlotDescriptor_IsAutoIncrement_DEFAULT
+}
+
+func (p *TSlotDescriptor) IsSetColumnPaths() bool {
+	return p.ColumnPaths != nil
 }
 
 func (p *TSlotDescriptor) Read(iprot thrift.TProtocol) (err error) {
@@ -2260,6 +2279,16 @@ func (p *TSlotDescriptor) Read(iprot thrift.TProtocol) (err error) {
 		case 14:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField14(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 15:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField15(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -2473,6 +2502,28 @@ func (p *TSlotDescriptor) ReadField14(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TSlotDescriptor) ReadField15(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	p.ColumnPaths = make([]string, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		p.ColumnPaths = append(p.ColumnPaths, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *TSlotDescriptor) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TSlotDescriptor"); err != nil {
@@ -2533,6 +2584,10 @@ func (p *TSlotDescriptor) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField14(oprot); err != nil {
 			fieldId = 14
+			goto WriteFieldError
+		}
+		if err = p.writeField15(oprot); err != nil {
+			fieldId = 15
 			goto WriteFieldError
 		}
 
@@ -2800,6 +2855,33 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
 }
 
+func (p *TSlotDescriptor) writeField15(oprot thrift.TProtocol) (err error) {
+	if p.IsSetColumnPaths() {
+		if err = oprot.WriteFieldBegin("column_paths", thrift.LIST, 15); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.ColumnPaths)); err != nil {
+			return err
+		}
+		for _, v := range p.ColumnPaths {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
+}
+
 func (p *TSlotDescriptor) String() string {
 	if p == nil {
 		return "<nil>"
@@ -2853,6 +2935,9 @@ func (p *TSlotDescriptor) DeepEqual(ano *TSlotDescriptor) bool {
 		return false
 	}
 	if !p.Field14DeepEqual(ano.IsAutoIncrement) {
+		return false
+	}
+	if !p.Field15DeepEqual(ano.ColumnPaths) {
 		return false
 	}
 	return true
@@ -2953,6 +3038,19 @@ func (p *TSlotDescriptor) Field14DeepEqual(src bool) bool {
 
 	if p.IsAutoIncrement != src {
 		return false
+	}
+	return true
+}
+func (p *TSlotDescriptor) Field15DeepEqual(src []string) bool {
+
+	if len(p.ColumnPaths) != len(src) {
+		return false
+	}
+	for i, v := range p.ColumnPaths {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }
@@ -4606,13 +4704,16 @@ func (p *TOlapTablePartition) Field10DeepEqual(src *bool) bool {
 }
 
 type TOlapTablePartitionParam struct {
-	DbId               int64                  `thrift:"db_id,1,required" frugal:"1,required,i64" json:"db_id"`
-	TableId            int64                  `thrift:"table_id,2,required" frugal:"2,required,i64" json:"table_id"`
-	Version            int64                  `thrift:"version,3,required" frugal:"3,required,i64" json:"version"`
-	PartitionColumn    *string                `thrift:"partition_column,4,optional" frugal:"4,optional,string" json:"partition_column,omitempty"`
-	DistributedColumns []string               `thrift:"distributed_columns,5,optional" frugal:"5,optional,list<string>" json:"distributed_columns,omitempty"`
-	Partitions         []*TOlapTablePartition `thrift:"partitions,6,required" frugal:"6,required,list<TOlapTablePartition>" json:"partitions"`
-	PartitionColumns   []string               `thrift:"partition_columns,7,optional" frugal:"7,optional,list<string>" json:"partition_columns,omitempty"`
+	DbId                     int64                      `thrift:"db_id,1,required" frugal:"1,required,i64" json:"db_id"`
+	TableId                  int64                      `thrift:"table_id,2,required" frugal:"2,required,i64" json:"table_id"`
+	Version                  int64                      `thrift:"version,3,required" frugal:"3,required,i64" json:"version"`
+	PartitionColumn          *string                    `thrift:"partition_column,4,optional" frugal:"4,optional,string" json:"partition_column,omitempty"`
+	DistributedColumns       []string                   `thrift:"distributed_columns,5,optional" frugal:"5,optional,list<string>" json:"distributed_columns,omitempty"`
+	Partitions               []*TOlapTablePartition     `thrift:"partitions,6,required" frugal:"6,required,list<TOlapTablePartition>" json:"partitions"`
+	PartitionColumns         []string                   `thrift:"partition_columns,7,optional" frugal:"7,optional,list<string>" json:"partition_columns,omitempty"`
+	PartitionFunctionExprs   []*exprs.TExpr             `thrift:"partition_function_exprs,8,optional" frugal:"8,optional,list<exprs.TExpr>" json:"partition_function_exprs,omitempty"`
+	EnableAutomaticPartition *bool                      `thrift:"enable_automatic_partition,9,optional" frugal:"9,optional,bool" json:"enable_automatic_partition,omitempty"`
+	PartitionType            *partitions.TPartitionType `thrift:"partition_type,10,optional" frugal:"10,optional,TPartitionType" json:"partition_type,omitempty"`
 }
 
 func NewTOlapTablePartitionParam() *TOlapTablePartitionParam {
@@ -4665,6 +4766,33 @@ func (p *TOlapTablePartitionParam) GetPartitionColumns() (v []string) {
 	}
 	return p.PartitionColumns
 }
+
+var TOlapTablePartitionParam_PartitionFunctionExprs_DEFAULT []*exprs.TExpr
+
+func (p *TOlapTablePartitionParam) GetPartitionFunctionExprs() (v []*exprs.TExpr) {
+	if !p.IsSetPartitionFunctionExprs() {
+		return TOlapTablePartitionParam_PartitionFunctionExprs_DEFAULT
+	}
+	return p.PartitionFunctionExprs
+}
+
+var TOlapTablePartitionParam_EnableAutomaticPartition_DEFAULT bool
+
+func (p *TOlapTablePartitionParam) GetEnableAutomaticPartition() (v bool) {
+	if !p.IsSetEnableAutomaticPartition() {
+		return TOlapTablePartitionParam_EnableAutomaticPartition_DEFAULT
+	}
+	return *p.EnableAutomaticPartition
+}
+
+var TOlapTablePartitionParam_PartitionType_DEFAULT partitions.TPartitionType
+
+func (p *TOlapTablePartitionParam) GetPartitionType() (v partitions.TPartitionType) {
+	if !p.IsSetPartitionType() {
+		return TOlapTablePartitionParam_PartitionType_DEFAULT
+	}
+	return *p.PartitionType
+}
 func (p *TOlapTablePartitionParam) SetDbId(val int64) {
 	p.DbId = val
 }
@@ -4686,15 +4814,27 @@ func (p *TOlapTablePartitionParam) SetPartitions(val []*TOlapTablePartition) {
 func (p *TOlapTablePartitionParam) SetPartitionColumns(val []string) {
 	p.PartitionColumns = val
 }
+func (p *TOlapTablePartitionParam) SetPartitionFunctionExprs(val []*exprs.TExpr) {
+	p.PartitionFunctionExprs = val
+}
+func (p *TOlapTablePartitionParam) SetEnableAutomaticPartition(val *bool) {
+	p.EnableAutomaticPartition = val
+}
+func (p *TOlapTablePartitionParam) SetPartitionType(val *partitions.TPartitionType) {
+	p.PartitionType = val
+}
 
 var fieldIDToName_TOlapTablePartitionParam = map[int16]string{
-	1: "db_id",
-	2: "table_id",
-	3: "version",
-	4: "partition_column",
-	5: "distributed_columns",
-	6: "partitions",
-	7: "partition_columns",
+	1:  "db_id",
+	2:  "table_id",
+	3:  "version",
+	4:  "partition_column",
+	5:  "distributed_columns",
+	6:  "partitions",
+	7:  "partition_columns",
+	8:  "partition_function_exprs",
+	9:  "enable_automatic_partition",
+	10: "partition_type",
 }
 
 func (p *TOlapTablePartitionParam) IsSetPartitionColumn() bool {
@@ -4707,6 +4847,18 @@ func (p *TOlapTablePartitionParam) IsSetDistributedColumns() bool {
 
 func (p *TOlapTablePartitionParam) IsSetPartitionColumns() bool {
 	return p.PartitionColumns != nil
+}
+
+func (p *TOlapTablePartitionParam) IsSetPartitionFunctionExprs() bool {
+	return p.PartitionFunctionExprs != nil
+}
+
+func (p *TOlapTablePartitionParam) IsSetEnableAutomaticPartition() bool {
+	return p.EnableAutomaticPartition != nil
+}
+
+func (p *TOlapTablePartitionParam) IsSetPartitionType() bool {
+	return p.PartitionType != nil
 }
 
 func (p *TOlapTablePartitionParam) Read(iprot thrift.TProtocol) (err error) {
@@ -4799,6 +4951,36 @@ func (p *TOlapTablePartitionParam) Read(iprot thrift.TProtocol) (err error) {
 		case 7:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 8:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 9:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 10:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -4957,6 +5139,45 @@ func (p *TOlapTablePartitionParam) ReadField7(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TOlapTablePartitionParam) ReadField8(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	p.PartitionFunctionExprs = make([]*exprs.TExpr, 0, size)
+	for i := 0; i < size; i++ {
+		_elem := exprs.NewTExpr()
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		p.PartitionFunctionExprs = append(p.PartitionFunctionExprs, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *TOlapTablePartitionParam) ReadField9(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.EnableAutomaticPartition = &v
+	}
+	return nil
+}
+
+func (p *TOlapTablePartitionParam) ReadField10(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := partitions.TPartitionType(v)
+		p.PartitionType = &tmp
+	}
+	return nil
+}
+
 func (p *TOlapTablePartitionParam) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TOlapTablePartitionParam"); err != nil {
@@ -4989,6 +5210,18 @@ func (p *TOlapTablePartitionParam) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 
@@ -5159,6 +5392,71 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
 
+func (p *TOlapTablePartitionParam) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPartitionFunctionExprs() {
+		if err = oprot.WriteFieldBegin("partition_function_exprs", thrift.LIST, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.PartitionFunctionExprs)); err != nil {
+			return err
+		}
+		for _, v := range p.PartitionFunctionExprs {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
+func (p *TOlapTablePartitionParam) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableAutomaticPartition() {
+		if err = oprot.WriteFieldBegin("enable_automatic_partition", thrift.BOOL, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.EnableAutomaticPartition); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+
+func (p *TOlapTablePartitionParam) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPartitionType() {
+		if err = oprot.WriteFieldBegin("partition_type", thrift.I32, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.PartitionType)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
 func (p *TOlapTablePartitionParam) String() string {
 	if p == nil {
 		return "<nil>"
@@ -5191,6 +5489,15 @@ func (p *TOlapTablePartitionParam) DeepEqual(ano *TOlapTablePartitionParam) bool
 		return false
 	}
 	if !p.Field7DeepEqual(ano.PartitionColumns) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.PartitionFunctionExprs) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.EnableAutomaticPartition) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.PartitionType) {
 		return false
 	}
 	return true
@@ -5265,6 +5572,43 @@ func (p *TOlapTablePartitionParam) Field7DeepEqual(src []string) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *TOlapTablePartitionParam) Field8DeepEqual(src []*exprs.TExpr) bool {
+
+	if len(p.PartitionFunctionExprs) != len(src) {
+		return false
+	}
+	for i, v := range p.PartitionFunctionExprs {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *TOlapTablePartitionParam) Field9DeepEqual(src *bool) bool {
+
+	if p.EnableAutomaticPartition == src {
+		return true
+	} else if p.EnableAutomaticPartition == nil || src == nil {
+		return false
+	}
+	if *p.EnableAutomaticPartition != *src {
+		return false
+	}
+	return true
+}
+func (p *TOlapTablePartitionParam) Field10DeepEqual(src *partitions.TPartitionType) bool {
+
+	if p.PartitionType == src {
+		return true
+	} else if p.PartitionType == nil || src == nil {
+		return false
+	}
+	if *p.PartitionType != *src {
+		return false
 	}
 	return true
 }

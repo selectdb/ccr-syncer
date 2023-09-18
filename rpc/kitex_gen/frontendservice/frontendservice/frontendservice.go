@@ -65,6 +65,7 @@ func NewServiceInfo() *kitex.ServiceInfo {
 		"getBinlogLag":              kitex.NewMethodInfo(getBinlogLagHandler, newFrontendServiceGetBinlogLagArgs, newFrontendServiceGetBinlogLagResult, false),
 		"updateStatsCache":          kitex.NewMethodInfo(updateStatsCacheHandler, newFrontendServiceUpdateStatsCacheArgs, newFrontendServiceUpdateStatsCacheResult, false),
 		"getAutoIncrementRange":     kitex.NewMethodInfo(getAutoIncrementRangeHandler, newFrontendServiceGetAutoIncrementRangeArgs, newFrontendServiceGetAutoIncrementRangeResult, false),
+		"createPartition":           kitex.NewMethodInfo(createPartitionHandler, newFrontendServiceCreatePartitionArgs, newFrontendServiceCreatePartitionResult, false),
 	}
 	extra := map[string]interface{}{
 		"PackageName": "frontendservice",
@@ -872,6 +873,24 @@ func newFrontendServiceGetAutoIncrementRangeResult() interface{} {
 	return frontendservice.NewFrontendServiceGetAutoIncrementRangeResult()
 }
 
+func createPartitionHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*frontendservice.FrontendServiceCreatePartitionArgs)
+	realResult := result.(*frontendservice.FrontendServiceCreatePartitionResult)
+	success, err := handler.(frontendservice.FrontendService).CreatePartition(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newFrontendServiceCreatePartitionArgs() interface{} {
+	return frontendservice.NewFrontendServiceCreatePartitionArgs()
+}
+
+func newFrontendServiceCreatePartitionResult() interface{} {
+	return frontendservice.NewFrontendServiceCreatePartitionResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -1315,6 +1334,16 @@ func (p *kClient) GetAutoIncrementRange(ctx context.Context, request *frontendse
 	_args.Request = request
 	var _result frontendservice.FrontendServiceGetAutoIncrementRangeResult
 	if err = p.c.Call(ctx, "getAutoIncrementRange", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CreatePartition(ctx context.Context, request *frontendservice.TCreatePartitionRequest) (r *frontendservice.TCreatePartitionResult_, err error) {
+	var _args frontendservice.FrontendServiceCreatePartitionArgs
+	_args.Request = request
+	var _result frontendservice.FrontendServiceCreatePartitionResult
+	if err = p.c.Call(ctx, "createPartition", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

@@ -15445,6 +15445,7 @@ type TMasterOpRequest struct {
 	ClientNodePort         *int32                             `thrift:"clientNodePort,23,optional" frugal:"23,optional,i32" json:"clientNodePort,omitempty"`
 	SyncJournalOnly        *bool                              `thrift:"syncJournalOnly,24,optional" frugal:"24,optional,bool" json:"syncJournalOnly,omitempty"`
 	DefaultCatalog         *string                            `thrift:"defaultCatalog,25,optional" frugal:"25,optional,string" json:"defaultCatalog,omitempty"`
+	DefaultDatabase        *string                            `thrift:"defaultDatabase,26,optional" frugal:"26,optional,string" json:"defaultDatabase,omitempty"`
 }
 
 func NewTMasterOpRequest() *TMasterOpRequest {
@@ -15664,6 +15665,15 @@ func (p *TMasterOpRequest) GetDefaultCatalog() (v string) {
 	}
 	return *p.DefaultCatalog
 }
+
+var TMasterOpRequest_DefaultDatabase_DEFAULT string
+
+func (p *TMasterOpRequest) GetDefaultDatabase() (v string) {
+	if !p.IsSetDefaultDatabase() {
+		return TMasterOpRequest_DefaultDatabase_DEFAULT
+	}
+	return *p.DefaultDatabase
+}
 func (p *TMasterOpRequest) SetUser(val string) {
 	p.User = val
 }
@@ -15739,6 +15749,9 @@ func (p *TMasterOpRequest) SetSyncJournalOnly(val *bool) {
 func (p *TMasterOpRequest) SetDefaultCatalog(val *string) {
 	p.DefaultCatalog = val
 }
+func (p *TMasterOpRequest) SetDefaultDatabase(val *string) {
+	p.DefaultDatabase = val
+}
 
 var fieldIDToName_TMasterOpRequest = map[int16]string{
 	1:  "user",
@@ -15766,6 +15779,7 @@ var fieldIDToName_TMasterOpRequest = map[int16]string{
 	23: "clientNodePort",
 	24: "syncJournalOnly",
 	25: "defaultCatalog",
+	26: "defaultDatabase",
 }
 
 func (p *TMasterOpRequest) IsSetResourceInfo() bool {
@@ -15854,6 +15868,10 @@ func (p *TMasterOpRequest) IsSetSyncJournalOnly() bool {
 
 func (p *TMasterOpRequest) IsSetDefaultCatalog() bool {
 	return p.DefaultCatalog != nil
+}
+
+func (p *TMasterOpRequest) IsSetDefaultDatabase() bool {
+	return p.DefaultDatabase != nil
 }
 
 func (p *TMasterOpRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -16124,6 +16142,16 @@ func (p *TMasterOpRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 25:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField25(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 26:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField26(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -16438,6 +16466,15 @@ func (p *TMasterOpRequest) ReadField25(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TMasterOpRequest) ReadField26(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		p.DefaultDatabase = &v
+	}
+	return nil
+}
+
 func (p *TMasterOpRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TMasterOpRequest"); err != nil {
@@ -16542,6 +16579,10 @@ func (p *TMasterOpRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField25(oprot); err != nil {
 			fieldId = 25
+			goto WriteFieldError
+		}
+		if err = p.writeField26(oprot); err != nil {
+			fieldId = 26
 			goto WriteFieldError
 		}
 
@@ -17058,6 +17099,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 25 end error: ", p), err)
 }
 
+func (p *TMasterOpRequest) writeField26(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDefaultDatabase() {
+		if err = oprot.WriteFieldBegin("defaultDatabase", thrift.STRING, 26); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.DefaultDatabase); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 26 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 26 end error: ", p), err)
+}
+
 func (p *TMasterOpRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -17144,6 +17204,9 @@ func (p *TMasterOpRequest) DeepEqual(ano *TMasterOpRequest) bool {
 		return false
 	}
 	if !p.Field25DeepEqual(ano.DefaultCatalog) {
+		return false
+	}
+	if !p.Field26DeepEqual(ano.DefaultDatabase) {
 		return false
 	}
 	return true
@@ -17412,6 +17475,18 @@ func (p *TMasterOpRequest) Field25DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.DefaultCatalog, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TMasterOpRequest) Field26DeepEqual(src *string) bool {
+
+	if p.DefaultDatabase == src {
+		return true
+	} else if p.DefaultDatabase == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.DefaultDatabase, *src) != 0 {
 		return false
 	}
 	return true
@@ -25828,9 +25903,10 @@ func (p *TStreamLoadPutRequest) Field53DeepEqual(src *bool) bool {
 }
 
 type TStreamLoadPutResult_ struct {
-	Status         *status.TStatus                              `thrift:"status,1,required" frugal:"1,required,status.TStatus" json:"status"`
-	Params         *palointernalservice.TExecPlanFragmentParams `thrift:"params,2,optional" frugal:"2,optional,palointernalservice.TExecPlanFragmentParams" json:"params,omitempty"`
-	PipelineParams *palointernalservice.TPipelineFragmentParams `thrift:"pipeline_params,3,optional" frugal:"3,optional,palointernalservice.TPipelineFragmentParams" json:"pipeline_params,omitempty"`
+	Status            *status.TStatus                              `thrift:"status,1,required" frugal:"1,required,status.TStatus" json:"status"`
+	Params            *palointernalservice.TExecPlanFragmentParams `thrift:"params,2,optional" frugal:"2,optional,palointernalservice.TExecPlanFragmentParams" json:"params,omitempty"`
+	PipelineParams    *palointernalservice.TPipelineFragmentParams `thrift:"pipeline_params,3,optional" frugal:"3,optional,palointernalservice.TPipelineFragmentParams" json:"pipeline_params,omitempty"`
+	BaseSchemaVersion *int64                                       `thrift:"base_schema_version,4,optional" frugal:"4,optional,i64" json:"base_schema_version,omitempty"`
 }
 
 func NewTStreamLoadPutResult_() *TStreamLoadPutResult_ {
@@ -25867,6 +25943,15 @@ func (p *TStreamLoadPutResult_) GetPipelineParams() (v *palointernalservice.TPip
 	}
 	return p.PipelineParams
 }
+
+var TStreamLoadPutResult__BaseSchemaVersion_DEFAULT int64
+
+func (p *TStreamLoadPutResult_) GetBaseSchemaVersion() (v int64) {
+	if !p.IsSetBaseSchemaVersion() {
+		return TStreamLoadPutResult__BaseSchemaVersion_DEFAULT
+	}
+	return *p.BaseSchemaVersion
+}
 func (p *TStreamLoadPutResult_) SetStatus(val *status.TStatus) {
 	p.Status = val
 }
@@ -25876,11 +25961,15 @@ func (p *TStreamLoadPutResult_) SetParams(val *palointernalservice.TExecPlanFrag
 func (p *TStreamLoadPutResult_) SetPipelineParams(val *palointernalservice.TPipelineFragmentParams) {
 	p.PipelineParams = val
 }
+func (p *TStreamLoadPutResult_) SetBaseSchemaVersion(val *int64) {
+	p.BaseSchemaVersion = val
+}
 
 var fieldIDToName_TStreamLoadPutResult_ = map[int16]string{
 	1: "status",
 	2: "params",
 	3: "pipeline_params",
+	4: "base_schema_version",
 }
 
 func (p *TStreamLoadPutResult_) IsSetStatus() bool {
@@ -25893,6 +25982,10 @@ func (p *TStreamLoadPutResult_) IsSetParams() bool {
 
 func (p *TStreamLoadPutResult_) IsSetPipelineParams() bool {
 	return p.PipelineParams != nil
+}
+
+func (p *TStreamLoadPutResult_) IsSetBaseSchemaVersion() bool {
+	return p.BaseSchemaVersion != nil
 }
 
 func (p *TStreamLoadPutResult_) Read(iprot thrift.TProtocol) (err error) {
@@ -25939,6 +26032,16 @@ func (p *TStreamLoadPutResult_) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -26006,6 +26109,15 @@ func (p *TStreamLoadPutResult_) ReadField3(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TStreamLoadPutResult_) ReadField4(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.BaseSchemaVersion = &v
+	}
+	return nil
+}
+
 func (p *TStreamLoadPutResult_) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TStreamLoadPutResult"); err != nil {
@@ -26022,6 +26134,10 @@ func (p *TStreamLoadPutResult_) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 
@@ -26098,6 +26214,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 
+func (p *TStreamLoadPutResult_) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBaseSchemaVersion() {
+		if err = oprot.WriteFieldBegin("base_schema_version", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.BaseSchemaVersion); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
 func (p *TStreamLoadPutResult_) String() string {
 	if p == nil {
 		return "<nil>"
@@ -26120,6 +26255,9 @@ func (p *TStreamLoadPutResult_) DeepEqual(ano *TStreamLoadPutResult_) bool {
 	if !p.Field3DeepEqual(ano.PipelineParams) {
 		return false
 	}
+	if !p.Field4DeepEqual(ano.BaseSchemaVersion) {
+		return false
+	}
 	return true
 }
 
@@ -26140,6 +26278,18 @@ func (p *TStreamLoadPutResult_) Field2DeepEqual(src *palointernalservice.TExecPl
 func (p *TStreamLoadPutResult_) Field3DeepEqual(src *palointernalservice.TPipelineFragmentParams) bool {
 
 	if !p.PipelineParams.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TStreamLoadPutResult_) Field4DeepEqual(src *int64) bool {
+
+	if p.BaseSchemaVersion == src {
+		return true
+	} else if p.BaseSchemaVersion == nil || src == nil {
+		return false
+	}
+	if *p.BaseSchemaVersion != *src {
 		return false
 	}
 	return true
@@ -28438,6 +28588,7 @@ type TLoadTxnCommitRequest struct {
 	Token               *string                    `thrift:"token,13,optional" frugal:"13,optional,string" json:"token,omitempty"`
 	DbId                *int64                     `thrift:"db_id,14,optional" frugal:"14,optional,i64" json:"db_id,omitempty"`
 	Tbls                []string                   `thrift:"tbls,15,optional" frugal:"15,optional,list<string>" json:"tbls,omitempty"`
+	TableId             *int64                     `thrift:"table_id,16,optional" frugal:"16,optional,i64" json:"table_id,omitempty"`
 }
 
 func NewTLoadTxnCommitRequest() *TLoadTxnCommitRequest {
@@ -28552,6 +28703,15 @@ func (p *TLoadTxnCommitRequest) GetTbls() (v []string) {
 	}
 	return p.Tbls
 }
+
+var TLoadTxnCommitRequest_TableId_DEFAULT int64
+
+func (p *TLoadTxnCommitRequest) GetTableId() (v int64) {
+	if !p.IsSetTableId() {
+		return TLoadTxnCommitRequest_TableId_DEFAULT
+	}
+	return *p.TableId
+}
 func (p *TLoadTxnCommitRequest) SetCluster(val *string) {
 	p.Cluster = val
 }
@@ -28597,6 +28757,9 @@ func (p *TLoadTxnCommitRequest) SetDbId(val *int64) {
 func (p *TLoadTxnCommitRequest) SetTbls(val []string) {
 	p.Tbls = val
 }
+func (p *TLoadTxnCommitRequest) SetTableId(val *int64) {
+	p.TableId = val
+}
 
 var fieldIDToName_TLoadTxnCommitRequest = map[int16]string{
 	1:  "cluster",
@@ -28614,6 +28777,7 @@ var fieldIDToName_TLoadTxnCommitRequest = map[int16]string{
 	13: "token",
 	14: "db_id",
 	15: "tbls",
+	16: "table_id",
 }
 
 func (p *TLoadTxnCommitRequest) IsSetCluster() bool {
@@ -28650,6 +28814,10 @@ func (p *TLoadTxnCommitRequest) IsSetDbId() bool {
 
 func (p *TLoadTxnCommitRequest) IsSetTbls() bool {
 	return p.Tbls != nil
+}
+
+func (p *TLoadTxnCommitRequest) IsSetTableId() bool {
+	return p.TableId != nil
 }
 
 func (p *TLoadTxnCommitRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -28826,6 +28994,16 @@ func (p *TLoadTxnCommitRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 15:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField15(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 16:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField16(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -29052,6 +29230,15 @@ func (p *TLoadTxnCommitRequest) ReadField15(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TLoadTxnCommitRequest) ReadField16(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.TableId = &v
+	}
+	return nil
+}
+
 func (p *TLoadTxnCommitRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TLoadTxnCommitRequest"); err != nil {
@@ -29116,6 +29303,10 @@ func (p *TLoadTxnCommitRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField15(oprot); err != nil {
 			fieldId = 15
+			goto WriteFieldError
+		}
+		if err = p.writeField16(oprot); err != nil {
+			fieldId = 16
 			goto WriteFieldError
 		}
 
@@ -29426,6 +29617,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
 }
 
+func (p *TLoadTxnCommitRequest) writeField16(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTableId() {
+		if err = oprot.WriteFieldBegin("table_id", thrift.I64, 16); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TableId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
+}
+
 func (p *TLoadTxnCommitRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -29482,6 +29692,9 @@ func (p *TLoadTxnCommitRequest) DeepEqual(ano *TLoadTxnCommitRequest) bool {
 		return false
 	}
 	if !p.Field15DeepEqual(ano.Tbls) {
+		return false
+	}
+	if !p.Field16DeepEqual(ano.TableId) {
 		return false
 	}
 	return true
@@ -29631,6 +29844,18 @@ func (p *TLoadTxnCommitRequest) Field15DeepEqual(src []string) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *TLoadTxnCommitRequest) Field16DeepEqual(src *int64) bool {
+
+	if p.TableId == src {
+		return true
+	} else if p.TableId == nil || src == nil {
+		return false
+	}
+	if *p.TableId != *src {
+		return false
 	}
 	return true
 }
@@ -47934,7 +48159,8 @@ func (p *TGetSnapshotResult_) Field3DeepEqual(src []byte) bool {
 }
 
 type TTableRef struct {
-	Table *string `thrift:"table,1,optional" frugal:"1,optional,string" json:"table,omitempty"`
+	Table     *string `thrift:"table,1,optional" frugal:"1,optional,string" json:"table,omitempty"`
+	AliasName *string `thrift:"alias_name,3,optional" frugal:"3,optional,string" json:"alias_name,omitempty"`
 }
 
 func NewTTableRef() *TTableRef {
@@ -47953,16 +48179,33 @@ func (p *TTableRef) GetTable() (v string) {
 	}
 	return *p.Table
 }
+
+var TTableRef_AliasName_DEFAULT string
+
+func (p *TTableRef) GetAliasName() (v string) {
+	if !p.IsSetAliasName() {
+		return TTableRef_AliasName_DEFAULT
+	}
+	return *p.AliasName
+}
 func (p *TTableRef) SetTable(val *string) {
 	p.Table = val
+}
+func (p *TTableRef) SetAliasName(val *string) {
+	p.AliasName = val
 }
 
 var fieldIDToName_TTableRef = map[int16]string{
 	1: "table",
+	3: "alias_name",
 }
 
 func (p *TTableRef) IsSetTable() bool {
 	return p.Table != nil
+}
+
+func (p *TTableRef) IsSetAliasName() bool {
+	return p.AliasName != nil
 }
 
 func (p *TTableRef) Read(iprot thrift.TProtocol) (err error) {
@@ -47987,6 +48230,16 @@ func (p *TTableRef) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -48033,6 +48286,15 @@ func (p *TTableRef) ReadField1(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TTableRef) ReadField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		p.AliasName = &v
+	}
+	return nil
+}
+
 func (p *TTableRef) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TTableRef"); err != nil {
@@ -48041,6 +48303,10 @@ func (p *TTableRef) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 
@@ -48081,6 +48347,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
+func (p *TTableRef) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAliasName() {
+		if err = oprot.WriteFieldBegin("alias_name", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.AliasName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
 func (p *TTableRef) String() string {
 	if p == nil {
 		return "<nil>"
@@ -48097,6 +48382,9 @@ func (p *TTableRef) DeepEqual(ano *TTableRef) bool {
 	if !p.Field1DeepEqual(ano.Table) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.AliasName) {
+		return false
+	}
 	return true
 }
 
@@ -48108,6 +48396,18 @@ func (p *TTableRef) Field1DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Table, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TTableRef) Field3DeepEqual(src *string) bool {
+
+	if p.AliasName == src {
+		return true
+	} else if p.AliasName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.AliasName, *src) != 0 {
 		return false
 	}
 	return true
@@ -51234,6 +51534,916 @@ func (p *TAutoIncrementRangeResult_) Field3DeepEqual(src *int64) bool {
 	return true
 }
 
+type TCreatePartitionRequest struct {
+	TxnId           *int64                    `thrift:"txn_id,1,optional" frugal:"1,optional,i64" json:"txn_id,omitempty"`
+	DbId            *int64                    `thrift:"db_id,2,optional" frugal:"2,optional,i64" json:"db_id,omitempty"`
+	TableId         *int64                    `thrift:"table_id,3,optional" frugal:"3,optional,i64" json:"table_id,omitempty"`
+	PartitionValues [][]*exprs.TStringLiteral `thrift:"partitionValues,4,optional" frugal:"4,optional,list<list<exprs.TStringLiteral>>" json:"partitionValues,omitempty"`
+}
+
+func NewTCreatePartitionRequest() *TCreatePartitionRequest {
+	return &TCreatePartitionRequest{}
+}
+
+func (p *TCreatePartitionRequest) InitDefault() {
+	*p = TCreatePartitionRequest{}
+}
+
+var TCreatePartitionRequest_TxnId_DEFAULT int64
+
+func (p *TCreatePartitionRequest) GetTxnId() (v int64) {
+	if !p.IsSetTxnId() {
+		return TCreatePartitionRequest_TxnId_DEFAULT
+	}
+	return *p.TxnId
+}
+
+var TCreatePartitionRequest_DbId_DEFAULT int64
+
+func (p *TCreatePartitionRequest) GetDbId() (v int64) {
+	if !p.IsSetDbId() {
+		return TCreatePartitionRequest_DbId_DEFAULT
+	}
+	return *p.DbId
+}
+
+var TCreatePartitionRequest_TableId_DEFAULT int64
+
+func (p *TCreatePartitionRequest) GetTableId() (v int64) {
+	if !p.IsSetTableId() {
+		return TCreatePartitionRequest_TableId_DEFAULT
+	}
+	return *p.TableId
+}
+
+var TCreatePartitionRequest_PartitionValues_DEFAULT [][]*exprs.TStringLiteral
+
+func (p *TCreatePartitionRequest) GetPartitionValues() (v [][]*exprs.TStringLiteral) {
+	if !p.IsSetPartitionValues() {
+		return TCreatePartitionRequest_PartitionValues_DEFAULT
+	}
+	return p.PartitionValues
+}
+func (p *TCreatePartitionRequest) SetTxnId(val *int64) {
+	p.TxnId = val
+}
+func (p *TCreatePartitionRequest) SetDbId(val *int64) {
+	p.DbId = val
+}
+func (p *TCreatePartitionRequest) SetTableId(val *int64) {
+	p.TableId = val
+}
+func (p *TCreatePartitionRequest) SetPartitionValues(val [][]*exprs.TStringLiteral) {
+	p.PartitionValues = val
+}
+
+var fieldIDToName_TCreatePartitionRequest = map[int16]string{
+	1: "txn_id",
+	2: "db_id",
+	3: "table_id",
+	4: "partitionValues",
+}
+
+func (p *TCreatePartitionRequest) IsSetTxnId() bool {
+	return p.TxnId != nil
+}
+
+func (p *TCreatePartitionRequest) IsSetDbId() bool {
+	return p.DbId != nil
+}
+
+func (p *TCreatePartitionRequest) IsSetTableId() bool {
+	return p.TableId != nil
+}
+
+func (p *TCreatePartitionRequest) IsSetPartitionValues() bool {
+	return p.PartitionValues != nil
+}
+
+func (p *TCreatePartitionRequest) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TCreatePartitionRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TCreatePartitionRequest) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.TxnId = &v
+	}
+	return nil
+}
+
+func (p *TCreatePartitionRequest) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.DbId = &v
+	}
+	return nil
+}
+
+func (p *TCreatePartitionRequest) ReadField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.TableId = &v
+	}
+	return nil
+}
+
+func (p *TCreatePartitionRequest) ReadField4(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	p.PartitionValues = make([][]*exprs.TStringLiteral, 0, size)
+	for i := 0; i < size; i++ {
+		_, size, err := iprot.ReadListBegin()
+		if err != nil {
+			return err
+		}
+		_elem := make([]*exprs.TStringLiteral, 0, size)
+		for i := 0; i < size; i++ {
+			_elem1 := exprs.NewTStringLiteral()
+			if err := _elem1.Read(iprot); err != nil {
+				return err
+			}
+
+			_elem = append(_elem, _elem1)
+		}
+		if err := iprot.ReadListEnd(); err != nil {
+			return err
+		}
+
+		p.PartitionValues = append(p.PartitionValues, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *TCreatePartitionRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TCreatePartitionRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TCreatePartitionRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTxnId() {
+		if err = oprot.WriteFieldBegin("txn_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TxnId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TCreatePartitionRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDbId() {
+		if err = oprot.WriteFieldBegin("db_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.DbId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TCreatePartitionRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTableId() {
+		if err = oprot.WriteFieldBegin("table_id", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TableId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *TCreatePartitionRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPartitionValues() {
+		if err = oprot.WriteFieldBegin("partitionValues", thrift.LIST, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.LIST, len(p.PartitionValues)); err != nil {
+			return err
+		}
+		for _, v := range p.PartitionValues {
+			if err := oprot.WriteListBegin(thrift.STRUCT, len(v)); err != nil {
+				return err
+			}
+			for _, v := range v {
+				if err := v.Write(oprot); err != nil {
+					return err
+				}
+			}
+			if err := oprot.WriteListEnd(); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *TCreatePartitionRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TCreatePartitionRequest(%+v)", *p)
+}
+
+func (p *TCreatePartitionRequest) DeepEqual(ano *TCreatePartitionRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.TxnId) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.DbId) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.TableId) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.PartitionValues) {
+		return false
+	}
+	return true
+}
+
+func (p *TCreatePartitionRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.TxnId == src {
+		return true
+	} else if p.TxnId == nil || src == nil {
+		return false
+	}
+	if *p.TxnId != *src {
+		return false
+	}
+	return true
+}
+func (p *TCreatePartitionRequest) Field2DeepEqual(src *int64) bool {
+
+	if p.DbId == src {
+		return true
+	} else if p.DbId == nil || src == nil {
+		return false
+	}
+	if *p.DbId != *src {
+		return false
+	}
+	return true
+}
+func (p *TCreatePartitionRequest) Field3DeepEqual(src *int64) bool {
+
+	if p.TableId == src {
+		return true
+	} else if p.TableId == nil || src == nil {
+		return false
+	}
+	if *p.TableId != *src {
+		return false
+	}
+	return true
+}
+func (p *TCreatePartitionRequest) Field4DeepEqual(src [][]*exprs.TStringLiteral) bool {
+
+	if len(p.PartitionValues) != len(src) {
+		return false
+	}
+	for i, v := range p.PartitionValues {
+		_src := src[i]
+		if len(v) != len(_src) {
+			return false
+		}
+		for i, v := range v {
+			_src1 := _src[i]
+			if !v.DeepEqual(_src1) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+type TCreatePartitionResult_ struct {
+	Status     *status.TStatus                    `thrift:"status,1,optional" frugal:"1,optional,status.TStatus" json:"status,omitempty"`
+	Partitions []*descriptors.TOlapTablePartition `thrift:"partitions,2,optional" frugal:"2,optional,list<descriptors.TOlapTablePartition>" json:"partitions,omitempty"`
+	Tablets    []*descriptors.TTabletLocation     `thrift:"tablets,3,optional" frugal:"3,optional,list<descriptors.TTabletLocation>" json:"tablets,omitempty"`
+	Nodes      []*descriptors.TNodeInfo           `thrift:"nodes,4,optional" frugal:"4,optional,list<descriptors.TNodeInfo>" json:"nodes,omitempty"`
+}
+
+func NewTCreatePartitionResult_() *TCreatePartitionResult_ {
+	return &TCreatePartitionResult_{}
+}
+
+func (p *TCreatePartitionResult_) InitDefault() {
+	*p = TCreatePartitionResult_{}
+}
+
+var TCreatePartitionResult__Status_DEFAULT *status.TStatus
+
+func (p *TCreatePartitionResult_) GetStatus() (v *status.TStatus) {
+	if !p.IsSetStatus() {
+		return TCreatePartitionResult__Status_DEFAULT
+	}
+	return p.Status
+}
+
+var TCreatePartitionResult__Partitions_DEFAULT []*descriptors.TOlapTablePartition
+
+func (p *TCreatePartitionResult_) GetPartitions() (v []*descriptors.TOlapTablePartition) {
+	if !p.IsSetPartitions() {
+		return TCreatePartitionResult__Partitions_DEFAULT
+	}
+	return p.Partitions
+}
+
+var TCreatePartitionResult__Tablets_DEFAULT []*descriptors.TTabletLocation
+
+func (p *TCreatePartitionResult_) GetTablets() (v []*descriptors.TTabletLocation) {
+	if !p.IsSetTablets() {
+		return TCreatePartitionResult__Tablets_DEFAULT
+	}
+	return p.Tablets
+}
+
+var TCreatePartitionResult__Nodes_DEFAULT []*descriptors.TNodeInfo
+
+func (p *TCreatePartitionResult_) GetNodes() (v []*descriptors.TNodeInfo) {
+	if !p.IsSetNodes() {
+		return TCreatePartitionResult__Nodes_DEFAULT
+	}
+	return p.Nodes
+}
+func (p *TCreatePartitionResult_) SetStatus(val *status.TStatus) {
+	p.Status = val
+}
+func (p *TCreatePartitionResult_) SetPartitions(val []*descriptors.TOlapTablePartition) {
+	p.Partitions = val
+}
+func (p *TCreatePartitionResult_) SetTablets(val []*descriptors.TTabletLocation) {
+	p.Tablets = val
+}
+func (p *TCreatePartitionResult_) SetNodes(val []*descriptors.TNodeInfo) {
+	p.Nodes = val
+}
+
+var fieldIDToName_TCreatePartitionResult_ = map[int16]string{
+	1: "status",
+	2: "partitions",
+	3: "tablets",
+	4: "nodes",
+}
+
+func (p *TCreatePartitionResult_) IsSetStatus() bool {
+	return p.Status != nil
+}
+
+func (p *TCreatePartitionResult_) IsSetPartitions() bool {
+	return p.Partitions != nil
+}
+
+func (p *TCreatePartitionResult_) IsSetTablets() bool {
+	return p.Tablets != nil
+}
+
+func (p *TCreatePartitionResult_) IsSetNodes() bool {
+	return p.Nodes != nil
+}
+
+func (p *TCreatePartitionResult_) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TCreatePartitionResult_[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TCreatePartitionResult_) ReadField1(iprot thrift.TProtocol) error {
+	p.Status = status.NewTStatus()
+	if err := p.Status.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *TCreatePartitionResult_) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	p.Partitions = make([]*descriptors.TOlapTablePartition, 0, size)
+	for i := 0; i < size; i++ {
+		_elem := descriptors.NewTOlapTablePartition()
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		p.Partitions = append(p.Partitions, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *TCreatePartitionResult_) ReadField3(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	p.Tablets = make([]*descriptors.TTabletLocation, 0, size)
+	for i := 0; i < size; i++ {
+		_elem := descriptors.NewTTabletLocation()
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		p.Tablets = append(p.Tablets, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *TCreatePartitionResult_) ReadField4(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	p.Nodes = make([]*descriptors.TNodeInfo, 0, size)
+	for i := 0; i < size; i++ {
+		_elem := descriptors.NewTNodeInfo()
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		p.Nodes = append(p.Nodes, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *TCreatePartitionResult_) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TCreatePartitionResult"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TCreatePartitionResult_) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStatus() {
+		if err = oprot.WriteFieldBegin("status", thrift.STRUCT, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Status.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TCreatePartitionResult_) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPartitions() {
+		if err = oprot.WriteFieldBegin("partitions", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Partitions)); err != nil {
+			return err
+		}
+		for _, v := range p.Partitions {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TCreatePartitionResult_) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTablets() {
+		if err = oprot.WriteFieldBegin("tablets", thrift.LIST, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Tablets)); err != nil {
+			return err
+		}
+		for _, v := range p.Tablets {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *TCreatePartitionResult_) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNodes() {
+		if err = oprot.WriteFieldBegin("nodes", thrift.LIST, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Nodes)); err != nil {
+			return err
+		}
+		for _, v := range p.Nodes {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *TCreatePartitionResult_) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TCreatePartitionResult_(%+v)", *p)
+}
+
+func (p *TCreatePartitionResult_) DeepEqual(ano *TCreatePartitionResult_) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Status) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Partitions) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Tablets) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.Nodes) {
+		return false
+	}
+	return true
+}
+
+func (p *TCreatePartitionResult_) Field1DeepEqual(src *status.TStatus) bool {
+
+	if !p.Status.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TCreatePartitionResult_) Field2DeepEqual(src []*descriptors.TOlapTablePartition) bool {
+
+	if len(p.Partitions) != len(src) {
+		return false
+	}
+	for i, v := range p.Partitions {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *TCreatePartitionResult_) Field3DeepEqual(src []*descriptors.TTabletLocation) bool {
+
+	if len(p.Tablets) != len(src) {
+		return false
+	}
+	for i, v := range p.Tablets {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *TCreatePartitionResult_) Field4DeepEqual(src []*descriptors.TNodeInfo) bool {
+
+	if len(p.Nodes) != len(src) {
+		return false
+	}
+	for i, v := range p.Nodes {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+
 type FrontendService interface {
 	GetDbNames(ctx context.Context, params *TGetDbsParams) (r *TGetDbsResult_, err error)
 
@@ -51322,6 +52532,8 @@ type FrontendService interface {
 	UpdateStatsCache(ctx context.Context, request *TUpdateFollowerStatsCacheRequest) (r *status.TStatus, err error)
 
 	GetAutoIncrementRange(ctx context.Context, request *TAutoIncrementRangeRequest) (r *TAutoIncrementRangeResult_, err error)
+
+	CreatePartition(ctx context.Context, request *TCreatePartitionRequest) (r *TCreatePartitionResult_, err error)
 }
 
 type FrontendServiceClient struct {
@@ -51744,6 +52956,15 @@ func (p *FrontendServiceClient) GetAutoIncrementRange(ctx context.Context, reque
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *FrontendServiceClient) CreatePartition(ctx context.Context, request *TCreatePartitionRequest) (r *TCreatePartitionResult_, err error) {
+	var _args FrontendServiceCreatePartitionArgs
+	_args.Request = request
+	var _result FrontendServiceCreatePartitionResult
+	if err = p.Client_().Call(ctx, "createPartition", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 
 type FrontendServiceProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
@@ -51809,6 +53030,7 @@ func NewFrontendServiceProcessor(handler FrontendService) *FrontendServiceProces
 	self.AddToProcessorMap("getBinlogLag", &frontendServiceProcessorGetBinlogLag{handler: handler})
 	self.AddToProcessorMap("updateStatsCache", &frontendServiceProcessorUpdateStatsCache{handler: handler})
 	self.AddToProcessorMap("getAutoIncrementRange", &frontendServiceProcessorGetAutoIncrementRange{handler: handler})
+	self.AddToProcessorMap("createPartition", &frontendServiceProcessorCreatePartition{handler: handler})
 	return self
 }
 func (p *FrontendServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -53924,6 +55146,54 @@ func (p *frontendServiceProcessorGetAutoIncrementRange) Process(ctx context.Cont
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("getAutoIncrementRange", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type frontendServiceProcessorCreatePartition struct {
+	handler FrontendService
+}
+
+func (p *frontendServiceProcessorCreatePartition) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := FrontendServiceCreatePartitionArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("createPartition", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := FrontendServiceCreatePartitionResult{}
+	var retval *TCreatePartitionResult_
+	if retval, err2 = p.handler.CreatePartition(ctx, args.Request); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing createPartition: "+err2.Error())
+		oprot.WriteMessageBegin("createPartition", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("createPartition", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -69002,6 +70272,352 @@ func (p *FrontendServiceGetAutoIncrementRangeResult) DeepEqual(ano *FrontendServ
 }
 
 func (p *FrontendServiceGetAutoIncrementRangeResult) Field0DeepEqual(src *TAutoIncrementRangeResult_) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type FrontendServiceCreatePartitionArgs struct {
+	Request *TCreatePartitionRequest `thrift:"request,1" frugal:"1,default,TCreatePartitionRequest" json:"request"`
+}
+
+func NewFrontendServiceCreatePartitionArgs() *FrontendServiceCreatePartitionArgs {
+	return &FrontendServiceCreatePartitionArgs{}
+}
+
+func (p *FrontendServiceCreatePartitionArgs) InitDefault() {
+	*p = FrontendServiceCreatePartitionArgs{}
+}
+
+var FrontendServiceCreatePartitionArgs_Request_DEFAULT *TCreatePartitionRequest
+
+func (p *FrontendServiceCreatePartitionArgs) GetRequest() (v *TCreatePartitionRequest) {
+	if !p.IsSetRequest() {
+		return FrontendServiceCreatePartitionArgs_Request_DEFAULT
+	}
+	return p.Request
+}
+func (p *FrontendServiceCreatePartitionArgs) SetRequest(val *TCreatePartitionRequest) {
+	p.Request = val
+}
+
+var fieldIDToName_FrontendServiceCreatePartitionArgs = map[int16]string{
+	1: "request",
+}
+
+func (p *FrontendServiceCreatePartitionArgs) IsSetRequest() bool {
+	return p.Request != nil
+}
+
+func (p *FrontendServiceCreatePartitionArgs) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FrontendServiceCreatePartitionArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *FrontendServiceCreatePartitionArgs) ReadField1(iprot thrift.TProtocol) error {
+	p.Request = NewTCreatePartitionRequest()
+	if err := p.Request.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *FrontendServiceCreatePartitionArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("createPartition_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *FrontendServiceCreatePartitionArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Request.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *FrontendServiceCreatePartitionArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("FrontendServiceCreatePartitionArgs(%+v)", *p)
+}
+
+func (p *FrontendServiceCreatePartitionArgs) DeepEqual(ano *FrontendServiceCreatePartitionArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Request) {
+		return false
+	}
+	return true
+}
+
+func (p *FrontendServiceCreatePartitionArgs) Field1DeepEqual(src *TCreatePartitionRequest) bool {
+
+	if !p.Request.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type FrontendServiceCreatePartitionResult struct {
+	Success *TCreatePartitionResult_ `thrift:"success,0,optional" frugal:"0,optional,TCreatePartitionResult_" json:"success,omitempty"`
+}
+
+func NewFrontendServiceCreatePartitionResult() *FrontendServiceCreatePartitionResult {
+	return &FrontendServiceCreatePartitionResult{}
+}
+
+func (p *FrontendServiceCreatePartitionResult) InitDefault() {
+	*p = FrontendServiceCreatePartitionResult{}
+}
+
+var FrontendServiceCreatePartitionResult_Success_DEFAULT *TCreatePartitionResult_
+
+func (p *FrontendServiceCreatePartitionResult) GetSuccess() (v *TCreatePartitionResult_) {
+	if !p.IsSetSuccess() {
+		return FrontendServiceCreatePartitionResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *FrontendServiceCreatePartitionResult) SetSuccess(x interface{}) {
+	p.Success = x.(*TCreatePartitionResult_)
+}
+
+var fieldIDToName_FrontendServiceCreatePartitionResult = map[int16]string{
+	0: "success",
+}
+
+func (p *FrontendServiceCreatePartitionResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *FrontendServiceCreatePartitionResult) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FrontendServiceCreatePartitionResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *FrontendServiceCreatePartitionResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = NewTCreatePartitionResult_()
+	if err := p.Success.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *FrontendServiceCreatePartitionResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("createPartition_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *FrontendServiceCreatePartitionResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *FrontendServiceCreatePartitionResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("FrontendServiceCreatePartitionResult(%+v)", *p)
+}
+
+func (p *FrontendServiceCreatePartitionResult) DeepEqual(ano *FrontendServiceCreatePartitionResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *FrontendServiceCreatePartitionResult) Field0DeepEqual(src *TCreatePartitionResult_) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

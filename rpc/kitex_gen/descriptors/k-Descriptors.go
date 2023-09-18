@@ -12,6 +12,7 @@ import (
 
 	"github.com/cloudwego/kitex/pkg/protocol/bthrift"
 	"github.com/selectdb/ccr_syncer/rpc/kitex_gen/exprs"
+	"github.com/selectdb/ccr_syncer/rpc/kitex_gen/partitions"
 	"github.com/selectdb/ccr_syncer/rpc/kitex_gen/types"
 )
 
@@ -24,6 +25,7 @@ var (
 	_ = thrift.TProtocol(nil)
 	_ = bthrift.BinaryWriter(nil)
 	_ = exprs.KitexUnusedProtection
+	_ = partitions.KitexUnusedProtection
 	_ = types.KitexUnusedProtection
 )
 
@@ -1300,6 +1302,20 @@ func (p *TSlotDescriptor) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 15:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField15(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1581,6 +1597,36 @@ func (p *TSlotDescriptor) FastReadField14(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TSlotDescriptor) FastReadField15(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := bthrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.ColumnPaths = make([]string, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem string
+		if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_elem = v
+
+		}
+
+		p.ColumnPaths = append(p.ColumnPaths, _elem)
+	}
+	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TSlotDescriptor) FastWrite(buf []byte) int {
 	return 0
@@ -1604,6 +1650,7 @@ func (p *TSlotDescriptor) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binar
 		offset += p.fastWriteField14(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 		offset += p.fastWriteField8(buf[offset:], binaryWriter)
+		offset += p.fastWriteField15(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -1628,6 +1675,7 @@ func (p *TSlotDescriptor) BLength() int {
 		l += p.field12Length()
 		l += p.field13Length()
 		l += p.field14Length()
+		l += p.field15Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -1767,6 +1815,25 @@ func (p *TSlotDescriptor) fastWriteField14(buf []byte, binaryWriter bthrift.Bina
 	return offset
 }
 
+func (p *TSlotDescriptor) fastWriteField15(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetColumnPaths() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "column_paths", thrift.LIST, 15)
+		listBeginOffset := offset
+		offset += bthrift.Binary.ListBeginLength(thrift.STRING, 0)
+		var length int
+		for _, v := range p.ColumnPaths {
+			length++
+			offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, v)
+
+		}
+		bthrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
+		offset += bthrift.Binary.WriteListEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TSlotDescriptor) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("id", thrift.I32, 1)
@@ -1895,6 +1962,21 @@ func (p *TSlotDescriptor) field14Length() int {
 		l += bthrift.Binary.FieldBeginLength("is_auto_increment", thrift.BOOL, 14)
 		l += bthrift.Binary.BoolLength(p.IsAutoIncrement)
 
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TSlotDescriptor) field15Length() int {
+	l := 0
+	if p.IsSetColumnPaths() {
+		l += bthrift.Binary.FieldBeginLength("column_paths", thrift.LIST, 15)
+		l += bthrift.Binary.ListBeginLength(thrift.STRING, len(p.ColumnPaths))
+		for _, v := range p.ColumnPaths {
+			l += bthrift.Binary.StringLengthNocopy(v)
+
+		}
+		l += bthrift.Binary.ListEndLength()
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l
@@ -3321,6 +3403,48 @@ func (p *TOlapTablePartitionParam) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 8:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField8(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 9:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField9(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 10:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -3519,6 +3643,61 @@ func (p *TOlapTablePartitionParam) FastReadField7(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TOlapTablePartitionParam) FastReadField8(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := bthrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.PartitionFunctionExprs = make([]*exprs.TExpr, 0, size)
+	for i := 0; i < size; i++ {
+		_elem := exprs.NewTExpr()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		p.PartitionFunctionExprs = append(p.PartitionFunctionExprs, _elem)
+	}
+	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
+func (p *TOlapTablePartitionParam) FastReadField9(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.EnableAutomaticPartition = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TOlapTablePartitionParam) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := partitions.TPartitionType(v)
+		p.PartitionType = &tmp
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TOlapTablePartitionParam) FastWrite(buf []byte) int {
 	return 0
@@ -3531,10 +3710,13 @@ func (p *TOlapTablePartitionParam) FastWriteNocopy(buf []byte, binaryWriter bthr
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
+		offset += p.fastWriteField9(buf[offset:], binaryWriter)
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 		offset += p.fastWriteField7(buf[offset:], binaryWriter)
+		offset += p.fastWriteField8(buf[offset:], binaryWriter)
+		offset += p.fastWriteField10(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -3552,6 +3734,9 @@ func (p *TOlapTablePartitionParam) BLength() int {
 		l += p.field5Length()
 		l += p.field6Length()
 		l += p.field7Length()
+		l += p.field8Length()
+		l += p.field9Length()
+		l += p.field10Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -3650,6 +3835,46 @@ func (p *TOlapTablePartitionParam) fastWriteField7(buf []byte, binaryWriter bthr
 	return offset
 }
 
+func (p *TOlapTablePartitionParam) fastWriteField8(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetPartitionFunctionExprs() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "partition_function_exprs", thrift.LIST, 8)
+		listBeginOffset := offset
+		offset += bthrift.Binary.ListBeginLength(thrift.STRUCT, 0)
+		var length int
+		for _, v := range p.PartitionFunctionExprs {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], binaryWriter)
+		}
+		bthrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+		offset += bthrift.Binary.WriteListEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TOlapTablePartitionParam) fastWriteField9(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetEnableAutomaticPartition() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_automatic_partition", thrift.BOOL, 9)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.EnableAutomaticPartition)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TOlapTablePartitionParam) fastWriteField10(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetPartitionType() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "partition_type", thrift.I32, 10)
+		offset += bthrift.Binary.WriteI32(buf[offset:], int32(*p.PartitionType))
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TOlapTablePartitionParam) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("db_id", thrift.I64, 1)
@@ -3725,6 +3950,42 @@ func (p *TOlapTablePartitionParam) field7Length() int {
 
 		}
 		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TOlapTablePartitionParam) field8Length() int {
+	l := 0
+	if p.IsSetPartitionFunctionExprs() {
+		l += bthrift.Binary.FieldBeginLength("partition_function_exprs", thrift.LIST, 8)
+		l += bthrift.Binary.ListBeginLength(thrift.STRUCT, len(p.PartitionFunctionExprs))
+		for _, v := range p.PartitionFunctionExprs {
+			l += v.BLength()
+		}
+		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TOlapTablePartitionParam) field9Length() int {
+	l := 0
+	if p.IsSetEnableAutomaticPartition() {
+		l += bthrift.Binary.FieldBeginLength("enable_automatic_partition", thrift.BOOL, 9)
+		l += bthrift.Binary.BoolLength(*p.EnableAutomaticPartition)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TOlapTablePartitionParam) field10Length() int {
+	l := 0
+	if p.IsSetPartitionType() {
+		l += bthrift.Binary.FieldBeginLength("partition_type", thrift.I32, 10)
+		l += bthrift.Binary.I32Length(int32(*p.PartitionType))
+
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l
