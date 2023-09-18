@@ -12,6 +12,12 @@ import (
 	"time"
 
 	"github.com/modern-go/gls"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
+
+	_ "github.com/go-sql-driver/mysql"
+
 	"github.com/selectdb/ccr_syncer/ccr/base"
 	"github.com/selectdb/ccr_syncer/ccr/record"
 	"github.com/selectdb/ccr_syncer/rpc"
@@ -21,12 +27,6 @@ import (
 	festruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/frontendservice"
 	tstatus "github.com/selectdb/ccr_syncer/rpc/kitex_gen/status"
 	ttypes "github.com/selectdb/ccr_syncer/rpc/kitex_gen/types"
-
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"go.uber.org/zap"
-
-	_ "github.com/go-sql-driver/mysql"
 )
 
 const (
@@ -1071,10 +1071,13 @@ func (j *Job) recoverIncrementalSync() error {
 
 func (j *Job) incrementalSync() error {
 	if !j.progress.IsDone() {
+		log.Infof("job progress is not done, state is (%s, need recover", j.progress.SubSyncState)
+
 		return j.recoverIncrementalSync()
 	}
 
 	// Step 1: get binlog
+	log.Debug("start incremental sync")
 	src := &j.Src
 	srcRpc, err := j.rpcFactory.NewFeRpc(src)
 	if err != nil {
@@ -1142,10 +1145,10 @@ func (j *Job) recoverJobProgress() error {
 func (j *Job) tableSync() error {
 	switch j.progress.SyncState {
 	case TableFullSync:
-		log.Debugf("table full sync")
+		log.Debug("table full sync")
 		return j.fullSync()
 	case TableIncrementalSync:
-		log.Debugf("table incremental sync")
+		log.Debug("table incremental sync")
 		return j.incrementalSync()
 	default:
 		return errors.Errorf("unknown sync state: %v", j.progress.SyncState)
@@ -1153,14 +1156,14 @@ func (j *Job) tableSync() error {
 }
 
 func (j *Job) dbTablesIncrementalSync() error {
-	log.Debugf("db tables incremental sync")
+	log.Debug("db tables incremental sync")
 
 	return j.incrementalSync()
 }
 
 // TODO(Drogon): impl DBSpecificTableFullSync
 func (j *Job) dbSpecificTableFullSync() error {
-	log.Debugf("db specific table full sync")
+	log.Debug("db specific table full sync")
 
 	return nil
 }
@@ -1168,14 +1171,14 @@ func (j *Job) dbSpecificTableFullSync() error {
 func (j *Job) dbSync() error {
 	switch j.progress.SyncState {
 	case DBFullSync:
-		log.Debugf("db full sync")
+		log.Debug("db full sync")
 		return j.fullSync()
 	case DBTablesIncrementalSync:
 		return j.dbTablesIncrementalSync()
 	case DBSpecificTableFullSync:
 		return j.dbSpecificTableFullSync()
 	case DBIncrementalSync:
-		log.Debugf("db incremental sync")
+		log.Debug("db incremental sync")
 		return j.incrementalSync()
 	default:
 		return errors.Errorf("unknown db sync state: %v", j.progress.SyncState)

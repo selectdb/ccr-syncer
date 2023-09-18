@@ -115,8 +115,16 @@ func (s SubSyncState) String() string {
 		return "RestoreSnapshot"
 	case PersistRestoreInfo:
 		return "PersistRestoreInfo"
+	case BeginTransaction:
+		return "BeginTransaction"
+	case IngestBinlog:
+		return "IngestBinlog"
+	case CommitTransaction:
+		return "CommitTransaction"
+	case RollbackTransaction:
+		return "RollbackTransaction"
 	default:
-		return fmt.Sprintf("Unknown SubSyncState: %d", s)
+		return fmt.Sprintf("Unknown sub sync state: %d, binlog type: %d", s.State, s.BinlogType)
 	}
 }
 
