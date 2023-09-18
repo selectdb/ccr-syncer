@@ -108,7 +108,6 @@ func (c *Checker) next() {
 
 func (c *Checker) handleRefresh() {
 	c.lastStamp, c.err = c.db.RefreshSyncer(c.hostInfo, c.lastStamp)
-	log.Debugf("lastStamp %d", c.lastStamp)
 }
 
 func (c *Checker) handleUpdate() {
@@ -117,17 +116,16 @@ func (c *Checker) handleUpdate() {
 	if len(jobs) != 0 {
 		c.err = c.jobManager.Recover(jobs)
 	}
-	log.Debugf("update jobs %v", jobs)
+	log.Infof("update jobs %v", jobs)
 }
 
 func (c *Checker) handleCheck() {
 	c.deadSyncers, c.err = c.db.GetDeadSyncers(c.lastStamp - int64(CHECK_TIMEOUT.Nanoseconds()))
-	log.Debugf("check dead syncers: %v", c.deadSyncers)
 }
 
 func (c *Checker) handleRebalance() {
+	log.Infof("rebalance dead syncers: %v", c.deadSyncers)
 	c.err = c.db.RebalanceLoadFromDeadSyncers(c.deadSyncers)
-	log.Debugf("check dead syncers: %v", c.deadSyncers)
 }
 
 func (c *Checker) check() error {
@@ -145,13 +143,13 @@ func (c *Checker) check() error {
 		case checkerStateRebalance:
 			c.handleRebalance()
 		case checkerStateFinish:
-			if log.GetLevel() >= log.DebugLevel {
-				if ans, err := c.db.GetAllData(); err != nil {
-					log.Error(err)
-				} else {
-					log.Debugf("table data: %v", ans)
-				}
-			}
+			// if log.GetLevel() >= log.DebugLevel {
+			// 	if ans, err := c.db.GetAllData(); err != nil {
+			// 		log.Error(err)
+			// 	} else {
+			// 		log.Debugf("table data: %v", ans)
+			// 	}
+			// }
 			return nil
 		case checkerStateError:
 			return c.err

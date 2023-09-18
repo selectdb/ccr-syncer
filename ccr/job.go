@@ -1080,6 +1080,7 @@ func (j *Job) recoverIncrementalSync() error {
 }
 
 func (j *Job) incrementalSync() error {
+	log.Debugf("[deadlinefen] j.progress.IsDone() %v", j.progress.IsDone())
 	if !j.progress.IsDone() {
 		log.Infof("job progress is not done, state is (%s), need recover", j.progress.SubSyncState)
 

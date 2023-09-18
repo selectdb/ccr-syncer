@@ -7,7 +7,7 @@ endif
 
 .PHONY: build
 ## build : Build binary
-build: ccr_syncer get_binlog ingest_binlog get_meta snapshot_op get_master_token spec_checker
+build: ccr_syncer get_binlog ingest_binlog get_meta snapshot_op get_master_token spec_checker rows_parse
 
 .PHONY: bin
 ## bin : Create bin directory
@@ -87,3 +87,8 @@ spec_checker: bin
 ## get_lag : Build get_lag binary
 get_lag: bin
 	$(V)go build -o bin/get_lag ./cmd/get_lag
+
+.PHONY: rows_parse
+## rows_parse : Build rows_parse binary
+rows_parse: bin
+	$(V)go build -o bin/rows_parse ./cmd/rows_parse

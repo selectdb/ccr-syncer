@@ -197,12 +197,29 @@ func (s *Spec) IsDatabaseEnableBinlog() (bool, error) {
 		return false, err
 	}
 
-	var _dbNmae string
 	var createDBString string
-	err = db.QueryRow("SHOW CREATE DATABASE "+s.Database).Scan(&_dbNmae, &createDBString)
+	query := fmt.Sprintf("SHOW CREATE DATABASE %s", s.Database)
+	rows, err := db.Query(query)
 	if err != nil {
-		return false, errors.Wrapf(err, "show create database %s failed", s.Database)
+		return false, errors.Wrapf(err, query)
 	}
+	defer rows.Close()
+
+	for rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return false, errors.Wrapf(err, query)
+		}
+		createDBString, err = rowParser.GetString("Create Database")
+		if err != nil {
+			return false, errors.Wrapf(err, query)
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return false, errors.Wrap(err, query)
+	}
+
 	log.Infof("database %s create string: %s", s.Database, createDBString)
 
 	// check "binlog.enable" = "true" in create database string
@@ -218,13 +235,29 @@ func (s *Spec) IsTableEnableBinlog() (bool, error) {
 		return false, err
 	}
 
-	var tableName string
 	var createTableString string
-	sql := fmt.Sprintf("SHOW CREATE TABLE %s.%s", s.Database, s.Table)
-	err = db.QueryRow(sql).Scan(&tableName, &createTableString)
+	query := fmt.Sprintf("SHOW CREATE TABLE %s.%s", s.Database, s.Table)
+	rows, err := db.Query(query)
 	if err != nil {
-		return false, errors.Wrapf(err, "show create table %s.%s failed", s.Database, s.Table)
+		return false, errors.Wrapf(err, query)
 	}
+	defer rows.Close()
+
+	for rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return false, errors.Wrapf(err, query)
+		}
+		createTableString, err = rowParser.GetString("Create Table")
+		if err != nil {
+			return false, errors.Wrapf(err, query)
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return false, errors.Wrap(err, query)
+	}
+
 	log.Infof("table %s.%s create string: %s", s.Database, s.Table, createTableString)
 
 	// check "binlog.enable" = "true" in create table string
@@ -248,10 +281,13 @@ func (s *Spec) GetAllTables() ([]string, error) {
 
 	var tables []string
 	for rows.Next() {
-		var table string
-		err = rows.Scan(&table)
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return nil, errors.Wrapf(err, "SHOW TABLES")
+		}
+		table, err := rowParser.GetString(fmt.Sprintf("Tables_in_%s", s.Database))
 		if err != nil {
-			return nil, errors.Wrapf(err, "scan table name failed")
+			return nil, errors.Wrapf(err, "SHOW TABLES")
 		}
 		tables = append(tables, table)
 	}
@@ -359,10 +395,16 @@ func (s *Spec) CheckDatabaseExists() (bool, error) {
 
 	var database string
 	for rows.Next() {
-		if err := rows.Scan(&database); err != nil {
-			return false, errors.Wrapf(err, "scan database name failed, sql: %s", sql)
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return false, errors.Wrapf(err, sql)
+		}
+		database, err = rowParser.GetString("Database")
+		if err != nil {
+			return false, errors.Wrapf(err, sql)
 		}
 	}
+
 	if err := rows.Err(); err != nil {
 		return false, errors.Wrapf(err, "scan database name failed, sql: %s", sql)
 	}
@@ -388,8 +430,13 @@ func (s *Spec) CheckTableExists() (bool, error) {
 
 	var table string
 	for rows.Next() {
-		if err := rows.Scan(&table); err != nil {
-			return false, errors.Wrapf(err, "scan table name failed, sql: %s", sql)
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return false, errors.Wrapf(err, sql)
+		}
+		table, err = rowParser.GetString(fmt.Sprintf("Tables_in_%s", s.Database))
+		if err != nil {
+			return false, errors.Wrapf(err, sql)
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -457,9 +504,6 @@ func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, error) {
 		return BackupStateUnknown, err
 	}
 
-	var backupStateStr string
-	scanArgs := utils.MakeSingleColScanArgs(3, &backupStateStr, 10)
-
 	sql := fmt.Sprintf("SHOW BACKUP FROM %s WHERE SnapshotName = \"%s\"", s.Database, snapshotName)
 	log.Debugf("check backup state sql: %s", sql)
 	rows, err := db.Query(sql)
@@ -467,10 +511,16 @@ func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, error) {
 		return BackupStateUnknown, errors.Wrapf(err, "show backup failed, sql: %s", sql)
 	}
 	defer rows.Close()
-
+	
+	var backupStateStr string
 	if rows.Next() {
-		if err := rows.Scan(scanArgs...); err != nil {
-			return BackupStateUnknown, errors.Wrapf(err, "scan backup state failed, sql: %s", sql)
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return BackupStateUnknown, errors.Wrapf(err, sql)
+		}
+		backupStateStr, err = rowParser.GetString("State")
+		if err != nil {
+			return BackupStateUnknown, errors.Wrapf(err, sql)
 		}
 
 		log.Infof("check snapshot %s backup state: [%v]", snapshotName, backupStateStr)
@@ -507,20 +557,23 @@ func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, error) {
 		return RestoreStateUnknown, err
 	}
 
-	var restoreStateStr string
-	scanArgs := utils.MakeSingleColScanArgs(4, &restoreStateStr, 16)
-
 	query := fmt.Sprintf("SHOW RESTORE FROM %s WHERE Label = \"%s\"", s.Database, snapshotName)
-
+	
 	log.Debugf("check restore state sql: %s", query)
 	rows, err := db.Query(query)
 	if err != nil {
 		return RestoreStateUnknown, errors.Wrapf(err, "query restore state failed")
 	}
 	defer rows.Close()
-
+	
+	var restoreStateStr string
 	if rows.Next() {
-		if err := rows.Scan(scanArgs...); err != nil {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return RestoreStateUnknown, errors.Wrapf(err, "scan restore state failed")
+		}
+		restoreStateStr, err = rowParser.GetString("State")
+		if err != nil {
 			return RestoreStateUnknown, errors.Wrapf(err, "scan restore state failed")
 		}
 
