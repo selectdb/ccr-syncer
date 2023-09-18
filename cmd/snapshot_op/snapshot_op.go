@@ -7,9 +7,11 @@ import (
 	"github.com/selectdb/ccr_syncer/ccr/base"
 	"github.com/selectdb/ccr_syncer/utils"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/selectdb/ccr_syncer/ccr"
 	"github.com/selectdb/ccr_syncer/rpc"
-	log "github.com/sirupsen/logrus"
+	tstatus "github.com/selectdb/ccr_syncer/rpc/kitex_gen/status"
 )
 
 // commit_seq flag default 0
@@ -37,6 +39,11 @@ func test_get_snapshot(spec *base.Spec) {
 	if err != nil {
 		panic(err)
 	}
+
+	if snapshotResp.Status.GetStatusCode() != tstatus.TStatusCode_OK {
+		log.Panicf("get snapshot failed, status: %v", snapshotResp.Status)
+	}
+
 	jobInfo := snapshotResp.GetJobInfo()
 	log.Infof("resp: %v\n", snapshotResp)
 	log.Infof("job: %s\n", string(jobInfo))
@@ -96,7 +103,7 @@ func test_restore_snapshot(src *base.Spec, dest *base.Spec) {
 	if err != nil {
 		panic(err)
 	}
-	restoreResp, err := destRpc.RestoreSnapshot(dest, labelName, snapshotResp)
+	restoreResp, err := destRpc.RestoreSnapshot(dest, nil, labelName, snapshotResp)
 	if err != nil {
 		panic(err)
 	}
