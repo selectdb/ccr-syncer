@@ -25,7 +25,7 @@ suite("test_mow") {
 
     def checkSelectTimesOf = { sqlString, rowSize, times, func = null -> Boolean
         def tmpRes = target_sql "${sqlString}"
-        while (tmpRes.size() != rowSize) {
+        while (tmpRes.size() != rowSize || (func != null && !func(tmpRes))) {
             sleep(sync_gap_time)
             if (--times > 0) {
                 tmpRes = target_sql "${sqlString}"

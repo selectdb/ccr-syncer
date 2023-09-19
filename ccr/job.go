@@ -259,9 +259,9 @@ func (j *Job) isIncrementalSync() bool {
 
 func (j *Job) fullSync() error {
 	type inMemoryData struct {
-		snapshotName      string
-		snapshotResp      *festruct.TGetSnapshotResult_
-		tableCommitSeqMap map[int64]int64
+		SnapshotName      string                        `json:"snapshot_name"`
+		SnapshotResp      *festruct.TGetSnapshotResult_ `json:"snapshot_resp"`
+		TableCommitSeqMap map[int64]int64               `json:"table_commit_seq_map"`
 	}
 
 	// TODO: snapshot machine, not need create snapshot each time
@@ -336,9 +336,9 @@ func (j *Job) fullSync() error {
 		}
 
 		inMemoryData := &inMemoryData{
-			snapshotName:      snapshotName,
-			snapshotResp:      snapshotResp,
-			tableCommitSeqMap: tableCommitSeqMap,
+			SnapshotName:      snapshotName,
+			SnapshotResp:      snapshotResp,
+			TableCommitSeqMap: tableCommitSeqMap,
 		}
 		j.progress.NextSubVolatile(AddExtraInfo, inMemoryData)
 
@@ -347,9 +347,9 @@ func (j *Job) fullSync() error {
 		log.Infof("fullsync status: add extra info")
 
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
-		snapshotResp := inMemoryData.snapshotResp
+		snapshotResp := inMemoryData.SnapshotResp
 		jobInfo := snapshotResp.GetJobInfo()
-		tableCommitSeqMap := inMemoryData.tableCommitSeqMap
+		tableCommitSeqMap := inMemoryData.TableCommitSeqMap
 
 		var jobInfoMap map[string]interface{}
 		err := json.Unmarshal(jobInfo, &jobInfoMap)
@@ -400,8 +400,8 @@ func (j *Job) fullSync() error {
 
 		// Step 4.1: start a new fullsync && persist
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
-		snapshotName := inMemoryData.snapshotName
-		snapshotResp := inMemoryData.snapshotResp
+		snapshotName := inMemoryData.SnapshotName
+		snapshotResp := inMemoryData.SnapshotResp
 
 		// Step 4.2: restore snapshot to dest
 		dest := &j.Dest
@@ -1080,7 +1080,6 @@ func (j *Job) recoverIncrementalSync() error {
 }
 
 func (j *Job) incrementalSync() error {
-	log.Debugf("[deadlinefen] j.progress.IsDone() %v", j.progress.IsDone())
 	if !j.progress.IsDone() {
 		log.Infof("job progress is not done, state is (%s), need recover", j.progress.SubSyncState)
 
