@@ -41,13 +41,15 @@ func test_get_lag(spec *base.Spec) {
 
 func main() {
 	src := &base.Spec{
-		Host:       "localhost",
-		Port:       "9030",
-		ThriftPort: "9020",
-		User:       "root",
-		Password:   "",
-		Database:   "ccr",
-		Table:      "",
+		Frontend: base.Frontend{
+			Host:       "localhost",
+			Port:       "9030",
+			ThriftPort: "9020",
+		},
+		User:     "root",
+		Password: "",
+		Database: "ccr",
+		Table:    "",
 	}
 
 	test_get_lag(src)

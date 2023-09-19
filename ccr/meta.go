@@ -1,7 +1,6 @@
 package ccr
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -47,7 +46,7 @@ func (m *Meta) GetDbId() (int64, error) {
 		return dbId, nil
 	}
 
-	dbname := "default_cluster:" + dbName
+	dbFullName := "default_cluster:" + dbName
 	// mysql> show proc '/dbs/';
 	// +-------+------------------------------------+----------+----------+-------------+--------------------------+--------------+--------------+------------------+
 	// | DbId  | DbName                             | TableNum | Size     | Quota       | LastConsistencyCheckTime | ReplicaCount | ReplicaQuota | TransactionQuota |
@@ -61,26 +60,30 @@ func (m *Meta) GetDbId() (int64, error) {
 		return 0, err
 	}
 
-	var dbId int64
-	var parsedDbname string
-	discardCols := make([]sql.RawBytes, 8)
-	scanArgs := []interface{}{&dbId, &parsedDbname}
-	for i := range discardCols {
-		scanArgs = append(scanArgs, &discardCols[i])
-	}
 	rows, err := db.Query("show proc '/dbs/'")
 	if err != nil {
 		return 0, errors.Wrapf(err, "show proc '/dbs/' failed")
 	}
-
 	defer rows.Close()
+
 	for rows.Next() {
-		if err := rows.Scan(scanArgs...); err != nil {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
 			return 0, errors.Wrapf(err, "show proc '/dbs/' failed")
 		}
+
+		dbId, err := rowParser.GetInt64("DbId")
+		if err != nil {
+			return 0, errors.Wrapf(err, "show proc '/dbs/' failed")
+		}
+		parsedDbname, err := rowParser.GetString("DbName")
+		if err != nil {
+			return 0, errors.Wrapf(err, "show proc '/dbs/' failed")
+		}
+
 		// match parsedDbname == dbname, return dbId
-		if parsedDbname == dbname {
-			m.DatabaseName2IdMap[dbname] = dbId
+		if parsedDbname == dbFullName {
+			m.DatabaseName2IdMap[dbFullName] = dbId
 			m.DatabaseMeta.Id = dbId
 			return dbId, nil
 		}
@@ -91,7 +94,7 @@ func (m *Meta) GetDbId() (int64, error) {
 	}
 
 	// not found
-	return 0, errors.Errorf("%s not found dbId", dbname)
+	return 0, errors.Errorf("%s not found dbId", dbFullName)
 }
 
 func (m *Meta) GetFullTableName(tableName string) string {
@@ -121,24 +124,28 @@ func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) 
 		return nil, err
 	}
 
-	var parsedTableId int64
-	var parsedTableName string
-	discardCols := make([]sql.RawBytes, 8)
-	scanArgs := []interface{}{&parsedTableId, &parsedTableName}
-	for i := range discardCols {
-		scanArgs = append(scanArgs, &discardCols[i])
-	}
 	query := fmt.Sprintf("show proc '/dbs/%d/'", dbId)
 	rows, err := db.Query(query)
 	if err != nil {
 		return nil, errors.Wrap(err, query)
 	}
-
 	defer rows.Close()
+
 	for rows.Next() {
-		if err := rows.Scan(scanArgs...); err != nil {
-			return nil, errors.Wrap(err, query)
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return nil, errors.Wrapf(err, query)
 		}
+
+		parsedTableId, err := rowParser.GetInt64("TableId")
+		if err != nil {
+			return nil, errors.Wrapf(err, query)
+		}
+		parsedTableName, err := rowParser.GetString("TableName")
+		if err != nil {
+			return nil, errors.Wrapf(err, query)
+		}
+
 		// match parsedDbname == dbname, return dbId
 		if parsedTableName == tableName || parsedTableId == tableId {
 			fullTableName := m.GetFullTableName(parsedTableName)
@@ -213,16 +220,6 @@ func (m *Meta) UpdatePartitions(tableId int64) error {
 	}
 
 	partitions := make([]*PartitionMeta, 0)
-	// total columns 18
-	var partitionId int64     // column 0
-	var partitionName string  // column 1
-	var partitionKey string   // column 5
-	var partitionRange string // column 6
-	discardCols := make([]sql.RawBytes, 14)
-	scanArgs := []interface{}{&partitionId, &partitionName, &discardCols[0], &discardCols[1], &discardCols[2], &partitionKey, &partitionRange}
-	for i := 3; i < len(discardCols); i++ {
-		scanArgs = append(scanArgs, &discardCols[i])
-	}
 	query := fmt.Sprintf("show proc '/dbs/%d/%d/partitions'", dbId, table.Id)
 	log.Debug(query)
 	rows, err := db.Query(query)
@@ -232,8 +229,27 @@ func (m *Meta) UpdatePartitions(tableId int64) error {
 
 	defer rows.Close()
 	for rows.Next() {
-		if err := rows.Scan(scanArgs...); err != nil {
-			return errors.Wrap(err, query)
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return errors.Wrapf(err, query)
+		}
+
+		// get data
+		partitionId, err := rowParser.GetInt64("PartitionId")
+		if err != nil {
+			return errors.Wrapf(err, query)
+		}
+		partitionName, err := rowParser.GetString("PartitionName")
+		if err != nil {
+			return errors.Wrapf(err, query)
+		}
+		partitionKey, err := rowParser.GetString("PartitionKey")
+		if err != nil {
+			return errors.Wrapf(err, query)
+		}
+		partitionRange, err := rowParser.GetString("Range")
+		if err != nil {
+			return errors.Wrapf(err, query)
 		}
 		log.Debugf("partitionId: %d, partitionName: %s", partitionId, partitionName)
 		partition := &PartitionMeta{
@@ -438,17 +454,43 @@ func (m *Meta) UpdateBackends() error {
 
 	defer rows.Close()
 	for rows.Next() {
-		// total 23, backend 6
-		var backend base.Backend
-		discardCols := make([]sql.RawBytes, 18)
-		scanArgs := []interface{}{&backend.Id, &backend.Host, &backend.HeartbeatPort, &backend.BePort, &backend.HttpPort, &backend.BrpcPort}
-		for i := range discardCols {
-			scanArgs = append(scanArgs, &discardCols[i])
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return errors.Wrapf(err, query)
 		}
 
-		if err := rows.Scan(scanArgs...); err != nil {
-			return errors.Wrap(err, query)
+		var backend base.Backend
+		backend.Id, err = rowParser.GetInt64("BackendId")
+		if err != nil {
+			return errors.Wrapf(err, query)
 		}
+		backend.Host, err = rowParser.GetString("Host")
+		if err != nil {
+			return errors.Wrapf(err, query)
+		}
+
+		var port int64
+		port, err = rowParser.GetInt64("HeartbeatPort")
+		if err != nil {
+			return errors.Wrapf(err, query)
+		}
+		backend.HeartbeatPort = uint16(port)
+		port, err = rowParser.GetInt64("BePort")
+		if err != nil {
+			return errors.Wrapf(err, query)
+		}
+		backend.BePort = uint16(port)
+		port, err = rowParser.GetInt64("HttpPort")
+		if err != nil {
+			return errors.Wrapf(err, query)
+		}
+		backend.HttpPort = uint16(port)
+		port, err = rowParser.GetInt64("BrpcPort")
+		if err != nil {
+			return errors.Wrapf(err, query)
+		}
+		backend.BrpcPort = uint16(port)
+
 		log.Debugf("backend: %v", &backend)
 		backends = append(backends, &backend)
 	}
@@ -549,14 +591,6 @@ func (m *Meta) UpdateIndexes(tableId int64, partitionId int64) error {
 	}
 
 	indexes := make([]*IndexMeta, 0)
-	// totoal rows 4
-	var indexId int64
-	var indexName string
-	discardCols := make([]sql.RawBytes, 2)
-	scanArgs := []interface{}{&indexId, &indexName}
-	for i := range discardCols {
-		scanArgs = append(scanArgs, &discardCols[i])
-	}
 	query := fmt.Sprintf("show proc '/dbs/%d/%d/partitions/%d'", dbId, table.Id, partition.Id)
 	log.Debug(query)
 	rows, err := db.Query(query)
@@ -566,8 +600,18 @@ func (m *Meta) UpdateIndexes(tableId int64, partitionId int64) error {
 
 	defer rows.Close()
 	for rows.Next() {
-		if err := rows.Scan(scanArgs...); err != nil {
-			return errors.Wrap(err, query)
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return errors.Wrapf(err, query)
+		}
+
+		indexId, err := rowParser.GetInt64("IndexId")
+		if err != nil {
+			return errors.Wrapf(err, query)
+		}
+		indexName, err := rowParser.GetString("IndexName")
+		if err != nil {
+			return errors.Wrapf(err, query)
 		}
 		log.Debugf("indexId: %d, indexName: %s", indexId, indexName)
 
@@ -652,15 +696,6 @@ func (m *Meta) updateReplica(index *IndexMeta) error {
 	}
 
 	replicas := make([]*ReplicaMeta, 0)
-	// total columns 21
-	var tabletId int64
-	var replicaId int64
-	var backendId int64
-	discardCols := make([]sql.RawBytes, 18)
-	scanArgs := []interface{}{&tabletId, &replicaId, &backendId}
-	for i := range discardCols {
-		scanArgs = append(scanArgs, &discardCols[i])
-	}
 	query := fmt.Sprintf("show proc '/dbs/%d/%d/partitions/%d/%d'", dbId, tableId, partitionId, indexId)
 	log.Debug(query)
 	rows, err := db.Query(query)
@@ -670,8 +705,22 @@ func (m *Meta) updateReplica(index *IndexMeta) error {
 
 	defer rows.Close()
 	for rows.Next() {
-		if err := rows.Scan(scanArgs...); err != nil {
-			return errors.Wrap(err, query)
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return errors.Wrapf(err, query)
+		}
+
+		tabletId, err := rowParser.GetInt64("TabletId")
+		if err != nil {
+			return errors.Wrapf(err, query)
+		}
+		replicaId, err := rowParser.GetInt64("ReplicaId")
+		if err != nil {
+			return errors.Wrapf(err, query)
+		}
+		backendId, err := rowParser.GetInt64("BackendId")
+		if err != nil {
+			return errors.Wrapf(err, query)
 		}
 		replica := &ReplicaMeta{
 			Id:        replicaId,
@@ -828,9 +877,7 @@ func (m *Meta) GetTableNameById(tableId int64) (string, error) {
 		return "", err
 	}
 
-	var _dbName string
 	var tableName string
-	var _dbId int64
 	sql := fmt.Sprintf("show table %d", tableId)
 	rows, err := db.Query(sql)
 	if err != nil {
@@ -839,7 +886,12 @@ func (m *Meta) GetTableNameById(tableId int64) (string, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		if err := rows.Scan(&_dbName, &tableName, &_dbId); err != nil {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return "", errors.Wrapf(err, sql)
+		}
+		tableName, err = rowParser.GetString("TableName")
+		if err != nil {
 			return "", errors.Wrap(err, sql)
 		}
 	}
@@ -871,13 +923,6 @@ func (m *Meta) GetTables() (map[int64]*TableMeta, error) {
 		return nil, err
 	}
 
-	var tableId int64
-	var tableName string
-	discardCols := make([]sql.RawBytes, 8)
-	scanArgs := []interface{}{&tableId, &tableName}
-	for i := range discardCols {
-		scanArgs = append(scanArgs, &discardCols[i])
-	}
 	query := fmt.Sprintf("show proc '/dbs/%d/'", dbId)
 	rows, err := db.Query(query)
 	if err != nil {
@@ -888,7 +933,17 @@ func (m *Meta) GetTables() (map[int64]*TableMeta, error) {
 	tables := make(map[int64]*TableMeta) // tableId -> table
 	defer rows.Close()
 	for rows.Next() {
-		if err := rows.Scan(scanArgs...); err != nil {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return nil, errors.Wrapf(err, query)
+		}
+
+		tableId, err := rowParser.GetInt64("TableId")
+		if err != nil {
+			return nil, errors.Wrapf(err, query)
+		}
+		tableName, err := rowParser.GetString("TableName")
+		if err != nil {
 			return nil, errors.Wrapf(err, query)
 		}
 
@@ -936,17 +991,22 @@ func (m *Meta) isFEBinlogFeature() (bool, error) {
 		return false, err
 	}
 
-	isEnabled := false
-	scanArgs := utils.MakeSingleColScanArgs(1, &isEnabled, 4)
 	query := fmt.Sprintf("ADMIN SHOW FRONTEND CONFIG LIKE \"%%enable_feature_binlog%%\"")
 	rows, err := db.Query(query)
 	if err != nil {
 		return false, errors.Wrap(err, query)
 	}
-
 	defer rows.Close()
+
+	var isEnabled bool = false
 	if rows.Next() {
-		if err := rows.Scan(scanArgs...); err != nil {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return false, errors.Wrapf(err, query)
+		}
+
+		isEnabled, err = rowParser.GetBool("Value")
+		if err != nil {
 			return false, errors.Wrap(err, query)
 		}
 	}
