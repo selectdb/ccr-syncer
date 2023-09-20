@@ -5,7 +5,7 @@ else
 	V := @
 endif
 
-tag := $(shell git describe --abbrev=0 --always --dirty)
+tag := $(shell git describe --abbrev=0 --always --dirty --tags)
 sha := $(shell git rev-parse --short HEAD)
 git_tag_sha := $(tag):$(sha)
 
