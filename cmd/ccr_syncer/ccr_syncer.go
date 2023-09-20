@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -14,6 +13,8 @@ import (
 	"github.com/selectdb/ccr_syncer/storage"
 	"github.com/selectdb/ccr_syncer/utils"
 	"github.com/selectdb/ccr_syncer/xerror"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Syncer struct {
@@ -28,11 +29,14 @@ type Syncer struct {
 }
 
 var (
-	dbPath string
-	syncer Syncer
+	dbPath  string
+	syncer  Syncer
+	version bool
 )
 
 func init() {
+	flag.BoolVar(&version, "version", false, "The program's version")
+
 	flag.StringVar(&dbPath, "db_dir", "ccr.db", "sqlite3 db file")
 	flag.StringVar(&syncer.Db_type, "db_type", "sqlite3", "meta db type")
 	flag.StringVar(&syncer.Db_host, "db_host", "127.0.0.1", "meta db host")
@@ -48,6 +52,13 @@ func init() {
 }
 
 func main() {
+	if version {
+		printVersion()
+	}
+
+	// print version
+	log.Infof("ccr start, version: %s", getVersion())
+
 	// Step 1: Check db
 	if dbPath == "" {
 		log.Fatal("db_dir is empty")

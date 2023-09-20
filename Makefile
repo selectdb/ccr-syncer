@@ -5,6 +5,10 @@ else
 	V := @
 endif
 
+tag := $(shell git describe --abbrev=0 --always --dirty)
+sha := $(shell git rev-parse --short HEAD)
+git_tag_sha := $(tag):$(sha)
+
 .PHONY: build
 ## build : Build binary
 build: ccr_syncer get_binlog ingest_binlog get_meta snapshot_op get_master_token spec_checker rows_parse
@@ -41,7 +45,7 @@ help: Makefile
 .PHONY: ccr_syncer
 ## ccr_syncer : Build ccr_syncer binary
 ccr_syncer: bin
-	$(V)go build -o bin/ccr_syncer ./cmd/ccr_syncer
+	$(V)go build -ldflags "-X main.GitTagSha=$(git_tag_sha)" -o bin/ccr_syncer ./cmd/ccr_syncer
 
 .PHONY: get_binlog
 ## get_binlog : Build get_binlog binary
