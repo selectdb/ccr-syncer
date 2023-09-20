@@ -1039,7 +1039,7 @@ func (m *Meta) checkBEsBinlogFeature() error {
 				backend.Host, backend.HttpPort, configs)
 		}
 
-		if configs[0][2] != "true" {
+		if configs[0][2] != "true" && configs[0][2] != "1" {
 			disabledBinlogBEs = append(disabledBinlogBEs, fmt.Sprintf("%v:%v", backend.Host, backend.HttpPort))
 		}
 	}
