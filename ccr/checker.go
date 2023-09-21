@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/selectdb/ccr_syncer/storage"
+	"github.com/selectdb/ccr_syncer/xerror"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -59,11 +60,11 @@ type Checker struct {
 
 func NewChecker(hostInfo string, db storage.DB, jm *JobManager) *Checker {
 	return &Checker{
-		lastStamp:   -1,
-		hostInfo:    hostInfo,
-		db:          db,
-		jobManager:  jm,
-		stop:        make(chan struct{}),
+		lastStamp:  -1,
+		hostInfo:   hostInfo,
+		db:         db,
+		jobManager: jm,
+		stop:       make(chan struct{}),
 	}
 }
 
@@ -101,7 +102,7 @@ func (c *Checker) next() {
 	case checkerStateRebalance:
 		c.state = checkerStateRefresh
 	default:
-		c.err = errors.Errorf("Unknown checker state %d", c.state)
+		c.err = xerror.Errorf(xerror.Normal, "Unknown checker state %d", c.state)
 		c.state = checkerStateError
 	}
 }
@@ -154,7 +155,7 @@ func (c *Checker) check() error {
 		case checkerStateError:
 			return c.err
 		default:
-			return errors.Errorf("Unknown checker state %d", c.state)
+			return xerror.Errorf(xerror.Normal, "Unknown checker state %d", c.state)
 		}
 		c.next()
 	}
@@ -179,7 +180,7 @@ func (c *Checker) run() error {
 	for {
 		select {
 		case <-c.stop:
-			log.Info("checker stoppped")
+			log.Info("checker stopped")
 			return nil
 		case <-ticker.C:
 			if err := c.check(); err != nil {

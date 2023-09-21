@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/pkg/errors"
+	"github.com/selectdb/ccr_syncer/xerror"
 )
 
 type PartitionRecord struct {
@@ -62,7 +62,7 @@ func NewUpsertFromJson(data string) (*Upsert, error) {
 	var up Upsert
 	err := json.Unmarshal([]byte(data), &up)
 	if err != nil {
-		return nil, errors.Wrap(err, "unmarshal upsert error")
+		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal upsert error")
 	}
 
 	for tableId, tableRecord := range up.TableRecords {

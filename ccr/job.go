@@ -11,22 +11,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/modern-go/gls"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"go.uber.org/zap"
-
-	_ "github.com/go-sql-driver/mysql"
-
 	"github.com/selectdb/ccr_syncer/ccr/base"
 	"github.com/selectdb/ccr_syncer/ccr/record"
 	"github.com/selectdb/ccr_syncer/rpc"
 	"github.com/selectdb/ccr_syncer/storage"
 	utils "github.com/selectdb/ccr_syncer/utils"
+	"github.com/selectdb/ccr_syncer/xerror"
 
 	festruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/frontendservice"
 	tstatus "github.com/selectdb/ccr_syncer/rpc/kitex_gen/status"
 	ttypes "github.com/selectdb/ccr_syncer/rpc/kitex_gen/types"
+
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/modern-go/gls"
+	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 const (
@@ -112,7 +111,7 @@ func NewJobContext(src, dest base.Spec, db storage.DB, factory *Factory) *JobCon
 func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 	jobContext, ok := ctx.(*JobContext)
 	if !ok {
-		return nil, errors.Errorf("invalid context type: %T", ctx)
+		return nil, xerror.Errorf(xerror.Normal, "invalid context type: %T", ctx)
 	}
 
 	metaFactory := jobContext.factory.MetaFactory
@@ -135,7 +134,7 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 	}
 
 	if err := job.valid(); err != nil {
-		return nil, errors.Wrap(err, "job is invalid")
+		return nil, xerror.Wrap(err, xerror.Normal, "job is invalid")
 	}
 
 	if job.Src.Table == "" {
@@ -154,7 +153,7 @@ func NewJobFromJson(jsonData string, db storage.DB, factory *Factory) (*Job, err
 	var job Job
 	err := json.Unmarshal([]byte(jsonData), &job)
 	if err != nil {
-		return nil, errors.Wrapf(err, "unmarshal json failed, json: %s", jsonData)
+		return nil, xerror.Wrapf(err, xerror.Normal, "unmarshal json failed, json: %s", jsonData)
 	}
 	job.ISrc = factory.ISpecFactory.NewISpec(&job.Src)
 	job.IDest = factory.ISpecFactory.NewISpec(&job.Dest)
@@ -172,27 +171,27 @@ func NewJobFromJson(jsonData string, db storage.DB, factory *Factory) (*Job, err
 func (j *Job) valid() error {
 	var err error
 	if exist, err := j.db.IsJobExist(j.Name); err != nil {
-		return errors.Wrap(err, "check job exist failed")
+		return xerror.Wrap(err, xerror.Normal, "check job exist failed")
 	} else if exist {
-		return errors.Errorf("job %s already exist", j.Name)
+		return xerror.Errorf(xerror.Normal, "job %s already exist", j.Name)
 	}
 
 	if j.Name == "" {
-		return errors.New("name is empty")
+		return xerror.New(xerror.Normal, "name is empty")
 	}
 
 	err = j.ISrc.Valid()
 	if err != nil {
-		return errors.Wrap(err, "src spec is invalid")
+		return xerror.Wrap(err, xerror.Normal, "src spec is invalid")
 	}
 
 	err = j.IDest.Valid()
 	if err != nil {
-		return errors.Wrap(err, "dest spec is invalid")
+		return xerror.Wrap(err, xerror.Normal, "dest spec is invalid")
 	}
 
 	if (j.Src.Table == "" && j.Dest.Table != "") || (j.Src.Table != "" && j.Dest.Table == "") {
-		return errors.New("src/dest are not both db or table sync")
+		return xerror.New(xerror.Normal, "src/dest are not both db or table sync")
 	}
 
 	return nil
@@ -289,7 +288,7 @@ func (j *Job) fullSync() error {
 		case TableSync:
 			backupTableList = append(backupTableList, j.Src.Table)
 		default:
-			return errors.Errorf("invalid sync type %s", j.SyncType)
+			return xerror.Errorf(xerror.Normal, "invalid sync type %s", j.SyncType)
 		}
 		snapshotName, err := j.ISrc.CreateSnapshotAndWaitForDone(backupTableList)
 		if err != nil {
@@ -321,7 +320,7 @@ func (j *Job) fullSync() error {
 
 		log.Debugf("job: %s", string(snapshotResp.GetJobInfo()))
 		if !snapshotResp.IsSetJobInfo() {
-			return errors.New("jobInfo is not set")
+			return xerror.New(xerror.Normal, "jobInfo is not set")
 		}
 
 		tableCommitSeqMap, err := ExtractTableCommitSeqMap(snapshotResp.GetJobInfo())
@@ -331,7 +330,7 @@ func (j *Job) fullSync() error {
 
 		if j.SyncType == TableSync {
 			if _, ok := tableCommitSeqMap[j.Src.TableId]; !ok {
-				return errors.Errorf("tableid %d, commit seq not found", j.Src.TableId)
+				return xerror.Errorf(xerror.Normal, "tableid %d, commit seq not found", j.Src.TableId)
 			}
 		}
 
@@ -354,7 +353,7 @@ func (j *Job) fullSync() error {
 		var jobInfoMap map[string]interface{}
 		err := json.Unmarshal(jobInfo, &jobInfoMap)
 		if err != nil {
-			return errors.Wrapf(err, "unmarshal jobInfo failed, jobInfo: %s", string(jobInfo))
+			return xerror.Wrapf(err, xerror.Normal, "unmarshal jobInfo failed, jobInfo: %s", string(jobInfo))
 		}
 		log.Debugf("jobInfo: %v", jobInfoMap)
 
@@ -367,7 +366,7 @@ func (j *Job) fullSync() error {
 		jobInfoMap["extra_info"] = extraInfo
 		jobInfoBytes, err := json.Marshal(jobInfoMap)
 		if err != nil {
-			return errors.Errorf("marshal jobInfo failed, jobInfo: %v", jobInfoMap)
+			return xerror.Errorf(xerror.Normal, "marshal jobInfo failed, jobInfo: %v", jobInfoMap)
 		}
 		log.Debugf("jobInfoBytes: %s", string(jobInfoBytes))
 		snapshotResp.SetJobInfo(jobInfoBytes)
@@ -393,7 +392,7 @@ func (j *Job) fullSync() error {
 			inMemoryData := &inMemoryData{}
 			if err := json.Unmarshal([]byte(persistData), inMemoryData); err != nil {
 				// TODO: return to snapshot
-				return errors.Errorf("unmarshal persistData failed, persistData: %s", persistData)
+				return xerror.Errorf(xerror.Normal, "unmarshal persistData failed, persistData: %s", persistData)
 			}
 			j.progress.InMemoryData = inMemoryData
 		}
@@ -433,7 +432,7 @@ func (j *Job) fullSync() error {
 			return err
 		}
 		if !restoreFinished {
-			err = errors.Errorf("check restore state timeout, max try times: %d", base.MAX_CHECK_RETRY_TIMES)
+			err = xerror.Errorf(xerror.Normal, "check restore state timeout, max try times: %d", base.MAX_CHECK_RETRY_TIMES)
 			return err
 		}
 		j.progress.NextSubCheckpoint(PersistRestoreInfo, snapshotName)
@@ -462,12 +461,12 @@ func (j *Job) fullSync() error {
 			j.progress.TableCommitSeqMap = nil
 			j.progress.NextWithPersist(j.progress.CommitSeq, TableIncrementalSync, Done, "")
 		default:
-			return errors.Errorf("invalid sync type %d", j.SyncType)
+			return xerror.Errorf(xerror.Normal, "invalid sync type %d", j.SyncType)
 		}
 
 		return nil
 	default:
-		return errors.Errorf("invalid job sub sync state %d", j.progress.SubSyncState)
+		return xerror.Errorf(xerror.Normal, "invalid job sub sync state %d", j.progress.SubSyncState)
 	}
 
 	return j.fullSync()
@@ -476,7 +475,7 @@ func (j *Job) fullSync() error {
 func (j *Job) persistJob() error {
 	data, err := json.Marshal(j)
 	if err != nil {
-		return errors.Errorf("marshal job failed, job: %v", j)
+		return xerror.Errorf(xerror.Normal, "marshal job failed, job: %v", j)
 	}
 
 	if err := j.db.UpdateJob(j.Name, string(data)); err != nil {
@@ -561,12 +560,12 @@ func (j *Job) getReleatedTableRecords(upsert *record.Upsert) ([]*record.TableRec
 	case TableSync:
 		tableRecord, ok := upsert.TableRecords[j.Src.TableId]
 		if !ok {
-			return nil, errors.Errorf("table record not found, table: %s", j.Src.Table)
+			return nil, xerror.Errorf(xerror.Normal, "table record not found, table: %s", j.Src.Table)
 		}
 		tableRecords = make([]*record.TableRecord, 0, 1)
 		tableRecords = append(tableRecords, tableRecord)
 	default:
-		return nil, errors.Errorf("invalid sync type: %s", j.SyncType)
+		return nil, xerror.Errorf(xerror.Normal, "invalid sync type: %s", j.SyncType)
 	}
 
 	return tableRecords, nil
@@ -585,7 +584,7 @@ func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*
 
 	ingestBinlogJob, ok := job.(*IngestBinlogJob)
 	if !ok {
-		return nil, errors.Errorf("invalid job type, job: %+v", job)
+		return nil, xerror.Errorf(xerror.Normal, "invalid job type, job: %+v", job)
 	}
 
 	job.Run()
@@ -614,7 +613,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			persistData := j.progress.PersistData
 			inMemoryData := &inMemoryData{}
 			if err := json.Unmarshal([]byte(persistData), inMemoryData); err != nil {
-				return errors.Errorf("unmarshal persistData failed, persistData: %s", persistData)
+				return xerror.Errorf(xerror.Normal, "unmarshal persistData failed, persistData: %s", persistData)
 			}
 			j.progress.InMemoryData = inMemoryData
 		}
@@ -630,7 +629,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 	switch j.progress.SubSyncState {
 	case Done:
 		if binlog == nil {
-			log.Errorf("binlog is nil, %+v", errors.Errorf("handle nil upsert binlog"))
+			log.Errorf("binlog is nil, %+v", xerror.Errorf(xerror.Normal, "handle nil upsert binlog"))
 			return nil
 		}
 
@@ -693,7 +692,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		}
 		log.Debugf("resp: %v", beginTxnResp)
 		if beginTxnResp.GetStatus().GetStatusCode() != tstatus.TStatusCode_OK {
-			return errors.Errorf("begin txn failed, status: %v", beginTxnResp.GetStatus())
+			return xerror.Errorf(xerror.Normal, "begin txn failed, status: %v", beginTxnResp.GetStatus())
 		}
 		txnId := beginTxnResp.GetTxnId()
 		log.Debugf("TxnId: %d, DbId: %d", txnId, beginTxnResp.GetDbId())
@@ -744,7 +743,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			break
 		}
 		if resp.Status.GetStatusCode() != tstatus.TStatusCode_OK {
-			err := errors.Errorf("commit txn failed, status: %v", resp.Status)
+			err := xerror.Errorf(xerror.Normal, "commit txn failed, status: %v", resp.Status)
 			rollback(err, inMemoryData)
 			break
 		}
@@ -786,14 +785,14 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			return err
 		}
 		if resp.Status.GetStatusCode() != tstatus.TStatusCode_OK {
-			return errors.Errorf("rollback txn failed, status: %v", resp.Status)
+			return xerror.Errorf(xerror.Normal, "rollback txn failed, status: %v", resp.Status)
 		}
 		log.Infof("rollback TxnId: %d resp: %v", txnId, resp)
 		j.progress.Done()
 		return nil
 
 	default:
-		return errors.Errorf("invalid job sub sync state %d", j.progress.SubSyncState)
+		return xerror.Errorf(xerror.Normal, "invalid job sub sync state %d", j.progress.SubSyncState)
 	}
 
 	return j.handleUpsert(binlog)
@@ -858,7 +857,7 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 	log.Infof("handle create table binlog")
 
 	if j.SyncType != DBSync {
-		return errors.Errorf("invalid sync type: %v", j.SyncType)
+		return xerror.Errorf(xerror.Normal, "invalid sync type: %v", j.SyncType)
 	}
 
 	data := binlog.GetData()
@@ -881,7 +880,7 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 	log.Infof("handle drop table binlog")
 
 	if j.SyncType != DBSync {
-		return errors.Errorf("invalid sync type: %v", j.SyncType)
+		return xerror.Errorf(xerror.Normal, "invalid sync type: %v", j.SyncType)
 	}
 
 	data := binlog.GetData()
@@ -896,7 +895,7 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 		dirtySrcTables := j.srcMeta.DirtyGetTables()
 		srcTable, ok := dirtySrcTables[dropTable.TableId]
 		if !ok {
-			return errors.Errorf("table not found, tableId: %d", dropTable.TableId)
+			return xerror.Errorf(xerror.Normal, "table not found, tableId: %d", dropTable.TableId)
 		}
 
 		tableName = srcTable.Name
@@ -928,7 +927,7 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 		return err
 	}
 	if alterJob.TableName == "" {
-		return errors.Errorf("invalid alter job, tableName: %s", alterJob.TableName)
+		return xerror.Errorf(xerror.Normal, "invalid alter job, tableName: %s", alterJob.TableName)
 	}
 	if !alterJob.IsFinished() {
 		return nil
@@ -1016,7 +1015,7 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 
 func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 	if binlog == nil || !binlog.IsSetCommitSeq() {
-		return errors.Errorf("invalid binlog: %v", binlog)
+		return xerror.Errorf(xerror.Normal, "invalid binlog: %v", binlog)
 	}
 
 	log.Debugf("binlog data: %s", binlog.GetData())
@@ -1065,7 +1064,7 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 	case festruct.TBinlogType_BARRIER:
 		// TODO(Drogon)
 	default:
-		return errors.Errorf("unknown binlog type: %v", binlog.GetType())
+		return xerror.Errorf(xerror.Normal, "unknown binlog type: %v", binlog.GetType())
 	}
 
 	return nil
@@ -1114,19 +1113,19 @@ func (j *Job) incrementalSync() error {
 		case tstatus.TStatusCode_BINLOG_TOO_NEW_COMMIT_SEQ:
 			return nil
 		case tstatus.TStatusCode_BINLOG_DISABLE:
-			return errors.Errorf("binlog is disabled")
+			return xerror.Errorf(xerror.Normal, "binlog is disabled")
 		case tstatus.TStatusCode_BINLOG_NOT_FOUND_DB:
-			return errors.Errorf("can't found db")
+			return xerror.Errorf(xerror.Normal, "can't found db")
 		case tstatus.TStatusCode_BINLOG_NOT_FOUND_TABLE:
-			return errors.Errorf("can't found table")
+			return xerror.Errorf(xerror.Normal, "can't found table")
 		default:
-			return errors.Errorf("invalid binlog status type: %v", status.StatusCode)
+			return xerror.Errorf(xerror.Normal, "invalid binlog status type: %v", status.StatusCode)
 		}
 
 		// Step 2.2: handle binlogs records if has job
 		binlogs := getBinlogResp.GetBinlogs()
 		if len(binlogs) == 0 {
-			return errors.Errorf("no binlog, but status code is: %v", status.StatusCode)
+			return xerror.Errorf(xerror.Normal, "no binlog, but status code is: %v", status.StatusCode)
 		}
 
 		// Step 2.3: dispatch handle binlogs
@@ -1161,7 +1160,7 @@ func (j *Job) tableSync() error {
 		log.Debug("table incremental sync")
 		return j.incrementalSync()
 	default:
-		return errors.Errorf("unknown sync state: %v", j.progress.SyncState)
+		return xerror.Errorf(xerror.Normal, "unknown sync state: %v", j.progress.SyncState)
 	}
 }
 
@@ -1191,7 +1190,7 @@ func (j *Job) dbSync() error {
 		log.Debug("db incremental sync")
 		return j.incrementalSync()
 	default:
-		return errors.Errorf("unknown db sync state: %v", j.progress.SyncState)
+		return xerror.Errorf(xerror.Normal, "unknown db sync state: %v", j.progress.SyncState)
 	}
 }
 
@@ -1209,7 +1208,7 @@ func (j *Job) sync() error {
 	case DBSync:
 		return j.dbSync()
 	default:
-		return errors.Errorf("unknown table sync type: %v", j.SyncType)
+		return xerror.Errorf(xerror.Normal, "unknown table sync type: %v", j.SyncType)
 	}
 }
 
@@ -1242,7 +1241,7 @@ func (j *Job) newSnapshot(commitSeq int64) error {
 		j.progress.NextWithPersist(commitSeq, DBFullSync, BeginCreateSnapshot, "")
 		return nil
 	default:
-		err := errors.Errorf("unknown table sync type: %v", j.SyncType)
+		err := xerror.Errorf(xerror.Normal, "unknown table sync type: %v", j.SyncType)
 		log.Fatalf("run %+v", err)
 		return err
 	}
@@ -1309,13 +1308,13 @@ func (j *Job) FirstRun() error {
 	if src_db_exists, err := j.ISrc.CheckDatabaseExists(); err != nil {
 		return err
 	} else if !src_db_exists {
-		return errors.Errorf("src database %s not exists", j.Src.Database)
+		return xerror.Errorf(xerror.Normal, "src database %s not exists", j.Src.Database)
 	}
 	if j.SyncType == DBSync {
 		if enable, err := j.ISrc.IsDatabaseEnableBinlog(); err != nil {
 			return err
 		} else if !enable {
-			return errors.Errorf("src database %s not enable binlog", j.Src.Database)
+			return xerror.Errorf(xerror.Normal, "src database %s not enable binlog", j.Src.Database)
 		}
 	}
 	if srcDbId, err := j.srcMeta.GetDbId(); err != nil {
@@ -1329,13 +1328,13 @@ func (j *Job) FirstRun() error {
 		if src_table_exists, err := j.ISrc.CheckTableExists(); err != nil {
 			return err
 		} else if !src_table_exists {
-			return errors.Errorf("src table %s.%s not exists", j.Src.Database, j.Src.Table)
+			return xerror.Errorf(xerror.Normal, "src table %s.%s not exists", j.Src.Database, j.Src.Table)
 		}
 
 		if enable, err := j.ISrc.IsTableEnableBinlog(); err != nil {
 			return err
 		} else if !enable {
-			return errors.Errorf("src table %s.%s not enable binlog", j.Src.Database, j.Src.Table)
+			return xerror.Errorf(xerror.Normal, "src table %s.%s not enable binlog", j.Src.Database, j.Src.Table)
 		}
 
 		if srcTableId, err := j.srcMeta.GetTableId(j.Src.Table); err != nil {
@@ -1367,7 +1366,7 @@ func (j *Job) FirstRun() error {
 			return err
 		}
 		if dest_table_exists {
-			return errors.Errorf("dest table %s.%s already exists", j.Dest.Database, j.Dest.Table)
+			return xerror.Errorf(xerror.Normal, "dest table %s.%s already exists", j.Dest.Database, j.Dest.Table)
 		}
 	}
 

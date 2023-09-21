@@ -2,8 +2,9 @@ package storage
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"sort"
+
+	"github.com/selectdb/ccr_syncer/xerror"
 )
 
 type LoadInfo struct {
@@ -37,7 +38,7 @@ func (ls LoadSlice) Swap(i, j int) {
 func filterHighLoadSyncer(sumLoad int, loadList LoadSlice) (LoadSlice, int, error) {
 	sort.Sort(loadList)
 	if len(loadList) == 0 {
-		return nil, 0, errors.Errorf("loadList is empty!")
+		return nil, 0, xerror.Errorf(xerror.Normal, "loadList is empty!")
 	}
 	averageLoad := float64(sumLoad) / float64(len(loadList))
 	for i := len(loadList) - 1; i >= 0; i-- {
@@ -46,7 +47,7 @@ func filterHighLoadSyncer(sumLoad int, loadList LoadSlice) (LoadSlice, int, erro
 		}
 		sumLoad -= loadList[i].GetLoad()
 	}
-	return nil, 0, errors.Errorf("There is no available syncer!")
+	return nil, 0, xerror.Errorf(xerror.Normal, "There is no available syncer!")
 }
 
 func RebalanceLoad(additionalLoad int, currentLoad int, loadList LoadSlice) (LoadSlice, error) {

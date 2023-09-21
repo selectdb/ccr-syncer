@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/pkg/errors"
+	"github.com/selectdb/ccr_syncer/xerror"
 )
 
 type ModifyTableAddOrDropColumns struct {
@@ -17,16 +17,16 @@ func NewModifyTableAddOrDropColumnsFromJson(data string) (*ModifyTableAddOrDropC
 	var modifyTableAddOrDropColumns ModifyTableAddOrDropColumns
 	err := json.Unmarshal([]byte(data), &modifyTableAddOrDropColumns)
 	if err != nil {
-		return nil, errors.Wrap(err, "unmarshal modify table add or drop columns error")
+		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal modify table add or drop columns error")
 	}
 
 	if modifyTableAddOrDropColumns.RawSql == "" {
 		// TODO: fallback to create sql from other fields
-		return nil, errors.Errorf("modify table add or drop columns sql is empty")
+		return nil, xerror.Errorf(xerror.Normal, "modify table add or drop columns sql is empty")
 	}
 
 	if modifyTableAddOrDropColumns.TableId == 0 {
-		return nil, errors.Errorf("table id not found")
+		return nil, xerror.Errorf(xerror.Normal, "table id not found")
 	}
 
 	return &modifyTableAddOrDropColumns, nil

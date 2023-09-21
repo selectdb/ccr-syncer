@@ -3,8 +3,9 @@ package rpc
 import (
 	"context"
 
-	"github.com/pkg/errors"
 	"github.com/selectdb/ccr_syncer/ccr/base"
+	"github.com/selectdb/ccr_syncer/xerror"
+
 	bestruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/backendservice"
 	beservice "github.com/selectdb/ccr_syncer/rpc/kitex_gen/backendservice/backendservice"
 
@@ -25,7 +26,7 @@ func (beRpc *BeRpc) IngestBinlog(req *bestruct.TIngestBinlogRequest) (*bestruct.
 
 	client := beRpc.client
 	if result, err := client.IngestBinlog(context.Background(), req); err != nil {
-		return nil, errors.Wrapf(err, "IngestBinlog error: %v", err)
+		return nil, xerror.Wrapf(err, xerror.Normal, "IngestBinlog error: %v", err)
 	} else {
 		return result, nil
 	}

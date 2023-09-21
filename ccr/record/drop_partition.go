@@ -3,7 +3,7 @@ package record
 import (
 	"encoding/json"
 
-	"github.com/pkg/errors"
+	"github.com/selectdb/ccr_syncer/xerror"
 )
 
 type DropPartition struct {
@@ -15,16 +15,16 @@ func NewDropPartitionFromJson(data string) (*DropPartition, error) {
 	var dropPartition DropPartition
 	err := json.Unmarshal([]byte(data), &dropPartition)
 	if err != nil {
-		return nil, errors.Wrap(err, "unmarshal drop partition error")
+		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal drop partition error")
 	}
 
 	if dropPartition.Sql == "" {
 		// TODO: fallback to create sql from other fields
-		return nil, errors.Errorf("drop partition sql is empty")
+		return nil, xerror.Errorf(xerror.Normal, "drop partition sql is empty")
 	}
 
 	if dropPartition.TableId == 0 {
-		return nil, errors.Errorf("table id not found")
+		return nil, xerror.Errorf(xerror.Normal, "table id not found")
 	}
 
 	return &dropPartition, nil

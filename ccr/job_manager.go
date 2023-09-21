@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/selectdb/ccr_syncer/storage"
+	"github.com/selectdb/ccr_syncer/xerror"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -15,22 +16,22 @@ const (
 
 // job manager is thread safety
 type JobManager struct {
-	db      storage.DB
-	jobs    map[string]*Job
-	lock    sync.RWMutex
-	factory *Factory
+	db       storage.DB
+	jobs     map[string]*Job
+	lock     sync.RWMutex
+	factory  *Factory
 	hostInfo string
-	stop    chan struct{}
-	wg      sync.WaitGroup
+	stop     chan struct{}
+	wg       sync.WaitGroup
 }
 
 func NewJobManager(db storage.DB, factory *Factory, hostInfo string) *JobManager {
 	return &JobManager{
-		db:      db,
-		jobs:    make(map[string]*Job),
-		factory: factory,
+		db:       db,
+		jobs:     make(map[string]*Job),
+		factory:  factory,
 		hostInfo: hostInfo,
-		stop:    make(chan struct{}),
+		stop:     make(chan struct{}),
 	}
 }
 
@@ -47,7 +48,7 @@ func (jm *JobManager) AddJob(job *Job) error {
 
 	// Step 1: check job exist
 	if _, ok := jm.jobs[job.Name]; ok {
-		return errors.Errorf("%s: %s", ErrJobExist, job.Name)
+		return xerror.Errorf(xerror.Normal, "%s: %s", ErrJobExist, job.Name)
 	}
 
 	// Step 2: check job first run, mostly for dest/src fe db/table info
@@ -58,7 +59,7 @@ func (jm *JobManager) AddJob(job *Job) error {
 	// Step 3: add job info to db
 	data, err := json.Marshal(job)
 	if err != nil {
-		return errors.Wrap(err, "marshal job error")
+		return xerror.Wrap(err, xerror.Normal, "marshal job error")
 	}
 	if err := jm.db.AddJob(job.Name, string(data), jm.hostInfo); err != nil {
 		return err
@@ -114,7 +115,7 @@ func (jm *JobManager) RemoveJob(name string) error {
 		delete(jm.jobs, name)
 		return jm.db.RemoveJob(name)
 	} else {
-		return errors.Errorf("job not exist: %s", name)
+		return xerror.Errorf(xerror.Normal, "job not exist: %s", name)
 	}
 }
 
@@ -167,7 +168,7 @@ func (jm *JobManager) GetLag(jobName string) (int64, error) {
 	if job, ok := jm.jobs[jobName]; ok {
 		return job.GetLag()
 	} else {
-		return 0, errors.Errorf("job not exist: %s", jobName)
+		return 0, xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
 	}
 }
 
@@ -178,7 +179,7 @@ func (jm *JobManager) dealJob(jobName string, dealFunc func(job *Job) error) err
 	if job, ok := jm.jobs[jobName]; ok {
 		return dealFunc(job)
 	} else {
-		return errors.Errorf("job not exist: %s", jobName)
+		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
 	}
 }
 
@@ -201,6 +202,6 @@ func (jm *JobManager) JobStatus(jobName string) (*JobStatus, error) {
 	if job, ok := jm.jobs[jobName]; ok {
 		return job.Status(), nil
 	} else {
-		return nil, errors.Errorf("job not exist: %s", jobName)
+		return nil, xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
 	}
 }

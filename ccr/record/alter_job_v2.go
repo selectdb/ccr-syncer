@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/pkg/errors"
+	"github.com/selectdb/ccr_syncer/xerror"
 )
 
 type AlterJobV2 struct {
@@ -21,17 +21,17 @@ func NewAlterJobV2FromJson(data string) (*AlterJobV2, error) {
 	var alterJob AlterJobV2
 	err := json.Unmarshal([]byte(data), &alterJob)
 	if err != nil {
-		return nil, errors.Wrap(err, "unmarshal alter job error")
+		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal alter job error")
 	}
 
 	// rollup not contain RawSql
 	// if alterJob.RawSql == "" {
 	// 	// TODO: fallback to create sql from other fields
-	// 	return nil, errors.Errorf("alter job raw sql is empty")
+	// 	return nil, xerror.Errorf(xerror.Normal, "alter job raw sql is empty")
 	// }
 
 	if alterJob.TableId == 0 {
-		return nil, errors.Errorf("table id not found")
+		return nil, xerror.Errorf(xerror.Normal, "table id not found")
 	}
 
 	return &alterJob, nil

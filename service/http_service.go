@@ -5,17 +5,17 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/pkg/errors"
 	"github.com/selectdb/ccr_syncer/ccr"
 	"github.com/selectdb/ccr_syncer/ccr/base"
 	"github.com/selectdb/ccr_syncer/storage"
+	"github.com/selectdb/ccr_syncer/xerror"
 
 	log "github.com/sirupsen/logrus"
 )
 
 type HttpService struct {
-	port int
-	mux  *http.ServeMux
+	port     int
+	mux      *http.ServeMux
 	hostInfo string
 
 	db         storage.DB
@@ -24,8 +24,8 @@ type HttpService struct {
 
 func NewHttpServer(host string, port int, db storage.DB, jobManager *ccr.JobManager) *HttpService {
 	return &HttpService{
-		port: port,
-		mux:  http.NewServeMux(),
+		port:     port,
+		mux:      http.NewServeMux(),
 		hostInfo: fmt.Sprintf("%s:%d", host, port),
 
 		db:         db,
@@ -282,6 +282,6 @@ func (s *HttpService) Start() error {
 		log.Info("http server closed")
 		return nil
 	} else {
-		return errors.Wrapf(err, "http server start on %s failed", addr)
+		return xerror.Wrapf(err, xerror.Normal, "http server start on %s failed", addr)
 	}
 }

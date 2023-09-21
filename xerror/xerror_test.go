@@ -15,7 +15,7 @@ func TestErrorf(t *testing.T) {
 	var xerr *XError
 	assert.True(t, errors.As(err, &xerr))
 	assert.Equal(t, xerr.ErrType, Normal)
-	assert.Equal(t, xerr.Err.Error(), "test error")
+	assert.Equal(t, xerr.err.Error(), "test error")
 }
 
 func TestWrap(t *testing.T) {
@@ -27,7 +27,7 @@ func TestWrap(t *testing.T) {
 	var xerr *XError
 	assert.True(t, errors.As(wrappedErr, &xerr))
 	assert.Equal(t, xerr.ErrType, DB)
-	assert.Equal(t, xerr.Err.Error(), "db open error")
+	assert.Equal(t, xerr.err.Error(), "db open error")
 }
 
 func TestWrapf(t *testing.T) {
@@ -39,5 +39,5 @@ func TestWrapf(t *testing.T) {
 	var xerr *XError
 	assert.True(t, errors.As(wrappedErr, &xerr))
 	assert.Equal(t, xerr.ErrType, FE)
-	assert.Equal(t, xerr.Err.Error(), "fe test error")
+	assert.Equal(t, xerr.err.Error(), "fe test error")
 }

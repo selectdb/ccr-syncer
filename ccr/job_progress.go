@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/selectdb/ccr_syncer/storage"
+	"github.com/selectdb/ccr_syncer/xerror"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/zap"
 )
@@ -221,7 +221,7 @@ func _convertToPersistData(persistData any) string {
 	}
 
 	if persistDataJson, err := json.Marshal(persistData); err != nil {
-		log.Panicf("marshal persist data failed: %+v", errors.WithStack(err))
+		log.Panicf("marshal persist data failed: %+v", xerror.WithStack(err))
 		return ""
 	} else {
 		return string(persistDataJson)

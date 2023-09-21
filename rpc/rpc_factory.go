@@ -6,9 +6,9 @@ import (
 	"github.com/selectdb/ccr_syncer/ccr/base"
 	beservice "github.com/selectdb/ccr_syncer/rpc/kitex_gen/backendservice/backendservice"
 	feservice "github.com/selectdb/ccr_syncer/rpc/kitex_gen/frontendservice/frontendservice"
+	"github.com/selectdb/ccr_syncer/xerror"
 
 	"github.com/cloudwego/kitex/client"
-	"github.com/pkg/errors"
 )
 
 type IRpcFactory interface {
@@ -31,7 +31,7 @@ func (rf *RpcFactory) NewFeRpc(spec *base.Spec) (IFeRpc, error) {
 
 	// create kitex FrontendService client
 	if fe_client, err := feservice.NewClient("FrontendService", client.WithHostPorts(spec.Host+":"+spec.ThriftPort)); err != nil {
-		return nil, errors.Wrapf(err, "NewFeClient error: %v, spec: %s", err, spec)
+		return nil, xerror.Wrapf(err, xerror.Normal, "NewFeClient error: %v, spec: %s", err, spec)
 	} else {
 		return &FeRpc{
 			client: fe_client,
@@ -42,7 +42,7 @@ func (rf *RpcFactory) NewFeRpc(spec *base.Spec) (IFeRpc, error) {
 func (rf *RpcFactory) NewBeRpc(be *base.Backend) (IBeRpc, error) {
 	// create kitex FrontendService client
 	if client, err := beservice.NewClient("FrontendService", client.WithHostPorts(fmt.Sprintf("%s:%d", be.Host, be.BePort))); err != nil {
-		return nil, errors.Wrapf(err, "NewBeClient error: %v", err)
+		return nil, xerror.Wrapf(err, xerror.Normal, "NewBeClient error: %v", err)
 	} else {
 		return &BeRpc{
 			backend: be,

@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/selectdb/ccr_syncer/utils"
 	"github.com/selectdb/ccr_syncer/xerror"
 
@@ -201,23 +200,23 @@ func (s *Spec) IsDatabaseEnableBinlog() (bool, error) {
 	query := fmt.Sprintf("SHOW CREATE DATABASE %s", s.Database)
 	rows, err := db.Query(query)
 	if err != nil {
-		return false, errors.Wrapf(err, query)
+		return false, xerror.Wrap(err, xerror.Normal, query)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		rowParser := utils.NewRowParser()
 		if err := rowParser.Parse(rows); err != nil {
-			return false, errors.Wrapf(err, query)
+			return false, xerror.Wrap(err, xerror.Normal, query)
 		}
 		createDBString, err = rowParser.GetString("Create Database")
 		if err != nil {
-			return false, errors.Wrapf(err, query)
+			return false, xerror.Wrap(err, xerror.Normal, query)
 		}
 	}
 
 	if err := rows.Err(); err != nil {
-		return false, errors.Wrap(err, query)
+		return false, xerror.Wrap(err, xerror.Normal, query)
 	}
 
 	log.Infof("database %s create string: %s", s.Database, createDBString)
@@ -239,23 +238,23 @@ func (s *Spec) IsTableEnableBinlog() (bool, error) {
 	query := fmt.Sprintf("SHOW CREATE TABLE %s.%s", s.Database, s.Table)
 	rows, err := db.Query(query)
 	if err != nil {
-		return false, errors.Wrapf(err, query)
+		return false, xerror.Wrap(err, xerror.Normal, query)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		rowParser := utils.NewRowParser()
 		if err := rowParser.Parse(rows); err != nil {
-			return false, errors.Wrapf(err, query)
+			return false, xerror.Wrap(err, xerror.Normal, query)
 		}
 		createTableString, err = rowParser.GetString("Create Table")
 		if err != nil {
-			return false, errors.Wrapf(err, query)
+			return false, xerror.Wrap(err, xerror.Normal, query)
 		}
 	}
 
 	if err := rows.Err(); err != nil {
-		return false, errors.Wrap(err, query)
+		return false, xerror.Wrap(err, xerror.Normal, query)
 	}
 
 	log.Infof("table %s.%s create string: %s", s.Database, s.Table, createTableString)
@@ -275,7 +274,7 @@ func (s *Spec) GetAllTables() ([]string, error) {
 
 	rows, err := db.Query("SHOW TABLES")
 	if err != nil {
-		return nil, errors.Wrapf(err, "show tables failed")
+		return nil, xerror.Wrap(err, xerror.Normal, "show tables failed")
 	}
 	defer rows.Close()
 
@@ -283,11 +282,11 @@ func (s *Spec) GetAllTables() ([]string, error) {
 	for rows.Next() {
 		rowParser := utils.NewRowParser()
 		if err := rowParser.Parse(rows); err != nil {
-			return nil, errors.Wrapf(err, "SHOW TABLES")
+			return nil, xerror.Wrap(err, xerror.Normal, "SHOW TABLES")
 		}
 		table, err := rowParser.GetString(fmt.Sprintf("Tables_in_%s", s.Database))
 		if err != nil {
-			return nil, errors.Wrapf(err, "SHOW TABLES")
+			return nil, xerror.Wrap(err, xerror.Normal, "SHOW TABLES")
 		}
 		tables = append(tables, table)
 	}
@@ -305,7 +304,7 @@ func (s *Spec) dropTable(table string) error {
 	sql := fmt.Sprintf("DROP TABLE %s.%s", s.Database, table)
 	_, err = db.Exec(sql)
 	if err != nil {
-		return errors.Wrapf(err, "drop table %s.%s failed, sql: %s", s.Database, table, sql)
+		return xerror.Wrapf(err, xerror.Normal, "drop table %s.%s failed, sql: %s", s.Database, table, sql)
 	}
 	return nil
 }
@@ -344,11 +343,11 @@ func (s *Spec) ClearDB() error {
 	sql := fmt.Sprintf("DROP DATABASE %s", s.Database)
 	_, err = db.Exec(sql)
 	if err != nil {
-		return errors.Wrapf(err, "drop database %s failed", s.Database)
+		return xerror.Wrapf(err, xerror.Normal, "drop database %s failed", s.Database)
 	}
 
 	if _, err = db.Exec("CREATE DATABASE " + s.Database); err != nil {
-		return errors.Wrapf(err, "create database %s failed", s.Database)
+		return xerror.Wrapf(err, xerror.Normal, "create database %s failed", s.Database)
 	}
 	return nil
 }
@@ -362,7 +361,7 @@ func (s *Spec) CreateDatabase() error {
 	}
 
 	if _, err = db.Exec("CREATE DATABASE IF NOT EXISTS " + s.Database); err != nil {
-		return errors.Wrapf(err, "create database %s failed", s.Database)
+		return xerror.Wrapf(err, xerror.Normal, "create database %s failed", s.Database)
 	}
 	return nil
 }
@@ -374,7 +373,7 @@ func (s *Spec) CreateTable(stmt string) error {
 	}
 
 	if _, err = db.Exec(stmt); err != nil {
-		return errors.Wrapf(err, "create table %s.%s failed", s.Database, s.Table)
+		return xerror.Wrapf(err, xerror.Normal, "create table %s.%s failed", s.Database, s.Table)
 	}
 	return nil
 }
@@ -389,7 +388,7 @@ func (s *Spec) CheckDatabaseExists() (bool, error) {
 	sql := fmt.Sprintf("SHOW DATABASES LIKE '%s'", s.Database)
 	rows, err := db.Query(sql)
 	if err != nil {
-		return false, errors.Wrapf(err, "show databases failed, sql: %s", sql)
+		return false, xerror.Wrapf(err, xerror.Normal, "show databases failed, sql: %s", sql)
 	}
 	defer rows.Close()
 
@@ -397,16 +396,16 @@ func (s *Spec) CheckDatabaseExists() (bool, error) {
 	for rows.Next() {
 		rowParser := utils.NewRowParser()
 		if err := rowParser.Parse(rows); err != nil {
-			return false, errors.Wrapf(err, sql)
+			return false, xerror.Wrap(err, xerror.Normal, sql)
 		}
 		database, err = rowParser.GetString("Database")
 		if err != nil {
-			return false, errors.Wrapf(err, sql)
+			return false, xerror.Wrap(err, xerror.Normal, sql)
 		}
 	}
 
 	if err := rows.Err(); err != nil {
-		return false, errors.Wrapf(err, "scan database name failed, sql: %s", sql)
+		return false, xerror.Wrapf(err, xerror.Normal, "scan database name failed, sql: %s", sql)
 	}
 
 	return database != "", nil
@@ -424,7 +423,7 @@ func (s *Spec) CheckTableExists() (bool, error) {
 	sql := fmt.Sprintf("SHOW TABLES FROM %s LIKE '%s'", s.Database, s.Table)
 	rows, err := db.Query(sql)
 	if err != nil {
-		return false, errors.Wrapf(err, "show tables failed, sql: %s", sql)
+		return false, xerror.Wrapf(err, xerror.Normal, "show tables failed, sql: %s", sql)
 	}
 	defer rows.Close()
 
@@ -432,15 +431,15 @@ func (s *Spec) CheckTableExists() (bool, error) {
 	for rows.Next() {
 		rowParser := utils.NewRowParser()
 		if err := rowParser.Parse(rows); err != nil {
-			return false, errors.Wrapf(err, sql)
+			return false, xerror.Wrap(err, xerror.Normal, sql)
 		}
 		table, err = rowParser.GetString(fmt.Sprintf("Tables_in_%s", s.Database))
 		if err != nil {
-			return false, errors.Wrapf(err, sql)
+			return false, xerror.Wrap(err, xerror.Normal, sql)
 		}
 	}
 	if err := rows.Err(); err != nil {
-		return false, errors.Wrapf(err, "scan table name failed, sql: %s", sql)
+		return false, xerror.Wrapf(err, xerror.Normal, "scan table name failed, sql: %s", sql)
 	}
 
 	return table != "", nil
@@ -480,7 +479,7 @@ func (s *Spec) CreateSnapshotAndWaitForDone(tables []string) (string, error) {
 	log.Debugf("backup snapshot sql: %s", backupSnapshotSql)
 	_, err = db.Exec(backupSnapshotSql)
 	if err != nil {
-		return "", errors.Wrapf(err, "backup snapshot %s failed, sql: %s", snapshotName, backupSnapshotSql)
+		return "", xerror.Wrapf(err, xerror.Normal, "backup snapshot %s failed, sql: %s", snapshotName, backupSnapshotSql)
 	}
 
 	backupFinished, err := s.CheckBackupFinished(snapshotName)
@@ -508,19 +507,19 @@ func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, error) {
 	log.Debugf("check backup state sql: %s", sql)
 	rows, err := db.Query(sql)
 	if err != nil {
-		return BackupStateUnknown, errors.Wrapf(err, "show backup failed, sql: %s", sql)
+		return BackupStateUnknown, xerror.Wrapf(err, xerror.Normal, "show backup failed, sql: %s", sql)
 	}
 	defer rows.Close()
-	
+
 	var backupStateStr string
 	if rows.Next() {
 		rowParser := utils.NewRowParser()
 		if err := rowParser.Parse(rows); err != nil {
-			return BackupStateUnknown, errors.Wrapf(err, sql)
+			return BackupStateUnknown, xerror.Wrap(err, xerror.Normal, sql)
 		}
 		backupStateStr, err = rowParser.GetString("State")
 		if err != nil {
-			return BackupStateUnknown, errors.Wrapf(err, sql)
+			return BackupStateUnknown, xerror.Wrap(err, xerror.Normal, sql)
 		}
 
 		log.Infof("check snapshot %s backup state: [%v]", snapshotName, backupStateStr)
@@ -558,23 +557,23 @@ func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, error) {
 	}
 
 	query := fmt.Sprintf("SHOW RESTORE FROM %s WHERE Label = \"%s\"", s.Database, snapshotName)
-	
+
 	log.Debugf("check restore state sql: %s", query)
 	rows, err := db.Query(query)
 	if err != nil {
-		return RestoreStateUnknown, errors.Wrapf(err, "query restore state failed")
+		return RestoreStateUnknown, xerror.Wrap(err, xerror.Normal, "query restore state failed")
 	}
 	defer rows.Close()
-	
+
 	var restoreStateStr string
 	if rows.Next() {
 		rowParser := utils.NewRowParser()
 		if err := rowParser.Parse(rows); err != nil {
-			return RestoreStateUnknown, errors.Wrapf(err, "scan restore state failed")
+			return RestoreStateUnknown, xerror.Wrap(err, xerror.Normal, "scan restore state failed")
 		}
 		restoreStateStr, err = rowParser.GetString("State")
 		if err != nil {
-			return RestoreStateUnknown, errors.Wrapf(err, "scan restore state failed")
+			return RestoreStateUnknown, xerror.Wrap(err, xerror.Normal, "scan restore state failed")
 		}
 
 		log.Infof("check snapshot %s restore state: [%v]", snapshotName, restoreStateStr)
@@ -612,7 +611,7 @@ func (s *Spec) Exec(sql string) error {
 
 	_, err = db.Exec(sql)
 	if err != nil {
-		return errors.Wrapf(err, "exec sql %s failed", sql)
+		return xerror.Wrapf(err, xerror.Normal, "exec sql %s failed", sql)
 	}
 	return nil
 }
@@ -626,7 +625,7 @@ func (s *Spec) DbExec(sql string) error {
 
 	_, err = db.Exec(sql)
 	if err != nil {
-		return errors.Wrapf(err, "exec sql %s failed", sql)
+		return xerror.Wrapf(err, xerror.Normal, "exec sql %s failed", sql)
 	}
 	return nil
 }

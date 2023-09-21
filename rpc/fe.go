@@ -4,11 +4,12 @@ import (
 	"context"
 
 	"github.com/selectdb/ccr_syncer/ccr/base"
+	"github.com/selectdb/ccr_syncer/xerror"
+
 	festruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/frontendservice"
 	feservice "github.com/selectdb/ccr_syncer/rpc/kitex_gen/frontendservice/frontendservice"
 	festruct_types "github.com/selectdb/ccr_syncer/rpc/kitex_gen/types"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -73,7 +74,7 @@ func (rpc *FeRpc) BeginTransaction(spec *base.Spec, label string, tableIds []int
 
 	log.Debugf("BeginTransaction user %s, label: %s, tableIds: %v", req.GetUser(), label, tableIds)
 	if result, err := client.BeginTxn(context.Background(), req); err != nil {
-		return nil, errors.Wrapf(err, "BeginTransaction error: %v, req: %+v", err, req)
+		return nil, xerror.Wrapf(err, xerror.Normal, "BeginTransaction error: %v, req: %+v", err, req)
 	} else {
 		return result, nil
 	}
@@ -103,7 +104,7 @@ func (rpc *FeRpc) CommitTransaction(spec *base.Spec, txnId int64, commitInfos []
 	req.CommitInfos = commitInfos
 
 	if result, err := client.CommitTxn(context.Background(), req); err != nil {
-		return nil, errors.Wrapf(err, "CommitTransaction error: %v, req: %+v", err, req)
+		return nil, xerror.Wrapf(err, xerror.Normal, "CommitTransaction error: %v, req: %+v", err, req)
 	} else {
 		return result, nil
 	}
@@ -131,7 +132,7 @@ func (rpc *FeRpc) RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.T
 	req.TxnId = &txnId
 
 	if result, err := client.RollbackTxn(context.Background(), req); err != nil {
-		return nil, errors.Wrapf(err, "RollbackTransaction error: %v, req: %+v", err, req)
+		return nil, xerror.Wrapf(err, xerror.Normal, "RollbackTransaction error: %v, req: %+v", err, req)
 	} else {
 		return result, nil
 	}
@@ -166,7 +167,7 @@ func (rpc *FeRpc) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGetBin
 	log.Debugf("GetBinlog user %s, db %s, tableId %d, prev seq: %d", req.GetUser(), req.GetDb(),
 		req.GetTableId(), req.GetPrevCommitSeq())
 	if resp, err := client.GetBinlog(context.Background(), req); err != nil {
-		return nil, errors.Wrapf(err, "GetBinlog error: %v, req: %+v", err, req)
+		return nil, xerror.Wrapf(err, xerror.Normal, "GetBinlog error: %v, req: %+v", err, req)
 	} else {
 		return resp, nil
 	}
@@ -192,7 +193,7 @@ func (rpc *FeRpc) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.TGet
 	log.Debugf("GetBinlog user %s, db %s, tableId %d, prev seq: %d", req.GetUser(), req.GetDb(),
 		req.GetTableId(), req.GetPrevCommitSeq())
 	if resp, err := client.GetBinlogLag(context.Background(), req); err != nil {
-		return nil, errors.Wrapf(err, "GetBinlogLag error: %v, req: %+v", err, req)
+		return nil, xerror.Wrapf(err, xerror.Normal, "GetBinlogLag error: %v, req: %+v", err, req)
 	} else {
 		return resp, nil
 	}
@@ -226,7 +227,7 @@ func (rpc *FeRpc) GetSnapshot(spec *base.Spec, labelName string) (*festruct.TGet
 	log.Debugf("GetSnapshotRequest user %s, db %s, table %s, label name %s, snapshot name %s, snapshot type %d",
 		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), req.GetSnapshotName(), req.GetSnapshotType())
 	if resp, err := client.GetSnapshot(context.Background(), req); err != nil {
-		return nil, errors.Wrapf(err, "GetSnapshot error: %v, req: %+v", err, req)
+		return nil, xerror.Wrapf(err, xerror.Normal, "GetSnapshot error: %v, req: %+v", err, req)
 	} else {
 		return resp, nil
 	}
@@ -270,7 +271,7 @@ func (rpc *FeRpc) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableR
 	log.Debugf("RestoreSnapshotRequest user %s, db %s, table %s, label name %s, properties %v, meta %v, job info %v",
 		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), properties, snapshotResult.GetMeta(), snapshotResult.GetJobInfo())
 	if resp, err := client.RestoreSnapshot(context.Background(), req); err != nil {
-		return nil, errors.Wrapf(err, "RestoreSnapshot failed, req: %+v", req)
+		return nil, xerror.Wrapf(err, xerror.Normal, "RestoreSnapshot failed, req: %+v", req)
 	} else {
 		return resp, nil
 	}
@@ -288,7 +289,7 @@ func (rpc *FeRpc) GetMasterToken(spec *base.Spec) (string, error) {
 
 	log.Debugf("GetMasterToken user: %s", *req.User)
 	if resp, err := client.GetMasterToken(context.Background(), req); err != nil {
-		return "", errors.Wrapf(err, "GetMasterToken failed, req: %+v", req)
+		return "", xerror.Wrapf(err, xerror.Normal, "GetMasterToken failed, req: %+v", req)
 	} else {
 		return resp.GetToken(), nil
 	}

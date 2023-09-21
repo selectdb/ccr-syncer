@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"strconv"
 
-	"github.com/pkg/errors"
+	"github.com/selectdb/ccr_syncer/xerror"
 )
 
 type RowParser struct {
@@ -43,7 +43,7 @@ func (r *RowParser) Parse(row *sql.Rows) error {
 func (r *RowParser) GetBytesPointer(columnName string) (*sql.RawBytes, error) {
 	resBytes, ok := r.columns[columnName]
 	if !ok {
-		return nil, errors.Errorf("column %s is not in this table", columnName)
+		return nil, xerror.Errorf(xerror.Normal, "column %s is not in this table", columnName)
 	}
 	return resBytes, nil
 }
@@ -51,8 +51,9 @@ func (r *RowParser) GetBytesPointer(columnName string) (*sql.RawBytes, error) {
 func (r *RowParser) GetInt64(columnName string) (int64, error) {
 	resBytes, ok := r.columns[columnName]
 	if !ok {
-		return 0, errors.Errorf("column %s is not in this table", columnName)
+		return 0, xerror.Errorf(xerror.Normal, "column %s is not in this table", columnName)
 	}
+
 	resInt64, err := strconv.ParseInt(string(*resBytes), 10, 64)
 	if err != nil {
 		return 0, err
@@ -64,8 +65,9 @@ func (r *RowParser) GetInt64(columnName string) (int64, error) {
 func (r *RowParser) GetBool(columnName string) (bool, error) {
 	resBytes, ok := r.columns[columnName]
 	if !ok {
-		return false, errors.Errorf("column %s is not in this table", columnName)
+		return false, xerror.Errorf(xerror.Normal, "column %s is not in this table", columnName)
 	}
+
 	resBool, err := strconv.ParseBool(string(*resBytes))
 	if err != nil {
 		return false, err
@@ -76,7 +78,7 @@ func (r *RowParser) GetBool(columnName string) (bool, error) {
 func (r *RowParser) GetString(columnName string) (string, error) {
 	resBytes, ok := r.columns[columnName]
 	if !ok {
-		return "", errors.Errorf("column %s is not in this table", columnName)
+		return "", xerror.Errorf(xerror.Normal, "column %s is not in this table", columnName)
 	}
 
 	return string(*resBytes), nil

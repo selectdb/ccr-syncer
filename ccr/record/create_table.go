@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/pkg/errors"
+	"github.com/selectdb/ccr_syncer/xerror"
 )
 
 type CreateTable struct {
@@ -17,16 +17,16 @@ func NewCreateTableFromJson(data string) (*CreateTable, error) {
 	var createTable CreateTable
 	err := json.Unmarshal([]byte(data), &createTable)
 	if err != nil {
-		return nil, errors.Wrap(err, "unmarshal create table error")
+		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal create table error")
 	}
 
 	if createTable.Sql == "" {
 		// TODO: fallback to create sql from other fields
-		return nil, errors.Errorf("create table sql is empty")
+		return nil, xerror.Errorf(xerror.Normal, "create table sql is empty")
 	}
 
 	if createTable.TableId == 0 {
-		return nil, errors.Errorf("table id not found")
+		return nil, xerror.Errorf(xerror.Normal, "table id not found")
 	}
 
 	return &createTable, nil

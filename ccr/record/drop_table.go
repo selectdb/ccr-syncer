@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/pkg/errors"
+	"github.com/selectdb/ccr_syncer/xerror"
 )
 
 type DropTable struct {
@@ -18,11 +18,11 @@ func NewDropTableFromJson(data string) (*DropTable, error) {
 	var dropTable DropTable
 	err := json.Unmarshal([]byte(data), &dropTable)
 	if err != nil {
-		return nil, errors.Wrap(err, "unmarshal drop table error")
+		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal drop table error")
 	}
 
 	if dropTable.TableId == 0 {
-		return nil, errors.Errorf("table id not found")
+		return nil, xerror.Errorf(xerror.Normal, "table id not found")
 	}
 
 	return &dropTable, nil

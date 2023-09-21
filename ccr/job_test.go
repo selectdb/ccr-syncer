@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/selectdb/ccr_syncer/ccr/base"
 	"github.com/selectdb/ccr_syncer/rpc"
 	bestruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/backendservice"
 	festruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/frontendservice"
 	"github.com/selectdb/ccr_syncer/rpc/kitex_gen/status"
 	"github.com/selectdb/ccr_syncer/test_util"
+	"github.com/selectdb/ccr_syncer/xerror"
 	"github.com/tidwall/btree"
 	"go.uber.org/mock/gomock"
 )
@@ -259,7 +259,7 @@ type UpsertContext struct {
 func newUpsertData(ctx context.Context) (string, error) {
 	upsertContext, ok := ctx.(*UpsertContext)
 	if !ok {
-		return "", errors.Errorf("invalid context type: %T", ctx)
+		return "", xerror.Errorf(xerror.Normal, "invalid context type: %T", ctx)
 	}
 
 	dataMap := make(map[string]interface{})

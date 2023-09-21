@@ -3,7 +3,7 @@ package ccr
 import (
 	"encoding/json"
 
-	"github.com/pkg/errors"
+	"github.com/selectdb/ccr_syncer/xerror"
 )
 
 func ExtractTableCommitSeqMap(data []byte) (map[int64]int64, error) {
@@ -13,7 +13,7 @@ func ExtractTableCommitSeqMap(data []byte) (map[int64]int64, error) {
 	var jobInfo JobInfo
 
 	if err := json.Unmarshal(data, &jobInfo); err != nil {
-		return nil, errors.Wrapf(err, "unmarshal job info error: %v", err)
+		return nil, xerror.Wrapf(err, xerror.Normal, "unmarshal job info error: %v", err)
 	}
 	return jobInfo.TableCommitSeqMap, nil
 }
