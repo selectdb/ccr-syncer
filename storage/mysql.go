@@ -374,11 +374,11 @@ func (s *MysqlDB) GetAllData() (map[string][]string, error) {
 	jobData := make([]string, 0)
 	for jobRows.Next() {
 		var jobName string
-		var belong_to string
-		if err := jobRows.Scan(&jobName, &belong_to); err != nil {
+		var belongTo string
+		if err := jobRows.Scan(&jobName, &belongTo); err != nil {
 			return nil, xerror.Wrap(err, xerror.Normal, "scan jobs row failed.")
 		}
-		jobData = append(jobData, fmt.Sprintf("%s, %s", jobName, belong_to))
+		jobData = append(jobData, fmt.Sprintf("%s, %s", jobName, belongTo))
 	}
 	ans["jobs"] = jobData
 	jobRows.Close()

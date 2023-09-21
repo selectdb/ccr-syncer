@@ -18,6 +18,8 @@ import (
 
 const (
 	degree = 128
+
+	showErrMsg = "show proc '/dbs/' failed"
 )
 
 // All Update* functions force to update meta from fe
@@ -62,27 +64,27 @@ func (m *Meta) GetDbId() (int64, error) {
 
 	rows, err := db.Query("show proc '/dbs/'")
 	if err != nil {
-		return 0, xerror.Wrapf(err, xerror.Normal, "show proc '/dbs/' failed")
+		return 1, xerror.Wrap(err, xerror.Normal, showErrMsg)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		rowParser := utils.NewRowParser()
 		if err := rowParser.Parse(rows); err != nil {
-			return 0, xerror.Wrapf(err, xerror.Normal, "show proc '/dbs/' failed")
+			return 0, xerror.Wrap(err, xerror.Normal, showErrMsg)
 		}
 
 		dbId, err := rowParser.GetInt64("DbId")
 		if err != nil {
-			return 0, xerror.Wrapf(err, xerror.Normal, "show proc '/dbs/' failed")
+			return 0, xerror.Wrap(err, xerror.Normal, showErrMsg)
 		}
-		parsedDbname, err := rowParser.GetString("DbName")
+		parsedDbName, err := rowParser.GetString("DbName")
 		if err != nil {
-			return 0, xerror.Wrapf(err, xerror.Normal, "show proc '/dbs/' failed")
+			return 0, xerror.Wrap(err, xerror.Normal, showErrMsg)
 		}
 
 		// match parsedDbname == dbname, return dbId
-		if parsedDbname == dbFullName {
+		if parsedDbName == dbFullName {
 			m.DatabaseName2IdMap[dbFullName] = dbId
 			m.DatabaseMeta.Id = dbId
 			return dbId, nil
@@ -90,7 +92,7 @@ func (m *Meta) GetDbId() (int64, error) {
 	}
 
 	if err := rows.Err(); err != nil {
-		return 0, xerror.Wrapf(err, xerror.Normal, "show proc '/dbs/' failed")
+		return 0, xerror.Wrapf(err, xerror.Normal, showErrMsg)
 	}
 
 	// not found

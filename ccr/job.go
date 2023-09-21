@@ -770,16 +770,19 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		return nil
 
 	case RollbackTransaction:
+		log.Debugf("Rollback txn")
 		// Not Step 5: just rollback txn
 		if err := upateInMemory(); err != nil {
 			return err
 		}
+
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
 		txnId := inMemoryData.TxnId
 		destRpc, err := j.rpcFactory.NewFeRpc(dest)
 		if err != nil {
 			return err
 		}
+
 		resp, err := destRpc.RollbackTransaction(dest, txnId)
 		if err != nil {
 			return err
@@ -1129,7 +1132,7 @@ func (j *Job) incrementalSync() error {
 		}
 
 		// Step 2.3: dispatch handle binlogs
-		if err, backToRunLoop := j.handleBinlogs(binlogs); err == nil {
+		if err, backToRunLoop := j.handleBinlogs(binlogs); err != nil {
 			return err
 		} else if backToRunLoop {
 			return nil
