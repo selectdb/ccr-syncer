@@ -596,7 +596,7 @@ func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*
 
 // TODO: handle error by abort txn
 func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
-	log.Infof("handle upsert binlog")
+	log.Infof("handle upsert binlog, sub sync state: %s", j.progress.SubSyncState)
 
 	// inMemory will be update in state machine, but progress keep any, so progress.inMemory is also latest, well call NextSubCheckpoint don't need to upate inMemory in progress
 	// TODO(IMPROVE): some steps not need all data, so we can reset some data in progress, such as RollbackTransaction only need txnId
