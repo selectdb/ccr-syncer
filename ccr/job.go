@@ -1074,9 +1074,12 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 }
 
 func (j *Job) recoverIncrementalSync() error {
-	// switch state := j.progress.SubSyncState; {
-	// case SnapshotRange.Contains(state):
-	// }
+	switch j.progress.SubSyncState.BinlogType {
+	case BinlogUpsert:
+		return j.handleUpsert(nil)
+	default:
+		j.progress.Rollback()
+	}
 
 	return nil
 }

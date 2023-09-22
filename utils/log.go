@@ -8,8 +8,8 @@ import (
 
 	filename "github.com/keepeye/logrus-filename"
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/natefinch/lumberjack.v2"
 	prefixed "github.com/t-tomalak/logrus-prefixed-formatter"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 var (
@@ -45,26 +45,25 @@ func InitLog() {
 		filenameHook.Field = "line"
 		log.AddHook(filenameHook)
 	}
-	
-	// TODO: Add write permission check
-	if logFilename != "" {
-		output := &lumberjack.Logger{
-			Filename:   logFilename,
-			MaxSize:    100,
-			MaxAge:     7,
-			MaxBackups: 30,
-			LocalTime:  true,
-			Compress:   false,
-		}
-		if logAlsoToStderr {
-			writer := io.MultiWriter(output, os.Stderr)
-			log.SetOutput(writer)
-		} else {
-			log.SetOutput(output)
-		}
-	} else {
+
+	if logFilename == "" {
 		log.SetOutput(os.Stdout)
+		return
 	}
 
-	
+	// TODO: Add write permission check
+	output := &lumberjack.Logger{
+		Filename:   logFilename,
+		MaxSize:    100,
+		MaxAge:     7,
+		MaxBackups: 30,
+		LocalTime:  true,
+		Compress:   false,
+	}
+	if logAlsoToStderr {
+		writer := io.MultiWriter(output, os.Stderr)
+		log.SetOutput(writer)
+	} else {
+		log.SetOutput(output)
+	}
 }
