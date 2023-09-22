@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/rand"
 	"strings"
 	"sync"
 	"time"
@@ -489,13 +490,14 @@ func (j *Job) persistJob() error {
 func (j *Job) newLabel(commitSeq int64) string {
 	src := &j.Src
 	dest := &j.Dest
+	randNum := rand.Intn(65536) // hex 4 chars
 	if j.SyncType == DBSync {
-		// label "ccrj:${sync_type}:${src_db_id}:${dest_db_id}:${commit_seq}"
-		return fmt.Sprintf("ccrj:%s:%d:%d:%d", j.SyncType, src.DbId, dest.DbId, commitSeq)
+		// label "ccrj-rand:${sync_type}:${src_db_id}:${dest_db_id}:${commit_seq}"
+		return fmt.Sprintf("ccrj-%x:%s:%d:%d:%d", randNum, j.SyncType, src.DbId, dest.DbId, commitSeq)
 	} else {
 		// TableSync
-		// label "ccrj:${sync_type}:${src_db_id}_${src_table_id}:${dest_db_id}_${dest_table_id}:${commit_seq}"
-		return fmt.Sprintf("ccrj:%s:%d_%d:%d_%d:%d", j.SyncType, src.DbId, src.TableId, dest.DbId, dest.TableId, commitSeq)
+		// label "ccrj-rand:${sync_type}:${src_db_id}_${src_table_id}:${dest_db_id}_${dest_table_id}:${commit_seq}"
+		return fmt.Sprintf("ccrj-%x:%s:%d_%d:%d_%d:%d", randNum, j.SyncType, src.DbId, src.TableId, dest.DbId, dest.TableId, commitSeq)
 	}
 }
 
