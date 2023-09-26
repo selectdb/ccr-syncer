@@ -41,7 +41,7 @@ func (a *AlterJobV2) IsFinished() bool {
 	return a.JobState == "FINISHED"
 }
 
-// String
+// Stringer
 func (a *AlterJobV2) String() string {
 	return fmt.Sprintf("AlterJobV2: DbId: %d, TableId: %d, TableName: %s, JobId: %d, JobState: %s, RawSql: %s",
 		a.DbId, a.TableId, a.TableName, a.JobId, a.JobState, a.RawSql)

@@ -35,10 +35,10 @@ func (m *MockISpecFactory) EXPECT() *MockISpecFactoryMockRecorder {
 }
 
 // NewISpec mocks base method.
-func (m *MockISpecFactory) NewISpec(tableSpec *base.Spec) base.ISpec {
+func (m *MockISpecFactory) NewISpec(tableSpec *base.Spec) base.Specer {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NewISpec", tableSpec)
-	ret0, _ := ret[0].(base.ISpec)
+	ret0, _ := ret[0].(base.Specer)
 	return ret0
 }
 

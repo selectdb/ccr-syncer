@@ -62,7 +62,12 @@ type ReplicaMeta struct {
 	BackendId  int64
 }
 
-type IMeta interface {
+type MetaCleaner interface {
+	ClearDB(dbName string)
+	ClearTable(dbName string, tableName string)
+}
+
+type Metaer interface {
 	GetDbId() (int64, error)
 	GetFullTableName(tableName string) string
 
@@ -103,4 +108,6 @@ type IMeta interface {
 
 	// from Spec
 	DbExec(sql string) error
+
+	MetaCleaner
 }

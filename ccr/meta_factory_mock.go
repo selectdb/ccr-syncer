@@ -35,10 +35,10 @@ func (m *MockIMetaFactory) EXPECT() *MockIMetaFactoryMockRecorder {
 }
 
 // NewMeta mocks base method.
-func (m *MockIMetaFactory) NewMeta(tableSpec *base.Spec) IMeta {
+func (m *MockIMetaFactory) NewMeta(tableSpec *base.Spec) Metaer {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NewMeta", tableSpec)
-	ret0, _ := ret[0].(IMeta)
+	ret0, _ := ret[0].(Metaer)
 	return ret0
 }
 

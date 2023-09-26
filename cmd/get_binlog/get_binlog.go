@@ -52,7 +52,7 @@ func test_get_binlog(spec *base.Spec) {
 
 	binlog := resp.GetBinlogs()[0]
 	jsonData := binlog.GetData()
-	log.Infof("first resp binlog data: %v", jsonData)
+	log.Infof("first resp commit seq: %d, binlog data: %v", binlog.GetCommitSeq(), jsonData)
 	switch binlog.GetType() {
 	case festruct.TBinlogType_UPSERT:
 		if upsert, err := record.NewUpsertFromJson(jsonData); err != nil {

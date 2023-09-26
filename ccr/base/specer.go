@@ -13,15 +13,13 @@ const (
 	httpNotFoundEvent SpecEvent = 1
 )
 
-type ISpec interface {
+type Specer interface {
 	Valid() error
 	Connect() (*sql.DB, error)
 	ConnectDB() (*sql.DB, error)
 	IsDatabaseEnableBinlog() (bool, error)
 	IsTableEnableBinlog() (bool, error)
 	GetAllTables() ([]string, error)
-	DropTable() error
-	DropTables(tables []string) ([]string, error)
 	ClearDB() error
 	CreateDatabase() error
 	CreateTable(stmt string) error

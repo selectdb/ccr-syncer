@@ -1057,3 +1057,35 @@ func (m *Meta) checkBEsBinlogFeature() error {
 func (m *Meta) DirtyGetTables() map[int64]*TableMeta {
 	return m.Tables
 }
+
+func (m *Meta) ClearDB(dbName string) {
+	if m.Database != dbName {
+		log.Info("dbName not match, skip clear")
+		return
+	}
+
+	// clear DatabaseMeta
+	m.DbId = 0
+	m.Tables = make(map[int64]*TableMeta)
+
+	m.DatabaseName2IdMap = make(map[string]int64)
+	m.TableName2IdMap = make(map[string]int64)
+}
+
+func (m *Meta) ClearTable(dbName string, tableName string) {
+	if m.Database != dbName {
+		log.Info("dbName not match, skip clear")
+		return
+	}
+
+	tableId, ok := m.TableName2IdMap[tableName]
+	if !ok {
+		log.Infof("table %s not found, skip clear", tableName)
+		return
+	}
+
+	// remove TableMeta in DatabaseMeta
+	delete(m.Tables, tableId)
+
+	delete(m.TableName2IdMap, tableName)
+}

@@ -8,11 +8,13 @@ import (
 	"github.com/modern-go/gls"
 	"github.com/selectdb/ccr_syncer/ccr/base"
 	"github.com/selectdb/ccr_syncer/ccr/record"
+	utils "github.com/selectdb/ccr_syncer/utils"
+	"github.com/selectdb/ccr_syncer/xerror"
+
 	bestruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/backendservice"
 	tstatus "github.com/selectdb/ccr_syncer/rpc/kitex_gen/status"
 	ttypes "github.com/selectdb/ccr_syncer/rpc/kitex_gen/types"
-	utils "github.com/selectdb/ccr_syncer/utils"
-	"github.com/selectdb/ccr_syncer/xerror"
+
 	log "github.com/sirupsen/logrus"
 )
 

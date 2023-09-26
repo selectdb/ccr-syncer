@@ -14,6 +14,9 @@ func (jf *JobFactory) CreateJob(ctx context.Context, job *Job, jobType string) (
 	switch jobType {
 	case "IngestBinlog":
 		return NewIngestBinlogJob(ctx, job)
+	case "Snapshot":
+		return nil, nil
+		// return NewSnapshotJob(ctx, job)
 	default:
 		return nil, nil
 	}

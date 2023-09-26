@@ -309,29 +309,6 @@ func (s *Spec) dropTable(table string) error {
 	return nil
 }
 
-func (s *Spec) DropTable() error {
-	return s.dropTable(s.Table)
-}
-
-func (s *Spec) DropTables(tables []string) ([]string, error) {
-	log.Infof("drop tables %s", tables)
-
-	var err error
-	var successTables []string
-	for _, table := range tables {
-		err = s.dropTable(table)
-		if err != nil {
-			break
-		}
-		successTables = append(successTables, table)
-	}
-
-	if err != nil {
-		err = xerror.Errorf(xerror.Normal, "drop tables %s failed", tables)
-	}
-	return successTables, err
-}
-
 func (s *Spec) ClearDB() error {
 	log.Infof("clear database %s", s.Database)
 
@@ -680,6 +657,13 @@ func (s *Spec) DbExec(sql string) error {
 	if err != nil {
 		return xerror.Wrapf(err, xerror.Normal, "exec sql %s failed", sql)
 	}
+	return nil
+}
+
+// impl SpecCleaner
+func (s *Spec) CleanDB() error {
+	log.Infof("clean spec %s", s.String())
+
 	return nil
 }
 

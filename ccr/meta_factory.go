@@ -5,7 +5,7 @@ import (
 )
 
 type IMetaFactory interface {
-	NewMeta(tableSpec *base.Spec) IMeta
+	NewMeta(tableSpec *base.Spec) Metaer
 }
 
 type MetaFactory struct {
@@ -15,7 +15,7 @@ func NewMetaFactory() IMetaFactory {
 	return &MetaFactory{}
 }
 
-func (mf *MetaFactory) NewMeta(tableSpec *base.Spec) IMeta {
+func (mf *MetaFactory) NewMeta(tableSpec *base.Spec) Metaer {
 	return &Meta{
 		Spec: tableSpec,
 		DatabaseMeta: DatabaseMeta{

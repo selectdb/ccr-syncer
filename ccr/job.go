@@ -75,11 +75,11 @@ type Job struct {
 	SyncType          SyncType        `json:"sync_type"`
 	Name              string          `json:"name"`
 	Src               base.Spec       `json:"src"`
-	ISrc              base.ISpec      `json:"-"`
-	srcMeta           IMeta           `json:"-"`
+	ISrc              base.Specer     `json:"-"`
+	srcMeta           Metaer          `json:"-"`
 	Dest              base.Spec       `json:"dest"`
-	IDest             base.ISpec      `json:"-"`
-	destMeta          IMeta           `json:"-"`
+	IDest             base.Specer     `json:"-"`
+	destMeta          Metaer          `json:"-"`
 	State             JobState        `json:"state"`
 	destSrcTableIdMap map[int64]int64 `json:"-"`
 	progress          *JobProgress    `json:"-"`
@@ -982,6 +982,41 @@ func (j *Job) handleLightningSchemaChange(binlog *festruct.TBinlog) error {
 	return j.IDest.DbExec(sql)
 }
 
+func (j *Job) handleTruncateTable(binlog *festruct.TBinlog) error {
+	log.Infof("handle truncate table binlog")
+
+	data := binlog.GetData()
+	truncateTable, err := record.NewTruncateTableFromJson(data)
+	if err != nil {
+		return err
+	}
+
+	var tableName string
+	switch j.SyncType {
+	case DBSync:
+		tableName = truncateTable.TableName
+	case TableSync:
+		tableName = j.Dest.Table
+	default:
+		return xerror.Panicf(xerror.Normal, "invalid sync type: %v", j.SyncType)
+	}
+
+	var sql string
+	if truncateTable.RawSql == "" {
+		sql = fmt.Sprintf("TRUNCATE TABLE %s", tableName)
+	} else {
+		sql = fmt.Sprintf("TRUNCATE TABLE %s %s", tableName, truncateTable.RawSql)
+	}
+
+	log.Infof("truncateTableSql: %s", sql)
+	err = j.IDest.DbExec(sql)
+	if err != nil {
+		j.destMeta.ClearTable(j.Dest.Database, tableName)
+	}
+
+	return err
+}
+
 // return: error && bool backToRunLoop
 func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 	for _, binlog := range binlogs {
@@ -1034,43 +1069,29 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 	// TODO: use table driven, keep this and driven, conert BinlogType to TBinlogType
 	switch binlog.GetType() {
 	case festruct.TBinlogType_UPSERT:
-		if err := j.handleUpsert(binlog); err != nil {
-			return err
-		}
+		return j.handleUpsert(binlog)
 	case festruct.TBinlogType_ADD_PARTITION:
-		if err := j.handleAddPartition(binlog); err != nil {
-			return err
-		}
+		return j.handleAddPartition(binlog)
 	case festruct.TBinlogType_CREATE_TABLE:
-		if err := j.handleCreateTable(binlog); err != nil {
-			return err
-		}
+		return j.handleCreateTable(binlog)
 	case festruct.TBinlogType_DROP_PARTITION:
-		if err := j.handleDropPartition(binlog); err != nil {
-			return err
-		}
+		return j.handleDropPartition(binlog)
 	case festruct.TBinlogType_DROP_TABLE:
-		if err := j.handleDropTable(binlog); err != nil {
-			return err
-		}
+		return j.handleDropTable(binlog)
 	case festruct.TBinlogType_ALTER_JOB:
-		if err := j.handleAlterJob(binlog); err != nil {
-			return err
-		}
+		return j.handleAlterJob(binlog)
 	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS:
-		if err := j.handleLightningSchemaChange(binlog); err != nil {
-			return err
-		}
+		return j.handleLightningSchemaChange(binlog)
 	case festruct.TBinlogType_DUMMY:
-		if err := j.handleDummy(binlog); err != nil {
-			return err
-		}
+		return j.handleDummy(binlog)
 	case festruct.TBinlogType_ALTER_DATABASE_PROPERTY:
 		// TODO(Drogon)
 	case festruct.TBinlogType_MODIFY_TABLE_PROPERTY:
 		// TODO(Drogon)
 	case festruct.TBinlogType_BARRIER:
-		// TODO(Drogon)
+		log.Info("handle barrier binlog")
+	case festruct.TBinlogType_TRUNCATE_TABLE:
+		return j.handleTruncateTable(binlog)
 	default:
 		return xerror.Errorf(xerror.Normal, "unknown binlog type: %v", binlog.GetType())
 	}

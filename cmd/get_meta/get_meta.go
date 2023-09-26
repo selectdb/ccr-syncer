@@ -33,7 +33,7 @@ func init() {
 	utils.InitLog()
 }
 
-func test_init_meta(m ccr.IMeta, spec *base.Spec) {
+func test_init_meta(m ccr.Metaer, spec *base.Spec) {
 	if dbId, err := m.GetDbId(); err != nil {
 		panic(err)
 	} else {
