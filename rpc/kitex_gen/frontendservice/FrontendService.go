@@ -538,6 +538,7 @@ const (
 	TBinlogType_BARRIER                          TBinlogType = 10
 	TBinlogType_MODIFY_PARTITIONS                TBinlogType = 11
 	TBinlogType_REPLACE_PARTITIONS               TBinlogType = 12
+	TBinlogType_TRUNCATE_TABLE                   TBinlogType = 13
 )
 
 func (p TBinlogType) String() string {
@@ -568,6 +569,8 @@ func (p TBinlogType) String() string {
 		return "MODIFY_PARTITIONS"
 	case TBinlogType_REPLACE_PARTITIONS:
 		return "REPLACE_PARTITIONS"
+	case TBinlogType_TRUNCATE_TABLE:
+		return "TRUNCATE_TABLE"
 	}
 	return "<UNSET>"
 }
@@ -600,6 +603,8 @@ func TBinlogTypeFromString(s string) (TBinlogType, error) {
 		return TBinlogType_MODIFY_PARTITIONS, nil
 	case "REPLACE_PARTITIONS":
 		return TBinlogType_REPLACE_PARTITIONS, nil
+	case "TRUNCATE_TABLE":
+		return TBinlogType_TRUNCATE_TABLE, nil
 	}
 	return TBinlogType(0), fmt.Errorf("not a valid TBinlogType string")
 }
@@ -13390,6 +13395,318 @@ func (p *TReportExecStatusResult_) Field1DeepEqual(src *status.TStatus) bool {
 	return true
 }
 
+type TDetailedReportParams struct {
+	FragmentInstanceId *types.TUniqueId                    `thrift:"fragment_instance_id,1,optional" frugal:"1,optional,types.TUniqueId" json:"fragment_instance_id,omitempty"`
+	Profile            *runtimeprofile.TRuntimeProfileTree `thrift:"profile,2,optional" frugal:"2,optional,runtimeprofile.TRuntimeProfileTree" json:"profile,omitempty"`
+	LoadChannelProfile *runtimeprofile.TRuntimeProfileTree `thrift:"loadChannelProfile,3,optional" frugal:"3,optional,runtimeprofile.TRuntimeProfileTree" json:"loadChannelProfile,omitempty"`
+}
+
+func NewTDetailedReportParams() *TDetailedReportParams {
+	return &TDetailedReportParams{}
+}
+
+func (p *TDetailedReportParams) InitDefault() {
+	*p = TDetailedReportParams{}
+}
+
+var TDetailedReportParams_FragmentInstanceId_DEFAULT *types.TUniqueId
+
+func (p *TDetailedReportParams) GetFragmentInstanceId() (v *types.TUniqueId) {
+	if !p.IsSetFragmentInstanceId() {
+		return TDetailedReportParams_FragmentInstanceId_DEFAULT
+	}
+	return p.FragmentInstanceId
+}
+
+var TDetailedReportParams_Profile_DEFAULT *runtimeprofile.TRuntimeProfileTree
+
+func (p *TDetailedReportParams) GetProfile() (v *runtimeprofile.TRuntimeProfileTree) {
+	if !p.IsSetProfile() {
+		return TDetailedReportParams_Profile_DEFAULT
+	}
+	return p.Profile
+}
+
+var TDetailedReportParams_LoadChannelProfile_DEFAULT *runtimeprofile.TRuntimeProfileTree
+
+func (p *TDetailedReportParams) GetLoadChannelProfile() (v *runtimeprofile.TRuntimeProfileTree) {
+	if !p.IsSetLoadChannelProfile() {
+		return TDetailedReportParams_LoadChannelProfile_DEFAULT
+	}
+	return p.LoadChannelProfile
+}
+func (p *TDetailedReportParams) SetFragmentInstanceId(val *types.TUniqueId) {
+	p.FragmentInstanceId = val
+}
+func (p *TDetailedReportParams) SetProfile(val *runtimeprofile.TRuntimeProfileTree) {
+	p.Profile = val
+}
+func (p *TDetailedReportParams) SetLoadChannelProfile(val *runtimeprofile.TRuntimeProfileTree) {
+	p.LoadChannelProfile = val
+}
+
+var fieldIDToName_TDetailedReportParams = map[int16]string{
+	1: "fragment_instance_id",
+	2: "profile",
+	3: "loadChannelProfile",
+}
+
+func (p *TDetailedReportParams) IsSetFragmentInstanceId() bool {
+	return p.FragmentInstanceId != nil
+}
+
+func (p *TDetailedReportParams) IsSetProfile() bool {
+	return p.Profile != nil
+}
+
+func (p *TDetailedReportParams) IsSetLoadChannelProfile() bool {
+	return p.LoadChannelProfile != nil
+}
+
+func (p *TDetailedReportParams) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TDetailedReportParams[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TDetailedReportParams) ReadField1(iprot thrift.TProtocol) error {
+	p.FragmentInstanceId = types.NewTUniqueId()
+	if err := p.FragmentInstanceId.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *TDetailedReportParams) ReadField2(iprot thrift.TProtocol) error {
+	p.Profile = runtimeprofile.NewTRuntimeProfileTree()
+	if err := p.Profile.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *TDetailedReportParams) ReadField3(iprot thrift.TProtocol) error {
+	p.LoadChannelProfile = runtimeprofile.NewTRuntimeProfileTree()
+	if err := p.LoadChannelProfile.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *TDetailedReportParams) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TDetailedReportParams"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TDetailedReportParams) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFragmentInstanceId() {
+		if err = oprot.WriteFieldBegin("fragment_instance_id", thrift.STRUCT, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.FragmentInstanceId.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TDetailedReportParams) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetProfile() {
+		if err = oprot.WriteFieldBegin("profile", thrift.STRUCT, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Profile.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TDetailedReportParams) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLoadChannelProfile() {
+		if err = oprot.WriteFieldBegin("loadChannelProfile", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.LoadChannelProfile.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *TDetailedReportParams) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TDetailedReportParams(%+v)", *p)
+}
+
+func (p *TDetailedReportParams) DeepEqual(ano *TDetailedReportParams) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.FragmentInstanceId) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Profile) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.LoadChannelProfile) {
+		return false
+	}
+	return true
+}
+
+func (p *TDetailedReportParams) Field1DeepEqual(src *types.TUniqueId) bool {
+
+	if !p.FragmentInstanceId.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TDetailedReportParams) Field2DeepEqual(src *runtimeprofile.TRuntimeProfileTree) bool {
+
+	if !p.Profile.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TDetailedReportParams) Field3DeepEqual(src *runtimeprofile.TRuntimeProfileTree) bool {
+
+	if !p.LoadChannelProfile.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type TReportExecStatusParams struct {
 	ProtocolVersion    FrontendServiceVersion              `thrift:"protocol_version,1,required" frugal:"1,required,FrontendServiceVersion" json:"protocol_version"`
 	QueryId            *types.TUniqueId                    `thrift:"query_id,2,optional" frugal:"2,optional,types.TUniqueId" json:"query_id,omitempty"`
@@ -13412,6 +13729,7 @@ type TReportExecStatusParams struct {
 	QueryType          *palointernalservice.TQueryType     `thrift:"query_type,20,optional" frugal:"20,optional,TQueryType" json:"query_type,omitempty"`
 	LoadChannelProfile *runtimeprofile.TRuntimeProfileTree `thrift:"loadChannelProfile,21,optional" frugal:"21,optional,runtimeprofile.TRuntimeProfileTree" json:"loadChannelProfile,omitempty"`
 	FinishedScanRanges *int32                              `thrift:"finished_scan_ranges,22,optional" frugal:"22,optional,i32" json:"finished_scan_ranges,omitempty"`
+	DetailedReport     []*TDetailedReportParams            `thrift:"detailed_report,23,optional" frugal:"23,optional,list<TDetailedReportParams>" json:"detailed_report,omitempty"`
 }
 
 func NewTReportExecStatusParams() *TReportExecStatusParams {
@@ -13605,6 +13923,15 @@ func (p *TReportExecStatusParams) GetFinishedScanRanges() (v int32) {
 	}
 	return *p.FinishedScanRanges
 }
+
+var TReportExecStatusParams_DetailedReport_DEFAULT []*TDetailedReportParams
+
+func (p *TReportExecStatusParams) GetDetailedReport() (v []*TDetailedReportParams) {
+	if !p.IsSetDetailedReport() {
+		return TReportExecStatusParams_DetailedReport_DEFAULT
+	}
+	return p.DetailedReport
+}
 func (p *TReportExecStatusParams) SetProtocolVersion(val FrontendServiceVersion) {
 	p.ProtocolVersion = val
 }
@@ -13668,6 +13995,9 @@ func (p *TReportExecStatusParams) SetLoadChannelProfile(val *runtimeprofile.TRun
 func (p *TReportExecStatusParams) SetFinishedScanRanges(val *int32) {
 	p.FinishedScanRanges = val
 }
+func (p *TReportExecStatusParams) SetDetailedReport(val []*TDetailedReportParams) {
+	p.DetailedReport = val
+}
 
 var fieldIDToName_TReportExecStatusParams = map[int16]string{
 	1:  "protocol_version",
@@ -13691,6 +14021,7 @@ var fieldIDToName_TReportExecStatusParams = map[int16]string{
 	20: "query_type",
 	21: "loadChannelProfile",
 	22: "finished_scan_ranges",
+	23: "detailed_report",
 }
 
 func (p *TReportExecStatusParams) IsSetQueryId() bool {
@@ -13771,6 +14102,10 @@ func (p *TReportExecStatusParams) IsSetLoadChannelProfile() bool {
 
 func (p *TReportExecStatusParams) IsSetFinishedScanRanges() bool {
 	return p.FinishedScanRanges != nil
+}
+
+func (p *TReportExecStatusParams) IsSetDetailedReport() bool {
+	return p.DetailedReport != nil
 }
 
 func (p *TReportExecStatusParams) Read(iprot thrift.TProtocol) (err error) {
@@ -13997,6 +14332,16 @@ func (p *TReportExecStatusParams) Read(iprot thrift.TProtocol) (err error) {
 		case 22:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField22(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 23:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField23(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -14306,6 +14651,26 @@ func (p *TReportExecStatusParams) ReadField22(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TReportExecStatusParams) ReadField23(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	p.DetailedReport = make([]*TDetailedReportParams, 0, size)
+	for i := 0; i < size; i++ {
+		_elem := NewTDetailedReportParams()
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		p.DetailedReport = append(p.DetailedReport, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *TReportExecStatusParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TReportExecStatusParams"); err != nil {
@@ -14394,6 +14759,10 @@ func (p *TReportExecStatusParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField22(oprot); err != nil {
 			fieldId = 22
+			goto WriteFieldError
+		}
+		if err = p.writeField23(oprot); err != nil {
+			fieldId = 23
 			goto WriteFieldError
 		}
 
@@ -14865,6 +15234,33 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
 }
 
+func (p *TReportExecStatusParams) writeField23(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDetailedReport() {
+		if err = oprot.WriteFieldBegin("detailed_report", thrift.LIST, 23); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.DetailedReport)); err != nil {
+			return err
+		}
+		for _, v := range p.DetailedReport {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
+}
+
 func (p *TReportExecStatusParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -14939,6 +15335,9 @@ func (p *TReportExecStatusParams) DeepEqual(ano *TReportExecStatusParams) bool {
 		return false
 	}
 	if !p.Field22DeepEqual(ano.FinishedScanRanges) {
+		return false
+	}
+	if !p.Field23DeepEqual(ano.DetailedReport) {
 		return false
 	}
 	return true
@@ -15169,6 +15568,19 @@ func (p *TReportExecStatusParams) Field22DeepEqual(src *int32) bool {
 	}
 	if *p.FinishedScanRanges != *src {
 		return false
+	}
+	return true
+}
+func (p *TReportExecStatusParams) Field23DeepEqual(src []*TDetailedReportParams) bool {
+
+	if len(p.DetailedReport) != len(src) {
+		return false
+	}
+	for i, v := range p.DetailedReport {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }
@@ -27214,6 +27626,510 @@ func (p *TStreamLoadWithLoadStatusResult_) Field6DeepEqual(src *int64) bool {
 	return true
 }
 
+type TCheckWalRequest struct {
+	WalId *int64 `thrift:"wal_id,1,optional" frugal:"1,optional,i64" json:"wal_id,omitempty"`
+	DbId  *int64 `thrift:"db_id,2,optional" frugal:"2,optional,i64" json:"db_id,omitempty"`
+}
+
+func NewTCheckWalRequest() *TCheckWalRequest {
+	return &TCheckWalRequest{}
+}
+
+func (p *TCheckWalRequest) InitDefault() {
+	*p = TCheckWalRequest{}
+}
+
+var TCheckWalRequest_WalId_DEFAULT int64
+
+func (p *TCheckWalRequest) GetWalId() (v int64) {
+	if !p.IsSetWalId() {
+		return TCheckWalRequest_WalId_DEFAULT
+	}
+	return *p.WalId
+}
+
+var TCheckWalRequest_DbId_DEFAULT int64
+
+func (p *TCheckWalRequest) GetDbId() (v int64) {
+	if !p.IsSetDbId() {
+		return TCheckWalRequest_DbId_DEFAULT
+	}
+	return *p.DbId
+}
+func (p *TCheckWalRequest) SetWalId(val *int64) {
+	p.WalId = val
+}
+func (p *TCheckWalRequest) SetDbId(val *int64) {
+	p.DbId = val
+}
+
+var fieldIDToName_TCheckWalRequest = map[int16]string{
+	1: "wal_id",
+	2: "db_id",
+}
+
+func (p *TCheckWalRequest) IsSetWalId() bool {
+	return p.WalId != nil
+}
+
+func (p *TCheckWalRequest) IsSetDbId() bool {
+	return p.DbId != nil
+}
+
+func (p *TCheckWalRequest) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TCheckWalRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TCheckWalRequest) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.WalId = &v
+	}
+	return nil
+}
+
+func (p *TCheckWalRequest) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.DbId = &v
+	}
+	return nil
+}
+
+func (p *TCheckWalRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TCheckWalRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TCheckWalRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWalId() {
+		if err = oprot.WriteFieldBegin("wal_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WalId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TCheckWalRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDbId() {
+		if err = oprot.WriteFieldBegin("db_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.DbId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TCheckWalRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TCheckWalRequest(%+v)", *p)
+}
+
+func (p *TCheckWalRequest) DeepEqual(ano *TCheckWalRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WalId) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.DbId) {
+		return false
+	}
+	return true
+}
+
+func (p *TCheckWalRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.WalId == src {
+		return true
+	} else if p.WalId == nil || src == nil {
+		return false
+	}
+	if *p.WalId != *src {
+		return false
+	}
+	return true
+}
+func (p *TCheckWalRequest) Field2DeepEqual(src *int64) bool {
+
+	if p.DbId == src {
+		return true
+	} else if p.DbId == nil || src == nil {
+		return false
+	}
+	if *p.DbId != *src {
+		return false
+	}
+	return true
+}
+
+type TCheckWalResult_ struct {
+	Status       *status.TStatus `thrift:"status,1,optional" frugal:"1,optional,status.TStatus" json:"status,omitempty"`
+	NeedRecovery *bool           `thrift:"need_recovery,2,optional" frugal:"2,optional,bool" json:"need_recovery,omitempty"`
+}
+
+func NewTCheckWalResult_() *TCheckWalResult_ {
+	return &TCheckWalResult_{}
+}
+
+func (p *TCheckWalResult_) InitDefault() {
+	*p = TCheckWalResult_{}
+}
+
+var TCheckWalResult__Status_DEFAULT *status.TStatus
+
+func (p *TCheckWalResult_) GetStatus() (v *status.TStatus) {
+	if !p.IsSetStatus() {
+		return TCheckWalResult__Status_DEFAULT
+	}
+	return p.Status
+}
+
+var TCheckWalResult__NeedRecovery_DEFAULT bool
+
+func (p *TCheckWalResult_) GetNeedRecovery() (v bool) {
+	if !p.IsSetNeedRecovery() {
+		return TCheckWalResult__NeedRecovery_DEFAULT
+	}
+	return *p.NeedRecovery
+}
+func (p *TCheckWalResult_) SetStatus(val *status.TStatus) {
+	p.Status = val
+}
+func (p *TCheckWalResult_) SetNeedRecovery(val *bool) {
+	p.NeedRecovery = val
+}
+
+var fieldIDToName_TCheckWalResult_ = map[int16]string{
+	1: "status",
+	2: "need_recovery",
+}
+
+func (p *TCheckWalResult_) IsSetStatus() bool {
+	return p.Status != nil
+}
+
+func (p *TCheckWalResult_) IsSetNeedRecovery() bool {
+	return p.NeedRecovery != nil
+}
+
+func (p *TCheckWalResult_) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TCheckWalResult_[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TCheckWalResult_) ReadField1(iprot thrift.TProtocol) error {
+	p.Status = status.NewTStatus()
+	if err := p.Status.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *TCheckWalResult_) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.NeedRecovery = &v
+	}
+	return nil
+}
+
+func (p *TCheckWalResult_) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TCheckWalResult"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TCheckWalResult_) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStatus() {
+		if err = oprot.WriteFieldBegin("status", thrift.STRUCT, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Status.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TCheckWalResult_) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNeedRecovery() {
+		if err = oprot.WriteFieldBegin("need_recovery", thrift.BOOL, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.NeedRecovery); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TCheckWalResult_) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TCheckWalResult_(%+v)", *p)
+}
+
+func (p *TCheckWalResult_) DeepEqual(ano *TCheckWalResult_) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Status) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.NeedRecovery) {
+		return false
+	}
+	return true
+}
+
+func (p *TCheckWalResult_) Field1DeepEqual(src *status.TStatus) bool {
+
+	if !p.Status.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TCheckWalResult_) Field2DeepEqual(src *bool) bool {
+
+	if p.NeedRecovery == src {
+		return true
+	} else if p.NeedRecovery == nil || src == nil {
+		return false
+	}
+	if *p.NeedRecovery != *src {
+		return false
+	}
+	return true
+}
+
 type TKafkaRLTaskProgress struct {
 	PartitionCmtOffset map[int32]int64 `thrift:"partitionCmtOffset,1,required" frugal:"1,required,map<i32:i64>" json:"partitionCmtOffset"`
 }
@@ -31244,6 +32160,7 @@ type TLoadTxn2PCRequest struct {
 	AuthCode           *int64  `thrift:"auth_code,8,optional" frugal:"8,optional,i64" json:"auth_code,omitempty"`
 	Token              *string `thrift:"token,9,optional" frugal:"9,optional,string" json:"token,omitempty"`
 	ThriftRpcTimeoutMs *int64  `thrift:"thrift_rpc_timeout_ms,10,optional" frugal:"10,optional,i64" json:"thrift_rpc_timeout_ms,omitempty"`
+	Label              *string `thrift:"label,11,optional" frugal:"11,optional,string" json:"label,omitempty"`
 }
 
 func NewTLoadTxn2PCRequest() *TLoadTxn2PCRequest {
@@ -31333,6 +32250,15 @@ func (p *TLoadTxn2PCRequest) GetThriftRpcTimeoutMs() (v int64) {
 	}
 	return *p.ThriftRpcTimeoutMs
 }
+
+var TLoadTxn2PCRequest_Label_DEFAULT string
+
+func (p *TLoadTxn2PCRequest) GetLabel() (v string) {
+	if !p.IsSetLabel() {
+		return TLoadTxn2PCRequest_Label_DEFAULT
+	}
+	return *p.Label
+}
 func (p *TLoadTxn2PCRequest) SetCluster(val *string) {
 	p.Cluster = val
 }
@@ -31363,6 +32289,9 @@ func (p *TLoadTxn2PCRequest) SetToken(val *string) {
 func (p *TLoadTxn2PCRequest) SetThriftRpcTimeoutMs(val *int64) {
 	p.ThriftRpcTimeoutMs = val
 }
+func (p *TLoadTxn2PCRequest) SetLabel(val *string) {
+	p.Label = val
+}
 
 var fieldIDToName_TLoadTxn2PCRequest = map[int16]string{
 	1:  "cluster",
@@ -31375,6 +32304,7 @@ var fieldIDToName_TLoadTxn2PCRequest = map[int16]string{
 	8:  "auth_code",
 	9:  "token",
 	10: "thrift_rpc_timeout_ms",
+	11: "label",
 }
 
 func (p *TLoadTxn2PCRequest) IsSetCluster() bool {
@@ -31407,6 +32337,10 @@ func (p *TLoadTxn2PCRequest) IsSetToken() bool {
 
 func (p *TLoadTxn2PCRequest) IsSetThriftRpcTimeoutMs() bool {
 	return p.ThriftRpcTimeoutMs != nil
+}
+
+func (p *TLoadTxn2PCRequest) IsSetLabel() bool {
+	return p.Label != nil
 }
 
 func (p *TLoadTxn2PCRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -31525,6 +32459,16 @@ func (p *TLoadTxn2PCRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 10:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 11:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -31663,6 +32607,15 @@ func (p *TLoadTxn2PCRequest) ReadField10(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TLoadTxn2PCRequest) ReadField11(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		p.Label = &v
+	}
+	return nil
+}
+
 func (p *TLoadTxn2PCRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TLoadTxn2PCRequest"); err != nil {
@@ -31707,6 +32660,10 @@ func (p *TLoadTxn2PCRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 
@@ -31914,6 +32871,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
 
+func (p *TLoadTxn2PCRequest) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLabel() {
+		if err = oprot.WriteFieldBegin("label", thrift.STRING, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Label); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+
 func (p *TLoadTxn2PCRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -31955,6 +32931,9 @@ func (p *TLoadTxn2PCRequest) DeepEqual(ano *TLoadTxn2PCRequest) bool {
 		return false
 	}
 	if !p.Field10DeepEqual(ano.ThriftRpcTimeoutMs) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.Label) {
 		return false
 	}
 	return true
@@ -32066,6 +33045,18 @@ func (p *TLoadTxn2PCRequest) Field10DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.ThriftRpcTimeoutMs != *src {
+		return false
+	}
+	return true
+}
+func (p *TLoadTxn2PCRequest) Field11DeepEqual(src *string) bool {
+
+	if p.Label == src {
+		return true
+	} else if p.Label == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Label, *src) != 0 {
 		return false
 	}
 	return true
@@ -35908,15 +36899,16 @@ func (p *TDiskInfo) Field8DeepEqual(src string) bool {
 }
 
 type TFrontendPingFrontendResult_ struct {
-	Status            TFrontendPingFrontendStatusCode `thrift:"status,1,required" frugal:"1,required,TFrontendPingFrontendStatusCode" json:"status"`
-	Msg               string                          `thrift:"msg,2,required" frugal:"2,required,string" json:"msg"`
-	QueryPort         int32                           `thrift:"queryPort,3,required" frugal:"3,required,i32" json:"queryPort"`
-	RpcPort           int32                           `thrift:"rpcPort,4,required" frugal:"4,required,i32" json:"rpcPort"`
-	ReplayedJournalId int64                           `thrift:"replayedJournalId,5,required" frugal:"5,required,i64" json:"replayedJournalId"`
-	Version           string                          `thrift:"version,6,required" frugal:"6,required,string" json:"version"`
-	LastStartupTime   *int64                          `thrift:"lastStartupTime,7,optional" frugal:"7,optional,i64" json:"lastStartupTime,omitempty"`
-	DiskInfos         []*TDiskInfo                    `thrift:"diskInfos,8,optional" frugal:"8,optional,list<TDiskInfo>" json:"diskInfos,omitempty"`
-	ProcessUUID       *int64                          `thrift:"processUUID,9,optional" frugal:"9,optional,i64" json:"processUUID,omitempty"`
+	Status             TFrontendPingFrontendStatusCode `thrift:"status,1,required" frugal:"1,required,TFrontendPingFrontendStatusCode" json:"status"`
+	Msg                string                          `thrift:"msg,2,required" frugal:"2,required,string" json:"msg"`
+	QueryPort          int32                           `thrift:"queryPort,3,required" frugal:"3,required,i32" json:"queryPort"`
+	RpcPort            int32                           `thrift:"rpcPort,4,required" frugal:"4,required,i32" json:"rpcPort"`
+	ReplayedJournalId  int64                           `thrift:"replayedJournalId,5,required" frugal:"5,required,i64" json:"replayedJournalId"`
+	Version            string                          `thrift:"version,6,required" frugal:"6,required,string" json:"version"`
+	LastStartupTime    *int64                          `thrift:"lastStartupTime,7,optional" frugal:"7,optional,i64" json:"lastStartupTime,omitempty"`
+	DiskInfos          []*TDiskInfo                    `thrift:"diskInfos,8,optional" frugal:"8,optional,list<TDiskInfo>" json:"diskInfos,omitempty"`
+	ProcessUUID        *int64                          `thrift:"processUUID,9,optional" frugal:"9,optional,i64" json:"processUUID,omitempty"`
+	ArrowFlightSqlPort *int32                          `thrift:"arrowFlightSqlPort,10,optional" frugal:"10,optional,i32" json:"arrowFlightSqlPort,omitempty"`
 }
 
 func NewTFrontendPingFrontendResult_() *TFrontendPingFrontendResult_ {
@@ -35977,6 +36969,15 @@ func (p *TFrontendPingFrontendResult_) GetProcessUUID() (v int64) {
 	}
 	return *p.ProcessUUID
 }
+
+var TFrontendPingFrontendResult__ArrowFlightSqlPort_DEFAULT int32
+
+func (p *TFrontendPingFrontendResult_) GetArrowFlightSqlPort() (v int32) {
+	if !p.IsSetArrowFlightSqlPort() {
+		return TFrontendPingFrontendResult__ArrowFlightSqlPort_DEFAULT
+	}
+	return *p.ArrowFlightSqlPort
+}
 func (p *TFrontendPingFrontendResult_) SetStatus(val TFrontendPingFrontendStatusCode) {
 	p.Status = val
 }
@@ -36004,17 +37005,21 @@ func (p *TFrontendPingFrontendResult_) SetDiskInfos(val []*TDiskInfo) {
 func (p *TFrontendPingFrontendResult_) SetProcessUUID(val *int64) {
 	p.ProcessUUID = val
 }
+func (p *TFrontendPingFrontendResult_) SetArrowFlightSqlPort(val *int32) {
+	p.ArrowFlightSqlPort = val
+}
 
 var fieldIDToName_TFrontendPingFrontendResult_ = map[int16]string{
-	1: "status",
-	2: "msg",
-	3: "queryPort",
-	4: "rpcPort",
-	5: "replayedJournalId",
-	6: "version",
-	7: "lastStartupTime",
-	8: "diskInfos",
-	9: "processUUID",
+	1:  "status",
+	2:  "msg",
+	3:  "queryPort",
+	4:  "rpcPort",
+	5:  "replayedJournalId",
+	6:  "version",
+	7:  "lastStartupTime",
+	8:  "diskInfos",
+	9:  "processUUID",
+	10: "arrowFlightSqlPort",
 }
 
 func (p *TFrontendPingFrontendResult_) IsSetLastStartupTime() bool {
@@ -36027,6 +37032,10 @@ func (p *TFrontendPingFrontendResult_) IsSetDiskInfos() bool {
 
 func (p *TFrontendPingFrontendResult_) IsSetProcessUUID() bool {
 	return p.ProcessUUID != nil
+}
+
+func (p *TFrontendPingFrontendResult_) IsSetArrowFlightSqlPort() bool {
+	return p.ArrowFlightSqlPort != nil
 }
 
 func (p *TFrontendPingFrontendResult_) Read(iprot thrift.TProtocol) (err error) {
@@ -36143,6 +37152,16 @@ func (p *TFrontendPingFrontendResult_) Read(iprot thrift.TProtocol) (err error) 
 		case 9:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 10:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -36303,6 +37322,15 @@ func (p *TFrontendPingFrontendResult_) ReadField9(iprot thrift.TProtocol) error 
 	return nil
 }
 
+func (p *TFrontendPingFrontendResult_) ReadField10(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		p.ArrowFlightSqlPort = &v
+	}
+	return nil
+}
+
 func (p *TFrontendPingFrontendResult_) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TFrontendPingFrontendResult"); err != nil {
@@ -36343,6 +37371,10 @@ func (p *TFrontendPingFrontendResult_) Write(oprot thrift.TProtocol) (err error)
 		}
 		if err = p.writeField9(oprot); err != nil {
 			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 
@@ -36531,6 +37563,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
 
+func (p *TFrontendPingFrontendResult_) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetArrowFlightSqlPort() {
+		if err = oprot.WriteFieldBegin("arrowFlightSqlPort", thrift.I32, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.ArrowFlightSqlPort); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
 func (p *TFrontendPingFrontendResult_) String() string {
 	if p == nil {
 		return "<nil>"
@@ -36569,6 +37620,9 @@ func (p *TFrontendPingFrontendResult_) DeepEqual(ano *TFrontendPingFrontendResul
 		return false
 	}
 	if !p.Field9DeepEqual(ano.ProcessUUID) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.ArrowFlightSqlPort) {
 		return false
 	}
 	return true
@@ -36649,6 +37703,18 @@ func (p *TFrontendPingFrontendResult_) Field9DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.ProcessUUID != *src {
+		return false
+	}
+	return true
+}
+func (p *TFrontendPingFrontendResult_) Field10DeepEqual(src *int32) bool {
+
+	if p.ArrowFlightSqlPort == src {
+		return true
+	} else if p.ArrowFlightSqlPort == nil || src == nil {
+		return false
+	}
+	if *p.ArrowFlightSqlPort != *src {
 		return false
 	}
 	return true

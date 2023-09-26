@@ -11500,6 +11500,7 @@ type TCloneReq struct {
 	DestPathHash         *int64                `thrift:"dest_path_hash,9,optional" frugal:"9,optional,i64" json:"dest_path_hash,omitempty"`
 	TimeoutS             *int32                `thrift:"timeout_s,10,optional" frugal:"10,optional,i32" json:"timeout_s,omitempty"`
 	ReplicaId            types.TReplicaId      `thrift:"replica_id,11,optional" frugal:"11,optional,i64" json:"replica_id,omitempty"`
+	PartitionId          *int64                `thrift:"partition_id,12,optional" frugal:"12,optional,i64" json:"partition_id,omitempty"`
 }
 
 func NewTCloneReq() *TCloneReq {
@@ -11599,6 +11600,15 @@ func (p *TCloneReq) GetReplicaId() (v types.TReplicaId) {
 	}
 	return p.ReplicaId
 }
+
+var TCloneReq_PartitionId_DEFAULT int64
+
+func (p *TCloneReq) GetPartitionId() (v int64) {
+	if !p.IsSetPartitionId() {
+		return TCloneReq_PartitionId_DEFAULT
+	}
+	return *p.PartitionId
+}
 func (p *TCloneReq) SetTabletId(val types.TTabletId) {
 	p.TabletId = val
 }
@@ -11632,6 +11642,9 @@ func (p *TCloneReq) SetTimeoutS(val *int32) {
 func (p *TCloneReq) SetReplicaId(val types.TReplicaId) {
 	p.ReplicaId = val
 }
+func (p *TCloneReq) SetPartitionId(val *int64) {
+	p.PartitionId = val
+}
 
 var fieldIDToName_TCloneReq = map[int16]string{
 	1:  "tablet_id",
@@ -11645,6 +11658,7 @@ var fieldIDToName_TCloneReq = map[int16]string{
 	9:  "dest_path_hash",
 	10: "timeout_s",
 	11: "replica_id",
+	12: "partition_id",
 }
 
 func (p *TCloneReq) IsSetStorageMedium() bool {
@@ -11677,6 +11691,10 @@ func (p *TCloneReq) IsSetTimeoutS() bool {
 
 func (p *TCloneReq) IsSetReplicaId() bool {
 	return p.ReplicaId != TCloneReq_ReplicaId_DEFAULT
+}
+
+func (p *TCloneReq) IsSetPartitionId() bool {
+	return p.PartitionId != nil
 }
 
 func (p *TCloneReq) Read(iprot thrift.TProtocol) (err error) {
@@ -11807,6 +11825,16 @@ func (p *TCloneReq) Read(iprot thrift.TProtocol) (err error) {
 		case 11:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 12:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -11971,6 +11999,15 @@ func (p *TCloneReq) ReadField11(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TCloneReq) ReadField12(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.PartitionId = &v
+	}
+	return nil
+}
+
 func (p *TCloneReq) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TCloneReq"); err != nil {
@@ -12019,6 +12056,10 @@ func (p *TCloneReq) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 
@@ -12251,6 +12292,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
 
+func (p *TCloneReq) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPartitionId() {
+		if err = oprot.WriteFieldBegin("partition_id", thrift.I64, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.PartitionId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
+
 func (p *TCloneReq) String() string {
 	if p == nil {
 		return "<nil>"
@@ -12295,6 +12355,9 @@ func (p *TCloneReq) DeepEqual(ano *TCloneReq) bool {
 		return false
 	}
 	if !p.Field11DeepEqual(ano.ReplicaId) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.PartitionId) {
 		return false
 	}
 	return true
@@ -12414,6 +12477,18 @@ func (p *TCloneReq) Field10DeepEqual(src *int32) bool {
 func (p *TCloneReq) Field11DeepEqual(src types.TReplicaId) bool {
 
 	if p.ReplicaId != src {
+		return false
+	}
+	return true
+}
+func (p *TCloneReq) Field12DeepEqual(src *int64) bool {
+
+	if p.PartitionId == src {
+		return true
+	} else if p.PartitionId == nil || src == nil {
+		return false
+	}
+	if *p.PartitionId != *src {
 		return false
 	}
 	return true

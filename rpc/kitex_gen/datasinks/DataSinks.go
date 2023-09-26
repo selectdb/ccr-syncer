@@ -924,6 +924,7 @@ type TResultFileSinkOptions struct {
 	ParquetVersion           *TParquetVersion          `thrift:"parquet_version,14,optional" frugal:"14,optional,TParquetVersion" json:"parquet_version,omitempty"`
 	OrcSchema                *string                   `thrift:"orc_schema,15,optional" frugal:"15,optional,string" json:"orc_schema,omitempty"`
 	DeleteExistingFiles      *bool                     `thrift:"delete_existing_files,16,optional" frugal:"16,optional,bool" json:"delete_existing_files,omitempty"`
+	FileSuffix               *string                   `thrift:"file_suffix,17,optional" frugal:"17,optional,string" json:"file_suffix,omitempty"`
 }
 
 func NewTResultFileSinkOptions() *TResultFileSinkOptions {
@@ -1067,6 +1068,15 @@ func (p *TResultFileSinkOptions) GetDeleteExistingFiles() (v bool) {
 	}
 	return *p.DeleteExistingFiles
 }
+
+var TResultFileSinkOptions_FileSuffix_DEFAULT string
+
+func (p *TResultFileSinkOptions) GetFileSuffix() (v string) {
+	if !p.IsSetFileSuffix() {
+		return TResultFileSinkOptions_FileSuffix_DEFAULT
+	}
+	return *p.FileSuffix
+}
 func (p *TResultFileSinkOptions) SetFilePath(val string) {
 	p.FilePath = val
 }
@@ -1115,6 +1125,9 @@ func (p *TResultFileSinkOptions) SetOrcSchema(val *string) {
 func (p *TResultFileSinkOptions) SetDeleteExistingFiles(val *bool) {
 	p.DeleteExistingFiles = val
 }
+func (p *TResultFileSinkOptions) SetFileSuffix(val *string) {
+	p.FileSuffix = val
+}
 
 var fieldIDToName_TResultFileSinkOptions = map[int16]string{
 	1:  "file_path",
@@ -1133,6 +1146,7 @@ var fieldIDToName_TResultFileSinkOptions = map[int16]string{
 	14: "parquet_version",
 	15: "orc_schema",
 	16: "delete_existing_files",
+	17: "file_suffix",
 }
 
 func (p *TResultFileSinkOptions) IsSetColumnSeparator() bool {
@@ -1189,6 +1203,10 @@ func (p *TResultFileSinkOptions) IsSetOrcSchema() bool {
 
 func (p *TResultFileSinkOptions) IsSetDeleteExistingFiles() bool {
 	return p.DeleteExistingFiles != nil
+}
+
+func (p *TResultFileSinkOptions) IsSetFileSuffix() bool {
+	return p.FileSuffix != nil
 }
 
 func (p *TResultFileSinkOptions) Read(iprot thrift.TProtocol) (err error) {
@@ -1367,6 +1385,16 @@ func (p *TResultFileSinkOptions) Read(iprot thrift.TProtocol) (err error) {
 		case 16:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField16(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 17:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField17(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -1648,6 +1676,15 @@ func (p *TResultFileSinkOptions) ReadField16(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TResultFileSinkOptions) ReadField17(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		p.FileSuffix = &v
+	}
+	return nil
+}
+
 func (p *TResultFileSinkOptions) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TResultFileSinkOptions"); err != nil {
@@ -1716,6 +1753,10 @@ func (p *TResultFileSinkOptions) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField16(oprot); err != nil {
 			fieldId = 16
+			goto WriteFieldError
+		}
+		if err = p.writeField17(oprot); err != nil {
+			fieldId = 17
 			goto WriteFieldError
 		}
 
@@ -2095,6 +2136,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
 }
 
+func (p *TResultFileSinkOptions) writeField17(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFileSuffix() {
+		if err = oprot.WriteFieldBegin("file_suffix", thrift.STRING, 17); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.FileSuffix); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
+}
+
 func (p *TResultFileSinkOptions) String() string {
 	if p == nil {
 		return "<nil>"
@@ -2154,6 +2214,9 @@ func (p *TResultFileSinkOptions) DeepEqual(ano *TResultFileSinkOptions) bool {
 		return false
 	}
 	if !p.Field16DeepEqual(ano.DeleteExistingFiles) {
+		return false
+	}
+	if !p.Field17DeepEqual(ano.FileSuffix) {
 		return false
 	}
 	return true
@@ -2348,6 +2411,18 @@ func (p *TResultFileSinkOptions) Field16DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.DeleteExistingFiles != *src {
+		return false
+	}
+	return true
+}
+func (p *TResultFileSinkOptions) Field17DeepEqual(src *string) bool {
+
+	if p.FileSuffix == src {
+		return true
+	} else if p.FileSuffix == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.FileSuffix, *src) != 0 {
 		return false
 	}
 	return true
@@ -7026,6 +7101,8 @@ type TOlapTableSink struct {
 	LoadToSingleTablet   *bool                                 `thrift:"load_to_single_tablet,16,optional" frugal:"16,optional,bool" json:"load_to_single_tablet,omitempty"`
 	WriteSingleReplica   *bool                                 `thrift:"write_single_replica,17,optional" frugal:"17,optional,bool" json:"write_single_replica,omitempty"`
 	SlaveLocation        *descriptors.TOlapTableLocationParam  `thrift:"slave_location,18,optional" frugal:"18,optional,descriptors.TOlapTableLocationParam" json:"slave_location,omitempty"`
+	TxnTimeoutS          *int64                                `thrift:"txn_timeout_s,19,optional" frugal:"19,optional,i64" json:"txn_timeout_s,omitempty"`
+	WriteFileCache       *bool                                 `thrift:"write_file_cache,20,optional" frugal:"20,optional,bool" json:"write_file_cache,omitempty"`
 }
 
 func NewTOlapTableSink() *TOlapTableSink {
@@ -7167,6 +7244,24 @@ func (p *TOlapTableSink) GetSlaveLocation() (v *descriptors.TOlapTableLocationPa
 	}
 	return p.SlaveLocation
 }
+
+var TOlapTableSink_TxnTimeoutS_DEFAULT int64
+
+func (p *TOlapTableSink) GetTxnTimeoutS() (v int64) {
+	if !p.IsSetTxnTimeoutS() {
+		return TOlapTableSink_TxnTimeoutS_DEFAULT
+	}
+	return *p.TxnTimeoutS
+}
+
+var TOlapTableSink_WriteFileCache_DEFAULT bool
+
+func (p *TOlapTableSink) GetWriteFileCache() (v bool) {
+	if !p.IsSetWriteFileCache() {
+		return TOlapTableSink_WriteFileCache_DEFAULT
+	}
+	return *p.WriteFileCache
+}
 func (p *TOlapTableSink) SetLoadId(val *types.TUniqueId) {
 	p.LoadId = val
 }
@@ -7221,6 +7316,12 @@ func (p *TOlapTableSink) SetWriteSingleReplica(val *bool) {
 func (p *TOlapTableSink) SetSlaveLocation(val *descriptors.TOlapTableLocationParam) {
 	p.SlaveLocation = val
 }
+func (p *TOlapTableSink) SetTxnTimeoutS(val *int64) {
+	p.TxnTimeoutS = val
+}
+func (p *TOlapTableSink) SetWriteFileCache(val *bool) {
+	p.WriteFileCache = val
+}
 
 var fieldIDToName_TOlapTableSink = map[int16]string{
 	1:  "load_id",
@@ -7241,6 +7342,8 @@ var fieldIDToName_TOlapTableSink = map[int16]string{
 	16: "load_to_single_tablet",
 	17: "write_single_replica",
 	18: "slave_location",
+	19: "txn_timeout_s",
+	20: "write_file_cache",
 }
 
 func (p *TOlapTableSink) IsSetLoadId() bool {
@@ -7289,6 +7392,14 @@ func (p *TOlapTableSink) IsSetWriteSingleReplica() bool {
 
 func (p *TOlapTableSink) IsSetSlaveLocation() bool {
 	return p.SlaveLocation != nil
+}
+
+func (p *TOlapTableSink) IsSetTxnTimeoutS() bool {
+	return p.TxnTimeoutS != nil
+}
+
+func (p *TOlapTableSink) IsSetWriteFileCache() bool {
+	return p.WriteFileCache != nil
 }
 
 func (p *TOlapTableSink) Read(iprot thrift.TProtocol) (err error) {
@@ -7505,6 +7616,26 @@ func (p *TOlapTableSink) Read(iprot thrift.TProtocol) (err error) {
 		case 18:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField18(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 19:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField19(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 20:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField20(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -7754,6 +7885,24 @@ func (p *TOlapTableSink) ReadField18(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TOlapTableSink) ReadField19(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.TxnTimeoutS = &v
+	}
+	return nil
+}
+
+func (p *TOlapTableSink) ReadField20(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.WriteFileCache = &v
+	}
+	return nil
+}
+
 func (p *TOlapTableSink) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TOlapTableSink"); err != nil {
@@ -7830,6 +7979,14 @@ func (p *TOlapTableSink) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField18(oprot); err != nil {
 			fieldId = 18
+			goto WriteFieldError
+		}
+		if err = p.writeField19(oprot); err != nil {
+			fieldId = 19
+			goto WriteFieldError
+		}
+		if err = p.writeField20(oprot); err != nil {
+			fieldId = 20
 			goto WriteFieldError
 		}
 
@@ -8171,6 +8328,44 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 18 end error: ", p), err)
 }
 
+func (p *TOlapTableSink) writeField19(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTxnTimeoutS() {
+		if err = oprot.WriteFieldBegin("txn_timeout_s", thrift.I64, 19); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TxnTimeoutS); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 end error: ", p), err)
+}
+
+func (p *TOlapTableSink) writeField20(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWriteFileCache() {
+		if err = oprot.WriteFieldBegin("write_file_cache", thrift.BOOL, 20); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.WriteFileCache); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
+}
+
 func (p *TOlapTableSink) String() string {
 	if p == nil {
 		return "<nil>"
@@ -8236,6 +8431,12 @@ func (p *TOlapTableSink) DeepEqual(ano *TOlapTableSink) bool {
 		return false
 	}
 	if !p.Field18DeepEqual(ano.SlaveLocation) {
+		return false
+	}
+	if !p.Field19DeepEqual(ano.TxnTimeoutS) {
+		return false
+	}
+	if !p.Field20DeepEqual(ano.WriteFileCache) {
 		return false
 	}
 	return true
@@ -8393,6 +8594,30 @@ func (p *TOlapTableSink) Field17DeepEqual(src *bool) bool {
 func (p *TOlapTableSink) Field18DeepEqual(src *descriptors.TOlapTableLocationParam) bool {
 
 	if !p.SlaveLocation.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TOlapTableSink) Field19DeepEqual(src *int64) bool {
+
+	if p.TxnTimeoutS == src {
+		return true
+	} else if p.TxnTimeoutS == nil || src == nil {
+		return false
+	}
+	if *p.TxnTimeoutS != *src {
+		return false
+	}
+	return true
+}
+func (p *TOlapTableSink) Field20DeepEqual(src *bool) bool {
+
+	if p.WriteFileCache == src {
+		return true
+	} else if p.WriteFileCache == nil || src == nil {
+		return false
+	}
+	if *p.WriteFileCache != *src {
 		return false
 	}
 	return true

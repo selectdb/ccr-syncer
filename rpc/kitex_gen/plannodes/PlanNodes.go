@@ -336,6 +336,7 @@ const (
 	TFileFormatType_FORMAT_AVRO            TFileFormatType = 12
 	TFileFormatType_FORMAT_CSV_LZ4BLOCK    TFileFormatType = 13
 	TFileFormatType_FORMAT_CSV_SNAPPYBLOCK TFileFormatType = 14
+	TFileFormatType_FORMAT_WAL             TFileFormatType = 15
 )
 
 func (p TFileFormatType) String() string {
@@ -372,6 +373,8 @@ func (p TFileFormatType) String() string {
 		return "FORMAT_CSV_LZ4BLOCK"
 	case TFileFormatType_FORMAT_CSV_SNAPPYBLOCK:
 		return "FORMAT_CSV_SNAPPYBLOCK"
+	case TFileFormatType_FORMAT_WAL:
+		return "FORMAT_WAL"
 	}
 	return "<UNSET>"
 }
@@ -410,6 +413,8 @@ func TFileFormatTypeFromString(s string) (TFileFormatType, error) {
 		return TFileFormatType_FORMAT_CSV_LZ4BLOCK, nil
 	case "FORMAT_CSV_SNAPPYBLOCK":
 		return TFileFormatType_FORMAT_CSV_SNAPPYBLOCK, nil
+	case "FORMAT_WAL":
+		return TFileFormatType_FORMAT_WAL, nil
 	}
 	return TFileFormatType(0), fmt.Errorf("not a valid TFileFormatType string")
 }

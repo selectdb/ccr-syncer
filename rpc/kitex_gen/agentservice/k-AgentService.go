@@ -8427,6 +8427,20 @@ func (p *TCloneReq) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 12:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField12(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -8640,6 +8654,19 @@ func (p *TCloneReq) FastReadField11(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TCloneReq) FastReadField12(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.PartitionId = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TCloneReq) FastWrite(buf []byte) int {
 	return 0
@@ -8658,6 +8685,7 @@ func (p *TCloneReq) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWrite
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
 		offset += p.fastWriteField10(buf[offset:], binaryWriter)
 		offset += p.fastWriteField11(buf[offset:], binaryWriter)
+		offset += p.fastWriteField12(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 	}
@@ -8681,6 +8709,7 @@ func (p *TCloneReq) BLength() int {
 		l += p.field9Length()
 		l += p.field10Length()
 		l += p.field11Length()
+		l += p.field12Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -8809,6 +8838,17 @@ func (p *TCloneReq) fastWriteField11(buf []byte, binaryWriter bthrift.BinaryWrit
 	return offset
 }
 
+func (p *TCloneReq) fastWriteField12(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetPartitionId() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "partition_id", thrift.I64, 12)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.PartitionId)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TCloneReq) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("tablet_id", thrift.I64, 1)
@@ -8921,6 +8961,17 @@ func (p *TCloneReq) field11Length() int {
 	if p.IsSetReplicaId() {
 		l += bthrift.Binary.FieldBeginLength("replica_id", thrift.I64, 11)
 		l += bthrift.Binary.I64Length(p.ReplicaId)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TCloneReq) field12Length() int {
+	l := 0
+	if p.IsSetPartitionId() {
+		l += bthrift.Binary.FieldBeginLength("partition_id", thrift.I64, 12)
+		l += bthrift.Binary.I64Length(*p.PartitionId)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

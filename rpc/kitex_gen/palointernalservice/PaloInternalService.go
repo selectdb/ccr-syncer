@@ -1629,6 +1629,7 @@ type TQueryOptions struct {
 	InvertedIndexConjunctionOptThreshold   int32           `thrift:"inverted_index_conjunction_opt_threshold,83,optional" frugal:"83,optional,i32" json:"inverted_index_conjunction_opt_threshold,omitempty"`
 	EnableProfile                          bool            `thrift:"enable_profile,84,optional" frugal:"84,optional,bool" json:"enable_profile,omitempty"`
 	EnablePageCache                        bool            `thrift:"enable_page_cache,85,optional" frugal:"85,optional,bool" json:"enable_page_cache,omitempty"`
+	AnalyzeTimeout                         int32           `thrift:"analyze_timeout,86,optional" frugal:"86,optional,i32" json:"analyze_timeout,omitempty"`
 }
 
 func NewTQueryOptions() *TQueryOptions {
@@ -1700,6 +1701,7 @@ func NewTQueryOptions() *TQueryOptions {
 		InvertedIndexConjunctionOptThreshold:   1000,
 		EnableProfile:                          false,
 		EnablePageCache:                        false,
+		AnalyzeTimeout:                         43200,
 	}
 }
 
@@ -1772,6 +1774,7 @@ func (p *TQueryOptions) InitDefault() {
 		InvertedIndexConjunctionOptThreshold:   1000,
 		EnableProfile:                          false,
 		EnablePageCache:                        false,
+		AnalyzeTimeout:                         43200,
 	}
 }
 
@@ -2458,6 +2461,15 @@ func (p *TQueryOptions) GetEnablePageCache() (v bool) {
 	}
 	return p.EnablePageCache
 }
+
+var TQueryOptions_AnalyzeTimeout_DEFAULT int32 = 43200
+
+func (p *TQueryOptions) GetAnalyzeTimeout() (v int32) {
+	if !p.IsSetAnalyzeTimeout() {
+		return TQueryOptions_AnalyzeTimeout_DEFAULT
+	}
+	return p.AnalyzeTimeout
+}
 func (p *TQueryOptions) SetAbortOnError(val bool) {
 	p.AbortOnError = val
 }
@@ -2686,6 +2698,9 @@ func (p *TQueryOptions) SetEnableProfile(val bool) {
 func (p *TQueryOptions) SetEnablePageCache(val bool) {
 	p.EnablePageCache = val
 }
+func (p *TQueryOptions) SetAnalyzeTimeout(val int32) {
+	p.AnalyzeTimeout = val
+}
 
 var fieldIDToName_TQueryOptions = map[int16]string{
 	1:  "abort_on_error",
@@ -2764,6 +2779,7 @@ var fieldIDToName_TQueryOptions = map[int16]string{
 	83: "inverted_index_conjunction_opt_threshold",
 	84: "enable_profile",
 	85: "enable_page_cache",
+	86: "analyze_timeout",
 }
 
 func (p *TQueryOptions) IsSetAbortOnError() bool {
@@ -3068,6 +3084,10 @@ func (p *TQueryOptions) IsSetEnableProfile() bool {
 
 func (p *TQueryOptions) IsSetEnablePageCache() bool {
 	return p.EnablePageCache != TQueryOptions_EnablePageCache_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetAnalyzeTimeout() bool {
+	return p.AnalyzeTimeout != TQueryOptions_AnalyzeTimeout_DEFAULT
 }
 
 func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
@@ -3849,6 +3869,16 @@ func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
 					goto SkipFieldError
 				}
 			}
+		case 86:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField86(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
@@ -4562,6 +4592,15 @@ func (p *TQueryOptions) ReadField85(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TQueryOptions) ReadField86(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		p.AnalyzeTimeout = v
+	}
+	return nil
+}
+
 func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TQueryOptions"); err != nil {
@@ -4870,6 +4909,10 @@ func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField85(oprot); err != nil {
 			fieldId = 85
+			goto WriteFieldError
+		}
+		if err = p.writeField86(oprot); err != nil {
+			fieldId = 86
 			goto WriteFieldError
 		}
 
@@ -6335,6 +6378,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 85 end error: ", p), err)
 }
 
+func (p *TQueryOptions) writeField86(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAnalyzeTimeout() {
+		if err = oprot.WriteFieldBegin("analyze_timeout", thrift.I32, 86); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.AnalyzeTimeout); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 86 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 86 end error: ", p), err)
+}
+
 func (p *TQueryOptions) String() string {
 	if p == nil {
 		return "<nil>"
@@ -6574,6 +6636,9 @@ func (p *TQueryOptions) DeepEqual(ano *TQueryOptions) bool {
 		return false
 	}
 	if !p.Field85DeepEqual(ano.EnablePageCache) {
+		return false
+	}
+	if !p.Field86DeepEqual(ano.AnalyzeTimeout) {
 		return false
 	}
 	return true
@@ -7152,6 +7217,13 @@ func (p *TQueryOptions) Field84DeepEqual(src bool) bool {
 func (p *TQueryOptions) Field85DeepEqual(src bool) bool {
 
 	if p.EnablePageCache != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field86DeepEqual(src int32) bool {
+
+	if p.AnalyzeTimeout != src {
 		return false
 	}
 	return true
@@ -11544,6 +11616,7 @@ type TExecPlanFragmentParams struct {
 	InstancesSharingHashTable      []*types.TUniqueId                                    `thrift:"instances_sharing_hash_table,22,optional" frugal:"22,optional,list<types.TUniqueId>" json:"instances_sharing_hash_table,omitempty"`
 	TableName                      *string                                               `thrift:"table_name,23,optional" frugal:"23,optional,string" json:"table_name,omitempty"`
 	FileScanParams                 map[types.TPlanNodeId]*plannodes.TFileScanRangeParams `thrift:"file_scan_params,24,optional" frugal:"24,optional,map<i32:plannodes.TFileScanRangeParams>" json:"file_scan_params,omitempty"`
+	WalId                          *int64                                                `thrift:"wal_id,25,optional" frugal:"25,optional,i64" json:"wal_id,omitempty"`
 }
 
 func NewTExecPlanFragmentParams() *TExecPlanFragmentParams {
@@ -11774,6 +11847,15 @@ func (p *TExecPlanFragmentParams) GetFileScanParams() (v map[types.TPlanNodeId]*
 	}
 	return p.FileScanParams
 }
+
+var TExecPlanFragmentParams_WalId_DEFAULT int64
+
+func (p *TExecPlanFragmentParams) GetWalId() (v int64) {
+	if !p.IsSetWalId() {
+		return TExecPlanFragmentParams_WalId_DEFAULT
+	}
+	return *p.WalId
+}
 func (p *TExecPlanFragmentParams) SetProtocolVersion(val PaloInternalServiceVersion) {
 	p.ProtocolVersion = val
 }
@@ -11846,6 +11928,9 @@ func (p *TExecPlanFragmentParams) SetTableName(val *string) {
 func (p *TExecPlanFragmentParams) SetFileScanParams(val map[types.TPlanNodeId]*plannodes.TFileScanRangeParams) {
 	p.FileScanParams = val
 }
+func (p *TExecPlanFragmentParams) SetWalId(val *int64) {
+	p.WalId = val
+}
 
 var fieldIDToName_TExecPlanFragmentParams = map[int16]string{
 	1:  "protocol_version",
@@ -11872,6 +11957,7 @@ var fieldIDToName_TExecPlanFragmentParams = map[int16]string{
 	22: "instances_sharing_hash_table",
 	23: "table_name",
 	24: "file_scan_params",
+	25: "wal_id",
 }
 
 func (p *TExecPlanFragmentParams) IsSetFragment() bool {
@@ -11964,6 +12050,10 @@ func (p *TExecPlanFragmentParams) IsSetTableName() bool {
 
 func (p *TExecPlanFragmentParams) IsSetFileScanParams() bool {
 	return p.FileScanParams != nil
+}
+
+func (p *TExecPlanFragmentParams) IsSetWalId() bool {
+	return p.WalId != nil
 }
 
 func (p *TExecPlanFragmentParams) Read(iprot thrift.TProtocol) (err error) {
@@ -12220,6 +12310,16 @@ func (p *TExecPlanFragmentParams) Read(iprot thrift.TProtocol) (err error) {
 		case 24:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField24(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 25:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField25(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -12497,6 +12597,15 @@ func (p *TExecPlanFragmentParams) ReadField24(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TExecPlanFragmentParams) ReadField25(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.WalId = &v
+	}
+	return nil
+}
+
 func (p *TExecPlanFragmentParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TExecPlanFragmentParams"); err != nil {
@@ -12597,6 +12706,10 @@ func (p *TExecPlanFragmentParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField24(oprot); err != nil {
 			fieldId = 24
+			goto WriteFieldError
+		}
+		if err = p.writeField25(oprot); err != nil {
+			fieldId = 25
 			goto WriteFieldError
 		}
 
@@ -13093,6 +13206,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 24 end error: ", p), err)
 }
 
+func (p *TExecPlanFragmentParams) writeField25(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWalId() {
+		if err = oprot.WriteFieldBegin("wal_id", thrift.I64, 25); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WalId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 25 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 25 end error: ", p), err)
+}
+
 func (p *TExecPlanFragmentParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -13176,6 +13308,9 @@ func (p *TExecPlanFragmentParams) DeepEqual(ano *TExecPlanFragmentParams) bool {
 		return false
 	}
 	if !p.Field24DeepEqual(ano.FileScanParams) {
+		return false
+	}
+	if !p.Field25DeepEqual(ano.WalId) {
 		return false
 	}
 	return true
@@ -13398,6 +13533,18 @@ func (p *TExecPlanFragmentParams) Field24DeepEqual(src map[types.TPlanNodeId]*pl
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *TExecPlanFragmentParams) Field25DeepEqual(src *int64) bool {
+
+	if p.WalId == src {
+		return true
+	} else if p.WalId == nil || src == nil {
+		return false
+	}
+	if *p.WalId != *src {
+		return false
 	}
 	return true
 }

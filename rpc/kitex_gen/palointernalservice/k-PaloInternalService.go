@@ -2200,6 +2200,20 @@ func (p *TQueryOptions) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 86:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField86(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -3289,6 +3303,20 @@ func (p *TQueryOptions) FastReadField85(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TQueryOptions) FastReadField86(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.AnalyzeTimeout = v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TQueryOptions) FastWrite(buf []byte) int {
 	return 0
@@ -3370,6 +3398,7 @@ func (p *TQueryOptions) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryW
 		offset += p.fastWriteField83(buf[offset:], binaryWriter)
 		offset += p.fastWriteField84(buf[offset:], binaryWriter)
 		offset += p.fastWriteField85(buf[offset:], binaryWriter)
+		offset += p.fastWriteField86(buf[offset:], binaryWriter)
 		offset += p.fastWriteField18(buf[offset:], binaryWriter)
 		offset += p.fastWriteField42(buf[offset:], binaryWriter)
 		offset += p.fastWriteField46(buf[offset:], binaryWriter)
@@ -3460,6 +3489,7 @@ func (p *TQueryOptions) BLength() int {
 		l += p.field83Length()
 		l += p.field84Length()
 		l += p.field85Length()
+		l += p.field86Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -4301,6 +4331,17 @@ func (p *TQueryOptions) fastWriteField85(buf []byte, binaryWriter bthrift.Binary
 	return offset
 }
 
+func (p *TQueryOptions) fastWriteField86(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetAnalyzeTimeout() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "analyze_timeout", thrift.I32, 86)
+		offset += bthrift.Binary.WriteI32(buf[offset:], p.AnalyzeTimeout)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TQueryOptions) field1Length() int {
 	l := 0
 	if p.IsSetAbortOnError() {
@@ -5130,6 +5171,17 @@ func (p *TQueryOptions) field85Length() int {
 	if p.IsSetEnablePageCache() {
 		l += bthrift.Binary.FieldBeginLength("enable_page_cache", thrift.BOOL, 85)
 		l += bthrift.Binary.BoolLength(p.EnablePageCache)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field86Length() int {
+	l := 0
+	if p.IsSetAnalyzeTimeout() {
+		l += bthrift.Binary.FieldBeginLength("analyze_timeout", thrift.I32, 86)
+		l += bthrift.Binary.I32Length(p.AnalyzeTimeout)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -8819,6 +8871,20 @@ func (p *TExecPlanFragmentParams) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 25:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField25(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -9213,6 +9279,19 @@ func (p *TExecPlanFragmentParams) FastReadField24(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TExecPlanFragmentParams) FastReadField25(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.WalId = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TExecPlanFragmentParams) FastWrite(buf []byte) int {
 	return 0
@@ -9230,6 +9309,7 @@ func (p *TExecPlanFragmentParams) FastWriteNocopy(buf []byte, binaryWriter bthri
 		offset += p.fastWriteField18(buf[offset:], binaryWriter)
 		offset += p.fastWriteField20(buf[offset:], binaryWriter)
 		offset += p.fastWriteField21(buf[offset:], binaryWriter)
+		offset += p.fastWriteField25(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -9280,6 +9360,7 @@ func (p *TExecPlanFragmentParams) BLength() int {
 		l += p.field22Length()
 		l += p.field23Length()
 		l += p.field24Length()
+		l += p.field25Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -9555,6 +9636,17 @@ func (p *TExecPlanFragmentParams) fastWriteField24(buf []byte, binaryWriter bthr
 	return offset
 }
 
+func (p *TExecPlanFragmentParams) fastWriteField25(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetWalId() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "wal_id", thrift.I64, 25)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.WalId)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TExecPlanFragmentParams) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("protocol_version", thrift.I32, 1)
@@ -9811,6 +9903,17 @@ func (p *TExecPlanFragmentParams) field24Length() int {
 			l += v.BLength()
 		}
 		l += bthrift.Binary.MapEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TExecPlanFragmentParams) field25Length() int {
+	l := 0
+	if p.IsSetWalId() {
+		l += bthrift.Binary.FieldBeginLength("wal_id", thrift.I64, 25)
+		l += bthrift.Binary.I64Length(*p.WalId)
+
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l

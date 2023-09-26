@@ -575,6 +575,20 @@ func (p *TResultFileSinkOptions) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 17:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField17(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -949,6 +963,19 @@ func (p *TResultFileSinkOptions) FastReadField16(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TResultFileSinkOptions) FastReadField17(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.FileSuffix = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TResultFileSinkOptions) FastWrite(buf []byte) int {
 	return 0
@@ -974,6 +1001,7 @@ func (p *TResultFileSinkOptions) FastWriteNocopy(buf []byte, binaryWriter bthrif
 		offset += p.fastWriteField12(buf[offset:], binaryWriter)
 		offset += p.fastWriteField14(buf[offset:], binaryWriter)
 		offset += p.fastWriteField15(buf[offset:], binaryWriter)
+		offset += p.fastWriteField17(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -1000,6 +1028,7 @@ func (p *TResultFileSinkOptions) BLength() int {
 		l += p.field14Length()
 		l += p.field15Length()
 		l += p.field16Length()
+		l += p.field17Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -1230,6 +1259,17 @@ func (p *TResultFileSinkOptions) fastWriteField16(buf []byte, binaryWriter bthri
 	return offset
 }
 
+func (p *TResultFileSinkOptions) fastWriteField17(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetFileSuffix() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "file_suffix", thrift.STRING, 17)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.FileSuffix)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TResultFileSinkOptions) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("file_path", thrift.STRING, 1)
@@ -1424,6 +1464,17 @@ func (p *TResultFileSinkOptions) field16Length() int {
 	if p.IsSetDeleteExistingFiles() {
 		l += bthrift.Binary.FieldBeginLength("delete_existing_files", thrift.BOOL, 16)
 		l += bthrift.Binary.BoolLength(*p.DeleteExistingFiles)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TResultFileSinkOptions) field17Length() int {
+	l := 0
+	if p.IsSetFileSuffix() {
+		l += bthrift.Binary.FieldBeginLength("file_suffix", thrift.STRING, 17)
+		l += bthrift.Binary.StringLengthNocopy(*p.FileSuffix)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -5259,6 +5310,34 @@ func (p *TOlapTableSink) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 19:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField19(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 20:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField20(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -5590,6 +5669,32 @@ func (p *TOlapTableSink) FastReadField18(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TOlapTableSink) FastReadField19(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.TxnTimeoutS = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TOlapTableSink) FastReadField20(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.WriteFileCache = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TOlapTableSink) FastWrite(buf []byte) int {
 	return 0
@@ -5609,6 +5714,8 @@ func (p *TOlapTableSink) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binary
 		offset += p.fastWriteField15(buf[offset:], binaryWriter)
 		offset += p.fastWriteField16(buf[offset:], binaryWriter)
 		offset += p.fastWriteField17(buf[offset:], binaryWriter)
+		offset += p.fastWriteField19(buf[offset:], binaryWriter)
+		offset += p.fastWriteField20(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField8(buf[offset:], binaryWriter)
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
@@ -5645,6 +5752,8 @@ func (p *TOlapTableSink) BLength() int {
 		l += p.field16Length()
 		l += p.field17Length()
 		l += p.field18Length()
+		l += p.field19Length()
+		l += p.field20Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -5821,6 +5930,28 @@ func (p *TOlapTableSink) fastWriteField18(buf []byte, binaryWriter bthrift.Binar
 	return offset
 }
 
+func (p *TOlapTableSink) fastWriteField19(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTxnTimeoutS() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "txn_timeout_s", thrift.I64, 19)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.TxnTimeoutS)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TOlapTableSink) fastWriteField20(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetWriteFileCache() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "write_file_cache", thrift.BOOL, 20)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.WriteFileCache)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TOlapTableSink) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("load_id", thrift.STRUCT, 1)
@@ -5986,6 +6117,28 @@ func (p *TOlapTableSink) field18Length() int {
 	if p.IsSetSlaveLocation() {
 		l += bthrift.Binary.FieldBeginLength("slave_location", thrift.STRUCT, 18)
 		l += p.SlaveLocation.BLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TOlapTableSink) field19Length() int {
+	l := 0
+	if p.IsSetTxnTimeoutS() {
+		l += bthrift.Binary.FieldBeginLength("txn_timeout_s", thrift.I64, 19)
+		l += bthrift.Binary.I64Length(*p.TxnTimeoutS)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TOlapTableSink) field20Length() int {
+	l := 0
+	if p.IsSetWriteFileCache() {
+		l += bthrift.Binary.FieldBeginLength("write_file_cache", thrift.BOOL, 20)
+		l += bthrift.Binary.BoolLength(*p.WriteFileCache)
+
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l

@@ -1337,6 +1337,34 @@ func (p *TFinishTaskRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 17:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField17(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 18:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField18(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1710,6 +1738,86 @@ func (p *TFinishTaskRequest) FastReadField16(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TFinishTaskRequest) FastReadField17(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := bthrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.SuccTablets = make(map[types.TTabletId]types.TVersion, size)
+	for i := 0; i < size; i++ {
+		var _key types.TTabletId
+		if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_key = v
+
+		}
+
+		var _val types.TVersion
+		if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_val = v
+
+		}
+
+		p.SuccTablets[_key] = _val
+	}
+	if l, err := bthrift.Binary.ReadMapEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
+func (p *TFinishTaskRequest) FastReadField18(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := bthrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.TabletIdToDeltaNumRows = make(map[int64]int64, size)
+	for i := 0; i < size; i++ {
+		var _key int64
+		if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_key = v
+
+		}
+
+		var _val int64
+		if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_val = v
+
+		}
+
+		p.TabletIdToDeltaNumRows[_key] = _val
+	}
+	if l, err := bthrift.Binary.ReadMapEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TFinishTaskRequest) FastWrite(buf []byte) int {
 	return 0
@@ -1735,6 +1843,8 @@ func (p *TFinishTaskRequest) FastWriteNocopy(buf []byte, binaryWriter bthrift.Bi
 		offset += p.fastWriteField12(buf[offset:], binaryWriter)
 		offset += p.fastWriteField13(buf[offset:], binaryWriter)
 		offset += p.fastWriteField14(buf[offset:], binaryWriter)
+		offset += p.fastWriteField17(buf[offset:], binaryWriter)
+		offset += p.fastWriteField18(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -1761,6 +1871,8 @@ func (p *TFinishTaskRequest) BLength() int {
 		l += p.field14Length()
 		l += p.field15Length()
 		l += p.field16Length()
+		l += p.field17Length()
+		l += p.field18Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -1983,6 +2095,50 @@ func (p *TFinishTaskRequest) fastWriteField16(buf []byte, binaryWriter bthrift.B
 	return offset
 }
 
+func (p *TFinishTaskRequest) fastWriteField17(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetSuccTablets() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "succ_tablets", thrift.MAP, 17)
+		mapBeginOffset := offset
+		offset += bthrift.Binary.MapBeginLength(thrift.I64, thrift.I64, 0)
+		var length int
+		for k, v := range p.SuccTablets {
+			length++
+
+			offset += bthrift.Binary.WriteI64(buf[offset:], k)
+
+			offset += bthrift.Binary.WriteI64(buf[offset:], v)
+
+		}
+		bthrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.I64, thrift.I64, length)
+		offset += bthrift.Binary.WriteMapEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TFinishTaskRequest) fastWriteField18(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTabletIdToDeltaNumRows() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "tablet_id_to_delta_num_rows", thrift.MAP, 18)
+		mapBeginOffset := offset
+		offset += bthrift.Binary.MapBeginLength(thrift.I64, thrift.I64, 0)
+		var length int
+		for k, v := range p.TabletIdToDeltaNumRows {
+			length++
+
+			offset += bthrift.Binary.WriteI64(buf[offset:], k)
+
+			offset += bthrift.Binary.WriteI64(buf[offset:], v)
+
+		}
+		bthrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.I64, thrift.I64, length)
+		offset += bthrift.Binary.WriteMapEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TFinishTaskRequest) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("backend", thrift.STRUCT, 1)
@@ -2166,6 +2322,34 @@ func (p *TFinishTaskRequest) field16Length() int {
 		l += bthrift.Binary.FieldBeginLength("copy_time_ms", thrift.I64, 16)
 		l += bthrift.Binary.I64Length(*p.CopyTimeMs)
 
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TFinishTaskRequest) field17Length() int {
+	l := 0
+	if p.IsSetSuccTablets() {
+		l += bthrift.Binary.FieldBeginLength("succ_tablets", thrift.MAP, 17)
+		l += bthrift.Binary.MapBeginLength(thrift.I64, thrift.I64, len(p.SuccTablets))
+		var tmpK types.TTabletId
+		var tmpV types.TVersion
+		l += (bthrift.Binary.I64Length(int64(tmpK)) + bthrift.Binary.I64Length(int64(tmpV))) * len(p.SuccTablets)
+		l += bthrift.Binary.MapEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TFinishTaskRequest) field18Length() int {
+	l := 0
+	if p.IsSetTabletIdToDeltaNumRows() {
+		l += bthrift.Binary.FieldBeginLength("tablet_id_to_delta_num_rows", thrift.MAP, 18)
+		l += bthrift.Binary.MapBeginLength(thrift.I64, thrift.I64, len(p.TabletIdToDeltaNumRows))
+		var tmpK int64
+		var tmpV int64
+		l += (bthrift.Binary.I64Length(int64(tmpK)) + bthrift.Binary.I64Length(int64(tmpV))) * len(p.TabletIdToDeltaNumRows)
+		l += bthrift.Binary.MapEndLength()
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l
