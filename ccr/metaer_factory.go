@@ -4,14 +4,14 @@ import (
 	"github.com/selectdb/ccr_syncer/ccr/base"
 )
 
-type IMetaFactory interface {
+type MetaerFactory interface {
 	NewMeta(tableSpec *base.Spec) Metaer
 }
 
 type MetaFactory struct {
 }
 
-func NewMetaFactory() IMetaFactory {
+func NewMetaFactory() MetaerFactory {
 	return &MetaFactory{}
 }
 

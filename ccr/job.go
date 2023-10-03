@@ -122,10 +122,10 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 	job := &Job{
 		Name:              name,
 		Src:               src,
-		ISrc:              iSpecFactory.NewISpec(&src),
+		ISrc:              iSpecFactory.NewSpecer(&src),
 		srcMeta:           metaFactory.NewMeta(&jobContext.src),
 		Dest:              dest,
-		IDest:             iSpecFactory.NewISpec(&dest),
+		IDest:             iSpecFactory.NewSpecer(&dest),
 		destMeta:          metaFactory.NewMeta(&jobContext.dest),
 		State:             JobRunning,
 		destSrcTableIdMap: make(map[int64]int64),
@@ -156,8 +156,8 @@ func NewJobFromJson(jsonData string, db storage.DB, factory *Factory) (*Job, err
 	if err != nil {
 		return nil, xerror.Wrapf(err, xerror.Normal, "unmarshal json failed, json: %s", jsonData)
 	}
-	job.ISrc = factory.ISpecFactory.NewISpec(&job.Src)
-	job.IDest = factory.ISpecFactory.NewISpec(&job.Dest)
+	job.ISrc = factory.ISpecFactory.NewSpecer(&job.Src)
+	job.IDest = factory.ISpecFactory.NewSpecer(&job.Dest)
 	job.srcMeta = factory.MetaFactory.NewMeta(&job.Src)
 	job.destMeta = factory.MetaFactory.NewMeta(&job.Dest)
 	job.destSrcTableIdMap = make(map[int64]int64)
