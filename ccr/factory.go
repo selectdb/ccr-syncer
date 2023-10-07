@@ -7,11 +7,11 @@ import (
 
 type Factory struct {
 	RpcFactory   rpc.IRpcFactory
-	MetaFactory  IMetaFactory
-	ISpecFactory base.ISpecFactory
+	MetaFactory  MetaerFactory
+	ISpecFactory base.SpecerFactory
 }
 
-func NewFactory(rpcFactory rpc.IRpcFactory, metaFactory IMetaFactory, ISpecFactory base.ISpecFactory) *Factory {
+func NewFactory(rpcFactory rpc.IRpcFactory, metaFactory MetaerFactory, ISpecFactory base.SpecerFactory) *Factory {
 	return &Factory{
 		RpcFactory:   rpcFactory,
 		MetaFactory:  metaFactory,

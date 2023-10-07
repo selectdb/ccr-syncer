@@ -7,10 +7,12 @@ import (
 	"testing"
 
 	"github.com/selectdb/ccr_syncer/ccr/base"
+	"github.com/selectdb/ccr_syncer/ccr/record"
 	"github.com/selectdb/ccr_syncer/rpc"
 	bestruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/backendservice"
 	festruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/frontendservice"
 	"github.com/selectdb/ccr_syncer/rpc/kitex_gen/status"
+	ttypes "github.com/selectdb/ccr_syncer/rpc/kitex_gen/types"
 	"github.com/selectdb/ccr_syncer/test_util"
 	"github.com/selectdb/ccr_syncer/xerror"
 	"github.com/tidwall/btree"
@@ -294,6 +296,24 @@ func newUpsertData(ctx context.Context) (string, error) {
 	}
 }
 
+type inMemoryData struct {
+	CommitSeq    int64                       `json:"commit_seq"`
+	TxnId        int64                       `json:"txn_id"`
+	DestTableIds []int64                     `json:"dest_table_ids"`
+	TableRecords []*record.TableRecord       `json:"table_records"`
+	CommitInfos  []*ttypes.TTabletCommitInfo `json:"commit_infos"`
+}
+
+func upateInMemory(jobProgress *JobProgress) error {
+	persistData := jobProgress.PersistData
+	inMemoryData := &inMemoryData{}
+	if err := json.Unmarshal([]byte(persistData), inMemoryData); err != nil {
+		return xerror.Errorf(xerror.Normal, "unmarshal persistData failed, persistData: %s", persistData)
+	}
+	jobProgress.InMemoryData = inMemoryData
+	return nil
+}
+
 func TestHandleUpsertInTableSync(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -322,16 +342,23 @@ func TestHandleUpsertInTableSync(t *testing.T) {
 			if err := json.Unmarshal([]byte(progressJson), &jobProgress); err != nil {
 				t.Error(err)
 			}
-			// lse if jobProgress.TransactionId != txnId {
-			// 	t.Errorf("UnExpect TransactionId %v, need %v", jobProgress.TransactionId, txnId)
-			// }
+			if err := upateInMemory(&jobProgress); err != nil {
+				t.Error(err)
+			}
+
+			inMemoryData := jobProgress.InMemoryData.(*inMemoryData)
+			if inMemoryData.TxnId != txnId {
+				t.Errorf("txnId missmatch: expect %d, but get %d", txnId, inMemoryData.TxnId)
+			}
 			return nil
 		})
 
+	db.EXPECT().UpdateProgress("Test", gomock.Any()).Return(nil).Times(2)
+
 	// init factory
 	rpcFactory := NewMockIRpcFactory(ctrl)
-	metaFactory := NewMockIMetaFactory(ctrl)
-	factory := NewFactory(rpcFactory, metaFactory, base.NewISpecFactory())
+	metaFactory := NewMockMetaerFactory(ctrl)
+	factory := NewFactory(rpcFactory, metaFactory, base.NewSpecerFactory())
 
 	// init rpcFactory
 	rpcFactory.EXPECT().NewFeRpc(&tblDestSpec).DoAndReturn(func(_ *base.Spec) (rpc.IFeRpc, error) {
@@ -348,6 +375,10 @@ func TestHandleUpsertInTableSync(t *testing.T) {
 				JobStatus: nil,
 				DbId:      &tblDestSpec.DbId,
 			}, nil)
+		return mockFeRpc, nil
+	})
+	rpcFactory.EXPECT().NewFeRpc(&tblDestSpec).DoAndReturn(func(_ *base.Spec) (rpc.IFeRpc, error) {
+		mockFeRpc := NewMockIFeRpc(ctrl)
 		mockFeRpc.EXPECT().CommitTransaction(&tblDestSpec, txnId, gomock.Any()).Return(
 			&festruct.TCommitTxnResult_{
 				Status: &status.TStatus{
@@ -388,7 +419,7 @@ func TestHandleUpsertInTableSync(t *testing.T) {
 
 	// init metaFactory
 	metaFactory.EXPECT().NewMeta(&tblSrcSpec).DoAndReturn(func(_ *base.Spec) Metaer {
-		mockMeta := NewMockIMeta(ctrl)
+		mockMeta := NewMockMetaer(ctrl)
 
 		mockMeta.EXPECT().GetBackendMap().Return(backendMap, nil)
 		mockMeta.EXPECT().GetPartitionRangeMap(tblSrcSpec.TableId).DoAndReturn(
@@ -407,7 +438,7 @@ func TestHandleUpsertInTableSync(t *testing.T) {
 		return mockMeta
 	})
 	metaFactory.EXPECT().NewMeta(&tblDestSpec).DoAndReturn(func(_ *base.Spec) Metaer {
-		mockMeta := NewMockIMeta(ctrl)
+		mockMeta := NewMockMetaer(ctrl)
 		mockMeta.EXPECT().GetBackendMap().Return(backendMap, nil)
 		mockMeta.EXPECT().GetPartitionRangeMap(tblDestSpec.TableId).DoAndReturn(
 			func(tableId int64) (map[string]*PartitionMeta, error) {
@@ -435,6 +466,8 @@ func TestHandleUpsertInTableSync(t *testing.T) {
 		t.Error(err)
 	}
 	job.progress = NewJobProgress("Test", job.SyncType, db)
+	job.progress.SyncState = TableIncrementalSync
+	job.progress.SubSyncState = Done
 
 	// init binlog
 	tableIds := make([]int64, 0, 1)
@@ -489,16 +522,24 @@ func TestHandleUpsertInDbSync(t *testing.T) {
 			var jobProgress JobProgress
 			if err := json.Unmarshal([]byte(progressJson), &jobProgress); err != nil {
 				t.Error(err)
-			} else if jobProgress.TransactionId != txnId {
-				t.Errorf("UnExpect TransactionId %v, need %v", jobProgress.TransactionId, txnId)
+			}
+			if err := upateInMemory(&jobProgress); err != nil {
+				t.Error(err)
+			}
+
+			inMemoryData := jobProgress.InMemoryData.(*inMemoryData)
+			if inMemoryData.TxnId != txnId {
+				t.Errorf("txnId missmatch: expect %d, but get %d", txnId, inMemoryData.TxnId)
 			}
 			return nil
 		})
 
+	db.EXPECT().UpdateProgress("Test", gomock.Any()).Return(nil).Times(2)
+
 	// init factory
 	rpcFactory := NewMockIRpcFactory(ctrl)
-	metaFactory := NewMockIMetaFactory(ctrl)
-	factory := NewFactory(rpcFactory, metaFactory, base.NewISpecFactory())
+	metaFactory := NewMockMetaerFactory(ctrl)
+	factory := NewFactory(rpcFactory, metaFactory, base.NewSpecerFactory())
 
 	// init rpcFactory
 	rpcFactory.EXPECT().NewFeRpc(&dbDestSpec).DoAndReturn(func(_ *base.Spec) (rpc.IFeRpc, error) {
@@ -515,6 +556,10 @@ func TestHandleUpsertInDbSync(t *testing.T) {
 				JobStatus: nil,
 				DbId:      &dbDestSpec.DbId,
 			}, nil)
+		return mockFeRpc, nil
+	})
+	rpcFactory.EXPECT().NewFeRpc(&dbDestSpec).DoAndReturn(func(_ *base.Spec) (rpc.IFeRpc, error) {
+		mockFeRpc := NewMockIFeRpc(ctrl)
 		mockFeRpc.EXPECT().CommitTransaction(&dbDestSpec, txnId, gomock.Any()).Return(
 			&festruct.TCommitTxnResult_{
 				Status: &status.TStatus{
@@ -555,7 +600,7 @@ func TestHandleUpsertInDbSync(t *testing.T) {
 
 	// init metaFactory
 	metaFactory.EXPECT().NewMeta(&dbSrcSpec).DoAndReturn(func(_ *base.Spec) Metaer {
-		mockMeta := NewMockIMeta(ctrl)
+		mockMeta := NewMockMetaer(ctrl)
 
 		mockMeta.EXPECT().GetBackendMap().Return(backendMap, nil)
 		mockMeta.EXPECT().GetTableNameById(tableBaseId).Return(fmt.Sprint(tableBaseId), nil)
@@ -575,7 +620,7 @@ func TestHandleUpsertInDbSync(t *testing.T) {
 		return mockMeta
 	})
 	metaFactory.EXPECT().NewMeta(&dbDestSpec).DoAndReturn(func(_ *base.Spec) Metaer {
-		mockMeta := NewMockIMeta(ctrl)
+		mockMeta := NewMockMetaer(ctrl)
 		mockMeta.EXPECT().GetBackendMap().Return(backendMap, nil)
 		mockMeta.EXPECT().GetTableId(fmt.Sprint(tableBaseId)).Return(tableBaseId, nil)
 		mockMeta.EXPECT().GetPartitionRangeMap(tblDestSpec.TableId).DoAndReturn(
@@ -604,6 +649,8 @@ func TestHandleUpsertInDbSync(t *testing.T) {
 		t.Error(err)
 	}
 	job.progress = NewJobProgress("Test", job.SyncType, db)
+	job.progress.SyncState = DBIncrementalSync
+	job.progress.SubSyncState = Done
 
 	// init binlog
 	tableIds := make([]int64, 0, 1)
@@ -643,17 +690,17 @@ func TestHandleAddPartitionInTableSync(t *testing.T) {
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 
 	// init factory
-	iSpecFactory := NewMockISpecFactory(ctrl)
+	iSpecFactory := NewMockSpecerFactory(ctrl)
 	factory := NewFactory(rpc.NewRpcFactory(), NewMetaFactory(), iSpecFactory)
 
 	// init iSpecFactory
-	iSpecFactory.EXPECT().NewISpec(&tblSrcSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
-		mockISpec := NewMockISpec(ctrl)
+	iSpecFactory.EXPECT().NewSpecer(&tblSrcSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
+		mockISpec := NewMockSpecer(ctrl)
 		mockISpec.EXPECT().Valid().Return(nil)
 		return mockISpec
 	})
-	iSpecFactory.EXPECT().NewISpec(&tblDestSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
-		mockISpec := NewMockISpec(ctrl)
+	iSpecFactory.EXPECT().NewSpecer(&tblDestSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
+		mockISpec := NewMockSpecer(ctrl)
 		fullSql := fmt.Sprintf("ALTER TABLE %s.%s %s", tblDestSpec.Database, tblDestSpec.Table, testSql)
 		mockISpec.EXPECT().Exec(fullSql).Return(nil)
 		mockISpec.EXPECT().Valid().Return(nil)
@@ -699,26 +746,26 @@ func TestHandleAddPartitionInDbSync(t *testing.T) {
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 
 	// init factory
-	metaFactory := NewMockIMetaFactory(ctrl)
-	iSpecFactory := NewMockISpecFactory(ctrl)
+	metaFactory := NewMockMetaerFactory(ctrl)
+	iSpecFactory := NewMockSpecerFactory(ctrl)
 	factory := NewFactory(rpc.NewRpcFactory(), metaFactory, iSpecFactory)
 
 	// init metaFactory
-	metaFactory.EXPECT().NewMeta(&dbSrcSpec).Return(NewMockIMeta(ctrl))
+	metaFactory.EXPECT().NewMeta(&dbSrcSpec).Return(NewMockMetaer(ctrl))
 	metaFactory.EXPECT().NewMeta(&dbDestSpec).DoAndReturn(func(_ *base.Spec) Metaer {
-		mockMeta := NewMockIMeta(ctrl)
+		mockMeta := NewMockMetaer(ctrl)
 		mockMeta.EXPECT().GetTableNameById(tableBaseId).Return(fmt.Sprint(tableBaseId), nil)
 		return mockMeta
 	})
 
 	// init iSpecFactory
-	iSpecFactory.EXPECT().NewISpec(&dbSrcSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
-		mockISpec := NewMockISpec(ctrl)
+	iSpecFactory.EXPECT().NewSpecer(&dbSrcSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
+		mockISpec := NewMockSpecer(ctrl)
 		mockISpec.EXPECT().Valid().Return(nil)
 		return mockISpec
 	})
-	iSpecFactory.EXPECT().NewISpec(&dbDestSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
-		mockISpec := NewMockISpec(ctrl)
+	iSpecFactory.EXPECT().NewSpecer(&dbDestSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
+		mockISpec := NewMockSpecer(ctrl)
 		fullSql := fmt.Sprintf("ALTER TABLE %s.%s %s", dbDestSpec.Database, fmt.Sprint(tableBaseId), testSql)
 		mockISpec.EXPECT().Exec(fullSql).Return(nil)
 		mockISpec.EXPECT().Valid().Return(nil)
@@ -764,17 +811,17 @@ func TestHandleDropPartitionInTableSync(t *testing.T) {
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 
 	// init factory
-	iSpecFactory := NewMockISpecFactory(ctrl)
+	iSpecFactory := NewMockSpecerFactory(ctrl)
 	factory := NewFactory(rpc.NewRpcFactory(), NewMetaFactory(), iSpecFactory)
 
 	// init iSpecFactory
-	iSpecFactory.EXPECT().NewISpec(&tblSrcSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
-		mockISpec := NewMockISpec(ctrl)
+	iSpecFactory.EXPECT().NewSpecer(&tblSrcSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
+		mockISpec := NewMockSpecer(ctrl)
 		mockISpec.EXPECT().Valid().Return(nil)
 		return mockISpec
 	})
-	iSpecFactory.EXPECT().NewISpec(&tblDestSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
-		mockISpec := NewMockISpec(ctrl)
+	iSpecFactory.EXPECT().NewSpecer(&tblDestSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
+		mockISpec := NewMockSpecer(ctrl)
 		fullSql := fmt.Sprintf("ALTER TABLE %s.%s %s", tblDestSpec.Database, tblDestSpec.Table, testSql)
 		mockISpec.EXPECT().Exec(fullSql).Return(nil)
 		mockISpec.EXPECT().Valid().Return(nil)
@@ -820,26 +867,26 @@ func TestHandleDropPartitionInDbSync(t *testing.T) {
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 
 	// init factory
-	metaFactory := NewMockIMetaFactory(ctrl)
-	iSpecFactory := NewMockISpecFactory(ctrl)
+	metaFactory := NewMockMetaerFactory(ctrl)
+	iSpecFactory := NewMockSpecerFactory(ctrl)
 	factory := NewFactory(rpc.NewRpcFactory(), metaFactory, iSpecFactory)
 
 	// init metaFactory
-	metaFactory.EXPECT().NewMeta(&dbSrcSpec).Return(NewMockIMeta(ctrl))
+	metaFactory.EXPECT().NewMeta(&dbSrcSpec).Return(NewMockMetaer(ctrl))
 	metaFactory.EXPECT().NewMeta(&dbDestSpec).DoAndReturn(func(_ *base.Spec) Metaer {
-		mockMeta := NewMockIMeta(ctrl)
+		mockMeta := NewMockMetaer(ctrl)
 		mockMeta.EXPECT().GetTableNameById(tableBaseId).Return(fmt.Sprint(tableBaseId), nil)
 		return mockMeta
 	})
 
 	// init iSpecFactory
-	iSpecFactory.EXPECT().NewISpec(&dbSrcSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
-		mockISpec := NewMockISpec(ctrl)
+	iSpecFactory.EXPECT().NewSpecer(&dbSrcSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
+		mockISpec := NewMockSpecer(ctrl)
 		mockISpec.EXPECT().Valid().Return(nil)
 		return mockISpec
 	})
-	iSpecFactory.EXPECT().NewISpec(&dbDestSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
-		mockISpec := NewMockISpec(ctrl)
+	iSpecFactory.EXPECT().NewSpecer(&dbDestSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
+		mockISpec := NewMockSpecer(ctrl)
 		fullSql := fmt.Sprintf("ALTER TABLE %s.%s %s", dbDestSpec.Database, fmt.Sprint(tableBaseId), testSql)
 		mockISpec.EXPECT().Exec(fullSql).Return(nil)
 		mockISpec.EXPECT().Valid().Return(nil)
@@ -885,30 +932,30 @@ func TestHandleCreateTable(t *testing.T) {
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 
 	// init factory
-	metaFactory := NewMockIMetaFactory(ctrl)
-	iSpecFactory := NewMockISpecFactory(ctrl)
+	metaFactory := NewMockMetaerFactory(ctrl)
+	iSpecFactory := NewMockSpecerFactory(ctrl)
 	factory := NewFactory(rpc.NewRpcFactory(), metaFactory, iSpecFactory)
 
 	// init metaFactory
 	metaFactory.EXPECT().NewMeta(&dbSrcSpec).DoAndReturn(func(_ *base.Spec) Metaer {
-		mockMeta := NewMockIMeta(ctrl)
+		mockMeta := NewMockMetaer(ctrl)
 		mockMeta.EXPECT().GetTables().Return(make(map[int64]*TableMeta), nil)
 		return mockMeta
 	})
 	metaFactory.EXPECT().NewMeta(&dbDestSpec).DoAndReturn(func(_ *base.Spec) Metaer {
-		mockMeta := NewMockIMeta(ctrl)
+		mockMeta := NewMockMetaer(ctrl)
 		mockMeta.EXPECT().GetTables().Return(make(map[int64]*TableMeta), nil)
 		return mockMeta
 	})
 
 	// init iSpecFactory
-	iSpecFactory.EXPECT().NewISpec(&dbSrcSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
-		mockISpec := NewMockISpec(ctrl)
+	iSpecFactory.EXPECT().NewSpecer(&dbSrcSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
+		mockISpec := NewMockSpecer(ctrl)
 		mockISpec.EXPECT().Valid().Return(nil)
 		return mockISpec
 	})
-	iSpecFactory.EXPECT().NewISpec(&dbDestSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
-		mockISpec := NewMockISpec(ctrl)
+	iSpecFactory.EXPECT().NewSpecer(&dbDestSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
+		mockISpec := NewMockSpecer(ctrl)
 		mockISpec.EXPECT().DbExec(testSql).Return(nil)
 		mockISpec.EXPECT().Valid().Return(nil)
 		return mockISpec
@@ -954,30 +1001,30 @@ func TestHandleDropTable(t *testing.T) {
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 
 	// init factory
-	metaFactory := NewMockIMetaFactory(ctrl)
-	iSpecFactory := NewMockISpecFactory(ctrl)
+	metaFactory := NewMockMetaerFactory(ctrl)
+	iSpecFactory := NewMockSpecerFactory(ctrl)
 	factory := NewFactory(rpc.NewRpcFactory(), metaFactory, iSpecFactory)
 
 	// init metaFactory
 	metaFactory.EXPECT().NewMeta(&dbSrcSpec).DoAndReturn(func(_ *base.Spec) Metaer {
-		mockMeta := NewMockIMeta(ctrl)
+		mockMeta := NewMockMetaer(ctrl)
 		mockMeta.EXPECT().GetTables().Return(make(map[int64]*TableMeta), nil)
 		return mockMeta
 	})
 	metaFactory.EXPECT().NewMeta(&dbDestSpec).DoAndReturn(func(_ *base.Spec) Metaer {
-		mockMeta := NewMockIMeta(ctrl)
+		mockMeta := NewMockMetaer(ctrl)
 		mockMeta.EXPECT().GetTables().Return(make(map[int64]*TableMeta), nil)
 		return mockMeta
 	})
 
 	// init iSpecFactory
-	iSpecFactory.EXPECT().NewISpec(&dbSrcSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
-		mockISpec := NewMockISpec(ctrl)
+	iSpecFactory.EXPECT().NewSpecer(&dbSrcSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
+		mockISpec := NewMockSpecer(ctrl)
 		mockISpec.EXPECT().Valid().Return(nil)
 		return mockISpec
 	})
-	iSpecFactory.EXPECT().NewISpec(&dbDestSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
-		mockISpec := NewMockISpec(ctrl)
+	iSpecFactory.EXPECT().NewSpecer(&dbDestSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
+		mockISpec := NewMockSpecer(ctrl)
 		dropSql := fmt.Sprintf("DROP TABLE %v FORCE", tableBaseId)
 		mockISpec.EXPECT().DbExec(dropSql).Return(nil)
 		mockISpec.EXPECT().Valid().Return(nil)
@@ -1039,7 +1086,7 @@ func TestHandleDummyInTableSync(t *testing.T) {
 		})
 
 	// init factory
-	factory := NewFactory(rpc.NewRpcFactory(), NewMetaFactory(), base.NewISpecFactory())
+	factory := NewFactory(rpc.NewRpcFactory(), NewMetaFactory(), base.NewSpecerFactory())
 
 	// init job
 	ctx := NewJobContext(tblSrcSpec, tblDestSpec, db, factory)
@@ -1085,7 +1132,7 @@ func TestHandleDummyInDbSync(t *testing.T) {
 		})
 
 	// init factory
-	factory := NewFactory(rpc.NewRpcFactory(), NewMetaFactory(), base.NewISpecFactory())
+	factory := NewFactory(rpc.NewRpcFactory(), NewMetaFactory(), base.NewSpecerFactory())
 
 	// init job
 	ctx := NewJobContext(dbSrcSpec, dbDestSpec, db, factory)
@@ -1135,13 +1182,13 @@ func TestHandleAlterJobInTableSync(t *testing.T) {
 		})
 
 	// init factory
-	metaFactory := NewMockIMetaFactory(ctrl)
-	factory := NewFactory(rpc.NewRpcFactory(), metaFactory, base.NewISpecFactory())
+	metaFactory := NewMockMetaerFactory(ctrl)
+	factory := NewFactory(rpc.NewRpcFactory(), metaFactory, base.NewSpecerFactory())
 
 	// init metaFactory
-	metaFactory.EXPECT().NewMeta(&tblSrcSpec).Return(NewMockIMeta(ctrl))
+	metaFactory.EXPECT().NewMeta(&tblSrcSpec).Return(NewMockMetaer(ctrl))
 	metaFactory.EXPECT().NewMeta(&tblDestSpec).DoAndReturn(func(_ *base.Spec) Metaer {
-		mockMeta := NewMockIMeta(ctrl)
+		mockMeta := NewMockMetaer(ctrl)
 		dropSql := fmt.Sprintf("DROP TABLE %s FORCE", tblDestSpec.Table)
 		mockMeta.EXPECT().DbExec(dropSql).Return(nil)
 		return mockMeta
@@ -1209,13 +1256,13 @@ func TestHandleAlterJobInDbSync(t *testing.T) {
 		})
 
 	// init factory
-	metaFactory := NewMockIMetaFactory(ctrl)
-	factory := NewFactory(rpc.NewRpcFactory(), metaFactory, base.NewISpecFactory())
+	metaFactory := NewMockMetaerFactory(ctrl)
+	factory := NewFactory(rpc.NewRpcFactory(), metaFactory, base.NewSpecerFactory())
 
 	// init metaFactory
-	metaFactory.EXPECT().NewMeta(&dbSrcSpec).Return(NewMockIMeta(ctrl))
+	metaFactory.EXPECT().NewMeta(&dbSrcSpec).Return(NewMockMetaer(ctrl))
 	metaFactory.EXPECT().NewMeta(&dbDestSpec).DoAndReturn(func(_ *base.Spec) Metaer {
-		mockMeta := NewMockIMeta(ctrl)
+		mockMeta := NewMockMetaer(ctrl)
 		dropSql := fmt.Sprintf("DROP TABLE %s FORCE", fmt.Sprint(tableBaseId))
 		mockMeta.EXPECT().DbExec(dropSql).Return(nil)
 		return mockMeta
@@ -1265,17 +1312,17 @@ func TestHandleLightningSchemaChange(t *testing.T) {
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
 
 	// init factory
-	iSpecFactory := NewMockISpecFactory(ctrl)
+	iSpecFactory := NewMockSpecerFactory(ctrl)
 	factory := NewFactory(rpc.NewRpcFactory(), NewMetaFactory(), iSpecFactory)
 
 	// init iSpecFactory
-	iSpecFactory.EXPECT().NewISpec(&tblSrcSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
-		mockISpec := NewMockISpec(ctrl)
+	iSpecFactory.EXPECT().NewSpecer(&tblSrcSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
+		mockISpec := NewMockSpecer(ctrl)
 		mockISpec.EXPECT().Valid().Return(nil)
 		return mockISpec
 	})
-	iSpecFactory.EXPECT().NewISpec(&tblDestSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
-		mockISpec := NewMockISpec(ctrl)
+	iSpecFactory.EXPECT().NewSpecer(&tblDestSpec).DoAndReturn(func(_ *base.Spec) base.Specer {
+		mockISpec := NewMockSpecer(ctrl)
 		execSql := fmt.Sprintf("`%s` a test sql", tblSrcSpec.Table)
 		mockISpec.EXPECT().DbExec(execSql).Return(nil)
 		mockISpec.EXPECT().Valid().Return(nil)
