@@ -247,10 +247,33 @@ suite("test_common") {
     }
     assertTrue(checkSelectTimesOf("SELECT * FROM ${uniqueTable} WHERE test=${test_num}",
                                    insert_num, 30))
-    
 
-    logger.info("=== Test 4: delete job ===")
+    
+    logger.info("=== Test 4: desync job ===")
     test_num = 4
+    httpTest {
+        uri "/desync"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body "${uniqueTable}"
+        body "${bodyJson}"
+        op "post"
+        result respone
+    }
+
+    sleep(sync_gap_time)
+    
+    def res = target_sql "SHOW CREATE TABLE TEST_${context.dbName}.${uniqueTable}"
+    def desynced = false
+    for (List<Object> row : res) {
+        if ((row[0] as String) == "${uniqueTable}") {
+            desynced = (row[1] as String).contains("\"is_being_synced\" = \"false\"")
+            break
+        }
+    }
+    assertTrue(desynced)
+
+    logger.info("=== Test 5: delete job ===")
+    test_num = 5
     httpTest {
         uri "/delete"
         endpoint syncerAddress
