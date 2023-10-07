@@ -301,6 +301,36 @@ suite("test_db_sync") {
                                    insert_num, 30))
 
 
+    logger.info("=== Test 5: desync job ===")
+    test_num = 5
+    httpTest {
+        uri "/desync"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body ""
+        body "${bodyJson}"
+        op "post"
+        result respone
+    }
+
+    sleep(sync_gap_time)
+    
+    def checkDesynced = {tableName -> 
+        def res = target_sql "SHOW CREATE TABLE TEST_${context.dbName}.${tableName}"
+        def desynced = false
+        for (List<Object> row : res) {
+            if ((row[0] as String) == "${tableName}") {
+                desynced = (row[1] as String).contains("\"is_being_synced\" = \"false\"")
+                break
+            }
+        }
+        assertTrue(desynced)
+    }
+
+    checkDesynced(tableUnique0)
+    checkDesynced(tableAggregate0)
+    checkDesynced(tableDuplicate0)
+
+
      logger.info("=== Test 5: delete job ===")
      test_num = 5
      httpTest {

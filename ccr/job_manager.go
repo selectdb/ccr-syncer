@@ -205,3 +205,14 @@ func (jm *JobManager) JobStatus(jobName string) (*JobStatus, error) {
 		return nil, xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
 	}
 }
+
+func (jm *JobManager) Desync(jobName string) error {
+	jm.lock.RLock()
+	defer jm.lock.RUnlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return job.Desync()
+	} else {
+		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
+	}
+}

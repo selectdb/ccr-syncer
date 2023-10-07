@@ -1320,6 +1320,54 @@ func (j *Job) Run() error {
 	return j.run()
 }
 
+func (j *Job) desyncTable() error {
+	log.Debugf("desync table")
+
+	tableName, err := j.destMeta.GetTableNameById(j.Dest.TableId)
+	if err != nil {
+		return err
+	}
+
+	desyncSql := fmt.Sprintf("ALTER TABLE %s SET (\"is_being_synced\"=\"false\")", tableName)
+	log.Debugf("db exec: %s", desyncSql)
+	if err := j.IDest.DbExec(desyncSql); err != nil {
+		return xerror.Wrapf(err, xerror.FE, "failed tables: %s", tableName)
+	}
+	return nil
+}
+
+func (j *Job) desyncDB() error {
+	log.Debugf("desync db")
+
+	var failedTable string = ""
+	tables, err := j.destMeta.GetTables()
+	if err != nil {
+		return err
+	}
+
+	for _, tableMeta := range tables {
+		desyncSql := fmt.Sprintf("ALTER TABLE %s SET (\"is_being_synced\"=\"false\")", tableMeta.Name)
+		log.Debugf("db exec: %s", desyncSql)
+		if err := j.IDest.DbExec(desyncSql); err != nil {
+			failedTable += tableMeta.Name + " "
+		}
+	}
+
+	if failedTable != "" {
+		return xerror.Errorf(xerror.FE, "failed tables: %s", failedTable)
+	}
+
+	return nil
+}
+
+func (j *Job) Desync() error {
+	if j.SyncType == DBSync {
+		return j.desyncDB()
+	} else {
+		return j.desyncTable()
+	}
+}
+
 // stop job
 func (j *Job) Stop() {
 	close(j.stop)

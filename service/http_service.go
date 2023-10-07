@@ -261,6 +261,34 @@ func (s *HttpService) statusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *HttpService) desyncHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("desync job")
+
+	// Parse the JSON request body
+	var request CcrCommonRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if request.Name == "" {
+		http.Error(w, "name is empty", http.StatusBadRequest)
+		return
+	}
+
+	if isRedirected, err := s.isRedirected(request.Name, w); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	} else if isRedirected {
+		return
+	}
+
+	if err := s.jobManager.Desync(request.Name); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Write([]byte("desync success"))
+}
+
 func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/create_ccr", s.createHandler)
 	s.mux.HandleFunc("/get_lag", s.getLagHandler)
@@ -268,6 +296,7 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/resume", s.resumeHandler)
 	s.mux.HandleFunc("/delete", s.deleteHandler)
 	s.mux.HandleFunc("/job_status", s.statusHandler)
+	s.mux.HandleFunc("/desync", s.desyncHandler)
 }
 
 func (s *HttpService) Start() error {
