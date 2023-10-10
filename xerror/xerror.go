@@ -7,44 +7,43 @@ import (
 	"github.com/pkg/errors"
 )
 
-type ErrType int
+// type ErrorCategory int
 
-const (
-	Normal ErrType = iota
-	RPC
-	DB
-	FE
-	BE
-	Meta
+type ErrorCategory interface {
+	Name() string
+}
+
+var (
+	Normal = newErrorCategory("normal")
+	RPC    = newErrorCategory("rpc")
+	DB     = newErrorCategory("db")
+	FE     = newErrorCategory("fe")
+	BE     = newErrorCategory("be")
+	Meta   = newErrorCategory("meta")
 )
 
-func (e ErrType) String() string {
-	switch e {
-	case Normal:
-		return "normal"
-	case RPC:
-		return "rpc"
-	case DB:
-		return "db"
-	case FE:
-		return "fe"
-	case BE:
-		return "be"
-	case Meta:
-		return "meta"
-	default:
-		return "unknown"
+type xErrorCategory struct {
+	name string
+}
+
+func (e xErrorCategory) Name() string {
+	return e.name
+}
+
+func newErrorCategory(name string) ErrorCategory {
+	return &xErrorCategory{
+		name: name,
 	}
 }
 
-type ErrLevel int
+type errType int
 
 const (
-	xrecoverable ErrLevel = iota
+	xrecoverable errType = iota
 	xpanic
 )
 
-func (e ErrLevel) String() string {
+func (e errType) String() string {
 	switch e {
 	case xrecoverable:
 		return "Recoverable"
@@ -59,9 +58,13 @@ func (e ErrLevel) String() string {
 
 // a wrapped error with error type
 type XError struct {
-	ErrType  ErrType
-	errLevel ErrLevel
+	category ErrorCategory
+	errType  errType
 	err      error
+}
+
+func (e *XError) Category() ErrorCategory {
+	return e.category
 }
 
 func (e *XError) Error() string {
@@ -69,7 +72,7 @@ func (e *XError) Error() string {
 		return xerr.Error()
 	}
 
-	return fmt.Sprintf("%s: %s", e.ErrType.String(), e.err.Error())
+	return fmt.Sprintf("%s: %s", e.category.Name(), e.err.Error())
 }
 
 func (e *XError) Unwrap() error {
@@ -77,102 +80,102 @@ func (e *XError) Unwrap() error {
 }
 
 func (e *XError) IsRecoverable() bool {
-	return e.errLevel == xrecoverable
+	return e.errType == xrecoverable
 }
 
 func (e *XError) IsPanic() bool {
-	return e.errLevel == xpanic
+	return e.errType == xpanic
 }
 
-func New(errType ErrType, message string) error {
+func New(errCategory ErrorCategory, message string) error {
 	err := &XError{
-		ErrType:  errType,
-		errLevel: xrecoverable,
+		category: errCategory,
+		errType:  xrecoverable,
 		err:      stderrors.New(message),
 	}
 	return errors.WithStack(err)
 }
 
-func XNew(errType ErrType, message string) *XError {
+func XNew(errCategory ErrorCategory, message string) *XError {
 	err := &XError{
-		ErrType:  errType,
-		errLevel: xrecoverable,
+		category: errCategory,
+		errType:  xrecoverable,
 		err:      stderrors.New(message),
 	}
 	return err
 }
 
-func Panic(errType ErrType, message string) error {
+func Panic(errCategory ErrorCategory, message string) error {
 	err := &XError{
-		ErrType:  errType,
-		errLevel: xpanic,
+		category: errCategory,
+		errType:  xpanic,
 		err:      stderrors.New(message),
 	}
 	return errors.WithStack(err)
 }
 
-func Errorf(errType ErrType, format string, args ...interface{}) error {
+func Errorf(errCategory ErrorCategory, format string, args ...interface{}) error {
 	err := &XError{
-		ErrType:  errType,
-		errLevel: xrecoverable,
+		category: errCategory,
+		errType:  xrecoverable,
 		err:      fmt.Errorf(format, args...),
 	}
 	return errors.WithStack(err)
 }
 
-func Panicf(errType ErrType, format string, args ...interface{}) error {
+func Panicf(errCategory ErrorCategory, format string, args ...interface{}) error {
 	err := &XError{
-		ErrType:  errType,
-		errLevel: xpanic,
+		category: errCategory,
+		errType:  xpanic,
 		err:      fmt.Errorf(format, args...),
 	}
 	return errors.WithStack(err)
 }
 
-func wrap(err error, errType ErrType, errLevel ErrLevel, message string) error {
+func wrap(err error, errCategory ErrorCategory, errLevel errType, message string) error {
 	if err == nil {
 		return nil
 	}
 
 	err = &XError{
-		ErrType:  errType,
-		errLevel: errLevel,
+		category: errCategory,
+		errType:  errLevel,
 		err:      err,
 	}
 	return errors.Wrap(err, message)
 }
 
-func Wrap(err error, errType ErrType, message string) error {
-	return wrap(err, errType, xrecoverable, message)
+func Wrap(err error, errCategory ErrorCategory, message string) error {
+	return wrap(err, errCategory, xrecoverable, message)
 }
 
-func PanicWrap(err error, errType ErrType, message string) error {
-	return wrap(err, errType, xpanic, message)
+func PanicWrap(err error, errCategory ErrorCategory, message string) error {
+	return wrap(err, errCategory, xpanic, message)
 }
 
-func wrapf(err error, errType ErrType, errLevel ErrLevel, format string, args ...interface{}) error {
+func wrapf(err error, errCategory ErrorCategory, errLevel errType, format string, args ...interface{}) error {
 	if err == nil {
 		return nil
 	}
 
 	err = &XError{
-		ErrType:  errType,
-		errLevel: errLevel,
+		category: errCategory,
+		errType:  errLevel,
 		err:      err,
 	}
 	return errors.Wrapf(err, format, args...)
 }
 
-func Wrapf(err error, errType ErrType, format string, args ...interface{}) error {
-	return wrapf(err, errType, xrecoverable, format, args...)
+func Wrapf(err error, errCategory ErrorCategory, format string, args ...interface{}) error {
+	return wrapf(err, errCategory, xrecoverable, format, args...)
 }
 
 func XWrapf(xerr *XError, format string, args ...interface{}) error {
-	return wrapf(xerr, xerr.ErrType, xrecoverable, format, args...)
+	return wrapf(xerr, xerr.category, xrecoverable, format, args...)
 }
 
-func PanicWrapf(err error, errType ErrType, format string, args ...interface{}) error {
-	return wrapf(err, errType, xpanic, format, args...)
+func PanicWrapf(err error, errCategory ErrorCategory, format string, args ...interface{}) error {
+	return wrapf(err, errCategory, xpanic, format, args...)
 }
 
 func WithStack(err error) error {
@@ -181,8 +184,8 @@ func WithStack(err error) error {
 	}
 
 	err = &XError{
-		ErrType:  Normal,
-		errLevel: xrecoverable,
+		category: Normal,
+		errType:  xrecoverable,
 		err:      err,
 	}
 

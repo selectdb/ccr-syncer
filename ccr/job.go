@@ -1253,7 +1253,7 @@ func (j *Job) handleError(err error) error {
 	}
 
 	// TODO(Drogon): do more things, not only snapshot
-	if xerr.ErrType == xerror.Meta {
+	if xerr.Category() == xerror.Meta {
 		// TODO(Drogon): handle error
 		j.newSnapshot(j.progress.CommitSeq)
 	}
