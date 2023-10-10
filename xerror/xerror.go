@@ -11,6 +11,7 @@ type ErrType int
 
 const (
 	Normal ErrType = iota
+	RPC
 	DB
 	FE
 	BE
@@ -21,6 +22,8 @@ func (e ErrType) String() string {
 	switch e {
 	case Normal:
 		return "normal"
+	case RPC:
+		return "rpc"
 	case DB:
 		return "db"
 	case FE:

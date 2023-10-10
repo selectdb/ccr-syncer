@@ -108,13 +108,13 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 	// srcBackendIds := make([]int64, 0, srcReplicas.Len())
 	iter := srcReplicas.Iter()
 	if ok := iter.First(); !ok {
-		j.setError(xerror.Errorf(xerror.Normal, "src replicas is empty"))
+		j.setError(xerror.Errorf(xerror.Meta, "src replicas is empty"))
 		return false
 	}
 	srcBackendId := iter.Value().BackendId
 	srcBackend := j.GetSrcBackend(srcBackendId)
 	if srcBackend == nil {
-		j.setError(xerror.Errorf(xerror.Normal, "backend not found, backend id: %d", srcBackendId))
+		j.setError(xerror.XWrapf(errBackendNotFound, "backend id: %d", srcBackendId))
 		return false
 	}
 	req := &bestruct.TIngestBinlogRequest{
@@ -148,11 +148,11 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 
 		log.Debugf("ingest resp: %v", resp)
 		if !resp.IsSetStatus() {
-			err = xerror.Errorf(xerror.Normal, "ingest resp status not set")
+			err = xerror.Errorf(xerror.BE, "ingest resp status not set")
 			j.setError(err)
 			return
 		} else if resp.Status.StatusCode != tstatus.TStatusCode_OK {
-			err = xerror.Errorf(xerror.Normal, "ingest resp status code: %v, msg: %v", resp.Status.StatusCode, resp.Status.ErrorMsgs)
+			err = xerror.Errorf(xerror.BE, "ingest resp status code: %v, msg: %v", resp.Status.StatusCode, resp.Status.ErrorMsgs)
 			j.setError(err)
 			return
 		} else {
@@ -285,7 +285,7 @@ func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 	}
 
 	if srcTablets.Len() != destTablets.Len() {
-		j.setError(xerror.Errorf(xerror.Normal, "src tablets length: %v not equal to dest tablets length: %v", srcTablets.Len(), destTablets.Len()))
+		j.setError(xerror.Errorf(xerror.Meta, "src tablets length: %v not equal to dest tablets length: %v", srcTablets.Len(), destTablets.Len()))
 		return
 	}
 
@@ -296,13 +296,13 @@ func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 
 	srcIter := srcTablets.IterMut()
 	if !srcIter.First() {
-		j.setError(xerror.Errorf(xerror.Normal, "src tablets First() failed"))
+		j.setError(xerror.Errorf(xerror.Meta, "src tablets First() failed"))
 		return
 	}
 
 	destIter := destTablets.IterMut()
 	if !destIter.First() {
-		j.setError(xerror.Errorf(xerror.Normal, "dest tablets First() failed"))
+		j.setError(xerror.Errorf(xerror.Meta, "dest tablets First() failed"))
 		return
 	}
 
@@ -337,7 +337,7 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 
 	// TODO(Drogon): add use Backup/Restore to handle this
 	if len(indexIds) == 0 {
-		j.setError(xerror.Errorf(xerror.Normal, "index ids is empty"))
+		j.setError(xerror.Errorf(xerror.Meta, "index ids is empty"))
 		return
 	}
 
@@ -375,13 +375,13 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 	for _, indexId := range indexIds {
 		srcIndexMeta, ok := srcIndexIdMap[indexId]
 		if !ok {
-			j.setError(xerror.Errorf(xerror.Normal, "index id %v not found in src meta", indexId))
+			j.setError(xerror.Errorf(xerror.Meta, "index id %v not found in src meta", indexId))
 			return
 		}
 
 		srcIndexName := getSrcIndexName(job, srcIndexMeta)
 		if _, ok := destIndexNameMap[srcIndexName]; !ok {
-			j.setError(xerror.Errorf(xerror.Normal, "index name %v not found in dest meta", srcIndexName))
+			j.setError(xerror.Errorf(xerror.Meta, "index name %v not found in dest meta", srcIndexName))
 			return
 		}
 	}
@@ -407,7 +407,7 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 	log.Debugf("tableRecord: %v", tableRecord)
 
 	if len(tableRecord.PartitionRecords) == 0 {
-		j.setError(xerror.Errorf(xerror.Normal, "partition records is empty"))
+		j.setError(xerror.Errorf(xerror.Meta, "partition records is empty"))
 		return
 	}
 
@@ -429,7 +429,7 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 			break
 		}
 	default:
-		err = xerror.Errorf(xerror.Normal, "invalid sync type: %s", job.SyncType)
+		err = xerror.Panicf(xerror.Normal, "invalid sync type: %s", job.SyncType)
 	}
 	if err != nil {
 		j.setError(err)
@@ -451,12 +451,12 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 		rangeKey := partitionRecord.Range
 		// TODO(Improvment, Fix): this may happen after drop partition, can seek partition for more time, check from recycle bin
 		if _, ok := srcPartitionMap[rangeKey]; !ok {
-			err = xerror.Errorf(xerror.Normal, "partition range: %v not in src cluster", rangeKey)
+			err = xerror.Errorf(xerror.Meta, "partition range: %v not in src cluster", rangeKey)
 			j.setError(err)
 			return
 		}
 		if _, ok := destPartitionMap[rangeKey]; !ok {
-			err = xerror.Errorf(xerror.Normal, "partition range: %v not in dest cluster", rangeKey)
+			err = xerror.Errorf(xerror.Meta, "partition range: %v not in dest cluster", rangeKey)
 			j.setError(err)
 			return
 		}

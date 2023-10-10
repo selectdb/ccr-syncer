@@ -5,6 +5,7 @@ package ccr
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -1230,10 +1231,6 @@ func (j *Job) sync() error {
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
-	if j.State != JobRunning {
-		return nil
-	}
-
 	switch j.SyncType {
 	case TableSync:
 		return j.tableSync()
@@ -1244,20 +1241,54 @@ func (j *Job) sync() error {
 	}
 }
 
-func (j *Job) run() error {
+// if err is Panic, return it
+func (j *Job) handleError(err error) error {
+	var xerr *xerror.XError
+	if !errors.As(err, &xerr) {
+		return nil
+	}
+
+	if xerr.IsPanic() {
+		return err
+	}
+
+	// TODO(Drogon): do more things, not only snapshot
+	if xerr.ErrType == xerror.Meta {
+		// TODO(Drogon): handle error
+		j.newSnapshot(j.progress.CommitSeq)
+	}
+	return nil
+}
+
+func (j *Job) run() {
 	ticker := time.NewTicker(SYNC_DURATION)
 	defer ticker.Stop()
+
+	var panicError error
 
 	for {
 		select {
 		case <-j.stop:
 			gls.DeleteGls(gls.GoID())
 			log.Infof("job stopped, job: %s", j.Name)
-			return nil
 		case <-ticker.C:
-			if err := j.sync(); err != nil {
-				log.Errorf("job sync failed, job: %s, err: %+v", j.Name, err)
+			if j.getJobState() != JobRunning {
+				break
 			}
+
+			// loop to print error, not panic, waiting for user to pause/stop/remove Job
+			if panicError != nil {
+				log.Errorf("job panic, job: %s, err: %+v", j.Name, panicError)
+				break
+			}
+
+			err := j.sync()
+			if err == nil {
+				break
+			}
+
+			log.Errorf("job sync failed, job: %s, err: %+v", j.Name, err)
+			panicError = j.handleError(err)
 		}
 	}
 }
@@ -1273,7 +1304,7 @@ func (j *Job) newSnapshot(commitSeq int64) error {
 		j.progress.NextWithPersist(commitSeq, DBFullSync, BeginCreateSnapshot, "")
 		return nil
 	default:
-		err := xerror.Errorf(xerror.Normal, "unknown table sync type: %v", j.SyncType)
+		err := xerror.Panicf(xerror.Normal, "unknown table sync type: %v", j.SyncType)
 		log.Fatalf("run %+v", err)
 		return err
 	}
@@ -1317,7 +1348,8 @@ func (j *Job) Run() error {
 		j.destMeta.GetTables()
 	}
 
-	return j.run()
+	j.run()
+	return nil
 }
 
 func (j *Job) desyncTable() error {
@@ -1472,6 +1504,13 @@ func (j *Job) GetLag() (int64, error) {
 
 	log.Debugf("resp: %v, lag: %d", resp, resp.GetLag())
 	return resp.GetLag(), nil
+}
+
+func (j *Job) getJobState() JobState {
+	j.lock.Lock()
+	defer j.lock.Unlock()
+
+	return j.State
 }
 
 func (j *Job) changeJobState(state JobState) error {
