@@ -14,6 +14,7 @@ const (
 	DB
 	FE
 	BE
+	Meta
 )
 
 func (e ErrType) String() string {
@@ -26,6 +27,8 @@ func (e ErrType) String() string {
 		return "fe"
 	case BE:
 		return "be"
+	case Meta:
+		return "meta"
 	default:
 		return "unknown"
 	}
@@ -59,6 +62,10 @@ type XError struct {
 }
 
 func (e *XError) Error() string {
+	if xerr, ok := e.err.(*XError); ok {
+		return xerr.Error()
+	}
+
 	return fmt.Sprintf("%s: %s", e.ErrType.String(), e.err.Error())
 }
 
@@ -81,6 +88,15 @@ func New(errType ErrType, message string) error {
 		err:      stderrors.New(message),
 	}
 	return errors.WithStack(err)
+}
+
+func XNew(errType ErrType, message string) *XError {
+	err := &XError{
+		ErrType:  errType,
+		errLevel: xrecoverable,
+		err:      stderrors.New(message),
+	}
+	return err
 }
 
 func Panic(errType ErrType, message string) error {
@@ -146,6 +162,10 @@ func wrapf(err error, errType ErrType, errLevel ErrLevel, format string, args ..
 
 func Wrapf(err error, errType ErrType, format string, args ...interface{}) error {
 	return wrapf(err, errType, xrecoverable, format, args...)
+}
+
+func XWrapf(xerr *XError, format string, args ...interface{}) error {
+	return wrapf(xerr, xerr.ErrType, xrecoverable, format, args...)
 }
 
 func PanicWrapf(err error, errType ErrType, format string, args ...interface{}) error {

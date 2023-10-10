@@ -90,7 +90,7 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 
 	destBackend := j.GetDestBackend(destReplica.BackendId)
 	if destBackend == nil {
-		j.setError(xerror.Errorf(xerror.Normal, "backend not found, backend id: %d", destReplica.BackendId))
+		j.setError(xerror.XWrapf(errBackendNotFound, "backend id: %d", destReplica.BackendId))
 		return false
 	}
 	destTabletId := destReplica.TabletId

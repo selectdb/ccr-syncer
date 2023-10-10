@@ -41,3 +41,17 @@ func TestWrapf(t *testing.T) {
 	assert.Equal(t, xerr.ErrType, FE)
 	assert.Equal(t, xerr.err.Error(), "fe test error")
 }
+
+func TestIs(t *testing.T) {
+	errBackendNotFound := XNew(Meta, "backend not found")
+	wrappedErr := XWrapf(errBackendNotFound, "backend id: %d", 33415)
+	// t.Logf("wrappedErr: %+v", wrappedErr)
+
+	assert.True(t, errors.Is(wrappedErr, errBackendNotFound))
+
+	var xerr *XError
+	assert.True(t, errors.As(wrappedErr, &xerr))
+	assert.Equal(t, xerr.ErrType, Meta)
+	// t.Logf("xerr: %s", xerr.Error())
+	assert.Equal(t, errBackendNotFound.Error(), errBackendNotFound.Error())
+}
