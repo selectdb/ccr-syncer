@@ -7,6 +7,7 @@ import (
 
 	"github.com/selectdb/ccr_syncer/storage"
 	"github.com/selectdb/ccr_syncer/xerror"
+	"github.com/selectdb/ccr_syncer/xmetrics"
 
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/zap"
@@ -267,6 +268,8 @@ func (j *JobProgress) Done() {
 	j.SubSyncState = Done
 	j.PrevCommitSeq = j.CommitSeq
 
+	xmetrics.ConsumeBinlog(j.JobName, j.PrevCommitSeq)
+
 	j.Persist()
 }
 
@@ -275,6 +278,8 @@ func (j *JobProgress) Rollback() {
 
 	j.SubSyncState = Done
 	j.CommitSeq = j.PrevCommitSeq
+
+	xmetrics.Rollback(j.JobName, j.PrevCommitSeq)
 
 	j.Persist()
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/selectdb/ccr_syncer/storage"
 	"github.com/selectdb/ccr_syncer/xerror"
+	"github.com/selectdb/ccr_syncer/xmetrics"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -68,6 +69,9 @@ func (jm *JobManager) AddJob(job *Job) error {
 	// Step 4: run job
 	jm.jobs[job.Name] = job
 	jm.runJob(job)
+
+	// Step 5: add metrics
+	xmetrics.AddNewJob(job.Name)
 
 	return nil
 }
