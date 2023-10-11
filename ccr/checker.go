@@ -173,6 +173,11 @@ func (c *Checker) Start() error {
 	return c.run()
 }
 
+func (c *Checker) Stop() {
+	log.Info("checker stopping")
+	close(c.stop)
+}
+
 func (c *Checker) run() error {
 	ticker := time.NewTicker(CHECK_DURATION)
 	defer ticker.Stop()

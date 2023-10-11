@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/selectdb/ccr_syncer/ccr"
@@ -110,6 +112,32 @@ func main() {
 	go func() {
 		defer wg.Done()
 		checker.Start()
+	}()
+
+	// Step 6: start signal mux
+	// use closure to capture httpService, checker, jobManager
+	signalHandler := func(signal os.Signal) bool {
+		switch signal {
+		case syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
+			log.Infof("receive signal: %s", signal.String())
+			// stop httpService first, denied new request
+			httpService.Stop()
+			checker.Stop()
+			jobManager.Stop()
+			return true
+		case syscall.SIGHUP:
+			log.Infof("receive signal: %s", signal.String())
+			return false
+		default:
+			log.Infof("receive signal: %s", signal.String())
+			return false
+		}
+	}
+	signalMux := NewSignalMux(signalHandler)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		signalMux.Serve()
 	}()
 
 	// Step 6: wait for all task done
