@@ -20,8 +20,9 @@ bin:
 
 .PHONY: lint
 ## lint : Lint codespace
+# TODO(Drogon): add golang lint
 lint:
-	$(V)cargo clippy --workspace --tests --all-features -- -D warnings
+	$(V)golangci-lint run
 
 .PHONY: fmt
 ## fmt : Format all code
@@ -31,7 +32,7 @@ fmt:
 .PHONY: test
 ## test : Run test
 test:
-	$(V)go test $(shell go list ./... | grep -v github.com/selectdb/ccr_syncer/cmd | grep -v github.com/selectdb/ccr_syncer/rpc/kitex_gen/)
+	$(V)go test $(shell go list ./... | grep -v github.com/selectdb/ccr_syncer/cmd | grep -v github.com/selectdb/ccr_syncer/rpc/kitex_gen/) | grep -F -v '[no test files]'
 
 .PHONY: help
 ## help : Print help message
@@ -96,3 +97,8 @@ get_lag: bin
 ## rows_parse : Build rows_parse binary
 rows_parse: bin
 	$(V)go build -o bin/rows_parse ./cmd/rows_parse
+
+.PHONY: todos
+## todos : Print all todos
+todos:
+	$(V)grep -rnw . -e "TODO" | grep -v '^./rpc/thrift' | grep -v '^./.git'
