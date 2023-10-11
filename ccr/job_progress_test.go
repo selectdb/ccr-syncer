@@ -2,11 +2,18 @@ package ccr
 
 import (
 	"encoding/json"
+	"io"
 	"reflect"
 	"testing"
 
 	"github.com/selectdb/ccr_syncer/storage"
+
+	log "github.com/sirupsen/logrus"
 )
+
+func init() {
+	log.SetOutput(io.Discard)
+}
 
 func TestJobProgress_MarshalJSON(t *testing.T) {
 	type fields struct {
