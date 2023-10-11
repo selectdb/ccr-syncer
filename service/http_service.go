@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/selectdb/ccr_syncer/ccr"
 	"github.com/selectdb/ccr_syncer/ccr/base"
 	"github.com/selectdb/ccr_syncer/storage"
@@ -297,6 +298,8 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/delete", s.deleteHandler)
 	s.mux.HandleFunc("/job_status", s.statusHandler)
 	s.mux.HandleFunc("/desync", s.desyncHandler)
+
+	s.mux.Handle("/metrics", promhttp.Handler())
 }
 
 func (s *HttpService) Start() error {

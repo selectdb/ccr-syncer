@@ -4,6 +4,7 @@ import (
 	stderrors "errors"
 	"fmt"
 
+	"github.com/hashicorp/go-metrics"
 	"github.com/pkg/errors"
 )
 
@@ -108,6 +109,7 @@ func Panic(errType ErrType, message string) error {
 		errLevel: xpanic,
 		err:      stderrors.New(message),
 	}
+	metrics.IncrCounter([]string{fmt.Sprintf("Error.%s", errType.String())}, 1)
 	return errors.WithStack(err)
 }
 
@@ -117,6 +119,7 @@ func Errorf(errType ErrType, format string, args ...interface{}) error {
 		errLevel: xrecoverable,
 		err:      fmt.Errorf(format, args...),
 	}
+	metrics.IncrCounter([]string{fmt.Sprintf("Error.%s", errType.String())}, 1)
 	return errors.WithStack(err)
 }
 
@@ -126,6 +129,7 @@ func Panicf(errType ErrType, format string, args ...interface{}) error {
 		errLevel: xpanic,
 		err:      fmt.Errorf(format, args...),
 	}
+	metrics.IncrCounter([]string{fmt.Sprintf("Error.%s", errType.String())}, 1)
 	return errors.WithStack(err)
 }
 

@@ -14,6 +14,8 @@ import (
 	"github.com/selectdb/ccr_syncer/utils"
 	"github.com/selectdb/ccr_syncer/xerror"
 
+	"github.com/hashicorp/go-metrics"
+	"github.com/hashicorp/go-metrics/prometheus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -112,6 +114,13 @@ func main() {
 		checker.Start()
 	}()
 
-	// Step 6: wait for all task done
+	// Step 7: init metrics
+	sink, err := prometheus.NewPrometheusSink()
+	if err != nil {
+		log.Fatalf("new prometheus sink failed: %+v", err)
+	}
+	metrics.NewGlobal(metrics.DefaultConfig("ccr-metrics"), sink)
+
+	// Step 8: wait for all task done
 	wg.Wait()
 }
