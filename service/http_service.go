@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 
 type HttpService struct {
 	port     int
+	server   *http.Server
 	mux      *http.ServeMux
 	hostInfo string
 
@@ -304,7 +306,9 @@ func (s *HttpService) Start() error {
 	log.Infof("Server listening on %s", addr)
 
 	s.RegisterHandlers()
-	err := http.ListenAndServe(addr, s.mux)
+
+	s.server = &http.Server{Addr: addr, Handler: s.mux}
+	err := s.server.ListenAndServe()
 	if err == nil {
 		return nil
 	} else if err == http.ErrServerClosed {
@@ -313,4 +317,11 @@ func (s *HttpService) Start() error {
 	} else {
 		return xerror.Wrapf(err, xerror.Normal, "http server start on %s failed", addr)
 	}
+}
+
+func (s *HttpService) Stop() error {
+	if err := s.server.Shutdown(context.TODO()); err != nil {
+		return xerror.Wrapf(err, xerror.Normal, "http server close failed")
+	}
+	return nil
 }
