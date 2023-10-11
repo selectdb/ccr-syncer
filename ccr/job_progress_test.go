@@ -2,11 +2,18 @@ package ccr
 
 import (
 	"encoding/json"
+	"io"
 	"reflect"
 	"testing"
 
 	"github.com/selectdb/ccr_syncer/storage"
+
+	log "github.com/sirupsen/logrus"
 )
+
+func init() {
+	log.SetOutput(io.Discard)
+}
 
 func TestJobProgress_MarshalJSON(t *testing.T) {
 	type fields struct {
@@ -14,6 +21,7 @@ func TestJobProgress_MarshalJSON(t *testing.T) {
 		db                storage.DB
 		SyncState         SyncState
 		SubSyncState      SubSyncState
+		PrevCommitSeq     int64
 		CommitSeq         int64
 		TransactionId     int64
 		TableCommitSeqMap map[int64]int64
@@ -33,13 +41,13 @@ func TestJobProgress_MarshalJSON(t *testing.T) {
 				db:                nil,
 				SyncState:         TableFullSync,
 				SubSyncState:      BeginCreateSnapshot,
+				PrevCommitSeq:     0,
 				CommitSeq:         1,
-				TransactionId:     2,
 				TableCommitSeqMap: map[int64]int64{1: 2},
 				InMemoryData:      nil,
 				PersistData:       "test-data",
 			},
-			want:    []byte(`{"job_name":"test-job","sync_state":500,"sub_sync_state":{"state":0,"binlog_type":-1},"commit_seq":1,"transaction_id":2,"table_commit_seq_map":{"1":2},"data":"test-data"}`),
+			want:    []byte(`{"job_name":"test-job","sync_state":500,"sub_sync_state":{"state":0,"binlog_type":-1},"prev_commit_seq":0,"commit_seq":1,"table_commit_seq_map":{"1":2},"data":"test-data"}`),
 			wantErr: false,
 		},
 	}
@@ -50,6 +58,7 @@ func TestJobProgress_MarshalJSON(t *testing.T) {
 				db:                tt.fields.db,
 				SyncState:         tt.fields.SyncState,
 				SubSyncState:      tt.fields.SubSyncState,
+				PrevCommitSeq:     tt.fields.PrevCommitSeq,
 				CommitSeq:         tt.fields.CommitSeq,
 				TableCommitSeqMap: tt.fields.TableCommitSeqMap,
 				InMemoryData:      tt.fields.InMemoryData,
