@@ -115,7 +115,8 @@ func main() {
 	}()
 
 	// Step 6: start signal mux
-	signalMux := NewSignalMux(func(signal os.Signal) bool {
+	// use closure to capture httpService, checker, jobManager
+	signalHandler := func(signal os.Signal) bool {
 		switch signal {
 		case syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
 			log.Infof("receive signal: %s", signal.String())
@@ -131,7 +132,8 @@ func main() {
 			log.Infof("receive signal: %s", signal.String())
 			return false
 		}
-	})
+	}
+	signalMux := NewSignalMux(signalHandler)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
