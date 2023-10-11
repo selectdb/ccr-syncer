@@ -1277,6 +1277,7 @@ func (j *Job) run() {
 			}
 
 			// loop to print error, not panic, waiting for user to pause/stop/remove Job
+			// TODO(Drogon): Add user resume the job, so reset panicError for retry
 			if panicError != nil {
 				log.Errorf("job panic, job: %s, err: %+v", j.Name, panicError)
 				break

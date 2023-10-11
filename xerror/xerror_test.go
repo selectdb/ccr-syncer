@@ -7,10 +7,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TODO(Drogon): Add more unittests
+
+// UnitTest for xCategory
+func TestXCategory(t *testing.T) {
+	assert.Equal(t, Normal.Name(), "normal")
+	assert.Equal(t, RPC.Name(), "rpc")
+	assert.Equal(t, DB.Name(), "db")
+	assert.Equal(t, FE.Name(), "fe")
+	assert.Equal(t, BE.Name(), "be")
+	assert.Equal(t, Meta.Name(), "meta")
+}
+
+// UnitTest for XError
 func TestErrorf(t *testing.T) {
 	err := Errorf(Normal, "test error")
-	// t.Logf("err: %+v", err)
 	assert.NotNil(t, err)
+	// t.Logf("err: %+v", err)
 
 	var xerr *XError
 	assert.True(t, errors.As(err, &xerr))
@@ -21,8 +34,8 @@ func TestErrorf(t *testing.T) {
 func TestWrap(t *testing.T) {
 	err := errors.New("db open error")
 	wrappedErr := Wrap(err, DB, "wrapped error")
-	// t.Logf("wrappedErr: %+v", wrappedErr)
 	assert.NotNil(t, wrappedErr)
+	// t.Logf("wrappedErr: %+v", wrappedErr)
 
 	var xerr *XError
 	assert.True(t, errors.As(wrappedErr, &xerr))
@@ -33,8 +46,8 @@ func TestWrap(t *testing.T) {
 func TestWrapf(t *testing.T) {
 	err := errors.New("fe test error")
 	wrappedErr := Wrapf(err, FE, "wrapped error: %s", "foo")
-	// t.Logf("wrappedErr: %+v", wrappedErr)
 	assert.NotNil(t, wrappedErr)
+	// t.Logf("wrappedErr: %+v", wrappedErr)
 
 	var xerr *XError
 	assert.True(t, errors.As(wrappedErr, &xerr))
@@ -45,6 +58,7 @@ func TestWrapf(t *testing.T) {
 func TestIs(t *testing.T) {
 	errBackendNotFound := XNew(Meta, "backend not found")
 	wrappedErr := XWrapf(errBackendNotFound, "backend id: %d", 33415)
+	assert.NotNil(t, wrappedErr)
 	// t.Logf("wrappedErr: %+v", wrappedErr)
 
 	assert.True(t, errors.Is(wrappedErr, errBackendNotFound))
