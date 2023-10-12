@@ -1271,6 +1271,7 @@ func (j *Job) run() {
 		case <-j.stop:
 			gls.DeleteGls(gls.GoID())
 			log.Infof("job stopped, job: %s", j.Name)
+			return
 		case <-ticker.C:
 			if j.getJobState() != JobRunning {
 				break

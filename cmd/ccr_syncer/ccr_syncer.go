@@ -119,11 +119,12 @@ func main() {
 	signalHandler := func(signal os.Signal) bool {
 		switch signal {
 		case syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
-			log.Infof("receive signal: %s", signal.String())
+			log.Infof("handle signal: %s", signal.String())
 			// stop httpService first, denied new request
 			httpService.Stop()
 			checker.Stop()
 			jobManager.Stop()
+			log.Info("all service stop")
 			return true
 		case syscall.SIGHUP:
 			log.Infof("receive signal: %s", signal.String())
