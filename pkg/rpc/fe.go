@@ -3,12 +3,12 @@ package rpc
 import (
 	"context"
 
+	"github.com/cloudwego/kitex/client"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
-	"github.com/selectdb/ccr_syncer/pkg/xerror"
-
 	festruct "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/frontendservice"
 	feservice "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/frontendservice/frontendservice"
 	festruct_types "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/types"
+	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -29,7 +29,50 @@ type IFeRpc interface {
 }
 
 type FeRpc struct {
-	client feservice.Client
+	masterClient *singleFeClient
+}
+
+func NewFeRpc(spec *base.Spec) (*FeRpc, error) {
+	singleFeClient, err := newSingleFeClient(spec)
+	if err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "NewFeClient error: %v", err)
+	} else {
+		return &FeRpc{
+			masterClient: singleFeClient,
+		}, nil
+	}
+}
+
+func (rpc *FeRpc) BeginTransaction(spec *base.Spec, label string, tableIds []int64) (*festruct.TBeginTxnResult_, error) {
+	return rpc.masterClient.BeginTransaction(spec, label, tableIds)
+}
+
+func (rpc *FeRpc) CommitTransaction(spec *base.Spec, txnId int64, commitInfos []*festruct_types.TTabletCommitInfo) (*festruct.TCommitTxnResult_, error) {
+	return rpc.masterClient.CommitTransaction(spec, txnId, commitInfos)
+}
+
+func (rpc *FeRpc) RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.TRollbackTxnResult_, error) {
+	return rpc.masterClient.RollbackTransaction(spec, txnId)
+}
+
+func (rpc *FeRpc) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogResult_, error) {
+	return rpc.masterClient.GetBinlog(spec, commitSeq)
+}
+
+func (rpc *FeRpc) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogLagResult_, error) {
+	return rpc.masterClient.GetBinlogLag(spec, commitSeq)
+}
+
+func (rpc *FeRpc) GetSnapshot(spec *base.Spec, labelName string) (*festruct.TGetSnapshotResult_, error) {
+	return rpc.masterClient.GetSnapshot(spec, labelName)
+}
+
+func (rpc *FeRpc) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableRef, label string, snapshotResult *festruct.TGetSnapshotResult_) (*festruct.TRestoreSnapshotResult_, error) {
+	return rpc.masterClient.RestoreSnapshot(spec, tableRefs, label, snapshotResult)
+}
+
+func (rpc *FeRpc) GetMasterToken(spec *base.Spec) (string, error) {
+	return rpc.masterClient.GetMasterToken(spec)
 }
 
 type Request interface {
@@ -44,6 +87,21 @@ func setAuthInfo[T Request](request T, spec *base.Spec) {
 	request.SetUser(&spec.User)
 	request.SetPasswd(&spec.Password)
 	request.SetDb(&spec.Database)
+}
+
+type singleFeClient struct {
+	client feservice.Client
+}
+
+func newSingleFeClient(spec *base.Spec) (*singleFeClient, error) {
+	// create kitex FrontendService client
+	if fe_client, err := feservice.NewClient("FrontendService", client.WithHostPorts(spec.Host+":"+spec.ThriftPort)); err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "NewFeClient error: %v, spec: %s", err, spec)
+	} else {
+		return &singleFeClient{
+			client: fe_client,
+		}, nil
+	}
 }
 
 // begin transaction
@@ -62,7 +120,7 @@ func setAuthInfo[T Request](request T, spec *base.Spec) {
 //	    10: optional Types.TUniqueId request_id
 //	    11: optional string token
 //	}
-func (rpc *FeRpc) BeginTransaction(spec *base.Spec, label string, tableIds []int64) (*festruct.TBeginTxnResult_, error) {
+func (rpc *singleFeClient) BeginTransaction(spec *base.Spec, label string, tableIds []int64) (*festruct.TBeginTxnResult_, error) {
 	log.Debugf("BeginTransaction spec: %s, label: %s, tableIds: %v", spec, label, tableIds)
 
 	client := rpc.client
@@ -94,7 +152,7 @@ func (rpc *FeRpc) BeginTransaction(spec *base.Spec, label string, tableIds []int
 //	    11: optional string token
 //	    12: optional i64 db_id
 //	}
-func (rpc *FeRpc) CommitTransaction(spec *base.Spec, txnId int64, commitInfos []*festruct_types.TTabletCommitInfo) (*festruct.TCommitTxnResult_, error) {
+func (rpc *singleFeClient) CommitTransaction(spec *base.Spec, txnId int64, commitInfos []*festruct_types.TTabletCommitInfo) (*festruct.TCommitTxnResult_, error) {
 	log.Debugf("CommitTransaction spec: %s, txnId: %d, commitInfos: %v", spec, txnId, commitInfos)
 
 	client := rpc.client
@@ -123,7 +181,7 @@ func (rpc *FeRpc) CommitTransaction(spec *base.Spec, txnId int64, commitInfos []
 //	    11: optional string token
 //	    12: optional i64 db_id
 //	}
-func (rpc *FeRpc) RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.TRollbackTxnResult_, error) {
+func (rpc *singleFeClient) RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.TRollbackTxnResult_, error) {
 	log.Debugf("RollbackTransaction spec: %s, txnId: %d", spec, txnId)
 
 	client := rpc.client
@@ -148,7 +206,7 @@ func (rpc *FeRpc) RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.T
 //	    7: optional string token
 //	    8: required i64 prev_commit_seq
 //	}
-func (rpc *FeRpc) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogResult_, error) {
+func (rpc *singleFeClient) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogResult_, error) {
 	log.Debugf("GetBinlog, spec: %s, commit seq: %d", spec, commitSeq)
 
 	client := rpc.client
@@ -173,7 +231,7 @@ func (rpc *FeRpc) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGetBin
 	}
 }
 
-func (rpc *FeRpc) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogLagResult_, error) {
+func (rpc *singleFeClient) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogLagResult_, error) {
 	log.Debugf("GetBinlogLag, spec: %s, commit seq: %d", spec, commitSeq)
 
 	client := rpc.client
@@ -210,7 +268,7 @@ func (rpc *FeRpc) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.TGet
 //	    8: optional string snapshot_name
 //	    9: optional TSnapshotType snapshot_type
 //	}
-func (rpc *FeRpc) GetSnapshot(spec *base.Spec, labelName string) (*festruct.TGetSnapshotResult_, error) {
+func (rpc *singleFeClient) GetSnapshot(spec *base.Spec, labelName string) (*festruct.TGetSnapshotResult_, error) {
 	log.Debugf("GetSnapshot %s, spec: %s", labelName, spec)
 
 	client := rpc.client
@@ -249,7 +307,7 @@ func (rpc *FeRpc) GetSnapshot(spec *base.Spec, labelName string) (*festruct.TGet
 //	}
 //
 // Restore Snapshot rpc
-func (rpc *FeRpc) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableRef, label string, snapshotResult *festruct.TGetSnapshotResult_) (*festruct.TRestoreSnapshotResult_, error) {
+func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableRef, label string, snapshotResult *festruct.TGetSnapshotResult_) (*festruct.TRestoreSnapshotResult_, error) {
 	log.Debugf("RestoreSnapshot, spec: %s, snapshot result: %+v", spec, snapshotResult)
 
 	client := rpc.client
@@ -277,7 +335,7 @@ func (rpc *FeRpc) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableR
 	}
 }
 
-func (rpc *FeRpc) GetMasterToken(spec *base.Spec) (string, error) {
+func (rpc *singleFeClient) GetMasterToken(spec *base.Spec) (string, error) {
 	log.Debugf("GetMasterToken, spec: %s", spec)
 
 	client := rpc.client

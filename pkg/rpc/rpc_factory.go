@@ -5,7 +5,6 @@ import (
 
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	beservice "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/backendservice/backendservice"
-	feservice "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/frontendservice/frontendservice"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
 	"github.com/cloudwego/kitex/client"
@@ -29,14 +28,7 @@ func (rf *RpcFactory) NewFeRpc(spec *base.Spec) (IFeRpc, error) {
 		return nil, err
 	}
 
-	// create kitex FrontendService client
-	if fe_client, err := feservice.NewClient("FrontendService", client.WithHostPorts(spec.Host+":"+spec.ThriftPort)); err != nil {
-		return nil, xerror.Wrapf(err, xerror.Normal, "NewFeClient error: %v, spec: %s", err, spec)
-	} else {
-		return &FeRpc{
-			client: fe_client,
-		}, nil
-	}
+	return NewFeRpc(spec)
 }
 
 func (rf *RpcFactory) NewBeRpc(be *base.Backend) (IBeRpc, error) {
