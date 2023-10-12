@@ -435,7 +435,7 @@ func (m *Meta) GetPartitionIdByRange(tableId int64, partitionRange string) (int6
 }
 
 func (m *Meta) UpdateBackends() error {
-	// mysql> show proc '/backends';
+	// mysql> show backends;
 	// +-----------+-----------------+-----------+---------------+--------+----------+----------+---------------------+---------------------+-------+----------------------+-----------------------+-----------+------------------+---------------+---------------+---------+----------------+--------------------+--------------------------+--------+------------------------------+-------------------------------------------------------------------------------------------------------------------------------+-------------------------+----------+
 	// | BackendId | Cluster         | Host      | HeartbeatPort | BePort | HttpPort | BrpcPort | LastStartTime       | LastHeartbeat       | Alive | SystemDecommissioned | ClusterDecommissioned | TabletNum | DataUsedCapacity | AvailCapacity | TotalCapacity | UsedPct | MaxDiskUsedPct | RemoteUsedCapacity | Tag                      | ErrMsg | Version                      | Status                                                                                                                        | HeartbeatFailureCounter | NodeRole |
 	// +-----------+-----------------+-----------+---------------+--------+----------+----------+---------------------+---------------------+-------+----------------------+-----------------------+-----------+------------------+---------------+---------------+---------+----------------+--------------------+--------------------------+--------+------------------------------+-------------------------------------------------------------------------------------------------------------------------------+-------------------------+----------+
@@ -447,7 +447,7 @@ func (m *Meta) UpdateBackends() error {
 	}
 
 	backends := make([]*base.Backend, 0)
-	query := "show proc '/backends'"
+	query := "show backends"
 	log.Debug(query)
 	rows, err := db.Query(query)
 	if err != nil {
