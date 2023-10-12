@@ -992,27 +992,32 @@ func (j *Job) handleTruncateTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	var tableName string
+	var destTableName string
 	switch j.SyncType {
 	case DBSync:
-		tableName = truncateTable.TableName
+		destTableName = truncateTable.TableName
 	case TableSync:
-		tableName = j.Dest.Table
+		destTableName = j.Dest.Table
 	default:
 		return xerror.Panicf(xerror.Normal, "invalid sync type: %v", j.SyncType)
 	}
 
 	var sql string
 	if truncateTable.RawSql == "" {
-		sql = fmt.Sprintf("TRUNCATE TABLE %s", tableName)
+		sql = fmt.Sprintf("TRUNCATE TABLE %s", destTableName)
 	} else {
-		sql = fmt.Sprintf("TRUNCATE TABLE %s %s", tableName, truncateTable.RawSql)
+		sql = fmt.Sprintf("TRUNCATE TABLE %s %s", destTableName, truncateTable.RawSql)
 	}
 
 	log.Infof("truncateTableSql: %s", sql)
+
 	err = j.IDest.DbExec(sql)
-	if err != nil {
-		j.destMeta.ClearTable(j.Dest.Database, tableName)
+	if err == nil {
+		if srcTableName, err := j.srcMeta.GetTableNameById(truncateTable.TableId); err == nil {
+			// if err != nil, maybe truncate table had been dropped
+			j.srcMeta.ClearTable(j.Src.Database, srcTableName)
+		}
+		j.destMeta.ClearTable(j.Dest.Database, destTableName)
 	}
 
 	return err
