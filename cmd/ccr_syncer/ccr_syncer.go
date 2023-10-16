@@ -14,6 +14,7 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/service"
 	"github.com/selectdb/ccr_syncer/pkg/storage"
 	"github.com/selectdb/ccr_syncer/pkg/utils"
+	"github.com/selectdb/ccr_syncer/pkg/version"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
 	log "github.com/sirupsen/logrus"
@@ -31,13 +32,13 @@ type Syncer struct {
 }
 
 var (
-	dbPath  string
-	syncer  Syncer
-	version bool
+	dbPath       string
+	syncer       Syncer
+	printVersion bool
 )
 
 func init() {
-	flag.BoolVar(&version, "version", false, "The program's version")
+	flag.BoolVar(&printVersion, "version", false, "The program's version")
 
 	flag.StringVar(&dbPath, "db_dir", "ccr.db", "sqlite3 db file")
 	flag.StringVar(&syncer.Db_type, "db_type", "sqlite3", "meta db type")
@@ -54,12 +55,13 @@ func init() {
 }
 
 func main() {
-	if version {
-		printVersion()
+	if printVersion {
+		fmt.Println(version.GetVersion())
+		os.Exit(0)
 	}
 
 	// print version
-	log.Infof("ccr start, version: %s", getVersion())
+	log.Infof("ccr start, version: %s", version.GetVersion())
 
 	// Step 1: Check db
 	if dbPath == "" {
