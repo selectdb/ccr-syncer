@@ -250,7 +250,7 @@ func (s *HttpService) statusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobStatus, err := s.jobManager.JobStatus(request.Name)
+	jobStatus, err := s.jobManager.GetJobStatus(request.Name)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -291,6 +291,25 @@ func (s *HttpService) desyncHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("desync success"))
 }
 
+// ListJobs service
+func (s *HttpService) listJobsHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("list jobs")
+
+	type result struct {
+		Jobs []*ccr.JobStatus `json:"jobs"`
+	}
+
+	jobs := s.jobManager.ListJobs()
+	jobResult := result{Jobs: jobs}
+
+	// write jobs as json
+	if data, err := json.Marshal(&jobResult); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	} else {
+		w.Write(data)
+	}
+}
+
 func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/create_ccr", s.createHandler)
 	s.mux.HandleFunc("/get_lag", s.getLagHandler)
@@ -299,6 +318,7 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/delete", s.deleteHandler)
 	s.mux.HandleFunc("/job_status", s.statusHandler)
 	s.mux.HandleFunc("/desync", s.desyncHandler)
+	s.mux.HandleFunc("/list_jobs", s.listJobsHandler)
 }
 
 func (s *HttpService) Start() error {

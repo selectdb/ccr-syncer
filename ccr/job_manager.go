@@ -195,7 +195,7 @@ func (jm *JobManager) Resume(jobName string) error {
 	})
 }
 
-func (jm *JobManager) JobStatus(jobName string) (*JobStatus, error) {
+func (jm *JobManager) GetJobStatus(jobName string) (*JobStatus, error) {
 	jm.lock.RLock()
 	defer jm.lock.RUnlock()
 
@@ -215,4 +215,15 @@ func (jm *JobManager) Desync(jobName string) error {
 	} else {
 		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
 	}
+}
+
+func (jm *JobManager) ListJobs() []*JobStatus {
+	jm.lock.RLock()
+	defer jm.lock.RUnlock()
+
+	jobs := make([]*JobStatus, 0)
+	for _, job := range jm.jobs {
+		jobs = append(jobs, job.Status())
+	}
+	return jobs
 }
