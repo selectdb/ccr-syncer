@@ -10,8 +10,8 @@ import (
 
 	"github.com/selectdb/ccr_syncer/ccr"
 	"github.com/selectdb/ccr_syncer/ccr/base"
+	"github.com/selectdb/ccr_syncer/pkg/service"
 	"github.com/selectdb/ccr_syncer/rpc"
-	"github.com/selectdb/ccr_syncer/service"
 	"github.com/selectdb/ccr_syncer/storage"
 	"github.com/selectdb/ccr_syncer/utils"
 	"github.com/selectdb/ccr_syncer/xerror"
