@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 
-	"github.com/selectdb/ccr_syncer/ccr/base"
-	"github.com/selectdb/ccr_syncer/rpc"
-	u "github.com/selectdb/ccr_syncer/utils"
+	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
+	"github.com/selectdb/ccr_syncer/pkg/rpc"
+	u "github.com/selectdb/ccr_syncer/pkg/utils"
 	log "github.com/sirupsen/logrus"
 )
 

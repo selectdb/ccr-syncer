@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/selectdb/ccr_syncer/ccr/base"
-	"github.com/selectdb/ccr_syncer/rpc"
+	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
+	"github.com/selectdb/ccr_syncer/pkg/rpc"
 )
 
 func test_get_master_token(spec *base.Spec) {

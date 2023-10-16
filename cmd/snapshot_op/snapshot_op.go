@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"flag"
 
-	"github.com/selectdb/ccr_syncer/ccr/base"
-	"github.com/selectdb/ccr_syncer/utils"
+	"github.com/selectdb/ccr_syncer/pkg/ccr"
+	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
+	"github.com/selectdb/ccr_syncer/pkg/rpc"
+	"github.com/selectdb/ccr_syncer/pkg/utils"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/selectdb/ccr_syncer/ccr"
-	"github.com/selectdb/ccr_syncer/rpc"
-	tstatus "github.com/selectdb/ccr_syncer/rpc/kitex_gen/status"
+	tstatus "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/status"
 )
 
 // commit_seq flag default 0

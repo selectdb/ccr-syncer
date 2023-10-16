@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"flag"
 
-	"github.com/selectdb/ccr_syncer/ccr/base"
-	"github.com/selectdb/ccr_syncer/ccr/record"
-	"github.com/selectdb/ccr_syncer/rpc"
-	festruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/frontendservice"
-	u "github.com/selectdb/ccr_syncer/utils"
+	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
+	"github.com/selectdb/ccr_syncer/pkg/ccr/record"
+	"github.com/selectdb/ccr_syncer/pkg/rpc"
+	festruct "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/frontendservice"
+	u "github.com/selectdb/ccr_syncer/pkg/utils"
 	log "github.com/sirupsen/logrus"
 )
 

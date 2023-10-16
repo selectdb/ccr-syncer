@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/selectdb/ccr_syncer/ccr/base"
-	"github.com/selectdb/ccr_syncer/utils"
+	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
+	"github.com/selectdb/ccr_syncer/pkg/utils"
 	log "github.com/sirupsen/logrus"
 )
 

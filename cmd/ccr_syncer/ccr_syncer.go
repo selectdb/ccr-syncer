@@ -8,13 +8,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/selectdb/ccr_syncer/ccr"
-	"github.com/selectdb/ccr_syncer/ccr/base"
+	"github.com/selectdb/ccr_syncer/pkg/ccr"
+	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
+	"github.com/selectdb/ccr_syncer/pkg/rpc"
 	"github.com/selectdb/ccr_syncer/pkg/service"
-	"github.com/selectdb/ccr_syncer/rpc"
-	"github.com/selectdb/ccr_syncer/storage"
-	"github.com/selectdb/ccr_syncer/utils"
-	"github.com/selectdb/ccr_syncer/xerror"
+	"github.com/selectdb/ccr_syncer/pkg/storage"
+	"github.com/selectdb/ccr_syncer/pkg/utils"
+	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
 	log "github.com/sirupsen/logrus"
 )

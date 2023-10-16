@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/selectdb/ccr_syncer/ccr/base"
-	"github.com/selectdb/ccr_syncer/utils"
+	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
+	"github.com/selectdb/ccr_syncer/pkg/utils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -29,7 +29,7 @@ func main() {
 	}
 
 	query := "ADMIN SHOW FRONTEND CONFIG LIKE \"%%enable_feature_binlog%%\""
-	rows, err := db.Query(query);
+	rows, err := db.Query(query)
 	if err != nil {
 		log.Fatalf("query %s failed", query)
 	}

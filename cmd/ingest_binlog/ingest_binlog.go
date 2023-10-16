@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/selectdb/ccr_syncer/ccr/base"
-	bestruct "github.com/selectdb/ccr_syncer/rpc/kitex_gen/backendservice"
-	festruct_types "github.com/selectdb/ccr_syncer/rpc/kitex_gen/types"
-	u "github.com/selectdb/ccr_syncer/utils"
+	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
+	"github.com/selectdb/ccr_syncer/pkg/rpc"
+	bestruct "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/backendservice"
+	festruct_types "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/types"
+	u "github.com/selectdb/ccr_syncer/pkg/utils"
 
-	"github.com/selectdb/ccr_syncer/rpc"
 	log "github.com/sirupsen/logrus"
 )
 
