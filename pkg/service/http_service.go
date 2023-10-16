@@ -9,6 +9,7 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/ccr"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	"github.com/selectdb/ccr_syncer/pkg/storage"
+	"github.com/selectdb/ccr_syncer/pkg/version"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
 	log "github.com/sirupsen/logrus"
@@ -47,6 +48,31 @@ func (r *CreateCcrRequest) String() string {
 	return fmt.Sprintf("name: %s, src: %v, dest: %v", r.Name, r.Src, r.Dest)
 }
 
+// version Handler
+// versionHandler handles the HTTP request for getting the version of the service.
+// It returns the version as a JSON object with a "version" field.
+func (s *HttpService) versionHandler(w http.ResponseWriter, r *http.Request) {
+	// Log the request
+	log.Infof("get version")
+
+	// Define the version result struct
+	type vesionResult struct {
+		Version string `json:"version"`
+	}
+
+	// Create the result object with the current version
+	result := vesionResult{Version: version.GetVersion()}
+
+	// Write the result as JSON
+	if data, err := json.Marshal(&result); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	} else {
+		w.Write(data)
+	}
+}
+
+// createCcr creates a new CCR job and adds it to the job manager.
+// It takes a CreateCcrRequest as input and returns an error if there was a problem creating the job or adding it to the job manager.
 func (s *HttpService) createCcr(request *CreateCcrRequest) error {
 	log.Infof("create ccr %s", request)
 
@@ -311,6 +337,7 @@ func (s *HttpService) listJobsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *HttpService) RegisterHandlers() {
+	s.mux.HandleFunc("/version", s.versionHandler)
 	s.mux.HandleFunc("/create_ccr", s.createHandler)
 	s.mux.HandleFunc("/get_lag", s.getLagHandler)
 	s.mux.HandleFunc("/pause", s.pauseHandler)
