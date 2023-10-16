@@ -32,7 +32,7 @@ fmt:
 .PHONY: test
 ## test : Run test
 test:
-	$(V)go test $(shell go list ./... | grep -v github.com/selectdb/ccr_syncer/cmd | grep -v github.com/selectdb/ccr_syncer/rpc/kitex_gen/) | grep -F -v '[no test files]'
+	$(V)go test $(shell go list ./... | grep -v github.com/selectdb/ccr_syncer/cmd | grep -v github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/) | grep -F -v '[no test files]'
 
 .PHONY: help
 ## help : Print help message
