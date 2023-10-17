@@ -46,7 +46,7 @@ help: Makefile
 .PHONY: ccr_syncer
 ## ccr_syncer : Build ccr_syncer binary
 ccr_syncer: bin
-	$(V)go build -ldflags "-X main.GitTagSha=$(git_tag_sha)" -o bin/ccr_syncer ./cmd/ccr_syncer
+	$(V)go build -ldflags "-X github.com/selectdb/ccr_syncer/pkg/version.GitTagSha=$(git_tag_sha)" -o bin/ccr_syncer ./cmd/ccr_syncer
 
 .PHONY: get_binlog
 ## get_binlog : Build get_binlog binary
