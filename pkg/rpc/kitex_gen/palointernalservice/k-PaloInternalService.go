@@ -2214,6 +2214,20 @@ func (p *TQueryOptions) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 87:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField87(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -3317,6 +3331,20 @@ func (p *TQueryOptions) FastReadField86(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TQueryOptions) FastReadField87(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.FasterFloatConvert = v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TQueryOptions) FastWrite(buf []byte) int {
 	return 0
@@ -3399,6 +3427,7 @@ func (p *TQueryOptions) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryW
 		offset += p.fastWriteField84(buf[offset:], binaryWriter)
 		offset += p.fastWriteField85(buf[offset:], binaryWriter)
 		offset += p.fastWriteField86(buf[offset:], binaryWriter)
+		offset += p.fastWriteField87(buf[offset:], binaryWriter)
 		offset += p.fastWriteField18(buf[offset:], binaryWriter)
 		offset += p.fastWriteField42(buf[offset:], binaryWriter)
 		offset += p.fastWriteField46(buf[offset:], binaryWriter)
@@ -3490,6 +3519,7 @@ func (p *TQueryOptions) BLength() int {
 		l += p.field84Length()
 		l += p.field85Length()
 		l += p.field86Length()
+		l += p.field87Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -4342,6 +4372,17 @@ func (p *TQueryOptions) fastWriteField86(buf []byte, binaryWriter bthrift.Binary
 	return offset
 }
 
+func (p *TQueryOptions) fastWriteField87(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetFasterFloatConvert() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "faster_float_convert", thrift.BOOL, 87)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.FasterFloatConvert)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TQueryOptions) field1Length() int {
 	l := 0
 	if p.IsSetAbortOnError() {
@@ -5182,6 +5223,17 @@ func (p *TQueryOptions) field86Length() int {
 	if p.IsSetAnalyzeTimeout() {
 		l += bthrift.Binary.FieldBeginLength("analyze_timeout", thrift.I32, 86)
 		l += bthrift.Binary.I32Length(p.AnalyzeTimeout)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field87Length() int {
+	l := 0
+	if p.IsSetFasterFloatConvert() {
+		l += bthrift.Binary.FieldBeginLength("faster_float_convert", thrift.BOOL, 87)
+		l += bthrift.Binary.BoolLength(p.FasterFloatConvert)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

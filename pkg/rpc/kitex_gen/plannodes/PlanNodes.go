@@ -923,6 +923,58 @@ func (p *TopNAlgorithm) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+type TPartTopNPhase int64
+
+const (
+	TPartTopNPhase_UNKNOWN          TPartTopNPhase = 0
+	TPartTopNPhase_ONE_PHASE_GLOBAL TPartTopNPhase = 1
+	TPartTopNPhase_TWO_PHASE_LOCAL  TPartTopNPhase = 2
+	TPartTopNPhase_TWO_PHASE_GLOBAL TPartTopNPhase = 3
+)
+
+func (p TPartTopNPhase) String() string {
+	switch p {
+	case TPartTopNPhase_UNKNOWN:
+		return "UNKNOWN"
+	case TPartTopNPhase_ONE_PHASE_GLOBAL:
+		return "ONE_PHASE_GLOBAL"
+	case TPartTopNPhase_TWO_PHASE_LOCAL:
+		return "TWO_PHASE_LOCAL"
+	case TPartTopNPhase_TWO_PHASE_GLOBAL:
+		return "TWO_PHASE_GLOBAL"
+	}
+	return "<UNSET>"
+}
+
+func TPartTopNPhaseFromString(s string) (TPartTopNPhase, error) {
+	switch s {
+	case "UNKNOWN":
+		return TPartTopNPhase_UNKNOWN, nil
+	case "ONE_PHASE_GLOBAL":
+		return TPartTopNPhase_ONE_PHASE_GLOBAL, nil
+	case "TWO_PHASE_LOCAL":
+		return TPartTopNPhase_TWO_PHASE_LOCAL, nil
+	case "TWO_PHASE_GLOBAL":
+		return TPartTopNPhase_TWO_PHASE_GLOBAL, nil
+	}
+	return TPartTopNPhase(0), fmt.Errorf("not a valid TPartTopNPhase string")
+}
+
+func TPartTopNPhasePtr(v TPartTopNPhase) *TPartTopNPhase { return &v }
+func (p *TPartTopNPhase) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = TPartTopNPhase(result.Int64)
+	return
+}
+
+func (p *TPartTopNPhase) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
 type TAnalyticWindowType int64
 
 const (
@@ -1127,6 +1179,53 @@ func (p *TRuntimeFilterType) Scan(value interface{}) (err error) {
 }
 
 func (p *TRuntimeFilterType) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
+type TMinMaxRuntimeFilterType int64
+
+const (
+	TMinMaxRuntimeFilterType_MIN     TMinMaxRuntimeFilterType = 1
+	TMinMaxRuntimeFilterType_MAX     TMinMaxRuntimeFilterType = 2
+	TMinMaxRuntimeFilterType_MIN_MAX TMinMaxRuntimeFilterType = 4
+)
+
+func (p TMinMaxRuntimeFilterType) String() string {
+	switch p {
+	case TMinMaxRuntimeFilterType_MIN:
+		return "MIN"
+	case TMinMaxRuntimeFilterType_MAX:
+		return "MAX"
+	case TMinMaxRuntimeFilterType_MIN_MAX:
+		return "MIN_MAX"
+	}
+	return "<UNSET>"
+}
+
+func TMinMaxRuntimeFilterTypeFromString(s string) (TMinMaxRuntimeFilterType, error) {
+	switch s {
+	case "MIN":
+		return TMinMaxRuntimeFilterType_MIN, nil
+	case "MAX":
+		return TMinMaxRuntimeFilterType_MAX, nil
+	case "MIN_MAX":
+		return TMinMaxRuntimeFilterType_MIN_MAX, nil
+	}
+	return TMinMaxRuntimeFilterType(0), fmt.Errorf("not a valid TMinMaxRuntimeFilterType string")
+}
+
+func TMinMaxRuntimeFilterTypePtr(v TMinMaxRuntimeFilterType) *TMinMaxRuntimeFilterType { return &v }
+func (p *TMinMaxRuntimeFilterType) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = TMinMaxRuntimeFilterType(result.Int64)
+	return
+}
+
+func (p *TMinMaxRuntimeFilterType) Value() (driver.Value, error) {
 	if p == nil {
 		return nil, nil
 	}
@@ -9335,6 +9434,10 @@ type TPaimonFileDesc struct {
 	TableName         *string           `thrift:"table_name,4,optional" frugal:"4,optional,string" json:"table_name,omitempty"`
 	PaimonPredicate   *string           `thrift:"paimon_predicate,5,optional" frugal:"5,optional,string" json:"paimon_predicate,omitempty"`
 	PaimonOptions     map[string]string `thrift:"paimon_options,6,optional" frugal:"6,optional,map<string:string>" json:"paimon_options,omitempty"`
+	CtlId             *int64            `thrift:"ctl_id,7,optional" frugal:"7,optional,i64" json:"ctl_id,omitempty"`
+	DbId              *int64            `thrift:"db_id,8,optional" frugal:"8,optional,i64" json:"db_id,omitempty"`
+	TblId             *int64            `thrift:"tbl_id,9,optional" frugal:"9,optional,i64" json:"tbl_id,omitempty"`
+	LastUpdateTime    *int64            `thrift:"last_update_time,10,optional" frugal:"10,optional,i64" json:"last_update_time,omitempty"`
 }
 
 func NewTPaimonFileDesc() *TPaimonFileDesc {
@@ -9398,6 +9501,42 @@ func (p *TPaimonFileDesc) GetPaimonOptions() (v map[string]string) {
 	}
 	return p.PaimonOptions
 }
+
+var TPaimonFileDesc_CtlId_DEFAULT int64
+
+func (p *TPaimonFileDesc) GetCtlId() (v int64) {
+	if !p.IsSetCtlId() {
+		return TPaimonFileDesc_CtlId_DEFAULT
+	}
+	return *p.CtlId
+}
+
+var TPaimonFileDesc_DbId_DEFAULT int64
+
+func (p *TPaimonFileDesc) GetDbId() (v int64) {
+	if !p.IsSetDbId() {
+		return TPaimonFileDesc_DbId_DEFAULT
+	}
+	return *p.DbId
+}
+
+var TPaimonFileDesc_TblId_DEFAULT int64
+
+func (p *TPaimonFileDesc) GetTblId() (v int64) {
+	if !p.IsSetTblId() {
+		return TPaimonFileDesc_TblId_DEFAULT
+	}
+	return *p.TblId
+}
+
+var TPaimonFileDesc_LastUpdateTime_DEFAULT int64
+
+func (p *TPaimonFileDesc) GetLastUpdateTime() (v int64) {
+	if !p.IsSetLastUpdateTime() {
+		return TPaimonFileDesc_LastUpdateTime_DEFAULT
+	}
+	return *p.LastUpdateTime
+}
 func (p *TPaimonFileDesc) SetPaimonSplit(val *string) {
 	p.PaimonSplit = val
 }
@@ -9416,14 +9555,30 @@ func (p *TPaimonFileDesc) SetPaimonPredicate(val *string) {
 func (p *TPaimonFileDesc) SetPaimonOptions(val map[string]string) {
 	p.PaimonOptions = val
 }
+func (p *TPaimonFileDesc) SetCtlId(val *int64) {
+	p.CtlId = val
+}
+func (p *TPaimonFileDesc) SetDbId(val *int64) {
+	p.DbId = val
+}
+func (p *TPaimonFileDesc) SetTblId(val *int64) {
+	p.TblId = val
+}
+func (p *TPaimonFileDesc) SetLastUpdateTime(val *int64) {
+	p.LastUpdateTime = val
+}
 
 var fieldIDToName_TPaimonFileDesc = map[int16]string{
-	1: "paimon_split",
-	2: "paimon_column_names",
-	3: "db_name",
-	4: "table_name",
-	5: "paimon_predicate",
-	6: "paimon_options",
+	1:  "paimon_split",
+	2:  "paimon_column_names",
+	3:  "db_name",
+	4:  "table_name",
+	5:  "paimon_predicate",
+	6:  "paimon_options",
+	7:  "ctl_id",
+	8:  "db_id",
+	9:  "tbl_id",
+	10: "last_update_time",
 }
 
 func (p *TPaimonFileDesc) IsSetPaimonSplit() bool {
@@ -9448,6 +9603,22 @@ func (p *TPaimonFileDesc) IsSetPaimonPredicate() bool {
 
 func (p *TPaimonFileDesc) IsSetPaimonOptions() bool {
 	return p.PaimonOptions != nil
+}
+
+func (p *TPaimonFileDesc) IsSetCtlId() bool {
+	return p.CtlId != nil
+}
+
+func (p *TPaimonFileDesc) IsSetDbId() bool {
+	return p.DbId != nil
+}
+
+func (p *TPaimonFileDesc) IsSetTblId() bool {
+	return p.TblId != nil
+}
+
+func (p *TPaimonFileDesc) IsSetLastUpdateTime() bool {
+	return p.LastUpdateTime != nil
 }
 
 func (p *TPaimonFileDesc) Read(iprot thrift.TProtocol) (err error) {
@@ -9522,6 +9693,46 @@ func (p *TPaimonFileDesc) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 8:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 9:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 10:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -9633,6 +9844,42 @@ func (p *TPaimonFileDesc) ReadField6(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TPaimonFileDesc) ReadField7(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.CtlId = &v
+	}
+	return nil
+}
+
+func (p *TPaimonFileDesc) ReadField8(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.DbId = &v
+	}
+	return nil
+}
+
+func (p *TPaimonFileDesc) ReadField9(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.TblId = &v
+	}
+	return nil
+}
+
+func (p *TPaimonFileDesc) ReadField10(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.LastUpdateTime = &v
+	}
+	return nil
+}
+
 func (p *TPaimonFileDesc) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TPaimonFileDesc"); err != nil {
@@ -9661,6 +9908,22 @@ func (p *TPaimonFileDesc) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 
@@ -9809,6 +10072,82 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 
+func (p *TPaimonFileDesc) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCtlId() {
+		if err = oprot.WriteFieldBegin("ctl_id", thrift.I64, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.CtlId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
+func (p *TPaimonFileDesc) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDbId() {
+		if err = oprot.WriteFieldBegin("db_id", thrift.I64, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.DbId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
+func (p *TPaimonFileDesc) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTblId() {
+		if err = oprot.WriteFieldBegin("tbl_id", thrift.I64, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TblId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+
+func (p *TPaimonFileDesc) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLastUpdateTime() {
+		if err = oprot.WriteFieldBegin("last_update_time", thrift.I64, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.LastUpdateTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
 func (p *TPaimonFileDesc) String() string {
 	if p == nil {
 		return "<nil>"
@@ -9838,6 +10177,18 @@ func (p *TPaimonFileDesc) DeepEqual(ano *TPaimonFileDesc) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.PaimonOptions) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.CtlId) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.DbId) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.TblId) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.LastUpdateTime) {
 		return false
 	}
 	return true
@@ -9913,6 +10264,54 @@ func (p *TPaimonFileDesc) Field6DeepEqual(src map[string]string) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *TPaimonFileDesc) Field7DeepEqual(src *int64) bool {
+
+	if p.CtlId == src {
+		return true
+	} else if p.CtlId == nil || src == nil {
+		return false
+	}
+	if *p.CtlId != *src {
+		return false
+	}
+	return true
+}
+func (p *TPaimonFileDesc) Field8DeepEqual(src *int64) bool {
+
+	if p.DbId == src {
+		return true
+	} else if p.DbId == nil || src == nil {
+		return false
+	}
+	if *p.DbId != *src {
+		return false
+	}
+	return true
+}
+func (p *TPaimonFileDesc) Field9DeepEqual(src *int64) bool {
+
+	if p.TblId == src {
+		return true
+	} else if p.TblId == nil || src == nil {
+		return false
+	}
+	if *p.TblId != *src {
+		return false
+	}
+	return true
+}
+func (p *TPaimonFileDesc) Field10DeepEqual(src *int64) bool {
+
+	if p.LastUpdateTime == src {
+		return true
+	} else if p.LastUpdateTime == nil || src == nil {
+		return false
+	}
+	if *p.LastUpdateTime != *src {
+		return false
 	}
 	return true
 }
@@ -16446,11 +16845,267 @@ func (p *TFrontendsMetadataParams) Field1DeepEqual(src *string) bool {
 	return true
 }
 
+type TQueriesMetadataParams struct {
+	ClusterName    *string `thrift:"cluster_name,1,optional" frugal:"1,optional,string" json:"cluster_name,omitempty"`
+	RelayToOtherFe *bool   `thrift:"relay_to_other_fe,2,optional" frugal:"2,optional,bool" json:"relay_to_other_fe,omitempty"`
+}
+
+func NewTQueriesMetadataParams() *TQueriesMetadataParams {
+	return &TQueriesMetadataParams{}
+}
+
+func (p *TQueriesMetadataParams) InitDefault() {
+	*p = TQueriesMetadataParams{}
+}
+
+var TQueriesMetadataParams_ClusterName_DEFAULT string
+
+func (p *TQueriesMetadataParams) GetClusterName() (v string) {
+	if !p.IsSetClusterName() {
+		return TQueriesMetadataParams_ClusterName_DEFAULT
+	}
+	return *p.ClusterName
+}
+
+var TQueriesMetadataParams_RelayToOtherFe_DEFAULT bool
+
+func (p *TQueriesMetadataParams) GetRelayToOtherFe() (v bool) {
+	if !p.IsSetRelayToOtherFe() {
+		return TQueriesMetadataParams_RelayToOtherFe_DEFAULT
+	}
+	return *p.RelayToOtherFe
+}
+func (p *TQueriesMetadataParams) SetClusterName(val *string) {
+	p.ClusterName = val
+}
+func (p *TQueriesMetadataParams) SetRelayToOtherFe(val *bool) {
+	p.RelayToOtherFe = val
+}
+
+var fieldIDToName_TQueriesMetadataParams = map[int16]string{
+	1: "cluster_name",
+	2: "relay_to_other_fe",
+}
+
+func (p *TQueriesMetadataParams) IsSetClusterName() bool {
+	return p.ClusterName != nil
+}
+
+func (p *TQueriesMetadataParams) IsSetRelayToOtherFe() bool {
+	return p.RelayToOtherFe != nil
+}
+
+func (p *TQueriesMetadataParams) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TQueriesMetadataParams[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TQueriesMetadataParams) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		p.ClusterName = &v
+	}
+	return nil
+}
+
+func (p *TQueriesMetadataParams) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.RelayToOtherFe = &v
+	}
+	return nil
+}
+
+func (p *TQueriesMetadataParams) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TQueriesMetadataParams"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TQueriesMetadataParams) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetClusterName() {
+		if err = oprot.WriteFieldBegin("cluster_name", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ClusterName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TQueriesMetadataParams) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRelayToOtherFe() {
+		if err = oprot.WriteFieldBegin("relay_to_other_fe", thrift.BOOL, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.RelayToOtherFe); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TQueriesMetadataParams) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TQueriesMetadataParams(%+v)", *p)
+}
+
+func (p *TQueriesMetadataParams) DeepEqual(ano *TQueriesMetadataParams) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ClusterName) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.RelayToOtherFe) {
+		return false
+	}
+	return true
+}
+
+func (p *TQueriesMetadataParams) Field1DeepEqual(src *string) bool {
+
+	if p.ClusterName == src {
+		return true
+	} else if p.ClusterName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ClusterName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TQueriesMetadataParams) Field2DeepEqual(src *bool) bool {
+
+	if p.RelayToOtherFe == src {
+		return true
+	} else if p.RelayToOtherFe == nil || src == nil {
+		return false
+	}
+	if *p.RelayToOtherFe != *src {
+		return false
+	}
+	return true
+}
+
 type TMetaScanRange struct {
 	MetadataType    *types.TMetadataType      `thrift:"metadata_type,1,optional" frugal:"1,optional,TMetadataType" json:"metadata_type,omitempty"`
 	IcebergParams   *TIcebergMetadataParams   `thrift:"iceberg_params,2,optional" frugal:"2,optional,TIcebergMetadataParams" json:"iceberg_params,omitempty"`
 	BackendsParams  *TBackendsMetadataParams  `thrift:"backends_params,3,optional" frugal:"3,optional,TBackendsMetadataParams" json:"backends_params,omitempty"`
 	FrontendsParams *TFrontendsMetadataParams `thrift:"frontends_params,4,optional" frugal:"4,optional,TFrontendsMetadataParams" json:"frontends_params,omitempty"`
+	QueriesParams   *TQueriesMetadataParams   `thrift:"queries_params,5,optional" frugal:"5,optional,TQueriesMetadataParams" json:"queries_params,omitempty"`
 }
 
 func NewTMetaScanRange() *TMetaScanRange {
@@ -16496,6 +17151,15 @@ func (p *TMetaScanRange) GetFrontendsParams() (v *TFrontendsMetadataParams) {
 	}
 	return p.FrontendsParams
 }
+
+var TMetaScanRange_QueriesParams_DEFAULT *TQueriesMetadataParams
+
+func (p *TMetaScanRange) GetQueriesParams() (v *TQueriesMetadataParams) {
+	if !p.IsSetQueriesParams() {
+		return TMetaScanRange_QueriesParams_DEFAULT
+	}
+	return p.QueriesParams
+}
 func (p *TMetaScanRange) SetMetadataType(val *types.TMetadataType) {
 	p.MetadataType = val
 }
@@ -16508,12 +17172,16 @@ func (p *TMetaScanRange) SetBackendsParams(val *TBackendsMetadataParams) {
 func (p *TMetaScanRange) SetFrontendsParams(val *TFrontendsMetadataParams) {
 	p.FrontendsParams = val
 }
+func (p *TMetaScanRange) SetQueriesParams(val *TQueriesMetadataParams) {
+	p.QueriesParams = val
+}
 
 var fieldIDToName_TMetaScanRange = map[int16]string{
 	1: "metadata_type",
 	2: "iceberg_params",
 	3: "backends_params",
 	4: "frontends_params",
+	5: "queries_params",
 }
 
 func (p *TMetaScanRange) IsSetMetadataType() bool {
@@ -16530,6 +17198,10 @@ func (p *TMetaScanRange) IsSetBackendsParams() bool {
 
 func (p *TMetaScanRange) IsSetFrontendsParams() bool {
 	return p.FrontendsParams != nil
+}
+
+func (p *TMetaScanRange) IsSetQueriesParams() bool {
+	return p.QueriesParams != nil
 }
 
 func (p *TMetaScanRange) Read(iprot thrift.TProtocol) (err error) {
@@ -16584,6 +17256,16 @@ func (p *TMetaScanRange) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -16655,6 +17337,14 @@ func (p *TMetaScanRange) ReadField4(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TMetaScanRange) ReadField5(iprot thrift.TProtocol) error {
+	p.QueriesParams = NewTQueriesMetadataParams()
+	if err := p.QueriesParams.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *TMetaScanRange) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TMetaScanRange"); err != nil {
@@ -16675,6 +17365,10 @@ func (p *TMetaScanRange) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 
@@ -16772,6 +17466,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 
+func (p *TMetaScanRange) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetQueriesParams() {
+		if err = oprot.WriteFieldBegin("queries_params", thrift.STRUCT, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.QueriesParams.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
 func (p *TMetaScanRange) String() string {
 	if p == nil {
 		return "<nil>"
@@ -16795,6 +17508,9 @@ func (p *TMetaScanRange) DeepEqual(ano *TMetaScanRange) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.FrontendsParams) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.QueriesParams) {
 		return false
 	}
 	return true
@@ -16829,6 +17545,13 @@ func (p *TMetaScanRange) Field3DeepEqual(src *TBackendsMetadataParams) bool {
 func (p *TMetaScanRange) Field4DeepEqual(src *TFrontendsMetadataParams) bool {
 
 	if !p.FrontendsParams.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TMetaScanRange) Field5DeepEqual(src *TQueriesMetadataParams) bool {
+
+	if !p.QueriesParams.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -29813,11 +30536,12 @@ func (p *TSortNode) Field7DeepEqual(src *bool) bool {
 }
 
 type TPartitionSortNode struct {
-	PartitionExprs      []*exprs.TExpr `thrift:"partition_exprs,1,optional" frugal:"1,optional,list<exprs.TExpr>" json:"partition_exprs,omitempty"`
-	SortInfo            *TSortInfo     `thrift:"sort_info,2,optional" frugal:"2,optional,TSortInfo" json:"sort_info,omitempty"`
-	HasGlobalLimit      *bool          `thrift:"has_global_limit,3,optional" frugal:"3,optional,bool" json:"has_global_limit,omitempty"`
-	TopNAlgorithm       *TopNAlgorithm `thrift:"top_n_algorithm,4,optional" frugal:"4,optional,TopNAlgorithm" json:"top_n_algorithm,omitempty"`
-	PartitionInnerLimit *int64         `thrift:"partition_inner_limit,5,optional" frugal:"5,optional,i64" json:"partition_inner_limit,omitempty"`
+	PartitionExprs      []*exprs.TExpr  `thrift:"partition_exprs,1,optional" frugal:"1,optional,list<exprs.TExpr>" json:"partition_exprs,omitempty"`
+	SortInfo            *TSortInfo      `thrift:"sort_info,2,optional" frugal:"2,optional,TSortInfo" json:"sort_info,omitempty"`
+	HasGlobalLimit      *bool           `thrift:"has_global_limit,3,optional" frugal:"3,optional,bool" json:"has_global_limit,omitempty"`
+	TopNAlgorithm       *TopNAlgorithm  `thrift:"top_n_algorithm,4,optional" frugal:"4,optional,TopNAlgorithm" json:"top_n_algorithm,omitempty"`
+	PartitionInnerLimit *int64          `thrift:"partition_inner_limit,5,optional" frugal:"5,optional,i64" json:"partition_inner_limit,omitempty"`
+	PtopnPhase          *TPartTopNPhase `thrift:"ptopn_phase,6,optional" frugal:"6,optional,TPartTopNPhase" json:"ptopn_phase,omitempty"`
 }
 
 func NewTPartitionSortNode() *TPartitionSortNode {
@@ -29872,6 +30596,15 @@ func (p *TPartitionSortNode) GetPartitionInnerLimit() (v int64) {
 	}
 	return *p.PartitionInnerLimit
 }
+
+var TPartitionSortNode_PtopnPhase_DEFAULT TPartTopNPhase
+
+func (p *TPartitionSortNode) GetPtopnPhase() (v TPartTopNPhase) {
+	if !p.IsSetPtopnPhase() {
+		return TPartitionSortNode_PtopnPhase_DEFAULT
+	}
+	return *p.PtopnPhase
+}
 func (p *TPartitionSortNode) SetPartitionExprs(val []*exprs.TExpr) {
 	p.PartitionExprs = val
 }
@@ -29887,6 +30620,9 @@ func (p *TPartitionSortNode) SetTopNAlgorithm(val *TopNAlgorithm) {
 func (p *TPartitionSortNode) SetPartitionInnerLimit(val *int64) {
 	p.PartitionInnerLimit = val
 }
+func (p *TPartitionSortNode) SetPtopnPhase(val *TPartTopNPhase) {
+	p.PtopnPhase = val
+}
 
 var fieldIDToName_TPartitionSortNode = map[int16]string{
 	1: "partition_exprs",
@@ -29894,6 +30630,7 @@ var fieldIDToName_TPartitionSortNode = map[int16]string{
 	3: "has_global_limit",
 	4: "top_n_algorithm",
 	5: "partition_inner_limit",
+	6: "ptopn_phase",
 }
 
 func (p *TPartitionSortNode) IsSetPartitionExprs() bool {
@@ -29914,6 +30651,10 @@ func (p *TPartitionSortNode) IsSetTopNAlgorithm() bool {
 
 func (p *TPartitionSortNode) IsSetPartitionInnerLimit() bool {
 	return p.PartitionInnerLimit != nil
+}
+
+func (p *TPartitionSortNode) IsSetPtopnPhase() bool {
+	return p.PtopnPhase != nil
 }
 
 func (p *TPartitionSortNode) Read(iprot thrift.TProtocol) (err error) {
@@ -29978,6 +30719,16 @@ func (p *TPartitionSortNode) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -30071,6 +30822,16 @@ func (p *TPartitionSortNode) ReadField5(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TPartitionSortNode) ReadField6(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := TPartTopNPhase(v)
+		p.PtopnPhase = &tmp
+	}
+	return nil
+}
+
 func (p *TPartitionSortNode) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TPartitionSortNode"); err != nil {
@@ -30095,6 +30856,10 @@ func (p *TPartitionSortNode) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 
@@ -30219,6 +30984,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 
+func (p *TPartitionSortNode) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPtopnPhase() {
+		if err = oprot.WriteFieldBegin("ptopn_phase", thrift.I32, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.PtopnPhase)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
 func (p *TPartitionSortNode) String() string {
 	if p == nil {
 		return "<nil>"
@@ -30245,6 +31029,9 @@ func (p *TPartitionSortNode) DeepEqual(ano *TPartitionSortNode) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.PartitionInnerLimit) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.PtopnPhase) {
 		return false
 	}
 	return true
@@ -30302,6 +31089,18 @@ func (p *TPartitionSortNode) Field5DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.PartitionInnerLimit != *src {
+		return false
+	}
+	return true
+}
+func (p *TPartitionSortNode) Field6DeepEqual(src *TPartTopNPhase) bool {
+
+	if p.PtopnPhase == src {
+		return true
+	} else if p.PtopnPhase == nil || src == nil {
+		return false
+	}
+	if *p.PtopnPhase != *src {
 		return false
 	}
 	return true
@@ -35276,6 +36075,7 @@ type TRuntimeFilterDesc struct {
 	BitmapTargetExpr     *exprs.TExpr                       `thrift:"bitmap_target_expr,10,optional" frugal:"10,optional,exprs.TExpr" json:"bitmap_target_expr,omitempty"`
 	BitmapFilterNotIn    *bool                              `thrift:"bitmap_filter_not_in,11,optional" frugal:"11,optional,bool" json:"bitmap_filter_not_in,omitempty"`
 	OptRemoteRf          *bool                              `thrift:"opt_remote_rf,12,optional" frugal:"12,optional,bool" json:"opt_remote_rf,omitempty"`
+	MinMaxType           *TMinMaxRuntimeFilterType          `thrift:"min_max_type,13,optional" frugal:"13,optional,TMinMaxRuntimeFilterType" json:"min_max_type,omitempty"`
 }
 
 func NewTRuntimeFilterDesc() *TRuntimeFilterDesc {
@@ -35358,6 +36158,15 @@ func (p *TRuntimeFilterDesc) GetOptRemoteRf() (v bool) {
 	}
 	return *p.OptRemoteRf
 }
+
+var TRuntimeFilterDesc_MinMaxType_DEFAULT TMinMaxRuntimeFilterType
+
+func (p *TRuntimeFilterDesc) GetMinMaxType() (v TMinMaxRuntimeFilterType) {
+	if !p.IsSetMinMaxType() {
+		return TRuntimeFilterDesc_MinMaxType_DEFAULT
+	}
+	return *p.MinMaxType
+}
 func (p *TRuntimeFilterDesc) SetFilterId(val int32) {
 	p.FilterId = val
 }
@@ -35394,6 +36203,9 @@ func (p *TRuntimeFilterDesc) SetBitmapFilterNotIn(val *bool) {
 func (p *TRuntimeFilterDesc) SetOptRemoteRf(val *bool) {
 	p.OptRemoteRf = val
 }
+func (p *TRuntimeFilterDesc) SetMinMaxType(val *TMinMaxRuntimeFilterType) {
+	p.MinMaxType = val
+}
 
 var fieldIDToName_TRuntimeFilterDesc = map[int16]string{
 	1:  "filter_id",
@@ -35408,6 +36220,7 @@ var fieldIDToName_TRuntimeFilterDesc = map[int16]string{
 	10: "bitmap_target_expr",
 	11: "bitmap_filter_not_in",
 	12: "opt_remote_rf",
+	13: "min_max_type",
 }
 
 func (p *TRuntimeFilterDesc) IsSetSrcExpr() bool {
@@ -35428,6 +36241,10 @@ func (p *TRuntimeFilterDesc) IsSetBitmapFilterNotIn() bool {
 
 func (p *TRuntimeFilterDesc) IsSetOptRemoteRf() bool {
 	return p.OptRemoteRf != nil
+}
+
+func (p *TRuntimeFilterDesc) IsSetMinMaxType() bool {
+	return p.MinMaxType != nil
 }
 
 func (p *TRuntimeFilterDesc) Read(iprot thrift.TProtocol) (err error) {
@@ -35578,6 +36395,16 @@ func (p *TRuntimeFilterDesc) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 13:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -35779,6 +36606,16 @@ func (p *TRuntimeFilterDesc) ReadField12(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TRuntimeFilterDesc) ReadField13(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := TMinMaxRuntimeFilterType(v)
+		p.MinMaxType = &tmp
+	}
+	return nil
+}
+
 func (p *TRuntimeFilterDesc) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TRuntimeFilterDesc"); err != nil {
@@ -35831,6 +36668,10 @@ func (p *TRuntimeFilterDesc) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 
@@ -36077,6 +36918,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
 
+func (p *TRuntimeFilterDesc) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMinMaxType() {
+		if err = oprot.WriteFieldBegin("min_max_type", thrift.I32, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.MinMaxType)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
+
 func (p *TRuntimeFilterDesc) String() string {
 	if p == nil {
 		return "<nil>"
@@ -36124,6 +36984,9 @@ func (p *TRuntimeFilterDesc) DeepEqual(ano *TRuntimeFilterDesc) bool {
 		return false
 	}
 	if !p.Field12DeepEqual(ano.OptRemoteRf) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.MinMaxType) {
 		return false
 	}
 	return true
@@ -36230,6 +37093,18 @@ func (p *TRuntimeFilterDesc) Field12DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.OptRemoteRf != *src {
+		return false
+	}
+	return true
+}
+func (p *TRuntimeFilterDesc) Field13DeepEqual(src *TMinMaxRuntimeFilterType) bool {
+
+	if p.MinMaxType == src {
+		return true
+	} else if p.MinMaxType == nil || src == nil {
+		return false
+	}
+	if *p.MinMaxType != *src {
 		return false
 	}
 	return true

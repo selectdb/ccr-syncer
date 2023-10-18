@@ -366,6 +366,8 @@ func (s *HttpService) Start() error {
 	}
 }
 
+// Stop stops the HTTP server gracefully.
+// It returns an error if the server shutdown fails.
 func (s *HttpService) Stop() error {
 	if err := s.server.Shutdown(context.TODO()); err != nil {
 		return xerror.Wrapf(err, xerror.Normal, "http server close failed")

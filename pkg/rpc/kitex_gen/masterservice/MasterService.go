@@ -1515,24 +1515,24 @@ func (p *TTabletInfo) Field20DeepEqual(src *types.TUniqueId) bool {
 }
 
 type TFinishTaskRequest struct {
-	Backend                *types.TBackend                    `thrift:"backend,1,required" frugal:"1,required,types.TBackend" json:"backend"`
-	TaskType               types.TTaskType                    `thrift:"task_type,2,required" frugal:"2,required,TTaskType" json:"task_type"`
-	Signature              int64                              `thrift:"signature,3,required" frugal:"3,required,i64" json:"signature"`
-	TaskStatus             *status.TStatus                    `thrift:"task_status,4,required" frugal:"4,required,status.TStatus" json:"task_status"`
-	ReportVersion          *int64                             `thrift:"report_version,5,optional" frugal:"5,optional,i64" json:"report_version,omitempty"`
-	FinishTabletInfos      []*TTabletInfo                     `thrift:"finish_tablet_infos,6,optional" frugal:"6,optional,list<TTabletInfo>" json:"finish_tablet_infos,omitempty"`
-	TabletChecksum         *int64                             `thrift:"tablet_checksum,7,optional" frugal:"7,optional,i64" json:"tablet_checksum,omitempty"`
-	RequestVersion         *int64                             `thrift:"request_version,8,optional" frugal:"8,optional,i64" json:"request_version,omitempty"`
-	RequestVersionHash     *int64                             `thrift:"request_version_hash,9,optional" frugal:"9,optional,i64" json:"request_version_hash,omitempty"`
-	SnapshotPath           *string                            `thrift:"snapshot_path,10,optional" frugal:"10,optional,string" json:"snapshot_path,omitempty"`
-	ErrorTabletIds         []types.TTabletId                  `thrift:"error_tablet_ids,11,optional" frugal:"11,optional,list<i64>" json:"error_tablet_ids,omitempty"`
-	SnapshotFiles          []string                           `thrift:"snapshot_files,12,optional" frugal:"12,optional,list<string>" json:"snapshot_files,omitempty"`
-	TabletFiles            map[types.TTabletId][]string       `thrift:"tablet_files,13,optional" frugal:"13,optional,map<i64:list<string>>" json:"tablet_files,omitempty"`
-	DownloadedTabletIds    []types.TTabletId                  `thrift:"downloaded_tablet_ids,14,optional" frugal:"14,optional,list<i64>" json:"downloaded_tablet_ids,omitempty"`
-	CopySize               *int64                             `thrift:"copy_size,15,optional" frugal:"15,optional,i64" json:"copy_size,omitempty"`
-	CopyTimeMs             *int64                             `thrift:"copy_time_ms,16,optional" frugal:"16,optional,i64" json:"copy_time_ms,omitempty"`
-	SuccTablets            map[types.TTabletId]types.TVersion `thrift:"succ_tablets,17,optional" frugal:"17,optional,map<i64:i64>" json:"succ_tablets,omitempty"`
-	TabletIdToDeltaNumRows map[int64]int64                    `thrift:"tablet_id_to_delta_num_rows,18,optional" frugal:"18,optional,map<i64:i64>" json:"tablet_id_to_delta_num_rows,omitempty"`
+	Backend               *types.TBackend                    `thrift:"backend,1,required" frugal:"1,required,types.TBackend" json:"backend"`
+	TaskType              types.TTaskType                    `thrift:"task_type,2,required" frugal:"2,required,TTaskType" json:"task_type"`
+	Signature             int64                              `thrift:"signature,3,required" frugal:"3,required,i64" json:"signature"`
+	TaskStatus            *status.TStatus                    `thrift:"task_status,4,required" frugal:"4,required,status.TStatus" json:"task_status"`
+	ReportVersion         *int64                             `thrift:"report_version,5,optional" frugal:"5,optional,i64" json:"report_version,omitempty"`
+	FinishTabletInfos     []*TTabletInfo                     `thrift:"finish_tablet_infos,6,optional" frugal:"6,optional,list<TTabletInfo>" json:"finish_tablet_infos,omitempty"`
+	TabletChecksum        *int64                             `thrift:"tablet_checksum,7,optional" frugal:"7,optional,i64" json:"tablet_checksum,omitempty"`
+	RequestVersion        *int64                             `thrift:"request_version,8,optional" frugal:"8,optional,i64" json:"request_version,omitempty"`
+	RequestVersionHash    *int64                             `thrift:"request_version_hash,9,optional" frugal:"9,optional,i64" json:"request_version_hash,omitempty"`
+	SnapshotPath          *string                            `thrift:"snapshot_path,10,optional" frugal:"10,optional,string" json:"snapshot_path,omitempty"`
+	ErrorTabletIds        []types.TTabletId                  `thrift:"error_tablet_ids,11,optional" frugal:"11,optional,list<i64>" json:"error_tablet_ids,omitempty"`
+	SnapshotFiles         []string                           `thrift:"snapshot_files,12,optional" frugal:"12,optional,list<string>" json:"snapshot_files,omitempty"`
+	TabletFiles           map[types.TTabletId][]string       `thrift:"tablet_files,13,optional" frugal:"13,optional,map<i64:list<string>>" json:"tablet_files,omitempty"`
+	DownloadedTabletIds   []types.TTabletId                  `thrift:"downloaded_tablet_ids,14,optional" frugal:"14,optional,list<i64>" json:"downloaded_tablet_ids,omitempty"`
+	CopySize              *int64                             `thrift:"copy_size,15,optional" frugal:"15,optional,i64" json:"copy_size,omitempty"`
+	CopyTimeMs            *int64                             `thrift:"copy_time_ms,16,optional" frugal:"16,optional,i64" json:"copy_time_ms,omitempty"`
+	SuccTablets           map[types.TTabletId]types.TVersion `thrift:"succ_tablets,17,optional" frugal:"17,optional,map<i64:i64>" json:"succ_tablets,omitempty"`
+	TableIdToDeltaNumRows map[int64]int64                    `thrift:"table_id_to_delta_num_rows,18,optional" frugal:"18,optional,map<i64:i64>" json:"table_id_to_delta_num_rows,omitempty"`
 }
 
 func NewTFinishTaskRequest() *TFinishTaskRequest {
@@ -1686,13 +1686,13 @@ func (p *TFinishTaskRequest) GetSuccTablets() (v map[types.TTabletId]types.TVers
 	return p.SuccTablets
 }
 
-var TFinishTaskRequest_TabletIdToDeltaNumRows_DEFAULT map[int64]int64
+var TFinishTaskRequest_TableIdToDeltaNumRows_DEFAULT map[int64]int64
 
-func (p *TFinishTaskRequest) GetTabletIdToDeltaNumRows() (v map[int64]int64) {
-	if !p.IsSetTabletIdToDeltaNumRows() {
-		return TFinishTaskRequest_TabletIdToDeltaNumRows_DEFAULT
+func (p *TFinishTaskRequest) GetTableIdToDeltaNumRows() (v map[int64]int64) {
+	if !p.IsSetTableIdToDeltaNumRows() {
+		return TFinishTaskRequest_TableIdToDeltaNumRows_DEFAULT
 	}
-	return p.TabletIdToDeltaNumRows
+	return p.TableIdToDeltaNumRows
 }
 func (p *TFinishTaskRequest) SetBackend(val *types.TBackend) {
 	p.Backend = val
@@ -1745,8 +1745,8 @@ func (p *TFinishTaskRequest) SetCopyTimeMs(val *int64) {
 func (p *TFinishTaskRequest) SetSuccTablets(val map[types.TTabletId]types.TVersion) {
 	p.SuccTablets = val
 }
-func (p *TFinishTaskRequest) SetTabletIdToDeltaNumRows(val map[int64]int64) {
-	p.TabletIdToDeltaNumRows = val
+func (p *TFinishTaskRequest) SetTableIdToDeltaNumRows(val map[int64]int64) {
+	p.TableIdToDeltaNumRows = val
 }
 
 var fieldIDToName_TFinishTaskRequest = map[int16]string{
@@ -1767,7 +1767,7 @@ var fieldIDToName_TFinishTaskRequest = map[int16]string{
 	15: "copy_size",
 	16: "copy_time_ms",
 	17: "succ_tablets",
-	18: "tablet_id_to_delta_num_rows",
+	18: "table_id_to_delta_num_rows",
 }
 
 func (p *TFinishTaskRequest) IsSetBackend() bool {
@@ -1830,8 +1830,8 @@ func (p *TFinishTaskRequest) IsSetSuccTablets() bool {
 	return p.SuccTablets != nil
 }
 
-func (p *TFinishTaskRequest) IsSetTabletIdToDeltaNumRows() bool {
-	return p.TabletIdToDeltaNumRows != nil
+func (p *TFinishTaskRequest) IsSetTableIdToDeltaNumRows() bool {
+	return p.TableIdToDeltaNumRows != nil
 }
 
 func (p *TFinishTaskRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -2350,7 +2350,7 @@ func (p *TFinishTaskRequest) ReadField18(iprot thrift.TProtocol) error {
 	if err != nil {
 		return err
 	}
-	p.TabletIdToDeltaNumRows = make(map[int64]int64, size)
+	p.TableIdToDeltaNumRows = make(map[int64]int64, size)
 	for i := 0; i < size; i++ {
 		var _key int64
 		if v, err := iprot.ReadI64(); err != nil {
@@ -2366,7 +2366,7 @@ func (p *TFinishTaskRequest) ReadField18(iprot thrift.TProtocol) error {
 			_val = v
 		}
 
-		p.TabletIdToDeltaNumRows[_key] = _val
+		p.TableIdToDeltaNumRows[_key] = _val
 	}
 	if err := iprot.ReadMapEnd(); err != nil {
 		return err
@@ -2853,14 +2853,14 @@ WriteFieldEndError:
 }
 
 func (p *TFinishTaskRequest) writeField18(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTabletIdToDeltaNumRows() {
-		if err = oprot.WriteFieldBegin("tablet_id_to_delta_num_rows", thrift.MAP, 18); err != nil {
+	if p.IsSetTableIdToDeltaNumRows() {
+		if err = oprot.WriteFieldBegin("table_id_to_delta_num_rows", thrift.MAP, 18); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteMapBegin(thrift.I64, thrift.I64, len(p.TabletIdToDeltaNumRows)); err != nil {
+		if err := oprot.WriteMapBegin(thrift.I64, thrift.I64, len(p.TableIdToDeltaNumRows)); err != nil {
 			return err
 		}
-		for k, v := range p.TabletIdToDeltaNumRows {
+		for k, v := range p.TableIdToDeltaNumRows {
 
 			if err := oprot.WriteI64(k); err != nil {
 				return err
@@ -2948,7 +2948,7 @@ func (p *TFinishTaskRequest) DeepEqual(ano *TFinishTaskRequest) bool {
 	if !p.Field17DeepEqual(ano.SuccTablets) {
 		return false
 	}
-	if !p.Field18DeepEqual(ano.TabletIdToDeltaNumRows) {
+	if !p.Field18DeepEqual(ano.TableIdToDeltaNumRows) {
 		return false
 	}
 	return true
@@ -3152,10 +3152,10 @@ func (p *TFinishTaskRequest) Field17DeepEqual(src map[types.TTabletId]types.TVer
 }
 func (p *TFinishTaskRequest) Field18DeepEqual(src map[int64]int64) bool {
 
-	if len(p.TabletIdToDeltaNumRows) != len(src) {
+	if len(p.TableIdToDeltaNumRows) != len(src) {
 		return false
 	}
-	for k, v := range p.TabletIdToDeltaNumRows {
+	for k, v := range p.TableIdToDeltaNumRows {
 		_src := src[k]
 		if v != _src {
 			return false

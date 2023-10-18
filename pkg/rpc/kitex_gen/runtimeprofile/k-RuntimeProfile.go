@@ -95,6 +95,20 @@ func (p *TCounter) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -188,6 +202,19 @@ func (p *TCounter) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TCounter) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.Level = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TCounter) FastWrite(buf []byte) int {
 	return 0
@@ -198,6 +225,7 @@ func (p *TCounter) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWriter
 	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "TCounter")
 	if p != nil {
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
+		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 	}
@@ -213,6 +241,7 @@ func (p *TCounter) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -246,6 +275,17 @@ func (p *TCounter) fastWriteField3(buf []byte, binaryWriter bthrift.BinaryWriter
 	return offset
 }
 
+func (p *TCounter) fastWriteField4(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetLevel() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "level", thrift.I64, 4)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.Level)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TCounter) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("name", thrift.STRING, 1)
@@ -270,6 +310,17 @@ func (p *TCounter) field3Length() int {
 	l += bthrift.Binary.I64Length(p.Value)
 
 	l += bthrift.Binary.FieldEndLength()
+	return l
+}
+
+func (p *TCounter) field4Length() int {
+	l := 0
+	if p.IsSetLevel() {
+		l += bthrift.Binary.FieldBeginLength("level", thrift.I64, 4)
+		l += bthrift.Binary.I64Length(*p.Level)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
 	return l
 }
 
@@ -432,6 +483,20 @@ func (p *TRuntimeProfileNode) FastRead(buf []byte) (int, error) {
 					goto ReadFieldError
 				}
 				issetTimestamp = true
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 10:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
 			} else {
 				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -742,6 +807,19 @@ func (p *TRuntimeProfileNode) FastReadField9(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TRuntimeProfileNode) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.IsSink = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TRuntimeProfileNode) FastWrite(buf []byte) int {
 	return 0
@@ -755,6 +833,7 @@ func (p *TRuntimeProfileNode) FastWriteNocopy(buf []byte, binaryWriter bthrift.B
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
+		offset += p.fastWriteField10(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
@@ -779,6 +858,7 @@ func (p *TRuntimeProfileNode) BLength() int {
 		l += p.field7Length()
 		l += p.field8Length()
 		l += p.field9Length()
+		l += p.field10Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -924,6 +1004,17 @@ func (p *TRuntimeProfileNode) fastWriteField9(buf []byte, binaryWriter bthrift.B
 	return offset
 }
 
+func (p *TRuntimeProfileNode) fastWriteField10(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetIsSink() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "is_sink", thrift.BOOL, 10)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.IsSink)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TRuntimeProfileNode) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("name", thrift.STRING, 1)
@@ -1040,6 +1131,17 @@ func (p *TRuntimeProfileNode) field9Length() int {
 	l += bthrift.Binary.I64Length(p.Timestamp)
 
 	l += bthrift.Binary.FieldEndLength()
+	return l
+}
+
+func (p *TRuntimeProfileNode) field10Length() int {
+	l := 0
+	if p.IsSetIsSink() {
+		l += bthrift.Binary.FieldBeginLength("is_sink", thrift.BOOL, 10)
+		l += bthrift.Binary.BoolLength(*p.IsSink)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
 	return l
 }
 

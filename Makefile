@@ -9,6 +9,10 @@ tag := $(shell git describe --abbrev=0 --always --dirty --tags)
 sha := $(shell git rev-parse --short HEAD)
 git_tag_sha := $(tag):$(sha)
 
+.PHONY: default
+## default: ccr_syncer
+default: ccr_syncer
+
 .PHONY: build
 ## build : Build binary
 build: ccr_syncer get_binlog ingest_binlog get_meta snapshot_op get_master_token spec_checker rows_parse
@@ -42,7 +46,12 @@ help: Makefile
 
 # --------------- ------------------ ---------------
 # --------------- User Defined Tasks ---------------
-.PHONY: cmd/ccr_syncer
+
+.PHONY: cloc
+## cloc : Count lines of code
+cloc:
+	$(V)tokei -C . -e pkg/rpc/kitex_gen -e pkg/rpc/thrift
+
 .PHONY: ccr_syncer
 ## ccr_syncer : Build ccr_syncer binary
 ccr_syncer: bin
@@ -61,7 +70,8 @@ run_get_binlog: get_binlog
 ## sync_thrift : Sync thrift
 # TODO(Drogon): Add build thrift
 sync_thrift:
-	$(V)rsync -avc $(THRIFT_DIR)/ rpc/thrift/
+	$(V)rsync -avc $(THRIFT_DIR)/ pkg/rpc/thrift/
+	$(V)$(MAKE) -C pkg/rpc/ gen_thrift
 
 .PHONY: ingest_binlog
 ## ingest_binlog : Build ingest_binlog binary

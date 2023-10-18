@@ -3785,6 +3785,7 @@ type TOlapTablePartition struct {
 	InKeys             [][]*exprs.TExprNode      `thrift:"in_keys,8,optional" frugal:"8,optional,list<list<exprs.TExprNode>>" json:"in_keys,omitempty"`
 	IsMutable          bool                      `thrift:"is_mutable,9,optional" frugal:"9,optional,bool" json:"is_mutable,omitempty"`
 	IsDefaultPartition *bool                     `thrift:"is_default_partition,10,optional" frugal:"10,optional,bool" json:"is_default_partition,omitempty"`
+	LoadTabletIdx      *int64                    `thrift:"load_tablet_idx,11,optional" frugal:"11,optional,i64" json:"load_tablet_idx,omitempty"`
 }
 
 func NewTOlapTablePartition() *TOlapTablePartition {
@@ -3875,6 +3876,15 @@ func (p *TOlapTablePartition) GetIsDefaultPartition() (v bool) {
 	}
 	return *p.IsDefaultPartition
 }
+
+var TOlapTablePartition_LoadTabletIdx_DEFAULT int64
+
+func (p *TOlapTablePartition) GetLoadTabletIdx() (v int64) {
+	if !p.IsSetLoadTabletIdx() {
+		return TOlapTablePartition_LoadTabletIdx_DEFAULT
+	}
+	return *p.LoadTabletIdx
+}
 func (p *TOlapTablePartition) SetId(val int64) {
 	p.Id = val
 }
@@ -3905,6 +3915,9 @@ func (p *TOlapTablePartition) SetIsMutable(val bool) {
 func (p *TOlapTablePartition) SetIsDefaultPartition(val *bool) {
 	p.IsDefaultPartition = val
 }
+func (p *TOlapTablePartition) SetLoadTabletIdx(val *int64) {
+	p.LoadTabletIdx = val
+}
 
 var fieldIDToName_TOlapTablePartition = map[int16]string{
 	1:  "id",
@@ -3917,6 +3930,7 @@ var fieldIDToName_TOlapTablePartition = map[int16]string{
 	8:  "in_keys",
 	9:  "is_mutable",
 	10: "is_default_partition",
+	11: "load_tablet_idx",
 }
 
 func (p *TOlapTablePartition) IsSetStartKey() bool {
@@ -3945,6 +3959,10 @@ func (p *TOlapTablePartition) IsSetIsMutable() bool {
 
 func (p *TOlapTablePartition) IsSetIsDefaultPartition() bool {
 	return p.IsDefaultPartition != nil
+}
+
+func (p *TOlapTablePartition) IsSetLoadTabletIdx() bool {
+	return p.LoadTabletIdx != nil
 }
 
 func (p *TOlapTablePartition) Read(iprot thrift.TProtocol) (err error) {
@@ -4065,6 +4083,16 @@ func (p *TOlapTablePartition) Read(iprot thrift.TProtocol) (err error) {
 		case 10:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 11:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -4262,6 +4290,15 @@ func (p *TOlapTablePartition) ReadField10(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TOlapTablePartition) ReadField11(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.LoadTabletIdx = &v
+	}
+	return nil
+}
+
 func (p *TOlapTablePartition) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TOlapTablePartition"); err != nil {
@@ -4306,6 +4343,10 @@ func (p *TOlapTablePartition) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 
@@ -4551,6 +4592,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
 
+func (p *TOlapTablePartition) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLoadTabletIdx() {
+		if err = oprot.WriteFieldBegin("load_tablet_idx", thrift.I64, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.LoadTabletIdx); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+
 func (p *TOlapTablePartition) String() string {
 	if p == nil {
 		return "<nil>"
@@ -4592,6 +4652,9 @@ func (p *TOlapTablePartition) DeepEqual(ano *TOlapTablePartition) bool {
 		return false
 	}
 	if !p.Field10DeepEqual(ano.IsDefaultPartition) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.LoadTabletIdx) {
 		return false
 	}
 	return true
@@ -4698,6 +4761,18 @@ func (p *TOlapTablePartition) Field10DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.IsDefaultPartition != *src {
+		return false
+	}
+	return true
+}
+func (p *TOlapTablePartition) Field11DeepEqual(src *int64) bool {
+
+	if p.LoadTabletIdx == src {
+		return true
+	} else if p.LoadTabletIdx == nil || src == nil {
+		return false
+	}
+	if *p.LoadTabletIdx != *src {
 		return false
 	}
 	return true
