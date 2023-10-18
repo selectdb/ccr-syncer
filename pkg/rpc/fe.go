@@ -35,6 +35,8 @@ type IFeRpc interface {
 	GetMasterToken(*base.Spec) (string, error)
 }
 
+// TODO(Drogon): Add addrs to cached all spec clients
+// now only cached master client, so callWithRetryAllClients only try with master clients(maybe not master now)
 type FeRpc struct {
 	masterClient *singleFeClient
 	clients      map[string]*singleFeClient
@@ -67,7 +69,6 @@ type resultType interface {
 	IsSetMasterAddress() bool
 	GetMasterAddress() *festruct_types.TNetworkAddress
 }
-
 type callerType func(client *singleFeClient) (resultType, error)
 
 func (rpc *FeRpc) callWithMasterRedirect(caller callerType) (resultType, error) {
@@ -105,7 +106,29 @@ func (rpc *FeRpc) callWithMasterRedirect(caller callerType) (resultType, error) 
 	return caller(rpc.masterClient)
 }
 
-// TODO: use retry checker by check status
+type retryCallerType func(client *singleFeClient) (any, error)
+
+func (rpc *FeRpc) callWithRetryAllClients(caller retryCallerType) (result any, err error) {
+	client := rpc.masterClient
+	if result, err = caller(client); err == nil {
+		return result, nil
+	}
+
+	usedClientAddrs := make(map[string]bool)
+	usedClientAddrs[client.Address()] = true
+	for addr, client := range rpc.clients {
+		if _, ok := usedClientAddrs[addr]; ok {
+			continue
+		}
+
+		usedClientAddrs[addr] = true
+		if result, err = caller(client); err == nil {
+			return result, nil
+		}
+	}
+	return result, err
+}
+
 func (rpc *FeRpc) BeginTransaction(spec *base.Spec, label string, tableIds []int64) (*festruct.TBeginTxnResult_, error) {
 	// return rpc.masterClient.BeginTransaction(spec, label, tableIds)
 	caller := func(client *singleFeClient) (resultType, error) {
@@ -134,11 +157,21 @@ func (rpc *FeRpc) RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.T
 }
 
 func (rpc *FeRpc) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogResult_, error) {
-	return rpc.masterClient.GetBinlog(spec, commitSeq)
+	// return rpc.masterClient.GetBinlog(spec, commitSeq)
+	caller := func(client *singleFeClient) (any, error) {
+		return client.GetBinlog(spec, commitSeq)
+	}
+	result, err := rpc.callWithRetryAllClients(caller)
+	return result.(*festruct.TGetBinlogResult_), err
 }
 
 func (rpc *FeRpc) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogLagResult_, error) {
-	return rpc.masterClient.GetBinlogLag(spec, commitSeq)
+	// return rpc.masterClient.GetBinlogLag(spec, commitSeq)
+	caller := func(client *singleFeClient) (any, error) {
+		return client.GetBinlogLag(spec, commitSeq)
+	}
+	result, err := rpc.callWithRetryAllClients(caller)
+	return result.(*festruct.TGetBinlogLagResult_), err
 }
 
 func (rpc *FeRpc) GetSnapshot(spec *base.Spec, labelName string) (*festruct.TGetSnapshotResult_, error) {
