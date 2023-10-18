@@ -15,6 +15,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func writeJson(w http.ResponseWriter, data interface{}) {
+	if data, err := json.Marshal(data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	} else {
+		w.Write(data)
+	}
+}
+
 type HttpService struct {
 	port     int
 	server   *http.Server
@@ -62,13 +70,7 @@ func (s *HttpService) versionHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Create the result object with the current version
 	result := vesionResult{Version: version.GetVersion()}
-
-	// Write the result as JSON
-	if data, err := json.Marshal(&result); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	} else {
-		w.Write(data)
-	}
+	writeJson(w, result)
 }
 
 // createCcr creates a new CCR job and adds it to the job manager.
@@ -126,9 +128,11 @@ func (s *HttpService) createHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Write a success response
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("create ccr success"))
+	type result struct {
+		Success bool `json:"success"`
+	}
+	createResult := result{Success: true}
+	writeJson(w, createResult)
 }
 
 type CcrCommonRequest struct {
@@ -163,7 +167,12 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Write([]byte(fmt.Sprintf("lag: %d", lag)))
+
+	type result struct {
+		Lag int64 `json:"lag"`
+	}
+	lagResult := result{Lag: lag}
+	writeJson(w, lagResult)
 }
 
 // Pause service
@@ -193,7 +202,12 @@ func (s *HttpService) pauseHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Write([]byte("pause success"))
+
+	type result struct {
+		Success bool `json:"success"`
+	}
+	pauseResult := result{Success: true}
+	writeJson(w, pauseResult)
 }
 
 // Resume service
@@ -223,7 +237,12 @@ func (s *HttpService) resumeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Write([]byte("resume success"))
+
+	type result struct {
+		Success bool `json:"success"`
+	}
+	resumeResult := result{Success: true}
+	writeJson(w, resumeResult)
 }
 
 func (s *HttpService) deleteHandler(w http.ResponseWriter, r *http.Request) {
@@ -252,7 +271,12 @@ func (s *HttpService) deleteHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Write([]byte("delete success"))
+
+	type result struct {
+		Success bool `json:"success"`
+	}
+	deleteResult := result{Success: true}
+	writeJson(w, deleteResult)
 }
 
 func (s *HttpService) statusHandler(w http.ResponseWriter, r *http.Request) {
@@ -281,12 +305,8 @@ func (s *HttpService) statusHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// write jobStatus as json
-	if data, err := json.Marshal(jobStatus); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	} else {
-		w.Write(data)
-	}
+
+	writeJson(w, jobStatus)
 }
 
 func (s *HttpService) desyncHandler(w http.ResponseWriter, r *http.Request) {
@@ -314,7 +334,12 @@ func (s *HttpService) desyncHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Write([]byte("desync success"))
+
+	type result struct {
+		Success bool `json:"success"`
+	}
+	desyncResult := result{Success: true}
+	writeJson(w, desyncResult)
 }
 
 // ListJobs service
@@ -327,13 +352,7 @@ func (s *HttpService) listJobsHandler(w http.ResponseWriter, r *http.Request) {
 
 	jobs := s.jobManager.ListJobs()
 	jobResult := result{Jobs: jobs}
-
-	// write jobs as json
-	if data, err := json.Marshal(&jobResult); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	} else {
-		w.Write(data)
-	}
+	writeJson(w, jobResult)
 }
 
 func (s *HttpService) RegisterHandlers() {
