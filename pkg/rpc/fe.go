@@ -2,11 +2,14 @@ package rpc
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 
 	"github.com/cloudwego/kitex/client"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	festruct "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/frontendservice"
 	feservice "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/frontendservice/frontendservice"
+	tstatus "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/status"
 	festruct_types "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/types"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
@@ -15,6 +18,10 @@ import (
 
 const (
 	LOCAL_REPO_NAME = ""
+)
+
+var (
+	ErrFeNotMasterCompatible = xerror.XNew(xerror.FE, "not master compatible")
 )
 
 type IFeRpc interface {
@@ -30,21 +37,65 @@ type IFeRpc interface {
 
 type FeRpc struct {
 	masterClient *singleFeClient
+	clients      map[string]*singleFeClient
 }
 
 func NewFeRpc(spec *base.Spec) (*FeRpc, error) {
-	singleFeClient, err := newSingleFeClient(spec)
+	host := spec.Host
+	// convert string to int32
+	port, err := strconv.Atoi(spec.ThriftPort)
 	if err != nil {
-		return nil, xerror.Wrapf(err, xerror.Normal, "NewFeClient error: %v", err)
-	} else {
-		return &FeRpc{
-			masterClient: singleFeClient,
-		}, nil
+		return nil, xerror.Wrapf(err, xerror.RPC, "NewFeClient error by convert port %s to int32", spec.ThriftPort)
 	}
+
+	addr := fmt.Sprintf("%s:%d", host, port)
+	client, err := newSingleFeClient(addr)
+	if err != nil {
+		return nil, xerror.Wrapf(err, xerror.RPC, "NewFeClient error: %v", err)
+	}
+
+	clients := make(map[string]*singleFeClient)
+	clients[client.Address()] = client
+	return &FeRpc{
+		masterClient: client,
+		clients:      clients,
+	}, nil
 }
 
+// TODO: use retry checker by check status
 func (rpc *FeRpc) BeginTransaction(spec *base.Spec, label string, tableIds []int64) (*festruct.TBeginTxnResult_, error) {
-	return rpc.masterClient.BeginTransaction(spec, label, tableIds)
+	result, err := rpc.masterClient.BeginTransaction(spec, label, tableIds)
+	if err != nil {
+		return result, err
+	}
+
+	if result.GetStatus().GetStatusCode() != tstatus.TStatusCode_NOT_MASTER {
+		return result, err
+	}
+
+	// no compatible for master
+	if !result.IsSetMasterAddress() {
+		return result, xerror.XPanicWrapf(ErrFeNotMasterCompatible, "fe addr [%s]", rpc.masterClient.Address())
+	}
+
+	// switch to master
+	masterAddr := result.GetMasterAddress()
+	log.Infof("switch to master %s", masterAddr)
+	var masterClient *singleFeClient
+	addr := fmt.Sprintf("%s:%d", masterAddr.Hostname, masterAddr.Port)
+	if client, ok := rpc.clients[addr]; ok {
+		masterClient = client
+	} else {
+		masterClient, err = newSingleFeClient(addr)
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.RPC, "NewFeClient error: %v", err)
+		}
+	}
+	rpc.masterClient = masterClient
+	rpc.clients[addr] = masterClient
+
+	// retry
+	return rpc.BeginTransaction(spec, label, tableIds)
 }
 
 func (rpc *FeRpc) CommitTransaction(spec *base.Spec, txnId int64, commitInfos []*festruct_types.TTabletCommitInfo) (*festruct.TCommitTxnResult_, error) {
@@ -90,18 +141,24 @@ func setAuthInfo[T Request](request T, spec *base.Spec) {
 }
 
 type singleFeClient struct {
+	addr   string
 	client feservice.Client
 }
 
-func newSingleFeClient(spec *base.Spec) (*singleFeClient, error) {
+func newSingleFeClient(addr string) (*singleFeClient, error) {
 	// create kitex FrontendService client
-	if fe_client, err := feservice.NewClient("FrontendService", client.WithHostPorts(spec.Host+":"+spec.ThriftPort)); err != nil {
-		return nil, xerror.Wrapf(err, xerror.Normal, "NewFeClient error: %v, spec: %s", err, spec)
+	if fe_client, err := feservice.NewClient("FrontendService", client.WithHostPorts(addr)); err != nil {
+		return nil, xerror.Wrapf(err, xerror.RPC, "NewFeClient error: %v, addr: %s", err, addr)
 	} else {
 		return &singleFeClient{
+			addr:   addr,
 			client: fe_client,
 		}, nil
 	}
+}
+
+func (rpc *singleFeClient) Address() string {
+	return rpc.addr
 }
 
 // begin transaction
@@ -132,7 +189,7 @@ func (rpc *singleFeClient) BeginTransaction(spec *base.Spec, label string, table
 
 	log.Debugf("BeginTransaction user %s, label: %s, tableIds: %v", req.GetUser(), label, tableIds)
 	if result, err := client.BeginTxn(context.Background(), req); err != nil {
-		return nil, xerror.Wrapf(err, xerror.Normal, "BeginTransaction error: %v, req: %+v", err, req)
+		return nil, xerror.Wrapf(err, xerror.RPC, "BeginTransaction error: %v, req: %+v", err, req)
 	} else {
 		return result, nil
 	}
@@ -162,7 +219,7 @@ func (rpc *singleFeClient) CommitTransaction(spec *base.Spec, txnId int64, commi
 	req.CommitInfos = commitInfos
 
 	if result, err := client.CommitTxn(context.Background(), req); err != nil {
-		return nil, xerror.Wrapf(err, xerror.Normal, "CommitTransaction error: %v, req: %+v", err, req)
+		return nil, xerror.Wrapf(err, xerror.RPC, "CommitTransaction error: %v, req: %+v", err, req)
 	} else {
 		return result, nil
 	}
@@ -190,7 +247,7 @@ func (rpc *singleFeClient) RollbackTransaction(spec *base.Spec, txnId int64) (*f
 	req.TxnId = &txnId
 
 	if result, err := client.RollbackTxn(context.Background(), req); err != nil {
-		return nil, xerror.Wrapf(err, xerror.Normal, "RollbackTransaction error: %v, req: %+v", err, req)
+		return nil, xerror.Wrapf(err, xerror.RPC, "RollbackTransaction error: %v, req: %+v", err, req)
 	} else {
 		return result, nil
 	}
@@ -225,7 +282,7 @@ func (rpc *singleFeClient) GetBinlog(spec *base.Spec, commitSeq int64) (*festruc
 	log.Debugf("GetBinlog user %s, db %s, tableId %d, prev seq: %d", req.GetUser(), req.GetDb(),
 		req.GetTableId(), req.GetPrevCommitSeq())
 	if resp, err := client.GetBinlog(context.Background(), req); err != nil {
-		return nil, xerror.Wrapf(err, xerror.Normal, "GetBinlog error: %v, req: %+v", err, req)
+		return nil, xerror.Wrapf(err, xerror.RPC, "GetBinlog error: %v, req: %+v", err, req)
 	} else {
 		return resp, nil
 	}
@@ -251,7 +308,7 @@ func (rpc *singleFeClient) GetBinlogLag(spec *base.Spec, commitSeq int64) (*fest
 	log.Debugf("GetBinlog user %s, db %s, tableId %d, prev seq: %d", req.GetUser(), req.GetDb(),
 		req.GetTableId(), req.GetPrevCommitSeq())
 	if resp, err := client.GetBinlogLag(context.Background(), req); err != nil {
-		return nil, xerror.Wrapf(err, xerror.Normal, "GetBinlogLag error: %v, req: %+v", err, req)
+		return nil, xerror.Wrapf(err, xerror.RPC, "GetBinlogLag error: %v, req: %+v", err, req)
 	} else {
 		return resp, nil
 	}
@@ -285,7 +342,7 @@ func (rpc *singleFeClient) GetSnapshot(spec *base.Spec, labelName string) (*fest
 	log.Debugf("GetSnapshotRequest user %s, db %s, table %s, label name %s, snapshot name %s, snapshot type %d",
 		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), req.GetSnapshotName(), req.GetSnapshotType())
 	if resp, err := client.GetSnapshot(context.Background(), req); err != nil {
-		return nil, xerror.Wrapf(err, xerror.Normal, "GetSnapshot error: %v, req: %+v", err, req)
+		return nil, xerror.Wrapf(err, xerror.RPC, "GetSnapshot error: %v, req: %+v", err, req)
 	} else {
 		return resp, nil
 	}
@@ -329,7 +386,7 @@ func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, tableRefs []*festruc
 	log.Debugf("RestoreSnapshotRequest user %s, db %s, table %s, label name %s, properties %v, meta %v, job info %v",
 		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), properties, snapshotResult.GetMeta(), snapshotResult.GetJobInfo())
 	if resp, err := client.RestoreSnapshot(context.Background(), req); err != nil {
-		return nil, xerror.Wrapf(err, xerror.Normal, "RestoreSnapshot failed, req: %+v", req)
+		return nil, xerror.Wrapf(err, xerror.RPC, "RestoreSnapshot failed, req: %+v", req)
 	} else {
 		return resp, nil
 	}
@@ -347,7 +404,7 @@ func (rpc *singleFeClient) GetMasterToken(spec *base.Spec) (string, error) {
 
 	log.Debugf("GetMasterToken user: %s", *req.User)
 	if resp, err := client.GetMasterToken(context.Background(), req); err != nil {
-		return "", xerror.Wrapf(err, xerror.Normal, "GetMasterToken failed, req: %+v", req)
+		return "", xerror.Wrapf(err, xerror.RPC, "GetMasterToken failed, req: %+v", req)
 	} else {
 		return resp.GetToken(), nil
 	}

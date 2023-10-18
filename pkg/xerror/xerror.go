@@ -178,6 +178,10 @@ func PanicWrapf(err error, errCategory ErrorCategory, format string, args ...int
 	return wrapf(err, errCategory, xpanic, format, args...)
 }
 
+func XPanicWrapf(xerr *XError, format string, args ...interface{}) error {
+	return wrapf(xerr, xerr.category, xpanic, format, args...)
+}
+
 func WithStack(err error) error {
 	if err == nil {
 		return nil
