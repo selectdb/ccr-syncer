@@ -42,7 +42,12 @@ help: Makefile
 
 # --------------- ------------------ ---------------
 # --------------- User Defined Tasks ---------------
-.PHONY: cmd/ccr_syncer
+
+.PHONY: cloc
+## cloc : Count lines of code
+cloc:
+	$(V)tokei -C . -e pkg/rpc/kitex_gen -e pkg/rpc/thrift
+
 .PHONY: ccr_syncer
 ## ccr_syncer : Build ccr_syncer binary
 ccr_syncer: bin
