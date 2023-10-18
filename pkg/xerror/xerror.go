@@ -72,7 +72,7 @@ func (e *XError) Error() string {
 		return xerr.Error()
 	}
 
-	return fmt.Sprintf("%s: %s", e.category.Name(), e.err.Error())
+	return fmt.Sprintf("[%s] %s", e.category.Name(), e.err.Error())
 }
 
 func (e *XError) Unwrap() error {
