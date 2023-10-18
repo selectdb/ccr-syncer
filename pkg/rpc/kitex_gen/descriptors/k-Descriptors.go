@@ -2719,6 +2719,20 @@ func (p *TOlapTablePartition) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 11:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField11(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -2974,6 +2988,19 @@ func (p *TOlapTablePartition) FastReadField10(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TOlapTablePartition) FastReadField11(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.LoadTabletIdx = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TOlapTablePartition) FastWrite(buf []byte) int {
 	return 0
@@ -2987,6 +3014,7 @@ func (p *TOlapTablePartition) FastWriteNocopy(buf []byte, binaryWriter bthrift.B
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
 		offset += p.fastWriteField10(buf[offset:], binaryWriter)
+		offset += p.fastWriteField11(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
@@ -3013,6 +3041,7 @@ func (p *TOlapTablePartition) BLength() int {
 		l += p.field8Length()
 		l += p.field9Length()
 		l += p.field10Length()
+		l += p.field11Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -3157,6 +3186,17 @@ func (p *TOlapTablePartition) fastWriteField10(buf []byte, binaryWriter bthrift.
 	return offset
 }
 
+func (p *TOlapTablePartition) fastWriteField11(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetLoadTabletIdx() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "load_tablet_idx", thrift.I64, 11)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.LoadTabletIdx)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TOlapTablePartition) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("id", thrift.I64, 1)
@@ -3269,6 +3309,17 @@ func (p *TOlapTablePartition) field10Length() int {
 	if p.IsSetIsDefaultPartition() {
 		l += bthrift.Binary.FieldBeginLength("is_default_partition", thrift.BOOL, 10)
 		l += bthrift.Binary.BoolLength(*p.IsDefaultPartition)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TOlapTablePartition) field11Length() int {
+	l := 0
+	if p.IsSetLoadTabletIdx() {
+		l += bthrift.Binary.FieldBeginLength("load_tablet_idx", thrift.I64, 11)
+		l += bthrift.Binary.I64Length(*p.LoadTabletIdx)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

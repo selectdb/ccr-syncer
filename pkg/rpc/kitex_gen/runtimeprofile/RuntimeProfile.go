@@ -13,6 +13,7 @@ type TCounter struct {
 	Name  string        `thrift:"name,1,required" frugal:"1,required,string" json:"name"`
 	Type  metrics.TUnit `thrift:"type,2,required" frugal:"2,required,TUnit" json:"type"`
 	Value int64         `thrift:"value,3,required" frugal:"3,required,i64" json:"value"`
+	Level *int64        `thrift:"level,4,optional" frugal:"4,optional,i64" json:"level,omitempty"`
 }
 
 func NewTCounter() *TCounter {
@@ -34,6 +35,15 @@ func (p *TCounter) GetType() (v metrics.TUnit) {
 func (p *TCounter) GetValue() (v int64) {
 	return p.Value
 }
+
+var TCounter_Level_DEFAULT int64
+
+func (p *TCounter) GetLevel() (v int64) {
+	if !p.IsSetLevel() {
+		return TCounter_Level_DEFAULT
+	}
+	return *p.Level
+}
 func (p *TCounter) SetName(val string) {
 	p.Name = val
 }
@@ -43,11 +53,19 @@ func (p *TCounter) SetType(val metrics.TUnit) {
 func (p *TCounter) SetValue(val int64) {
 	p.Value = val
 }
+func (p *TCounter) SetLevel(val *int64) {
+	p.Level = val
+}
 
 var fieldIDToName_TCounter = map[int16]string{
 	1: "name",
 	2: "type",
 	3: "value",
+	4: "level",
+}
+
+func (p *TCounter) IsSetLevel() bool {
+	return p.Level != nil
 }
 
 func (p *TCounter) Read(iprot thrift.TProtocol) (err error) {
@@ -100,6 +118,16 @@ func (p *TCounter) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetValue = true
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else {
 				if err = iprot.Skip(fieldTypeId); err != nil {
 					goto SkipFieldError
@@ -178,6 +206,15 @@ func (p *TCounter) ReadField3(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TCounter) ReadField4(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.Level = &v
+	}
+	return nil
+}
+
 func (p *TCounter) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TCounter"); err != nil {
@@ -194,6 +231,10 @@ func (p *TCounter) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 
@@ -266,6 +307,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 
+func (p *TCounter) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLevel() {
+		if err = oprot.WriteFieldBegin("level", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Level); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
 func (p *TCounter) String() string {
 	if p == nil {
 		return "<nil>"
@@ -286,6 +346,9 @@ func (p *TCounter) DeepEqual(ano *TCounter) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.Value) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.Level) {
 		return false
 	}
 	return true
@@ -312,6 +375,18 @@ func (p *TCounter) Field3DeepEqual(src int64) bool {
 	}
 	return true
 }
+func (p *TCounter) Field4DeepEqual(src *int64) bool {
+
+	if p.Level == src {
+		return true
+	} else if p.Level == nil || src == nil {
+		return false
+	}
+	if *p.Level != *src {
+		return false
+	}
+	return true
+}
 
 type TRuntimeProfileNode struct {
 	Name                    string              `thrift:"name,1,required" frugal:"1,required,string" json:"name"`
@@ -323,6 +398,7 @@ type TRuntimeProfileNode struct {
 	InfoStringsDisplayOrder []string            `thrift:"info_strings_display_order,7,required" frugal:"7,required,list<string>" json:"info_strings_display_order"`
 	ChildCountersMap        map[string][]string `thrift:"child_counters_map,8,required" frugal:"8,required,map<string:set<string>>" json:"child_counters_map"`
 	Timestamp               int64               `thrift:"timestamp,9,required" frugal:"9,required,i64" json:"timestamp"`
+	IsSink                  *bool               `thrift:"is_sink,10,optional" frugal:"10,optional,bool" json:"is_sink,omitempty"`
 }
 
 func NewTRuntimeProfileNode() *TRuntimeProfileNode {
@@ -368,6 +444,15 @@ func (p *TRuntimeProfileNode) GetChildCountersMap() (v map[string][]string) {
 func (p *TRuntimeProfileNode) GetTimestamp() (v int64) {
 	return p.Timestamp
 }
+
+var TRuntimeProfileNode_IsSink_DEFAULT bool
+
+func (p *TRuntimeProfileNode) GetIsSink() (v bool) {
+	if !p.IsSetIsSink() {
+		return TRuntimeProfileNode_IsSink_DEFAULT
+	}
+	return *p.IsSink
+}
 func (p *TRuntimeProfileNode) SetName(val string) {
 	p.Name = val
 }
@@ -395,17 +480,25 @@ func (p *TRuntimeProfileNode) SetChildCountersMap(val map[string][]string) {
 func (p *TRuntimeProfileNode) SetTimestamp(val int64) {
 	p.Timestamp = val
 }
+func (p *TRuntimeProfileNode) SetIsSink(val *bool) {
+	p.IsSink = val
+}
 
 var fieldIDToName_TRuntimeProfileNode = map[int16]string{
-	1: "name",
-	2: "num_children",
-	3: "counters",
-	4: "metadata",
-	5: "indent",
-	6: "info_strings",
-	7: "info_strings_display_order",
-	8: "child_counters_map",
-	9: "timestamp",
+	1:  "name",
+	2:  "num_children",
+	3:  "counters",
+	4:  "metadata",
+	5:  "indent",
+	6:  "info_strings",
+	7:  "info_strings_display_order",
+	8:  "child_counters_map",
+	9:  "timestamp",
+	10: "is_sink",
+}
+
+func (p *TRuntimeProfileNode) IsSetIsSink() bool {
+	return p.IsSink != nil
 }
 
 func (p *TRuntimeProfileNode) Read(iprot thrift.TProtocol) (err error) {
@@ -530,6 +623,16 @@ func (p *TRuntimeProfileNode) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetTimestamp = true
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 10:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else {
 				if err = iprot.Skip(fieldTypeId); err != nil {
 					goto SkipFieldError
@@ -768,6 +871,15 @@ func (p *TRuntimeProfileNode) ReadField9(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TRuntimeProfileNode) ReadField10(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.IsSink = &v
+	}
+	return nil
+}
+
 func (p *TRuntimeProfileNode) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TRuntimeProfileNode"); err != nil {
@@ -808,6 +920,10 @@ func (p *TRuntimeProfileNode) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField9(oprot); err != nil {
 			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 
@@ -1044,6 +1160,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
 
+func (p *TRuntimeProfileNode) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsSink() {
+		if err = oprot.WriteFieldBegin("is_sink", thrift.BOOL, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsSink); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
 func (p *TRuntimeProfileNode) String() string {
 	if p == nil {
 		return "<nil>"
@@ -1082,6 +1217,9 @@ func (p *TRuntimeProfileNode) DeepEqual(ano *TRuntimeProfileNode) bool {
 		return false
 	}
 	if !p.Field9DeepEqual(ano.Timestamp) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.IsSink) {
 		return false
 	}
 	return true
@@ -1176,6 +1314,18 @@ func (p *TRuntimeProfileNode) Field8DeepEqual(src map[string][]string) bool {
 func (p *TRuntimeProfileNode) Field9DeepEqual(src int64) bool {
 
 	if p.Timestamp != src {
+		return false
+	}
+	return true
+}
+func (p *TRuntimeProfileNode) Field10DeepEqual(src *bool) bool {
+
+	if p.IsSink == src {
+		return true
+	} else if p.IsSink == nil || src == nil {
+		return false
+	}
+	if *p.IsSink != *src {
 		return false
 	}
 	return true

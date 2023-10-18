@@ -1786,7 +1786,7 @@ func (p *TFinishTaskRequest) FastReadField18(buf []byte) (int, error) {
 	if err != nil {
 		return offset, err
 	}
-	p.TabletIdToDeltaNumRows = make(map[int64]int64, size)
+	p.TableIdToDeltaNumRows = make(map[int64]int64, size)
 	for i := 0; i < size; i++ {
 		var _key int64
 		if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
@@ -1808,7 +1808,7 @@ func (p *TFinishTaskRequest) FastReadField18(buf []byte) (int, error) {
 
 		}
 
-		p.TabletIdToDeltaNumRows[_key] = _val
+		p.TableIdToDeltaNumRows[_key] = _val
 	}
 	if l, err := bthrift.Binary.ReadMapEnd(buf[offset:]); err != nil {
 		return offset, err
@@ -2119,12 +2119,12 @@ func (p *TFinishTaskRequest) fastWriteField17(buf []byte, binaryWriter bthrift.B
 
 func (p *TFinishTaskRequest) fastWriteField18(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
-	if p.IsSetTabletIdToDeltaNumRows() {
-		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "tablet_id_to_delta_num_rows", thrift.MAP, 18)
+	if p.IsSetTableIdToDeltaNumRows() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "table_id_to_delta_num_rows", thrift.MAP, 18)
 		mapBeginOffset := offset
 		offset += bthrift.Binary.MapBeginLength(thrift.I64, thrift.I64, 0)
 		var length int
-		for k, v := range p.TabletIdToDeltaNumRows {
+		for k, v := range p.TableIdToDeltaNumRows {
 			length++
 
 			offset += bthrift.Binary.WriteI64(buf[offset:], k)
@@ -2343,12 +2343,12 @@ func (p *TFinishTaskRequest) field17Length() int {
 
 func (p *TFinishTaskRequest) field18Length() int {
 	l := 0
-	if p.IsSetTabletIdToDeltaNumRows() {
-		l += bthrift.Binary.FieldBeginLength("tablet_id_to_delta_num_rows", thrift.MAP, 18)
-		l += bthrift.Binary.MapBeginLength(thrift.I64, thrift.I64, len(p.TabletIdToDeltaNumRows))
+	if p.IsSetTableIdToDeltaNumRows() {
+		l += bthrift.Binary.FieldBeginLength("table_id_to_delta_num_rows", thrift.MAP, 18)
+		l += bthrift.Binary.MapBeginLength(thrift.I64, thrift.I64, len(p.TableIdToDeltaNumRows))
 		var tmpK int64
 		var tmpV int64
-		l += (bthrift.Binary.I64Length(int64(tmpK)) + bthrift.Binary.I64Length(int64(tmpV))) * len(p.TabletIdToDeltaNumRows)
+		l += (bthrift.Binary.I64Length(int64(tmpK)) + bthrift.Binary.I64Length(int64(tmpV))) * len(p.TableIdToDeltaNumRows)
 		l += bthrift.Binary.MapEndLength()
 		l += bthrift.Binary.FieldEndLength()
 	}

@@ -1630,6 +1630,7 @@ type TQueryOptions struct {
 	EnableProfile                          bool            `thrift:"enable_profile,84,optional" frugal:"84,optional,bool" json:"enable_profile,omitempty"`
 	EnablePageCache                        bool            `thrift:"enable_page_cache,85,optional" frugal:"85,optional,bool" json:"enable_page_cache,omitempty"`
 	AnalyzeTimeout                         int32           `thrift:"analyze_timeout,86,optional" frugal:"86,optional,i32" json:"analyze_timeout,omitempty"`
+	FasterFloatConvert                     bool            `thrift:"faster_float_convert,87,optional" frugal:"87,optional,bool" json:"faster_float_convert,omitempty"`
 }
 
 func NewTQueryOptions() *TQueryOptions {
@@ -1702,6 +1703,7 @@ func NewTQueryOptions() *TQueryOptions {
 		EnableProfile:                          false,
 		EnablePageCache:                        false,
 		AnalyzeTimeout:                         43200,
+		FasterFloatConvert:                     false,
 	}
 }
 
@@ -1775,6 +1777,7 @@ func (p *TQueryOptions) InitDefault() {
 		EnableProfile:                          false,
 		EnablePageCache:                        false,
 		AnalyzeTimeout:                         43200,
+		FasterFloatConvert:                     false,
 	}
 }
 
@@ -2470,6 +2473,15 @@ func (p *TQueryOptions) GetAnalyzeTimeout() (v int32) {
 	}
 	return p.AnalyzeTimeout
 }
+
+var TQueryOptions_FasterFloatConvert_DEFAULT bool = false
+
+func (p *TQueryOptions) GetFasterFloatConvert() (v bool) {
+	if !p.IsSetFasterFloatConvert() {
+		return TQueryOptions_FasterFloatConvert_DEFAULT
+	}
+	return p.FasterFloatConvert
+}
 func (p *TQueryOptions) SetAbortOnError(val bool) {
 	p.AbortOnError = val
 }
@@ -2701,6 +2713,9 @@ func (p *TQueryOptions) SetEnablePageCache(val bool) {
 func (p *TQueryOptions) SetAnalyzeTimeout(val int32) {
 	p.AnalyzeTimeout = val
 }
+func (p *TQueryOptions) SetFasterFloatConvert(val bool) {
+	p.FasterFloatConvert = val
+}
 
 var fieldIDToName_TQueryOptions = map[int16]string{
 	1:  "abort_on_error",
@@ -2780,6 +2795,7 @@ var fieldIDToName_TQueryOptions = map[int16]string{
 	84: "enable_profile",
 	85: "enable_page_cache",
 	86: "analyze_timeout",
+	87: "faster_float_convert",
 }
 
 func (p *TQueryOptions) IsSetAbortOnError() bool {
@@ -3088,6 +3104,10 @@ func (p *TQueryOptions) IsSetEnablePageCache() bool {
 
 func (p *TQueryOptions) IsSetAnalyzeTimeout() bool {
 	return p.AnalyzeTimeout != TQueryOptions_AnalyzeTimeout_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetFasterFloatConvert() bool {
+	return p.FasterFloatConvert != TQueryOptions_FasterFloatConvert_DEFAULT
 }
 
 func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
@@ -3879,6 +3899,16 @@ func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
 					goto SkipFieldError
 				}
 			}
+		case 87:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField87(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
@@ -4601,6 +4631,15 @@ func (p *TQueryOptions) ReadField86(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TQueryOptions) ReadField87(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.FasterFloatConvert = v
+	}
+	return nil
+}
+
 func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TQueryOptions"); err != nil {
@@ -4913,6 +4952,10 @@ func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField86(oprot); err != nil {
 			fieldId = 86
+			goto WriteFieldError
+		}
+		if err = p.writeField87(oprot); err != nil {
+			fieldId = 87
 			goto WriteFieldError
 		}
 
@@ -6397,6 +6440,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 86 end error: ", p), err)
 }
 
+func (p *TQueryOptions) writeField87(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFasterFloatConvert() {
+		if err = oprot.WriteFieldBegin("faster_float_convert", thrift.BOOL, 87); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.FasterFloatConvert); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 87 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 87 end error: ", p), err)
+}
+
 func (p *TQueryOptions) String() string {
 	if p == nil {
 		return "<nil>"
@@ -6639,6 +6701,9 @@ func (p *TQueryOptions) DeepEqual(ano *TQueryOptions) bool {
 		return false
 	}
 	if !p.Field86DeepEqual(ano.AnalyzeTimeout) {
+		return false
+	}
+	if !p.Field87DeepEqual(ano.FasterFloatConvert) {
 		return false
 	}
 	return true
@@ -7224,6 +7289,13 @@ func (p *TQueryOptions) Field85DeepEqual(src bool) bool {
 func (p *TQueryOptions) Field86DeepEqual(src int32) bool {
 
 	if p.AnalyzeTimeout != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field87DeepEqual(src bool) bool {
+
+	if p.FasterFloatConvert != src {
 		return false
 	}
 	return true
