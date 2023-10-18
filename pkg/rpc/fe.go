@@ -62,9 +62,16 @@ func NewFeRpc(spec *base.Spec) (*FeRpc, error) {
 	}, nil
 }
 
-// TODO: use retry checker by check status
-func (rpc *FeRpc) BeginTransaction(spec *base.Spec, label string, tableIds []int64) (*festruct.TBeginTxnResult_, error) {
-	result, err := rpc.masterClient.BeginTransaction(spec, label, tableIds)
+type resultType interface {
+	GetStatus() *tstatus.TStatus
+	IsSetMasterAddress() bool
+	GetMasterAddress() *festruct_types.TNetworkAddress
+}
+
+type callerType func(client *singleFeClient) (resultType, error)
+
+func (rpc *FeRpc) callWithMasterRedirect(caller callerType) (resultType, error) {
+	result, err := caller(rpc.masterClient)
 	if err != nil {
 		return result, err
 	}
@@ -95,15 +102,35 @@ func (rpc *FeRpc) BeginTransaction(spec *base.Spec, label string, tableIds []int
 	rpc.clients[addr] = masterClient
 
 	// retry
-	return rpc.BeginTransaction(spec, label, tableIds)
+	return caller(rpc.masterClient)
+}
+
+// TODO: use retry checker by check status
+func (rpc *FeRpc) BeginTransaction(spec *base.Spec, label string, tableIds []int64) (*festruct.TBeginTxnResult_, error) {
+	// return rpc.masterClient.BeginTransaction(spec, label, tableIds)
+	caller := func(client *singleFeClient) (resultType, error) {
+		return client.BeginTransaction(spec, label, tableIds)
+	}
+	result, err := rpc.callWithMasterRedirect(caller)
+	return result.(*festruct.TBeginTxnResult_), err
 }
 
 func (rpc *FeRpc) CommitTransaction(spec *base.Spec, txnId int64, commitInfos []*festruct_types.TTabletCommitInfo) (*festruct.TCommitTxnResult_, error) {
-	return rpc.masterClient.CommitTransaction(spec, txnId, commitInfos)
+	// return rpc.masterClient.CommitTransaction(spec, txnId, commitInfos)
+	caller := func(client *singleFeClient) (resultType, error) {
+		return client.CommitTransaction(spec, txnId, commitInfos)
+	}
+	result, err := rpc.callWithMasterRedirect(caller)
+	return result.(*festruct.TCommitTxnResult_), err
 }
 
 func (rpc *FeRpc) RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.TRollbackTxnResult_, error) {
-	return rpc.masterClient.RollbackTransaction(spec, txnId)
+	// return rpc.masterClient.RollbackTransaction(spec, txnId)
+	caller := func(client *singleFeClient) (resultType, error) {
+		return client.RollbackTransaction(spec, txnId)
+	}
+	result, err := rpc.callWithMasterRedirect(caller)
+	return result.(*festruct.TRollbackTxnResult_), err
 }
 
 func (rpc *FeRpc) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogResult_, error) {
@@ -115,11 +142,21 @@ func (rpc *FeRpc) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.TGet
 }
 
 func (rpc *FeRpc) GetSnapshot(spec *base.Spec, labelName string) (*festruct.TGetSnapshotResult_, error) {
-	return rpc.masterClient.GetSnapshot(spec, labelName)
+	// return rpc.masterClient.GetSnapshot(spec, labelName)
+	caller := func(client *singleFeClient) (resultType, error) {
+		return client.GetSnapshot(spec, labelName)
+	}
+	result, err := rpc.callWithMasterRedirect(caller)
+	return result.(*festruct.TGetSnapshotResult_), err
 }
 
 func (rpc *FeRpc) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableRef, label string, snapshotResult *festruct.TGetSnapshotResult_) (*festruct.TRestoreSnapshotResult_, error) {
-	return rpc.masterClient.RestoreSnapshot(spec, tableRefs, label, snapshotResult)
+	// return rpc.masterClient.RestoreSnapshot(spec, tableRefs, label, snapshotResult)
+	caller := func(client *singleFeClient) (resultType, error) {
+		return client.RestoreSnapshot(spec, tableRefs, label, snapshotResult)
+	}
+	result, err := rpc.callWithMasterRedirect(caller)
+	return result.(*festruct.TRestoreSnapshotResult_), err
 }
 
 func (rpc *FeRpc) GetMasterToken(spec *base.Spec) (string, error) {
