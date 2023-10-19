@@ -8,6 +8,14 @@ endif
 tag := $(shell git describe --abbrev=0 --always --dirty --tags)
 sha := $(shell git rev-parse --short HEAD)
 git_tag_sha := $(tag):$(sha)
+LDFLAGS="-X 'github.com/selectdb/ccr_syncer/pkg/version.GitTagSha=$(git_tag_sha)'"
+GOFLAGS=
+
+# COVERAGE=ON make
+ifeq ($(COVERAGE),ON)
+    GOFLAGS += -cover
+endif
+
 
 .PHONY: default
 ## default: ccr_syncer
@@ -55,7 +63,7 @@ cloc:
 .PHONY: ccr_syncer
 ## ccr_syncer : Build ccr_syncer binary
 ccr_syncer: bin
-	$(V)go build -ldflags "-X github.com/selectdb/ccr_syncer/pkg/version.GitTagSha=$(git_tag_sha)" -o bin/ccr_syncer ./cmd/ccr_syncer
+	$(V)go build ${GOFLAGS} -ldflags ${LDFLAGS} -o bin/ccr_syncer ./cmd/ccr_syncer
 
 .PHONY: get_binlog
 ## get_binlog : Build get_binlog binary
