@@ -144,7 +144,8 @@ type JobProgress struct {
 }
 
 func (j *JobProgress) String() string {
-	return fmt.Sprintf("JobProgress{JobName: %s, SyncState: %s, SubSyncState: %s, CommitSeq: %d, TableCommitSeqMap: %v, InMemoryData: %v, PersistData: %s}", j.JobName, j.SyncState, j.SubSyncState, j.CommitSeq, j.TableCommitSeqMap, j.InMemoryData, j.PersistData)
+	// const maxStringLength = 64
+	return fmt.Sprintf("JobProgress{JobName: %s, SyncState: %s, SubSyncState: %s, CommitSeq: %d, TableCommitSeqMap: %v, InMemoryData: %.64v, PersistData: %.64s}", j.JobName, j.SyncState, j.SubSyncState, j.CommitSeq, j.TableCommitSeqMap, j.InMemoryData, j.PersistData)
 }
 
 func NewJobProgress(jobName string, syncType SyncType, db storage.DB) *JobProgress {

@@ -54,7 +54,7 @@ func InitLog() {
 	// TODO: Add write permission check
 	output := &lumberjack.Logger{
 		Filename:   logFilename,
-		MaxSize:    100,
+		MaxSize:    128,
 		MaxAge:     7,
 		MaxBackups: 30,
 		LocalTime:  true,

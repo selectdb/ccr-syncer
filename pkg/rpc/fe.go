@@ -435,13 +435,13 @@ func (rpc *singleFeClient) GetSnapshot(spec *base.Spec, labelName string) (*fest
 //
 // Restore Snapshot rpc
 func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableRef, label string, snapshotResult *festruct.TGetSnapshotResult_) (*festruct.TRestoreSnapshotResult_, error) {
-	log.Debugf("RestoreSnapshot, spec: %s, snapshot result: %+v", spec, snapshotResult)
+	// NOTE: ignore meta, because it's too large
+	log.Debugf("RestoreSnapshot, spec: %s", spec)
 
 	client := rpc.client
 	repoName := "__keep_on_local__"
 	properties := make(map[string]string)
 	properties["reserve_replica"] = "true"
-	// log.Infof("meta: %v", string(snapshotResult.GetMeta()))
 	req := &festruct.TRestoreSnapshotRequest{
 		Table:      &spec.Table,
 		LabelName:  &label,    // TODO: check remove
@@ -453,8 +453,9 @@ func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, tableRefs []*festruc
 	}
 	setAuthInfo(req, spec)
 
-	log.Debugf("RestoreSnapshotRequest user %s, db %s, table %s, label name %s, properties %v, meta %v, job info %v",
-		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), properties, snapshotResult.GetMeta(), snapshotResult.GetJobInfo())
+	// NOTE: ignore meta, because it's too large
+	log.Debugf("RestoreSnapshotRequest user %s, db %s, table %s, label name %s, properties %v, job info %v",
+		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), properties, snapshotResult.GetJobInfo())
 	if resp, err := client.RestoreSnapshot(context.Background(), req); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "RestoreSnapshot failed, req: %+v", req)
 	} else {
