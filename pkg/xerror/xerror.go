@@ -3,8 +3,6 @@ package xerror
 import (
 	stderrors "errors"
 	"fmt"
-
-	"github.com/pkg/errors"
 )
 
 // type ErrorCategory int
@@ -67,11 +65,18 @@ func (e *XError) Category() ErrorCategory {
 	return e.category
 }
 
+// return the innerest xerror, unwrap stack && xerror
 func (e *XError) Error() string {
+	if err, ok := e.err.(*withStack); ok {
+		return err.error.Error()
+	}
+
+	// If the error is an XError, recursively call Error() on the inner error
 	if xerr, ok := e.err.(*XError); ok {
 		return xerr.Error()
 	}
 
+	// Otherwise, format the error message with the category name and error message
 	return fmt.Sprintf("[%s] %s", e.category.Name(), e.err.Error())
 }
 
@@ -87,16 +92,7 @@ func (e *XError) IsPanic() bool {
 	return e.errType == xpanic
 }
 
-func New(errCategory ErrorCategory, message string) error {
-	err := &XError{
-		category: errCategory,
-		errType:  xrecoverable,
-		err:      stderrors.New(message),
-	}
-	return errors.WithStack(err)
-}
-
-func XNew(errCategory ErrorCategory, message string) *XError {
+func NewWithoutStack(errCategory ErrorCategory, message string) *XError {
 	err := &XError{
 		category: errCategory,
 		errType:  xrecoverable,
@@ -105,31 +101,42 @@ func XNew(errCategory ErrorCategory, message string) *XError {
 	return err
 }
 
-func Panic(errCategory ErrorCategory, message string) error {
+func New(errCategory ErrorCategory, message string) error {
+	err := NewWithoutStack(errCategory, message)
+	return newWithStack(err)
+}
+
+func PanicWithoutStack(errCategory ErrorCategory, message string) error {
 	err := &XError{
 		category: errCategory,
 		errType:  xpanic,
 		err:      stderrors.New(message),
 	}
-	return errors.WithStack(err)
+	return err
+}
+
+func Panic(errCategory ErrorCategory, message string) error {
+	err := PanicWithoutStack(errCategory, message)
+	return newWithStack(err)
+}
+
+func errorf(errCategory ErrorCategory, errtype errType, format string, args ...interface{}) *XError {
+	err := &XError{
+		category: errCategory,
+		errType:  errtype,
+		err:      fmt.Errorf(format, args...),
+	}
+	return err
 }
 
 func Errorf(errCategory ErrorCategory, format string, args ...interface{}) error {
-	err := &XError{
-		category: errCategory,
-		errType:  xrecoverable,
-		err:      fmt.Errorf(format, args...),
-	}
-	return errors.WithStack(err)
+	err := errorf(errCategory, xrecoverable, format, args...)
+	return newWithStack(err)
 }
 
 func Panicf(errCategory ErrorCategory, format string, args ...interface{}) error {
-	err := &XError{
-		category: errCategory,
-		errType:  xpanic,
-		err:      fmt.Errorf(format, args...),
-	}
-	return errors.WithStack(err)
+	err := errorf(errCategory, xpanic, format, args...)
+	return newWithStack(err)
 }
 
 func wrap(err error, errCategory ErrorCategory, errLevel errType, message string) error {
@@ -142,7 +149,14 @@ func wrap(err error, errCategory ErrorCategory, errLevel errType, message string
 		errType:  errLevel,
 		err:      err,
 	}
-	return errors.Wrap(err, message)
+	err = &withMessage{
+		cause: err,
+		msg:   message,
+	}
+	return &withStack{
+		err,
+		callers(4),
+	}
 }
 
 func Wrap(err error, errCategory ErrorCategory, message string) error {
@@ -163,7 +177,15 @@ func wrapf(err error, errCategory ErrorCategory, errLevel errType, format string
 		errType:  errLevel,
 		err:      err,
 	}
-	return errors.Wrapf(err, format, args...)
+
+	err = &withMessage{
+		cause: err,
+		msg:   fmt.Sprintf(format, args...),
+	}
+	return &withStack{
+		err,
+		callers(4),
+	}
 }
 
 func Wrapf(err error, errCategory ErrorCategory, format string, args ...interface{}) error {
@@ -182,6 +204,17 @@ func XPanicWrapf(xerr *XError, format string, args ...interface{}) error {
 	return wrapf(xerr, xerr.category, xpanic, format, args...)
 }
 
+func newWithStack(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	return &withStack{
+		err,
+		callers(4),
+	}
+}
+
 func WithStack(err error) error {
 	if err == nil {
 		return nil
@@ -193,5 +226,8 @@ func WithStack(err error) error {
 		err:      err,
 	}
 
-	return errors.WithStack(err)
+	return &withStack{
+		err,
+		callers(4),
+	}
 }

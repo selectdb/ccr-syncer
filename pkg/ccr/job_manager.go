@@ -9,8 +9,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	ErrJobExist = "job exist"
+var (
+	errJobExist = xerror.NewWithoutStack(xerror.Normal, "job exist")
 )
 
 // job manager is thread safety
@@ -47,7 +47,7 @@ func (jm *JobManager) AddJob(job *Job) error {
 
 	// Step 1: check job exist
 	if _, ok := jm.jobs[job.Name]; ok {
-		return xerror.Errorf(xerror.Normal, "%s: %s", ErrJobExist, job.Name)
+		return xerror.XWrapf(errJobExist, "job: %s", job.Name)
 	}
 
 	// Step 2: check job first run, mostly for dest/src fe db/table info

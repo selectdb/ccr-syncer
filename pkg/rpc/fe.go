@@ -22,7 +22,7 @@ const (
 )
 
 var (
-	ErrFeNotMasterCompatible = xerror.XNew(xerror.FE, "not master compatible")
+	ErrFeNotMasterCompatible = xerror.NewWithoutStack(xerror.FE, "not master compatible")
 )
 
 type IFeRpc interface {
