@@ -11,12 +11,16 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 )
 
+const (
+	maxAllowedPacket = 128 * 1024 * 1024
+)
+
 type MysqlDB struct {
 	db *sql.DB
 }
 
 func NewMysqlDB(host string, port int, user string, password string) (DB, error) {
-	dbForDDL, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%d)/", user, password, host, port))
+	dbForDDL, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%d)/?maxAllowedPacket=%d", user, password, host, port, maxAllowedPacket))
 	if err != nil {
 		return nil, xerror.Wrapf(err, xerror.DB, "mysql: open %s@tcp(%s:%s) failed", user, host, password)
 	}
@@ -26,7 +30,7 @@ func NewMysqlDB(host string, port int, user string, password string) (DB, error)
 	}
 	dbForDDL.Close()
 
-	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", user, password, host, port, remoteDBName))
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?maxAllowedPacket=%d", user, password, host, port, remoteDBName, maxAllowedPacket))
 	if err != nil {
 		return nil, xerror.Wrapf(err, xerror.DB, "mysql: open mysql in db %s@tcp(%s:%d)/%s failed", user, host, port, remoteDBName)
 	}
