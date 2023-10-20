@@ -48,7 +48,7 @@ func (e errType) String() string {
 	case xrecoverable:
 		return "Recoverable"
 	case xpanic:
-		return "panic"
+		return "Panic"
 	default:
 		panic("unknown error level")
 	}

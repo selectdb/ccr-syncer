@@ -3,7 +3,7 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"strconv"
+	"sync"
 
 	"github.com/cloudwego/kitex/client"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
@@ -11,6 +11,7 @@ import (
 	feservice "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/frontendservice/frontendservice"
 	tstatus "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/status"
 	festruct_types "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/types"
+	"github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
 	log "github.com/sirupsen/logrus"
@@ -37,20 +38,17 @@ type IFeRpc interface {
 
 // TODO(Drogon): Add addrs to cached all spec clients
 // now only cached master client, so callWithRetryAllClients only try with master clients(maybe not master now)
+// TODO(Drgon): cached no update clients & cachedFeAddrs for readOnly
 type FeRpc struct {
-	masterClient *singleFeClient
-	clients      map[string]*singleFeClient
+	spec          *base.Spec
+	masterClient  *singleFeClient
+	clients       map[string]*singleFeClient
+	cachedFeAddrs map[string]bool
+	lock          sync.RWMutex // for get client
 }
 
 func NewFeRpc(spec *base.Spec) (*FeRpc, error) {
-	host := spec.Host
-	// convert string to int32
-	port, err := strconv.Atoi(spec.ThriftPort)
-	if err != nil {
-		return nil, xerror.Wrapf(err, xerror.RPC, "NewFeClient error by convert port %s to int32", spec.ThriftPort)
-	}
-
-	addr := fmt.Sprintf("%s:%d", host, port)
+	addr := fmt.Sprintf("%s:%s", spec.Host, spec.ThriftPort)
 	client, err := newSingleFeClient(addr)
 	if err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "NewFeClient error: %v", err)
@@ -58,9 +56,17 @@ func NewFeRpc(spec *base.Spec) (*FeRpc, error) {
 
 	clients := make(map[string]*singleFeClient)
 	clients[client.Address()] = client
+	cachedFeAddrs := make(map[string]bool)
+	for _, fe := range spec.Frontends {
+		addr := fmt.Sprintf("%s:%s", fe.Host, fe.ThriftPort)
+		cachedFeAddrs[addr] = true
+	}
+
 	return &FeRpc{
-		masterClient: client,
-		clients:      clients,
+		spec:          spec,
+		masterClient:  client,
+		clients:       clients,
+		cachedFeAddrs: cachedFeAddrs,
 	}, nil
 }
 
@@ -71,8 +77,54 @@ type resultType interface {
 }
 type callerType func(client *singleFeClient) (resultType, error)
 
+func (rpc *FeRpc) getMasterClient() *singleFeClient {
+	rpc.lock.RLock()
+	defer rpc.lock.RUnlock()
+
+	return rpc.masterClient
+}
+
+func (rpc *FeRpc) updateMasterClient(masterClient *singleFeClient) {
+	rpc.lock.Lock()
+	defer rpc.lock.Unlock()
+
+	rpc.clients[masterClient.Address()] = masterClient
+	rpc.masterClient = masterClient
+}
+
+func (rpc *FeRpc) getClient(addr string) (*singleFeClient, bool) {
+	rpc.lock.RLock()
+	defer rpc.lock.RUnlock()
+
+	client, ok := rpc.clients[addr]
+	return client, ok
+}
+
+func (rpc *FeRpc) addClient(client *singleFeClient) {
+	rpc.lock.Lock()
+	defer rpc.lock.Unlock()
+
+	rpc.clients[client.Address()] = client
+}
+
+func (rpc *FeRpc) getClients() map[string]*singleFeClient {
+	rpc.lock.RLock()
+	defer rpc.lock.RUnlock()
+
+	return utils.CopyMap(rpc.clients)
+}
+
+func (rpc *FeRpc) getCacheFeAddrs() map[string]bool {
+	rpc.lock.RLock()
+	defer rpc.lock.RUnlock()
+
+	return utils.CopyMap(rpc.cachedFeAddrs)
+}
+
 func (rpc *FeRpc) callWithMasterRedirect(caller callerType) (resultType, error) {
-	result, err := caller(rpc.masterClient)
+	masterClient := rpc.getMasterClient()
+
+	result, err := caller(masterClient)
 	if err != nil {
 		return result, err
 	}
@@ -83,15 +135,16 @@ func (rpc *FeRpc) callWithMasterRedirect(caller callerType) (resultType, error) 
 
 	// no compatible for master
 	if !result.IsSetMasterAddress() {
-		return result, xerror.XPanicWrapf(ErrFeNotMasterCompatible, "fe addr [%s]", rpc.masterClient.Address())
+		return result, xerror.XPanicWrapf(ErrFeNotMasterCompatible, "fe addr [%s]", masterClient.Address())
 	}
 
 	// switch to master
 	masterAddr := result.GetMasterAddress()
 	log.Infof("switch to master %s", masterAddr)
-	var masterClient *singleFeClient
 	addr := fmt.Sprintf("%s:%d", masterAddr.Hostname, masterAddr.Port)
-	if client, ok := rpc.clients[addr]; ok {
+
+	client, ok := rpc.getClient(addr)
+	if ok {
 		masterClient = client
 	} else {
 		masterClient, err = newSingleFeClient(addr)
@@ -99,24 +152,26 @@ func (rpc *FeRpc) callWithMasterRedirect(caller callerType) (resultType, error) 
 			return nil, xerror.Wrapf(err, xerror.RPC, "NewFeClient error: %v", err)
 		}
 	}
-	rpc.masterClient = masterClient
-	rpc.clients[addr] = masterClient
+	rpc.updateMasterClient(masterClient)
 
 	// retry
-	return caller(rpc.masterClient)
+	return caller(masterClient)
 }
 
 type retryCallerType func(client *singleFeClient) (any, error)
 
 func (rpc *FeRpc) callWithRetryAllClients(caller retryCallerType) (result any, err error) {
-	client := rpc.masterClient
+	client := rpc.getMasterClient()
 	if result, err = caller(client); err == nil {
 		return result, nil
 	}
 
 	usedClientAddrs := make(map[string]bool)
 	usedClientAddrs[client.Address()] = true
-	for addr, client := range rpc.clients {
+
+	// Step 1: try all cached fe clients
+	clients := rpc.getClients()
+	for addr, client := range clients {
 		if _, ok := usedClientAddrs[addr]; ok {
 			continue
 		}
@@ -126,6 +181,26 @@ func (rpc *FeRpc) callWithRetryAllClients(caller retryCallerType) (result any, e
 			return result, nil
 		}
 	}
+
+	// Step 2: try all cached fe addrs
+	cachedFeAddrs := rpc.getCacheFeAddrs()
+	for addr := range cachedFeAddrs {
+		if _, ok := usedClientAddrs[addr]; ok {
+			continue
+		}
+
+		usedClientAddrs[addr] = true
+		if client, err := newSingleFeClient(addr); err != nil {
+			log.Errorf("new fe client error: %v", err)
+		} else {
+			rpc.addClient(client)
+			if result, err = caller(client); err == nil {
+				return result, nil
+			}
+		}
+	}
+
+	// Step 3: return last error
 	return result, err
 }
 
