@@ -16,9 +16,11 @@ ifeq ($(COVERAGE),ON)
     GOFLAGS += -cover
 endif
 
+.PHONY: flag_coverage
+## COVERAGE=ON : Set coverage flag
 
 .PHONY: default
-## default: ccr_syncer
+## default: Build ccr_syncer
 default: ccr_syncer
 
 .PHONY: build
