@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	beservice "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/backendservice/backendservice"
@@ -16,10 +17,18 @@ type IRpcFactory interface {
 }
 
 type RpcFactory struct {
+	feRpcs     map[*base.Spec]IFeRpc
+	feRpcsLock sync.Mutex
+
+	beRpcs     map[*base.Backend]IBeRpc
+	beRpcsLock sync.Mutex
 }
 
 func NewRpcFactory() IRpcFactory {
-	return &RpcFactory{}
+	return &RpcFactory{
+		feRpcs: make(map[*base.Spec]IFeRpc),
+		beRpcs: make(map[*base.Backend]IBeRpc),
+	}
 }
 
 func (rf *RpcFactory) NewFeRpc(spec *base.Spec) (IFeRpc, error) {
@@ -28,17 +37,45 @@ func (rf *RpcFactory) NewFeRpc(spec *base.Spec) (IFeRpc, error) {
 		return nil, err
 	}
 
-	return NewFeRpc(spec)
+	rf.feRpcsLock.Lock()
+	if feRpc, ok := rf.feRpcs[spec]; ok {
+		rf.feRpcsLock.Unlock()
+		return feRpc, nil
+	}
+	rf.feRpcsLock.Unlock()
+
+	feRpc, err := NewFeRpc(spec)
+	if err != nil {
+		return nil, err
+	}
+
+	rf.feRpcsLock.Lock()
+	defer rf.feRpcsLock.Unlock()
+	rf.feRpcs[spec] = feRpc
+	return feRpc, nil
 }
 
 func (rf *RpcFactory) NewBeRpc(be *base.Backend) (IBeRpc, error) {
-	// create kitex FrontendService client
-	if client, err := beservice.NewClient("FrontendService", client.WithHostPorts(fmt.Sprintf("%s:%d", be.Host, be.BePort))); err != nil {
-		return nil, xerror.Wrapf(err, xerror.Normal, "NewBeClient error: %v", err)
-	} else {
-		return &BeRpc{
-			backend: be,
-			client:  client,
-		}, nil
+	rf.beRpcsLock.Lock()
+	if beRpc, ok := rf.beRpcs[be]; ok {
+		rf.beRpcsLock.Unlock()
+		return beRpc, nil
 	}
+	rf.beRpcsLock.Unlock()
+
+	// create kitex FrontendService client
+	client, err := beservice.NewClient("FrontendService", client.WithHostPorts(fmt.Sprintf("%s:%d", be.Host, be.BePort)))
+	if err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "NewBeClient error: %v", err)
+	}
+
+	beRpc := &BeRpc{
+		backend: be,
+		client:  client,
+	}
+
+	rf.beRpcsLock.Lock()
+	defer rf.beRpcsLock.Unlock()
+	rf.beRpcs[be] = beRpc
+	return beRpc, nil
 }
