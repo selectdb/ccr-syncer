@@ -59626,6 +59626,836 @@ func (p *TGetMetaResult_) Field2DeepEqual(src *TGetMetaDBMeta) bool {
 	return true
 }
 
+type TGetBackendMetaRequest struct {
+	Cluster   *string `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
+	User      *string `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
+	Passwd    *string `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
+	UserIp    *string `thrift:"user_ip,4,optional" frugal:"4,optional,string" json:"user_ip,omitempty"`
+	Token     *string `thrift:"token,5,optional" frugal:"5,optional,string" json:"token,omitempty"`
+	BackendId *int64  `thrift:"backend_id,6,optional" frugal:"6,optional,i64" json:"backend_id,omitempty"`
+}
+
+func NewTGetBackendMetaRequest() *TGetBackendMetaRequest {
+	return &TGetBackendMetaRequest{}
+}
+
+func (p *TGetBackendMetaRequest) InitDefault() {
+	*p = TGetBackendMetaRequest{}
+}
+
+var TGetBackendMetaRequest_Cluster_DEFAULT string
+
+func (p *TGetBackendMetaRequest) GetCluster() (v string) {
+	if !p.IsSetCluster() {
+		return TGetBackendMetaRequest_Cluster_DEFAULT
+	}
+	return *p.Cluster
+}
+
+var TGetBackendMetaRequest_User_DEFAULT string
+
+func (p *TGetBackendMetaRequest) GetUser() (v string) {
+	if !p.IsSetUser() {
+		return TGetBackendMetaRequest_User_DEFAULT
+	}
+	return *p.User
+}
+
+var TGetBackendMetaRequest_Passwd_DEFAULT string
+
+func (p *TGetBackendMetaRequest) GetPasswd() (v string) {
+	if !p.IsSetPasswd() {
+		return TGetBackendMetaRequest_Passwd_DEFAULT
+	}
+	return *p.Passwd
+}
+
+var TGetBackendMetaRequest_UserIp_DEFAULT string
+
+func (p *TGetBackendMetaRequest) GetUserIp() (v string) {
+	if !p.IsSetUserIp() {
+		return TGetBackendMetaRequest_UserIp_DEFAULT
+	}
+	return *p.UserIp
+}
+
+var TGetBackendMetaRequest_Token_DEFAULT string
+
+func (p *TGetBackendMetaRequest) GetToken() (v string) {
+	if !p.IsSetToken() {
+		return TGetBackendMetaRequest_Token_DEFAULT
+	}
+	return *p.Token
+}
+
+var TGetBackendMetaRequest_BackendId_DEFAULT int64
+
+func (p *TGetBackendMetaRequest) GetBackendId() (v int64) {
+	if !p.IsSetBackendId() {
+		return TGetBackendMetaRequest_BackendId_DEFAULT
+	}
+	return *p.BackendId
+}
+func (p *TGetBackendMetaRequest) SetCluster(val *string) {
+	p.Cluster = val
+}
+func (p *TGetBackendMetaRequest) SetUser(val *string) {
+	p.User = val
+}
+func (p *TGetBackendMetaRequest) SetPasswd(val *string) {
+	p.Passwd = val
+}
+func (p *TGetBackendMetaRequest) SetUserIp(val *string) {
+	p.UserIp = val
+}
+func (p *TGetBackendMetaRequest) SetToken(val *string) {
+	p.Token = val
+}
+func (p *TGetBackendMetaRequest) SetBackendId(val *int64) {
+	p.BackendId = val
+}
+
+var fieldIDToName_TGetBackendMetaRequest = map[int16]string{
+	1: "cluster",
+	2: "user",
+	3: "passwd",
+	4: "user_ip",
+	5: "token",
+	6: "backend_id",
+}
+
+func (p *TGetBackendMetaRequest) IsSetCluster() bool {
+	return p.Cluster != nil
+}
+
+func (p *TGetBackendMetaRequest) IsSetUser() bool {
+	return p.User != nil
+}
+
+func (p *TGetBackendMetaRequest) IsSetPasswd() bool {
+	return p.Passwd != nil
+}
+
+func (p *TGetBackendMetaRequest) IsSetUserIp() bool {
+	return p.UserIp != nil
+}
+
+func (p *TGetBackendMetaRequest) IsSetToken() bool {
+	return p.Token != nil
+}
+
+func (p *TGetBackendMetaRequest) IsSetBackendId() bool {
+	return p.BackendId != nil
+}
+
+func (p *TGetBackendMetaRequest) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TGetBackendMetaRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TGetBackendMetaRequest) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		p.Cluster = &v
+	}
+	return nil
+}
+
+func (p *TGetBackendMetaRequest) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		p.User = &v
+	}
+	return nil
+}
+
+func (p *TGetBackendMetaRequest) ReadField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		p.Passwd = &v
+	}
+	return nil
+}
+
+func (p *TGetBackendMetaRequest) ReadField4(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		p.UserIp = &v
+	}
+	return nil
+}
+
+func (p *TGetBackendMetaRequest) ReadField5(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		p.Token = &v
+	}
+	return nil
+}
+
+func (p *TGetBackendMetaRequest) ReadField6(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.BackendId = &v
+	}
+	return nil
+}
+
+func (p *TGetBackendMetaRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TGetBackendMetaRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TGetBackendMetaRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCluster() {
+		if err = oprot.WriteFieldBegin("cluster", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Cluster); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TGetBackendMetaRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetUser() {
+		if err = oprot.WriteFieldBegin("user", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.User); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TGetBackendMetaRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPasswd() {
+		if err = oprot.WriteFieldBegin("passwd", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Passwd); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *TGetBackendMetaRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetUserIp() {
+		if err = oprot.WriteFieldBegin("user_ip", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.UserIp); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *TGetBackendMetaRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetToken() {
+		if err = oprot.WriteFieldBegin("token", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Token); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *TGetBackendMetaRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBackendId() {
+		if err = oprot.WriteFieldBegin("backend_id", thrift.I64, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.BackendId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *TGetBackendMetaRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TGetBackendMetaRequest(%+v)", *p)
+}
+
+func (p *TGetBackendMetaRequest) DeepEqual(ano *TGetBackendMetaRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Cluster) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.User) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Passwd) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.UserIp) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.Token) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.BackendId) {
+		return false
+	}
+	return true
+}
+
+func (p *TGetBackendMetaRequest) Field1DeepEqual(src *string) bool {
+
+	if p.Cluster == src {
+		return true
+	} else if p.Cluster == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Cluster, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TGetBackendMetaRequest) Field2DeepEqual(src *string) bool {
+
+	if p.User == src {
+		return true
+	} else if p.User == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.User, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TGetBackendMetaRequest) Field3DeepEqual(src *string) bool {
+
+	if p.Passwd == src {
+		return true
+	} else if p.Passwd == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Passwd, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TGetBackendMetaRequest) Field4DeepEqual(src *string) bool {
+
+	if p.UserIp == src {
+		return true
+	} else if p.UserIp == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.UserIp, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TGetBackendMetaRequest) Field5DeepEqual(src *string) bool {
+
+	if p.Token == src {
+		return true
+	} else if p.Token == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Token, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TGetBackendMetaRequest) Field6DeepEqual(src *int64) bool {
+
+	if p.BackendId == src {
+		return true
+	} else if p.BackendId == nil || src == nil {
+		return false
+	}
+	if *p.BackendId != *src {
+		return false
+	}
+	return true
+}
+
+type TGetBackendMetaResult_ struct {
+	Status   *status.TStatus   `thrift:"status,1,required" frugal:"1,required,status.TStatus" json:"status"`
+	Backends []*types.TBackend `thrift:"backends,2,optional" frugal:"2,optional,list<types.TBackend>" json:"backends,omitempty"`
+}
+
+func NewTGetBackendMetaResult_() *TGetBackendMetaResult_ {
+	return &TGetBackendMetaResult_{}
+}
+
+func (p *TGetBackendMetaResult_) InitDefault() {
+	*p = TGetBackendMetaResult_{}
+}
+
+var TGetBackendMetaResult__Status_DEFAULT *status.TStatus
+
+func (p *TGetBackendMetaResult_) GetStatus() (v *status.TStatus) {
+	if !p.IsSetStatus() {
+		return TGetBackendMetaResult__Status_DEFAULT
+	}
+	return p.Status
+}
+
+var TGetBackendMetaResult__Backends_DEFAULT []*types.TBackend
+
+func (p *TGetBackendMetaResult_) GetBackends() (v []*types.TBackend) {
+	if !p.IsSetBackends() {
+		return TGetBackendMetaResult__Backends_DEFAULT
+	}
+	return p.Backends
+}
+func (p *TGetBackendMetaResult_) SetStatus(val *status.TStatus) {
+	p.Status = val
+}
+func (p *TGetBackendMetaResult_) SetBackends(val []*types.TBackend) {
+	p.Backends = val
+}
+
+var fieldIDToName_TGetBackendMetaResult_ = map[int16]string{
+	1: "status",
+	2: "backends",
+}
+
+func (p *TGetBackendMetaResult_) IsSetStatus() bool {
+	return p.Status != nil
+}
+
+func (p *TGetBackendMetaResult_) IsSetBackends() bool {
+	return p.Backends != nil
+}
+
+func (p *TGetBackendMetaResult_) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetStatus bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetStatus = true
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetStatus {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TGetBackendMetaResult_[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_TGetBackendMetaResult_[fieldId]))
+}
+
+func (p *TGetBackendMetaResult_) ReadField1(iprot thrift.TProtocol) error {
+	p.Status = status.NewTStatus()
+	if err := p.Status.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *TGetBackendMetaResult_) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	p.Backends = make([]*types.TBackend, 0, size)
+	for i := 0; i < size; i++ {
+		_elem := types.NewTBackend()
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		p.Backends = append(p.Backends, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *TGetBackendMetaResult_) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TGetBackendMetaResult"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TGetBackendMetaResult_) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("status", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Status.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TGetBackendMetaResult_) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBackends() {
+		if err = oprot.WriteFieldBegin("backends", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Backends)); err != nil {
+			return err
+		}
+		for _, v := range p.Backends {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TGetBackendMetaResult_) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TGetBackendMetaResult_(%+v)", *p)
+}
+
+func (p *TGetBackendMetaResult_) DeepEqual(ano *TGetBackendMetaResult_) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Status) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Backends) {
+		return false
+	}
+	return true
+}
+
+func (p *TGetBackendMetaResult_) Field1DeepEqual(src *status.TStatus) bool {
+
+	if !p.Status.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TGetBackendMetaResult_) Field2DeepEqual(src []*types.TBackend) bool {
+
+	if len(p.Backends) != len(src) {
+		return false
+	}
+	for i, v := range p.Backends {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+
 type FrontendService interface {
 	GetDbNames(ctx context.Context, params *TGetDbsParams) (r *TGetDbsResult_, err error)
 
@@ -59718,6 +60548,8 @@ type FrontendService interface {
 	CreatePartition(ctx context.Context, request *TCreatePartitionRequest) (r *TCreatePartitionResult_, err error)
 
 	GetMeta(ctx context.Context, request *TGetMetaRequest) (r *TGetMetaResult_, err error)
+
+	GetBackendMeta(ctx context.Context, request *TGetBackendMetaRequest) (r *TGetBackendMetaResult_, err error)
 }
 
 type FrontendServiceClient struct {
@@ -60158,6 +60990,15 @@ func (p *FrontendServiceClient) GetMeta(ctx context.Context, request *TGetMetaRe
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *FrontendServiceClient) GetBackendMeta(ctx context.Context, request *TGetBackendMetaRequest) (r *TGetBackendMetaResult_, err error) {
+	var _args FrontendServiceGetBackendMetaArgs
+	_args.Request = request
+	var _result FrontendServiceGetBackendMetaResult
+	if err = p.Client_().Call(ctx, "getBackendMeta", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 
 type FrontendServiceProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
@@ -60225,6 +61066,7 @@ func NewFrontendServiceProcessor(handler FrontendService) *FrontendServiceProces
 	self.AddToProcessorMap("getAutoIncrementRange", &frontendServiceProcessorGetAutoIncrementRange{handler: handler})
 	self.AddToProcessorMap("createPartition", &frontendServiceProcessorCreatePartition{handler: handler})
 	self.AddToProcessorMap("getMeta", &frontendServiceProcessorGetMeta{handler: handler})
+	self.AddToProcessorMap("getBackendMeta", &frontendServiceProcessorGetBackendMeta{handler: handler})
 	return self
 }
 func (p *FrontendServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -62436,6 +63278,54 @@ func (p *frontendServiceProcessorGetMeta) Process(ctx context.Context, seqId int
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("getMeta", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type frontendServiceProcessorGetBackendMeta struct {
+	handler FrontendService
+}
+
+func (p *frontendServiceProcessorGetBackendMeta) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := FrontendServiceGetBackendMetaArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("getBackendMeta", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := FrontendServiceGetBackendMetaResult{}
+	var retval *TGetBackendMetaResult_
+	if retval, err2 = p.handler.GetBackendMeta(ctx, args.Request); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getBackendMeta: "+err2.Error())
+		oprot.WriteMessageBegin("getBackendMeta", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("getBackendMeta", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -78206,6 +79096,352 @@ func (p *FrontendServiceGetMetaResult) DeepEqual(ano *FrontendServiceGetMetaResu
 }
 
 func (p *FrontendServiceGetMetaResult) Field0DeepEqual(src *TGetMetaResult_) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type FrontendServiceGetBackendMetaArgs struct {
+	Request *TGetBackendMetaRequest `thrift:"request,1" frugal:"1,default,TGetBackendMetaRequest" json:"request"`
+}
+
+func NewFrontendServiceGetBackendMetaArgs() *FrontendServiceGetBackendMetaArgs {
+	return &FrontendServiceGetBackendMetaArgs{}
+}
+
+func (p *FrontendServiceGetBackendMetaArgs) InitDefault() {
+	*p = FrontendServiceGetBackendMetaArgs{}
+}
+
+var FrontendServiceGetBackendMetaArgs_Request_DEFAULT *TGetBackendMetaRequest
+
+func (p *FrontendServiceGetBackendMetaArgs) GetRequest() (v *TGetBackendMetaRequest) {
+	if !p.IsSetRequest() {
+		return FrontendServiceGetBackendMetaArgs_Request_DEFAULT
+	}
+	return p.Request
+}
+func (p *FrontendServiceGetBackendMetaArgs) SetRequest(val *TGetBackendMetaRequest) {
+	p.Request = val
+}
+
+var fieldIDToName_FrontendServiceGetBackendMetaArgs = map[int16]string{
+	1: "request",
+}
+
+func (p *FrontendServiceGetBackendMetaArgs) IsSetRequest() bool {
+	return p.Request != nil
+}
+
+func (p *FrontendServiceGetBackendMetaArgs) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FrontendServiceGetBackendMetaArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetBackendMetaArgs) ReadField1(iprot thrift.TProtocol) error {
+	p.Request = NewTGetBackendMetaRequest()
+	if err := p.Request.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *FrontendServiceGetBackendMetaArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("getBackendMeta_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetBackendMetaArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Request.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *FrontendServiceGetBackendMetaArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("FrontendServiceGetBackendMetaArgs(%+v)", *p)
+}
+
+func (p *FrontendServiceGetBackendMetaArgs) DeepEqual(ano *FrontendServiceGetBackendMetaArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Request) {
+		return false
+	}
+	return true
+}
+
+func (p *FrontendServiceGetBackendMetaArgs) Field1DeepEqual(src *TGetBackendMetaRequest) bool {
+
+	if !p.Request.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type FrontendServiceGetBackendMetaResult struct {
+	Success *TGetBackendMetaResult_ `thrift:"success,0,optional" frugal:"0,optional,TGetBackendMetaResult_" json:"success,omitempty"`
+}
+
+func NewFrontendServiceGetBackendMetaResult() *FrontendServiceGetBackendMetaResult {
+	return &FrontendServiceGetBackendMetaResult{}
+}
+
+func (p *FrontendServiceGetBackendMetaResult) InitDefault() {
+	*p = FrontendServiceGetBackendMetaResult{}
+}
+
+var FrontendServiceGetBackendMetaResult_Success_DEFAULT *TGetBackendMetaResult_
+
+func (p *FrontendServiceGetBackendMetaResult) GetSuccess() (v *TGetBackendMetaResult_) {
+	if !p.IsSetSuccess() {
+		return FrontendServiceGetBackendMetaResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *FrontendServiceGetBackendMetaResult) SetSuccess(x interface{}) {
+	p.Success = x.(*TGetBackendMetaResult_)
+}
+
+var fieldIDToName_FrontendServiceGetBackendMetaResult = map[int16]string{
+	0: "success",
+}
+
+func (p *FrontendServiceGetBackendMetaResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *FrontendServiceGetBackendMetaResult) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FrontendServiceGetBackendMetaResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetBackendMetaResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = NewTGetBackendMetaResult_()
+	if err := p.Success.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *FrontendServiceGetBackendMetaResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("getBackendMeta_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetBackendMetaResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *FrontendServiceGetBackendMetaResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("FrontendServiceGetBackendMetaResult(%+v)", *p)
+}
+
+func (p *FrontendServiceGetBackendMetaResult) DeepEqual(ano *FrontendServiceGetBackendMetaResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *FrontendServiceGetBackendMetaResult) Field0DeepEqual(src *TGetBackendMetaResult_) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

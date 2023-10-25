@@ -59,6 +59,7 @@ type Client interface {
 	GetAutoIncrementRange(ctx context.Context, request *frontendservice.TAutoIncrementRangeRequest, callOptions ...callopt.Option) (r *frontendservice.TAutoIncrementRangeResult_, err error)
 	CreatePartition(ctx context.Context, request *frontendservice.TCreatePartitionRequest, callOptions ...callopt.Option) (r *frontendservice.TCreatePartitionResult_, err error)
 	GetMeta(ctx context.Context, request *frontendservice.TGetMetaRequest, callOptions ...callopt.Option) (r *frontendservice.TGetMetaResult_, err error)
+	GetBackendMeta(ctx context.Context, request *frontendservice.TGetBackendMetaRequest, callOptions ...callopt.Option) (r *frontendservice.TGetBackendMetaResult_, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -318,4 +319,9 @@ func (p *kFrontendServiceClient) CreatePartition(ctx context.Context, request *f
 func (p *kFrontendServiceClient) GetMeta(ctx context.Context, request *frontendservice.TGetMetaRequest, callOptions ...callopt.Option) (r *frontendservice.TGetMetaResult_, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetMeta(ctx, request)
+}
+
+func (p *kFrontendServiceClient) GetBackendMeta(ctx context.Context, request *frontendservice.TGetBackendMetaRequest, callOptions ...callopt.Option) (r *frontendservice.TGetBackendMetaResult_, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetBackendMeta(ctx, request)
 }

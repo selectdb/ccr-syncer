@@ -67,6 +67,7 @@ func NewServiceInfo() *kitex.ServiceInfo {
 		"getAutoIncrementRange":     kitex.NewMethodInfo(getAutoIncrementRangeHandler, newFrontendServiceGetAutoIncrementRangeArgs, newFrontendServiceGetAutoIncrementRangeResult, false),
 		"createPartition":           kitex.NewMethodInfo(createPartitionHandler, newFrontendServiceCreatePartitionArgs, newFrontendServiceCreatePartitionResult, false),
 		"getMeta":                   kitex.NewMethodInfo(getMetaHandler, newFrontendServiceGetMetaArgs, newFrontendServiceGetMetaResult, false),
+		"getBackendMeta":            kitex.NewMethodInfo(getBackendMetaHandler, newFrontendServiceGetBackendMetaArgs, newFrontendServiceGetBackendMetaResult, false),
 	}
 	extra := map[string]interface{}{
 		"PackageName": "frontendservice",
@@ -910,6 +911,24 @@ func newFrontendServiceGetMetaResult() interface{} {
 	return frontendservice.NewFrontendServiceGetMetaResult()
 }
 
+func getBackendMetaHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*frontendservice.FrontendServiceGetBackendMetaArgs)
+	realResult := result.(*frontendservice.FrontendServiceGetBackendMetaResult)
+	success, err := handler.(frontendservice.FrontendService).GetBackendMeta(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newFrontendServiceGetBackendMetaArgs() interface{} {
+	return frontendservice.NewFrontendServiceGetBackendMetaArgs()
+}
+
+func newFrontendServiceGetBackendMetaResult() interface{} {
+	return frontendservice.NewFrontendServiceGetBackendMetaResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -1373,6 +1392,16 @@ func (p *kClient) GetMeta(ctx context.Context, request *frontendservice.TGetMeta
 	_args.Request = request
 	var _result frontendservice.FrontendServiceGetMetaResult
 	if err = p.c.Call(ctx, "getMeta", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetBackendMeta(ctx context.Context, request *frontendservice.TGetBackendMetaRequest) (r *frontendservice.TGetBackendMetaResult_, err error) {
+	var _args frontendservice.FrontendServiceGetBackendMetaArgs
+	_args.Request = request
+	var _result frontendservice.FrontendServiceGetBackendMetaResult
+	if err = p.c.Call(ctx, "getBackendMeta", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

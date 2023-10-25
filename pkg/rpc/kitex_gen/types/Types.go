@@ -11739,6 +11739,8 @@ type TBackend struct {
 	Host     string `thrift:"host,1,required" frugal:"1,required,string" json:"host"`
 	BePort   TPort  `thrift:"be_port,2,required" frugal:"2,required,i32" json:"be_port"`
 	HttpPort TPort  `thrift:"http_port,3,required" frugal:"3,required,i32" json:"http_port"`
+	BrpcPort *TPort `thrift:"brpc_port,4,optional" frugal:"4,optional,i32" json:"brpc_port,omitempty"`
+	Id       *int64 `thrift:"id,5,optional" frugal:"5,optional,i64" json:"id,omitempty"`
 }
 
 func NewTBackend() *TBackend {
@@ -11760,6 +11762,24 @@ func (p *TBackend) GetBePort() (v TPort) {
 func (p *TBackend) GetHttpPort() (v TPort) {
 	return p.HttpPort
 }
+
+var TBackend_BrpcPort_DEFAULT TPort
+
+func (p *TBackend) GetBrpcPort() (v TPort) {
+	if !p.IsSetBrpcPort() {
+		return TBackend_BrpcPort_DEFAULT
+	}
+	return *p.BrpcPort
+}
+
+var TBackend_Id_DEFAULT int64
+
+func (p *TBackend) GetId() (v int64) {
+	if !p.IsSetId() {
+		return TBackend_Id_DEFAULT
+	}
+	return *p.Id
+}
 func (p *TBackend) SetHost(val string) {
 	p.Host = val
 }
@@ -11769,11 +11789,27 @@ func (p *TBackend) SetBePort(val TPort) {
 func (p *TBackend) SetHttpPort(val TPort) {
 	p.HttpPort = val
 }
+func (p *TBackend) SetBrpcPort(val *TPort) {
+	p.BrpcPort = val
+}
+func (p *TBackend) SetId(val *int64) {
+	p.Id = val
+}
 
 var fieldIDToName_TBackend = map[int16]string{
 	1: "host",
 	2: "be_port",
 	3: "http_port",
+	4: "brpc_port",
+	5: "id",
+}
+
+func (p *TBackend) IsSetBrpcPort() bool {
+	return p.BrpcPort != nil
+}
+
+func (p *TBackend) IsSetId() bool {
+	return p.Id != nil
 }
 
 func (p *TBackend) Read(iprot thrift.TProtocol) (err error) {
@@ -11826,6 +11862,26 @@ func (p *TBackend) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetHttpPort = true
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else {
 				if err = iprot.Skip(fieldTypeId); err != nil {
 					goto SkipFieldError
@@ -11904,6 +11960,24 @@ func (p *TBackend) ReadField3(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TBackend) ReadField4(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		p.BrpcPort = &v
+	}
+	return nil
+}
+
+func (p *TBackend) ReadField5(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.Id = &v
+	}
+	return nil
+}
+
 func (p *TBackend) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TBackend"); err != nil {
@@ -11920,6 +11994,14 @@ func (p *TBackend) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 
@@ -11992,6 +12074,44 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 
+func (p *TBackend) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBrpcPort() {
+		if err = oprot.WriteFieldBegin("brpc_port", thrift.I32, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.BrpcPort); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *TBackend) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetId() {
+		if err = oprot.WriteFieldBegin("id", thrift.I64, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Id); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
 func (p *TBackend) String() string {
 	if p == nil {
 		return "<nil>"
@@ -12014,6 +12134,12 @@ func (p *TBackend) DeepEqual(ano *TBackend) bool {
 	if !p.Field3DeepEqual(ano.HttpPort) {
 		return false
 	}
+	if !p.Field4DeepEqual(ano.BrpcPort) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.Id) {
+		return false
+	}
 	return true
 }
 
@@ -12034,6 +12160,30 @@ func (p *TBackend) Field2DeepEqual(src TPort) bool {
 func (p *TBackend) Field3DeepEqual(src TPort) bool {
 
 	if p.HttpPort != src {
+		return false
+	}
+	return true
+}
+func (p *TBackend) Field4DeepEqual(src *TPort) bool {
+
+	if p.BrpcPort == src {
+		return true
+	} else if p.BrpcPort == nil || src == nil {
+		return false
+	}
+	if *p.BrpcPort != *src {
+		return false
+	}
+	return true
+}
+func (p *TBackend) Field5DeepEqual(src *int64) bool {
+
+	if p.Id == src {
+		return true
+	} else if p.Id == nil || src == nil {
+		return false
+	}
+	if *p.Id != *src {
 		return false
 	}
 	return true
