@@ -191,8 +191,8 @@ func NewIngestContext(txnId int64, tableRecords []*record.TableRecord) *IngestCo
 
 type IngestBinlogJob struct {
 	ccrJob   *Job // ccr job
-	srcMeta  Metaer
-	destMeta Metaer
+	srcMeta  IngestBinlogMetaer
+	destMeta IngestBinlogMetaer
 
 	txnId        int64
 	tableRecords []*record.TableRecord

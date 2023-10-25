@@ -67,6 +67,15 @@ type MetaCleaner interface {
 	ClearTable(dbName string, tableName string)
 }
 
+type IngestBinlogMetaer interface {
+	GetTablets(tableId, partitionId, indexId int64) (*btree.Map[int64, *TabletMeta], error)
+	GetPartitionIdByRange(tableId int64, partitionRange string) (int64, error)
+	GetPartitionRangeMap(tableId int64) (map[string]*PartitionMeta, error)
+	GetIndexIdMap(tableId, partitionId int64) (map[int64]*IndexMeta, error)
+	GetIndexNameMap(tableId, partitionId int64) (map[string]*IndexMeta, error)
+	GetBackendMap() (map[int64]*base.Backend, error)
+}
+
 type Metaer interface {
 	GetDbId() (int64, error)
 	GetFullTableName(tableName string) string
@@ -79,32 +88,27 @@ type Metaer interface {
 
 	UpdatePartitions(tableId int64) error
 	GetPartitionIdMap(tableId int64) (map[int64]*PartitionMeta, error)
-	GetPartitionRangeMap(tableId int64) (map[string]*PartitionMeta, error)
 	GetPartitionIds(tableName string) ([]int64, error)
 	GetPartitionName(tableId int64, partitionId int64) (string, error)
 	GetPartitionRange(tableId int64, partitionId int64) (string, error)
 	GetPartitionIdByName(tableId int64, partitionName string) (int64, error)
-	GetPartitionIdByRange(tableId int64, partitionRange string) (int64, error)
 
 	UpdateBackends() error
 	GetBackends() ([]*base.Backend, error)
-	GetBackendMap() (map[int64]*base.Backend, error)
 	GetBackendId(host, portStr string) (int64, error)
 
 	UpdateIndexes(tableId, partitionId int64) error
-	GetIndexIdMap(tableId, partitionId int64) (map[int64]*IndexMeta, error)
-	GetIndexNameMap(tableId, partitionId int64) (map[string]*IndexMeta, error)
 
 	UpdateReplicas(tableId, partitionId int64) error
 	GetReplicas(tableId, partitionId int64) (*btree.Map[int64, *ReplicaMeta], error)
-
-	GetTablets(tableId, partitionId, indexId int64) (*btree.Map[int64, *TabletMeta], error)
 
 	UpdateToken(rpcFactory rpc.IRpcFactory) error
 	GetMasterToken(rpcFactory rpc.IRpcFactory) (string, error)
 
 	CheckBinlogFeature() error
 	DirtyGetTables() map[int64]*TableMeta
+
+	IngestBinlogMetaer
 
 	// from Spec
 	DbExec(sql string) error
