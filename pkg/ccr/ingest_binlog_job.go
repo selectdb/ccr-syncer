@@ -111,7 +111,8 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 		j.setError(xerror.Errorf(xerror.Meta, "src replicas is empty"))
 		return false
 	}
-	srcBackendId := iter.Value().BackendId
+	srcReplica := iter.Value()
+	srcBackendId := srcReplica.BackendId
 	srcBackend := j.GetSrcBackend(srcBackendId)
 	if srcBackend == nil {
 		j.setError(xerror.XWrapf(errBackendNotFound, "backend id: %d", srcBackendId))
@@ -189,7 +190,10 @@ func NewIngestContext(txnId int64, tableRecords []*record.TableRecord) *IngestCo
 }
 
 type IngestBinlogJob struct {
-	ccrJob       *Job // ccr job
+	ccrJob   *Job // ccr job
+	srcMeta  Metaer
+	destMeta Metaer
+
 	txnId        int64
 	tableRecords []*record.TableRecord
 
@@ -215,6 +219,8 @@ func NewIngestBinlogJob(ctx context.Context, ccrJob *Job) (*IngestBinlogJob, err
 
 	return &IngestBinlogJob{
 		ccrJob:       ccrJob,
+		srcMeta:      ccrJob.srcMeta,
+		destMeta:     ccrJob.destMeta,
 		txnId:        ingestCtx.txnId,
 		tableRecords: ingestCtx.tableRecords,
 
@@ -278,7 +284,7 @@ func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 		return
 	}
 
-	destTablets, err := job.destMeta.GetTablets(arg.destTableId, arg.destPartitionId, arg.destIndexMeta.Id)
+	destTablets, err := j.destMeta.GetTablets(arg.destTableId, arg.destPartitionId, arg.destIndexMeta.Id)
 	if err != nil {
 		j.setError(err)
 		return
@@ -345,19 +351,19 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 
 	srcPartitionId := partitionRecord.Id
 	srcPartitionRange := partitionRecord.Range
-	destPartitionId, err := job.destMeta.GetPartitionIdByRange(destTableId, srcPartitionRange)
+	destPartitionId, err := j.destMeta.GetPartitionIdByRange(destTableId, srcPartitionRange)
 	if err != nil {
 		j.setError(err)
 		return
 	}
 
 	// Step 1: check index id
-	srcIndexIdMap, err := j.ccrJob.srcMeta.GetIndexIdMap(srcTableId, srcPartitionId)
+	srcIndexIdMap, err := j.srcMeta.GetIndexIdMap(srcTableId, srcPartitionId)
 	if err != nil {
 		j.setError(err)
 		return
 	}
-	destIndexNameMap, err := j.ccrJob.destMeta.GetIndexNameMap(destTableId, destPartitionId)
+	destIndexNameMap, err := j.destMeta.GetIndexNameMap(destTableId, destPartitionId)
 	if err != nil {
 		j.setError(err)
 		return
@@ -442,7 +448,7 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 		j.setError(err)
 		return
 	}
-	destPartitionMap, err := job.destMeta.GetPartitionRangeMap(destTableId)
+	destPartitionMap, err := j.destMeta.GetPartitionRangeMap(destTableId)
 	if err != nil {
 		j.setError(err)
 		return
@@ -471,16 +477,14 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 func (j *IngestBinlogJob) prepareBackendMap() {
 	log.Debug("prepareBackendMap")
 
-	job := j.ccrJob
-
 	var err error
-	j.srcBackendMap, err = job.srcMeta.GetBackendMap()
+	j.srcBackendMap, err = j.srcMeta.GetBackendMap()
 	if err != nil {
 		j.setError(err)
 		return
 	}
 
-	j.destBackendMap, err = job.destMeta.GetBackendMap()
+	j.destBackendMap, err = j.destMeta.GetBackendMap()
 	if err != nil {
 		j.setError(err)
 		return

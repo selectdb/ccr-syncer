@@ -55,10 +55,11 @@ type TabletMeta struct {
 }
 
 type ReplicaMeta struct {
-	TabletMeta *TabletMeta
-	Id         int64
-	TabletId   int64
-	BackendId  int64
+	TabletMeta     *TabletMeta
+	Id             int64
+	TabletId       int64
+	BackendId      int64
+	VisibleVersion int64
 }
 
 type MetaCleaner interface {
