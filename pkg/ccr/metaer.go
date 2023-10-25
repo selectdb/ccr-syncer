@@ -30,7 +30,6 @@ type PartitionMeta struct {
 	TableMeta    *TableMeta
 	Id           int64
 	Name         string
-	Key          string
 	Range        string
 	IndexIdMap   map[int64]*IndexMeta  // indexId -> indexMeta
 	IndexNameMap map[string]*IndexMeta // indexName -> indexMeta
@@ -38,7 +37,7 @@ type PartitionMeta struct {
 
 // Stringer
 func (p *PartitionMeta) String() string {
-	return fmt.Sprintf("PartitionMeta{(id:%d), (name:%s), (key:%s), (range:%s)}", p.Id, p.Name, p.Key, p.Range)
+	return fmt.Sprintf("PartitionMeta{(id:%d), (name:%s), (range:%s)}", p.Id, p.Name, p.Range)
 }
 
 type IndexMeta struct {

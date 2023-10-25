@@ -245,10 +245,6 @@ func (m *Meta) UpdatePartitions(tableId int64) error {
 		if err != nil {
 			return xerror.Wrapf(err, xerror.Normal, query)
 		}
-		partitionKey, err := rowParser.GetString("PartitionKey")
-		if err != nil {
-			return xerror.Wrapf(err, xerror.Normal, query)
-		}
 		partitionRange, err := rowParser.GetString("Range")
 		if err != nil {
 			return xerror.Wrapf(err, xerror.Normal, query)
@@ -258,7 +254,6 @@ func (m *Meta) UpdatePartitions(tableId int64) error {
 			TableMeta: table,
 			Id:        partitionId,
 			Name:      partitionName,
-			Key:       partitionKey,
 			Range:     partitionRange,
 		}
 		partitions = append(partitions, partition)
