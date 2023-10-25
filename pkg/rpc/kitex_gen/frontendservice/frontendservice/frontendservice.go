@@ -66,6 +66,7 @@ func NewServiceInfo() *kitex.ServiceInfo {
 		"updateStatsCache":          kitex.NewMethodInfo(updateStatsCacheHandler, newFrontendServiceUpdateStatsCacheArgs, newFrontendServiceUpdateStatsCacheResult, false),
 		"getAutoIncrementRange":     kitex.NewMethodInfo(getAutoIncrementRangeHandler, newFrontendServiceGetAutoIncrementRangeArgs, newFrontendServiceGetAutoIncrementRangeResult, false),
 		"createPartition":           kitex.NewMethodInfo(createPartitionHandler, newFrontendServiceCreatePartitionArgs, newFrontendServiceCreatePartitionResult, false),
+		"getMeta":                   kitex.NewMethodInfo(getMetaHandler, newFrontendServiceGetMetaArgs, newFrontendServiceGetMetaResult, false),
 	}
 	extra := map[string]interface{}{
 		"PackageName": "frontendservice",
@@ -891,6 +892,24 @@ func newFrontendServiceCreatePartitionResult() interface{} {
 	return frontendservice.NewFrontendServiceCreatePartitionResult()
 }
 
+func getMetaHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*frontendservice.FrontendServiceGetMetaArgs)
+	realResult := result.(*frontendservice.FrontendServiceGetMetaResult)
+	success, err := handler.(frontendservice.FrontendService).GetMeta(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newFrontendServiceGetMetaArgs() interface{} {
+	return frontendservice.NewFrontendServiceGetMetaArgs()
+}
+
+func newFrontendServiceGetMetaResult() interface{} {
+	return frontendservice.NewFrontendServiceGetMetaResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -1344,6 +1363,16 @@ func (p *kClient) CreatePartition(ctx context.Context, request *frontendservice.
 	_args.Request = request
 	var _result frontendservice.FrontendServiceCreatePartitionResult
 	if err = p.c.Call(ctx, "createPartition", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetMeta(ctx context.Context, request *frontendservice.TGetMetaRequest) (r *frontendservice.TGetMetaResult_, err error) {
+	var _args frontendservice.FrontendServiceGetMetaArgs
+	_args.Request = request
+	var _result frontendservice.FrontendServiceGetMetaResult
+	if err = p.c.Call(ctx, "getMeta", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

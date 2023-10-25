@@ -1893,21 +1893,23 @@ func (p *TColumn) Field18DeepEqual(src bool) bool {
 }
 
 type TSlotDescriptor struct {
-	Id                types.TSlotId    `thrift:"id,1,required" frugal:"1,required,i32" json:"id"`
-	Parent            types.TTupleId   `thrift:"parent,2,required" frugal:"2,required,i32" json:"parent"`
-	SlotType          *types.TTypeDesc `thrift:"slotType,3,required" frugal:"3,required,types.TTypeDesc" json:"slotType"`
-	ColumnPos         int32            `thrift:"columnPos,4,required" frugal:"4,required,i32" json:"columnPos"`
-	ByteOffset        int32            `thrift:"byteOffset,5,required" frugal:"5,required,i32" json:"byteOffset"`
-	NullIndicatorByte int32            `thrift:"nullIndicatorByte,6,required" frugal:"6,required,i32" json:"nullIndicatorByte"`
-	NullIndicatorBit  int32            `thrift:"nullIndicatorBit,7,required" frugal:"7,required,i32" json:"nullIndicatorBit"`
-	ColName           string           `thrift:"colName,8,required" frugal:"8,required,string" json:"colName"`
-	SlotIdx           int32            `thrift:"slotIdx,9,required" frugal:"9,required,i32" json:"slotIdx"`
-	IsMaterialized    bool             `thrift:"isMaterialized,10,required" frugal:"10,required,bool" json:"isMaterialized"`
-	ColUniqueId       int32            `thrift:"col_unique_id,11,optional" frugal:"11,optional,i32" json:"col_unique_id,omitempty"`
-	IsKey             bool             `thrift:"is_key,12,optional" frugal:"12,optional,bool" json:"is_key,omitempty"`
-	NeedMaterialize   bool             `thrift:"need_materialize,13,optional" frugal:"13,optional,bool" json:"need_materialize,omitempty"`
-	IsAutoIncrement   bool             `thrift:"is_auto_increment,14,optional" frugal:"14,optional,bool" json:"is_auto_increment,omitempty"`
-	ColumnPaths       []string         `thrift:"column_paths,15,optional" frugal:"15,optional,list<string>" json:"column_paths,omitempty"`
+	Id                types.TSlotId        `thrift:"id,1,required" frugal:"1,required,i32" json:"id"`
+	Parent            types.TTupleId       `thrift:"parent,2,required" frugal:"2,required,i32" json:"parent"`
+	SlotType          *types.TTypeDesc     `thrift:"slotType,3,required" frugal:"3,required,types.TTypeDesc" json:"slotType"`
+	ColumnPos         int32                `thrift:"columnPos,4,required" frugal:"4,required,i32" json:"columnPos"`
+	ByteOffset        int32                `thrift:"byteOffset,5,required" frugal:"5,required,i32" json:"byteOffset"`
+	NullIndicatorByte int32                `thrift:"nullIndicatorByte,6,required" frugal:"6,required,i32" json:"nullIndicatorByte"`
+	NullIndicatorBit  int32                `thrift:"nullIndicatorBit,7,required" frugal:"7,required,i32" json:"nullIndicatorBit"`
+	ColName           string               `thrift:"colName,8,required" frugal:"8,required,string" json:"colName"`
+	SlotIdx           int32                `thrift:"slotIdx,9,required" frugal:"9,required,i32" json:"slotIdx"`
+	IsMaterialized    bool                 `thrift:"isMaterialized,10,required" frugal:"10,required,bool" json:"isMaterialized"`
+	ColUniqueId       int32                `thrift:"col_unique_id,11,optional" frugal:"11,optional,i32" json:"col_unique_id,omitempty"`
+	IsKey             bool                 `thrift:"is_key,12,optional" frugal:"12,optional,bool" json:"is_key,omitempty"`
+	NeedMaterialize   bool                 `thrift:"need_materialize,13,optional" frugal:"13,optional,bool" json:"need_materialize,omitempty"`
+	IsAutoIncrement   bool                 `thrift:"is_auto_increment,14,optional" frugal:"14,optional,bool" json:"is_auto_increment,omitempty"`
+	ColumnPaths       []string             `thrift:"column_paths,15,optional" frugal:"15,optional,list<string>" json:"column_paths,omitempty"`
+	ColDefaultValue   *string              `thrift:"col_default_value,16,optional" frugal:"16,optional,string" json:"col_default_value,omitempty"`
+	PrimitiveType     types.TPrimitiveType `thrift:"primitive_type,17,optional" frugal:"17,optional,TPrimitiveType" json:"primitive_type,omitempty"`
 }
 
 func NewTSlotDescriptor() *TSlotDescriptor {
@@ -1917,6 +1919,7 @@ func NewTSlotDescriptor() *TSlotDescriptor {
 		IsKey:           false,
 		NeedMaterialize: true,
 		IsAutoIncrement: false,
+		PrimitiveType:   types.TPrimitiveType_INVALID_TYPE,
 	}
 }
 
@@ -1927,6 +1930,7 @@ func (p *TSlotDescriptor) InitDefault() {
 		IsKey:           false,
 		NeedMaterialize: true,
 		IsAutoIncrement: false,
+		PrimitiveType:   types.TPrimitiveType_INVALID_TYPE,
 	}
 }
 
@@ -2019,6 +2023,24 @@ func (p *TSlotDescriptor) GetColumnPaths() (v []string) {
 	}
 	return p.ColumnPaths
 }
+
+var TSlotDescriptor_ColDefaultValue_DEFAULT string
+
+func (p *TSlotDescriptor) GetColDefaultValue() (v string) {
+	if !p.IsSetColDefaultValue() {
+		return TSlotDescriptor_ColDefaultValue_DEFAULT
+	}
+	return *p.ColDefaultValue
+}
+
+var TSlotDescriptor_PrimitiveType_DEFAULT types.TPrimitiveType = types.TPrimitiveType_INVALID_TYPE
+
+func (p *TSlotDescriptor) GetPrimitiveType() (v types.TPrimitiveType) {
+	if !p.IsSetPrimitiveType() {
+		return TSlotDescriptor_PrimitiveType_DEFAULT
+	}
+	return p.PrimitiveType
+}
 func (p *TSlotDescriptor) SetId(val types.TSlotId) {
 	p.Id = val
 }
@@ -2064,6 +2086,12 @@ func (p *TSlotDescriptor) SetIsAutoIncrement(val bool) {
 func (p *TSlotDescriptor) SetColumnPaths(val []string) {
 	p.ColumnPaths = val
 }
+func (p *TSlotDescriptor) SetColDefaultValue(val *string) {
+	p.ColDefaultValue = val
+}
+func (p *TSlotDescriptor) SetPrimitiveType(val types.TPrimitiveType) {
+	p.PrimitiveType = val
+}
 
 var fieldIDToName_TSlotDescriptor = map[int16]string{
 	1:  "id",
@@ -2081,6 +2109,8 @@ var fieldIDToName_TSlotDescriptor = map[int16]string{
 	13: "need_materialize",
 	14: "is_auto_increment",
 	15: "column_paths",
+	16: "col_default_value",
+	17: "primitive_type",
 }
 
 func (p *TSlotDescriptor) IsSetSlotType() bool {
@@ -2105,6 +2135,14 @@ func (p *TSlotDescriptor) IsSetIsAutoIncrement() bool {
 
 func (p *TSlotDescriptor) IsSetColumnPaths() bool {
 	return p.ColumnPaths != nil
+}
+
+func (p *TSlotDescriptor) IsSetColDefaultValue() bool {
+	return p.ColDefaultValue != nil
+}
+
+func (p *TSlotDescriptor) IsSetPrimitiveType() bool {
+	return p.PrimitiveType != TSlotDescriptor_PrimitiveType_DEFAULT
 }
 
 func (p *TSlotDescriptor) Read(iprot thrift.TProtocol) (err error) {
@@ -2289,6 +2327,26 @@ func (p *TSlotDescriptor) Read(iprot thrift.TProtocol) (err error) {
 		case 15:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField15(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 16:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField16(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 17:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField17(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -2524,6 +2582,24 @@ func (p *TSlotDescriptor) ReadField15(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TSlotDescriptor) ReadField16(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		p.ColDefaultValue = &v
+	}
+	return nil
+}
+
+func (p *TSlotDescriptor) ReadField17(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		p.PrimitiveType = types.TPrimitiveType(v)
+	}
+	return nil
+}
+
 func (p *TSlotDescriptor) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TSlotDescriptor"); err != nil {
@@ -2588,6 +2664,14 @@ func (p *TSlotDescriptor) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField15(oprot); err != nil {
 			fieldId = 15
+			goto WriteFieldError
+		}
+		if err = p.writeField16(oprot); err != nil {
+			fieldId = 16
+			goto WriteFieldError
+		}
+		if err = p.writeField17(oprot); err != nil {
+			fieldId = 17
 			goto WriteFieldError
 		}
 
@@ -2882,6 +2966,44 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
 }
 
+func (p *TSlotDescriptor) writeField16(oprot thrift.TProtocol) (err error) {
+	if p.IsSetColDefaultValue() {
+		if err = oprot.WriteFieldBegin("col_default_value", thrift.STRING, 16); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ColDefaultValue); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
+}
+
+func (p *TSlotDescriptor) writeField17(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPrimitiveType() {
+		if err = oprot.WriteFieldBegin("primitive_type", thrift.I32, 17); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(p.PrimitiveType)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
+}
+
 func (p *TSlotDescriptor) String() string {
 	if p == nil {
 		return "<nil>"
@@ -2938,6 +3060,12 @@ func (p *TSlotDescriptor) DeepEqual(ano *TSlotDescriptor) bool {
 		return false
 	}
 	if !p.Field15DeepEqual(ano.ColumnPaths) {
+		return false
+	}
+	if !p.Field16DeepEqual(ano.ColDefaultValue) {
+		return false
+	}
+	if !p.Field17DeepEqual(ano.PrimitiveType) {
 		return false
 	}
 	return true
@@ -3051,6 +3179,25 @@ func (p *TSlotDescriptor) Field15DeepEqual(src []string) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *TSlotDescriptor) Field16DeepEqual(src *string) bool {
+
+	if p.ColDefaultValue == src {
+		return true
+	} else if p.ColDefaultValue == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ColDefaultValue, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TSlotDescriptor) Field17DeepEqual(src types.TPrimitiveType) bool {
+
+	if p.PrimitiveType != src {
+		return false
 	}
 	return true
 }
@@ -12628,12 +12775,13 @@ func (p *TJdbcTable) Field8DeepEqual(src *string) bool {
 }
 
 type TMCTable struct {
-	Region       *string `thrift:"region,1,optional" frugal:"1,optional,string" json:"region,omitempty"`
-	Project      *string `thrift:"project,2,optional" frugal:"2,optional,string" json:"project,omitempty"`
-	Table        *string `thrift:"table,3,optional" frugal:"3,optional,string" json:"table,omitempty"`
-	AccessKey    *string `thrift:"access_key,4,optional" frugal:"4,optional,string" json:"access_key,omitempty"`
-	SecretKey    *string `thrift:"secret_key,5,optional" frugal:"5,optional,string" json:"secret_key,omitempty"`
-	PublicAccess *string `thrift:"public_access,6,optional" frugal:"6,optional,string" json:"public_access,omitempty"`
+	Region        *string `thrift:"region,1,optional" frugal:"1,optional,string" json:"region,omitempty"`
+	Project       *string `thrift:"project,2,optional" frugal:"2,optional,string" json:"project,omitempty"`
+	Table         *string `thrift:"table,3,optional" frugal:"3,optional,string" json:"table,omitempty"`
+	AccessKey     *string `thrift:"access_key,4,optional" frugal:"4,optional,string" json:"access_key,omitempty"`
+	SecretKey     *string `thrift:"secret_key,5,optional" frugal:"5,optional,string" json:"secret_key,omitempty"`
+	PublicAccess  *string `thrift:"public_access,6,optional" frugal:"6,optional,string" json:"public_access,omitempty"`
+	PartitionSpec *string `thrift:"partition_spec,7,optional" frugal:"7,optional,string" json:"partition_spec,omitempty"`
 }
 
 func NewTMCTable() *TMCTable {
@@ -12697,6 +12845,15 @@ func (p *TMCTable) GetPublicAccess() (v string) {
 	}
 	return *p.PublicAccess
 }
+
+var TMCTable_PartitionSpec_DEFAULT string
+
+func (p *TMCTable) GetPartitionSpec() (v string) {
+	if !p.IsSetPartitionSpec() {
+		return TMCTable_PartitionSpec_DEFAULT
+	}
+	return *p.PartitionSpec
+}
 func (p *TMCTable) SetRegion(val *string) {
 	p.Region = val
 }
@@ -12715,6 +12872,9 @@ func (p *TMCTable) SetSecretKey(val *string) {
 func (p *TMCTable) SetPublicAccess(val *string) {
 	p.PublicAccess = val
 }
+func (p *TMCTable) SetPartitionSpec(val *string) {
+	p.PartitionSpec = val
+}
 
 var fieldIDToName_TMCTable = map[int16]string{
 	1: "region",
@@ -12723,6 +12883,7 @@ var fieldIDToName_TMCTable = map[int16]string{
 	4: "access_key",
 	5: "secret_key",
 	6: "public_access",
+	7: "partition_spec",
 }
 
 func (p *TMCTable) IsSetRegion() bool {
@@ -12747,6 +12908,10 @@ func (p *TMCTable) IsSetSecretKey() bool {
 
 func (p *TMCTable) IsSetPublicAccess() bool {
 	return p.PublicAccess != nil
+}
+
+func (p *TMCTable) IsSetPartitionSpec() bool {
+	return p.PartitionSpec != nil
 }
 
 func (p *TMCTable) Read(iprot thrift.TProtocol) (err error) {
@@ -12821,6 +12986,16 @@ func (p *TMCTable) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -12912,6 +13087,15 @@ func (p *TMCTable) ReadField6(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TMCTable) ReadField7(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		p.PartitionSpec = &v
+	}
+	return nil
+}
+
 func (p *TMCTable) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TMCTable"); err != nil {
@@ -12940,6 +13124,10 @@ func (p *TMCTable) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 
@@ -13075,6 +13263,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 
+func (p *TMCTable) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPartitionSpec() {
+		if err = oprot.WriteFieldBegin("partition_spec", thrift.STRING, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.PartitionSpec); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
 func (p *TMCTable) String() string {
 	if p == nil {
 		return "<nil>"
@@ -13104,6 +13311,9 @@ func (p *TMCTable) DeepEqual(ano *TMCTable) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.PublicAccess) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.PartitionSpec) {
 		return false
 	}
 	return true
@@ -13177,6 +13387,18 @@ func (p *TMCTable) Field6DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.PublicAccess, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TMCTable) Field7DeepEqual(src *string) bool {
+
+	if p.PartitionSpec == src {
+		return true
+	} else if p.PartitionSpec == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.PartitionSpec, *src) != 0 {
 		return false
 	}
 	return true

@@ -5338,6 +5338,20 @@ func (p *TOlapTableSink) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 21:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField21(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -5695,6 +5709,19 @@ func (p *TOlapTableSink) FastReadField20(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TOlapTableSink) FastReadField21(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.BaseSchemaVersion = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TOlapTableSink) FastWrite(buf []byte) int {
 	return 0
@@ -5716,6 +5743,7 @@ func (p *TOlapTableSink) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binary
 		offset += p.fastWriteField17(buf[offset:], binaryWriter)
 		offset += p.fastWriteField19(buf[offset:], binaryWriter)
 		offset += p.fastWriteField20(buf[offset:], binaryWriter)
+		offset += p.fastWriteField21(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField8(buf[offset:], binaryWriter)
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
@@ -5754,6 +5782,7 @@ func (p *TOlapTableSink) BLength() int {
 		l += p.field18Length()
 		l += p.field19Length()
 		l += p.field20Length()
+		l += p.field21Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -5952,6 +5981,17 @@ func (p *TOlapTableSink) fastWriteField20(buf []byte, binaryWriter bthrift.Binar
 	return offset
 }
 
+func (p *TOlapTableSink) fastWriteField21(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetBaseSchemaVersion() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "base_schema_version", thrift.I64, 21)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.BaseSchemaVersion)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TOlapTableSink) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("load_id", thrift.STRUCT, 1)
@@ -6138,6 +6178,17 @@ func (p *TOlapTableSink) field20Length() int {
 	if p.IsSetWriteFileCache() {
 		l += bthrift.Binary.FieldBeginLength("write_file_cache", thrift.BOOL, 20)
 		l += bthrift.Binary.BoolLength(*p.WriteFileCache)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TOlapTableSink) field21Length() int {
+	l := 0
+	if p.IsSetBaseSchemaVersion() {
+		l += bthrift.Binary.FieldBeginLength("base_schema_version", thrift.I64, 21)
+		l += bthrift.Binary.I64Length(*p.BaseSchemaVersion)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

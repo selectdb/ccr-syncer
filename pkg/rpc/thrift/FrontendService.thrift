@@ -1183,25 +1183,97 @@ struct TCreatePartitionResult {
     4: optional list<Descriptors.TNodeInfo> nodes
 }
 
-struct TMetaRequest {
+struct TGetMetaReplica {
+    1: optional i64 id
+}
+
+struct TGetMetaTablet {
+    1: optional i64 id
+    2: optional list<TGetMetaReplica> replicas
+}
+
+struct TGetMetaIndex {
+    1: optional i64 id
+    2: optional string name
+    3: optional list<TGetMetaTablet> tablets
+}
+
+struct TGetMetaPartition {
+    1: optional i64 id
+    2: optional string name
+    3: optional string key
+    4: optional string range
+    5: optional bool is_temp
+    6: optional list<TGetMetaIndex> indexes
+}
+
+struct TGetMetaTable {
+    1: optional i64 id
+    2: optional string name
+    3: optional bool in_trash
+    4: optional list<TGetMetaPartition> partitions
+}
+
+struct TGetMetaDB {
+    1: optional i64 id
+    2: optional string name
+    3: optional bool only_table_names
+    4: optional list<TGetMetaTable> tables
+}
+
+struct TGetMetaRequest {
     1: optional string cluster
     2: optional string user
     3: optional string passwd
     4: optional string user_ip
     5: optional string token
-    6: optional string db
-    7: optional i64 db_id
-    8: optional string table
-    9: optional i64 table_id
-    10: optional string index
-    11: optional i64 index_id
-    12: optional string partition
-    13: optional i64 partition_id
+    6: optional TGetMetaDB db
     // trash
 }
 
-struct TMetaResult {
+struct TGetMetaReplicaMeta {
+    1: optional i64 id
+    2: optional i64 backend_id
+    3: optional i64 version
+}
 
+struct TGetMetaTabletMeta {
+    1: optional i64 id
+    2: optional list<TGetMetaReplicaMeta> replicas
+}
+
+struct TGetMetaIndexMeta {
+    1: optional i64 id
+    2: optional string name
+    3: optional list<TGetMetaTabletMeta> tablets
+}
+
+struct TGetMetaPartitionMeta {
+    1: optional i64 id
+    2: optional string name
+    3: optional string key
+    4: optional string range
+    5: optional i64 visible_version
+    6: optional bool is_temp
+    7: optional list<TGetMetaIndexMeta> indexes
+}
+
+struct TGetMetaTableMeta {
+    1: optional i64 id
+    2: optional string name
+    3: optional bool in_trash
+    4: optional list<TGetMetaPartitionMeta> partitions
+}
+
+struct TGetMetaDBMeta {
+    1: optional i64 id
+    2: optional string name
+    3: optional list<TGetMetaTableMeta> tables
+}
+
+struct TGetMetaResult {
+    1: required Status.TStatus status
+    2: optional TGetMetaDBMeta db_meta
 }
 
 service FrontendService {
@@ -1275,4 +1347,6 @@ service FrontendService {
     TAutoIncrementRangeResult getAutoIncrementRange(1: TAutoIncrementRangeRequest request)
 
     TCreatePartitionResult createPartition(1: TCreatePartitionRequest request)
+
+    TGetMetaResult getMeta(1: TGetMetaRequest request)
 }
