@@ -29,7 +29,7 @@ func init() {
 	flag.StringVar(&user, "user", "root", "user")
 	flag.StringVar(&password, "password", "", "password")
 	flag.StringVar(&dbName, "db", "ccr", "database name")
-	flag.StringVar(&tableName, "table", "enable_binlog", "table name")
+	flag.StringVar(&tableName, "table", "src_1", "table name")
 	flag.Parse()
 
 	utils.InitLog()
@@ -43,13 +43,22 @@ func test_get_table_meta(m ccr.Metaer, spec *base.Spec) {
 		log.Infof("found db: %s, dbId: %d", spec.Database, dbId)
 	}
 
+	if tableId, err := m.GetTableId(spec.Table); err != nil {
+		panic(err)
+	} else {
+		spec.TableId = tableId
+		log.Infof("found table: %s, tableId: %d", spec.Table, tableId)
+	}
+
 	rpcFactory := rpc.NewRpcFactory()
 	feRpc, err := rpcFactory.NewFeRpc(spec)
 	if err != nil {
 		panic(err)
 	}
 
-	result, err := feRpc.GetDbMeta(spec)
+	tableIds := make([]int64, 0)
+	tableIds = append(tableIds, spec.TableId)
+	result, err := feRpc.GetTableMeta(spec, tableIds)
 	if err != nil {
 		panic(err)
 	}
