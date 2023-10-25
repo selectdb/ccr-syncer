@@ -158,10 +158,6 @@ func (s *Spec) Valid() error {
 	return nil
 }
 
-func (s *Spec) IsSameHostDB(dest *Spec) bool {
-	return s.Host == dest.Host && s.Port == dest.Port && s.ThriftPort == dest.ThriftPort && s.Database == dest.Database
-}
-
 func (s *Spec) connect(dsn string) (*sql.DB, error) {
 	return GetMysqlDB(dsn)
 }

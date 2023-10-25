@@ -413,8 +413,8 @@ func (j *Job) fullSync() error {
 		log.Debugf("begin restore snapshot %s", snapshotName)
 
 		var tableRefs []*festruct.TTableRef
-		if j.Src.IsSameHostDB(&j.Dest) {
-			log.Debugf("same host db, table: %s, dest table: %s", j.Src.Table, j.Dest.Table)
+		if j.SyncType == TableSync && j.Src.Table != j.Dest.Table {
+			log.Debugf("table sync snapshot not same name, table: %s, dest table: %s", j.Src.Table, j.Dest.Table)
 			tableRefs = make([]*festruct.TTableRef, 0)
 			tableRef := &festruct.TTableRef{
 				Table:     &j.Src.Table,
