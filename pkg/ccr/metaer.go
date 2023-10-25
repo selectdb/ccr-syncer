@@ -27,12 +27,13 @@ func (t *TableMeta) String() string {
 }
 
 type PartitionMeta struct {
-	TableMeta    *TableMeta
-	Id           int64
-	Name         string
-	Range        string
-	IndexIdMap   map[int64]*IndexMeta  // indexId -> indexMeta
-	IndexNameMap map[string]*IndexMeta // indexName -> indexMeta
+	TableMeta      *TableMeta
+	Id             int64
+	Name           string
+	Range          string
+	VisibleVersion int64
+	IndexIdMap     map[int64]*IndexMeta  // indexId -> indexMeta
+	IndexNameMap   map[string]*IndexMeta // indexName -> indexMeta
 }
 
 // Stringer
@@ -55,11 +56,11 @@ type TabletMeta struct {
 }
 
 type ReplicaMeta struct {
-	TabletMeta     *TabletMeta
-	Id             int64
-	TabletId       int64
-	BackendId      int64
-	VisibleVersion int64
+	TabletMeta *TabletMeta
+	Id         int64
+	TabletId   int64
+	BackendId  int64
+	Version    int64
 }
 
 type MetaCleaner interface {

@@ -18,6 +18,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	errNotFoundDestMappingTableId = xerror.NewWithoutStack(xerror.Meta, "not found dest mapping table id")
+)
+
 type commitInfosCollector struct {
 	commitInfos     []*ttypes.TTabletCommitInfo
 	commitInfosLock sync.Mutex
@@ -179,20 +183,23 @@ type IngestContext struct {
 	context.Context
 	txnId        int64
 	tableRecords []*record.TableRecord
+	tableMapping map[int64]int64
 }
 
-func NewIngestContext(txnId int64, tableRecords []*record.TableRecord) *IngestContext {
+func NewIngestContext(txnId int64, tableRecords []*record.TableRecord, tableMapping map[int64]int64) *IngestContext {
 	return &IngestContext{
 		Context:      context.Background(),
 		txnId:        txnId,
 		tableRecords: tableRecords,
+		tableMapping: tableMapping,
 	}
 }
 
 type IngestBinlogJob struct {
-	ccrJob   *Job // ccr job
-	srcMeta  IngestBinlogMetaer
-	destMeta IngestBinlogMetaer
+	ccrJob       *Job // ccr job
+	tableMapping map[int64]int64
+	srcMeta      IngestBinlogMetaer
+	destMeta     IngestBinlogMetaer
 
 	txnId        int64
 	tableRecords []*record.TableRecord
@@ -219,8 +226,7 @@ func NewIngestBinlogJob(ctx context.Context, ccrJob *Job) (*IngestBinlogJob, err
 
 	return &IngestBinlogJob{
 		ccrJob:       ccrJob,
-		srcMeta:      ccrJob.srcMeta,
-		destMeta:     ccrJob.destMeta,
+		tableMapping: ingestCtx.tableMapping,
 		txnId:        ingestCtx.txnId,
 		tableRecords: ingestCtx.tableRecords,
 
@@ -516,8 +522,67 @@ func (j *IngestBinlogJob) runTabletIngestJobs() {
 	j.wg.Wait()
 }
 
+func (j *IngestBinlogJob) prepareMeta() {
+	log.Debug("prepareMeta")
+	srcTableIds := make([]int64, 0, len(j.tableRecords))
+	job := j.ccrJob
+
+	switch job.SyncType {
+	case DBSync:
+		for _, tableRecord := range j.tableRecords {
+			srcTableIds = append(srcTableIds, tableRecord.Id)
+		}
+	case TableSync:
+		srcTableIds = append(srcTableIds, job.Src.TableId)
+	default:
+		err := xerror.Panicf(xerror.Normal, "invalid sync type: %s", job.SyncType)
+		j.setError(err)
+		return
+	}
+
+	srcMeta, err := NewThriftMeta(&job.Src, job.srcMeta, j.ccrJob.rpcFactory, srcTableIds)
+	if err != nil {
+		j.setError(err)
+		return
+	}
+
+	destTableIds := make([]int64, 0, len(j.tableRecords))
+	switch job.SyncType {
+	case DBSync:
+		for _, srcTableId := range srcTableIds {
+			if destTableId, ok := j.tableMapping[srcTableId]; ok {
+				destTableIds = append(destTableIds, destTableId)
+			} else {
+				err := xerror.XWrapf(errNotFoundDestMappingTableId, "src table id: %d", srcTableId)
+				j.setError(err)
+				return
+			}
+		}
+	case TableSync:
+		destTableIds = append(destTableIds, job.Dest.TableId)
+	default:
+		err := xerror.Panicf(xerror.Normal, "invalid sync type: %s", job.SyncType)
+		j.setError(err)
+		return
+	}
+
+	destMeta, err := NewThriftMeta(&job.Dest, job.destMeta, j.ccrJob.rpcFactory, destTableIds)
+	if err != nil {
+		j.setError(err)
+		return
+	}
+
+	j.srcMeta = srcMeta
+	j.destMeta = destMeta
+}
+
 // TODO(Drogon): use monad error handle
 func (j *IngestBinlogJob) Run() {
+	j.prepareMeta()
+	if err := j.Error(); err != nil {
+		return
+	}
+
 	j.prepareBackendMap()
 	if err := j.Error(); err != nil {
 		return

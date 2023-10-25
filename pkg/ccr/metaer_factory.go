@@ -15,15 +15,6 @@ func NewMetaFactory() MetaerFactory {
 	return &MetaFactory{}
 }
 
-func (mf *MetaFactory) NewMeta(tableSpec *base.Spec) Metaer {
-	return &Meta{
-		Spec: tableSpec,
-		DatabaseMeta: DatabaseMeta{
-			Tables: make(map[int64]*TableMeta),
-		},
-		Backends:              make(map[int64]*base.Backend),
-		DatabaseName2IdMap:    make(map[string]int64),
-		TableName2IdMap:       make(map[string]int64),
-		BackendHostPort2IdMap: make(map[string]int64),
-	}
+func (mf *MetaFactory) NewMeta(spec *base.Spec) Metaer {
+	return NewMeta(spec)
 }
