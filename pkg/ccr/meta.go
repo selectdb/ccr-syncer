@@ -480,11 +480,6 @@ func (m *Meta) UpdateBackends() error {
 		}
 
 		var port int64
-		port, err = rowParser.GetInt64("HeartbeatPort")
-		if err != nil {
-			return xerror.Wrapf(err, xerror.Normal, query)
-		}
-		backend.HeartbeatPort = uint16(port)
 		port, err = rowParser.GetInt64("BePort")
 		if err != nil {
 			return xerror.Wrapf(err, xerror.Normal, query)

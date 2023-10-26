@@ -22,20 +22,46 @@ func NewThriftMeta(spec *base.Spec, metaArg Metaer, rpcFactory rpc.IRpcFactory, 
 		return nil, err
 	}
 
-	resp, err := feRpc.GetTableMeta(spec, tableIds)
+	// Step 1: get backends
+	backendMetaResp, err := feRpc.GetBackends(spec)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.GetStatus().GetStatusCode() != tstatus.TStatusCode_OK {
-		return nil, xerror.Errorf(xerror.Meta, "get table meta failed, status: %s", resp.GetStatus())
+	if backendMetaResp.GetStatus().GetStatusCode() != tstatus.TStatusCode_OK {
+		return nil, xerror.Errorf(xerror.Meta, "get backend meta failed, status: %s", backendMetaResp.GetStatus())
 	}
 
-	if !resp.IsSetDbMeta() {
+	if !backendMetaResp.IsSetBackends() {
+		return nil, xerror.New(xerror.Meta, "get backend meta failed, backend meta not set")
+	}
+
+	for _, backend := range backendMetaResp.GetBackends() {
+		backendMeta := &base.Backend{
+			Id:       backend.GetId(),
+			Host:     backend.GetHost(),
+			BePort:   uint16(backend.GetBePort()),
+			HttpPort: uint16(backend.GetHttpPort()),
+			BrpcPort: uint16(backend.GetBrpcPort()),
+		}
+		meta.Backends[backendMeta.Id] = backendMeta
+	}
+
+	// Step 2: get table metas
+	tableMetaResp, err := feRpc.GetTableMeta(spec, tableIds)
+	if err != nil {
+		return nil, err
+	}
+
+	if tableMetaResp.GetStatus().GetStatusCode() != tstatus.TStatusCode_OK {
+		return nil, xerror.Errorf(xerror.Meta, "get table meta failed, status: %s", tableMetaResp.GetStatus())
+	}
+
+	if !tableMetaResp.IsSetDbMeta() {
 		return nil, xerror.New(xerror.Meta, "get table meta failed, db meta not set")
 	}
 
-	for _, table := range resp.GetDbMeta().GetTables() {
+	for _, table := range tableMetaResp.GetDbMeta().GetTables() {
 		tableMeta := &TableMeta{
 			DatabaseMeta:      &meta.DatabaseMeta,
 			Id:                table.GetId(),
@@ -180,7 +206,6 @@ func (tm *ThriftMeta) GetIndexNameMap(tableId, partitionId int64) (map[string]*I
 	return partitionMeta.IndexNameMap, nil
 }
 
-// TODO(Drogon): change it
 func (tm *ThriftMeta) GetBackendMap() (map[int64]*base.Backend, error) {
-	return tm.proxyMeta.GetBackendMap()
+	return tm.meta.Backends, nil
 }

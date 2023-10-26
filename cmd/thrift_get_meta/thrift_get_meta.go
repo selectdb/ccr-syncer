@@ -96,6 +96,25 @@ func test_get_db_meta(m ccr.Metaer, spec *base.Spec) {
 	log.Infof("found db meta: %s", s)
 }
 
+func test_get_backends(m ccr.Metaer, spec *base.Spec) {
+	rpcFactory := rpc.NewRpcFactory()
+	feRpc, err := rpcFactory.NewFeRpc(spec)
+	if err != nil {
+		panic(err)
+	}
+
+	result, err := feRpc.GetBackends(spec)
+	if err != nil {
+		panic(err)
+	}
+	// toJson
+	s, err := json.Marshal(&result)
+	if err != nil {
+		panic(err)
+	}
+	log.Infof("found backends: %s", s)
+}
+
 func main() {
 	src := &base.Spec{
 		Frontend: base.Frontend{
@@ -117,4 +136,5 @@ func main() {
 	} else {
 		test_get_db_meta(meta, src)
 	}
+	test_get_backends(meta, src)
 }
