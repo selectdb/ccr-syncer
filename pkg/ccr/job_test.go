@@ -201,7 +201,6 @@ func newPartitionMeta(partitionId int64) *PartitionMeta {
 	return &PartitionMeta{
 		Id:           partitionId,
 		Name:         fmt.Sprint(partitionId),
-		Key:          fmt.Sprint(partitionId),
 		Range:        fmt.Sprint(partitionId),
 		IndexIdMap:   make(map[int64]*IndexMeta),
 		IndexNameMap: make(map[string]*IndexMeta),
