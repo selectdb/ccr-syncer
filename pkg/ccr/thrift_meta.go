@@ -11,11 +11,10 @@ import (
 )
 
 type ThriftMeta struct {
-	proxyMeta Metaer
-	meta      *Meta
+	meta *Meta
 }
 
-func NewThriftMeta(spec *base.Spec, metaArg Metaer, rpcFactory rpc.IRpcFactory, tableIds []int64) (*ThriftMeta, error) {
+func NewThriftMeta(spec *base.Spec, rpcFactory rpc.IRpcFactory, tableIds []int64) (*ThriftMeta, error) {
 	meta := NewMeta(spec)
 	feRpc, err := rpcFactory.NewFeRpc(spec)
 	if err != nil {
@@ -121,8 +120,7 @@ func NewThriftMeta(spec *base.Spec, metaArg Metaer, rpcFactory rpc.IRpcFactory, 
 	}
 
 	return &ThriftMeta{
-		proxyMeta: metaArg,
-		meta:      meta,
+		meta: meta,
 	}, nil
 }
 

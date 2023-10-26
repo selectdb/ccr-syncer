@@ -540,7 +540,7 @@ func (j *IngestBinlogJob) prepareMeta() {
 		return
 	}
 
-	srcMeta, err := NewThriftMeta(&job.Src, job.srcMeta, j.ccrJob.rpcFactory, srcTableIds)
+	srcMeta, err := NewThriftMeta(&job.Src, j.ccrJob.rpcFactory, srcTableIds)
 	if err != nil {
 		j.setError(err)
 		return
@@ -566,7 +566,7 @@ func (j *IngestBinlogJob) prepareMeta() {
 		return
 	}
 
-	destMeta, err := NewThriftMeta(&job.Dest, job.destMeta, j.ccrJob.rpcFactory, destTableIds)
+	destMeta, err := NewThriftMeta(&job.Dest, j.ccrJob.rpcFactory, destTableIds)
 	if err != nil {
 		j.setError(err)
 		return
