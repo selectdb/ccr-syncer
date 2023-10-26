@@ -11740,7 +11740,8 @@ type TBackend struct {
 	BePort   TPort  `thrift:"be_port,2,required" frugal:"2,required,i32" json:"be_port"`
 	HttpPort TPort  `thrift:"http_port,3,required" frugal:"3,required,i32" json:"http_port"`
 	BrpcPort *TPort `thrift:"brpc_port,4,optional" frugal:"4,optional,i32" json:"brpc_port,omitempty"`
-	Id       *int64 `thrift:"id,5,optional" frugal:"5,optional,i64" json:"id,omitempty"`
+	IsAlive  *bool  `thrift:"is_alive,5,optional" frugal:"5,optional,bool" json:"is_alive,omitempty"`
+	Id       *int64 `thrift:"id,6,optional" frugal:"6,optional,i64" json:"id,omitempty"`
 }
 
 func NewTBackend() *TBackend {
@@ -11772,6 +11773,15 @@ func (p *TBackend) GetBrpcPort() (v TPort) {
 	return *p.BrpcPort
 }
 
+var TBackend_IsAlive_DEFAULT bool
+
+func (p *TBackend) GetIsAlive() (v bool) {
+	if !p.IsSetIsAlive() {
+		return TBackend_IsAlive_DEFAULT
+	}
+	return *p.IsAlive
+}
+
 var TBackend_Id_DEFAULT int64
 
 func (p *TBackend) GetId() (v int64) {
@@ -11792,6 +11802,9 @@ func (p *TBackend) SetHttpPort(val TPort) {
 func (p *TBackend) SetBrpcPort(val *TPort) {
 	p.BrpcPort = val
 }
+func (p *TBackend) SetIsAlive(val *bool) {
+	p.IsAlive = val
+}
 func (p *TBackend) SetId(val *int64) {
 	p.Id = val
 }
@@ -11801,11 +11814,16 @@ var fieldIDToName_TBackend = map[int16]string{
 	2: "be_port",
 	3: "http_port",
 	4: "brpc_port",
-	5: "id",
+	5: "is_alive",
+	6: "id",
 }
 
 func (p *TBackend) IsSetBrpcPort() bool {
 	return p.BrpcPort != nil
+}
+
+func (p *TBackend) IsSetIsAlive() bool {
+	return p.IsAlive != nil
 }
 
 func (p *TBackend) IsSetId() bool {
@@ -11878,8 +11896,18 @@ func (p *TBackend) Read(iprot thrift.TProtocol) (err error) {
 				}
 			}
 		case 5:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -11970,6 +11998,15 @@ func (p *TBackend) ReadField4(iprot thrift.TProtocol) error {
 }
 
 func (p *TBackend) ReadField5(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.IsAlive = &v
+	}
+	return nil
+}
+
+func (p *TBackend) ReadField6(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadI64(); err != nil {
 		return err
 	} else {
@@ -12002,6 +12039,10 @@ func (p *TBackend) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 
@@ -12094,11 +12135,11 @@ WriteFieldEndError:
 }
 
 func (p *TBackend) writeField5(oprot thrift.TProtocol) (err error) {
-	if p.IsSetId() {
-		if err = oprot.WriteFieldBegin("id", thrift.I64, 5); err != nil {
+	if p.IsSetIsAlive() {
+		if err = oprot.WriteFieldBegin("is_alive", thrift.BOOL, 5); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI64(*p.Id); err != nil {
+		if err := oprot.WriteBool(*p.IsAlive); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -12110,6 +12151,25 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *TBackend) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetId() {
+		if err = oprot.WriteFieldBegin("id", thrift.I64, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Id); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 
 func (p *TBackend) String() string {
@@ -12137,7 +12197,10 @@ func (p *TBackend) DeepEqual(ano *TBackend) bool {
 	if !p.Field4DeepEqual(ano.BrpcPort) {
 		return false
 	}
-	if !p.Field5DeepEqual(ano.Id) {
+	if !p.Field5DeepEqual(ano.IsAlive) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.Id) {
 		return false
 	}
 	return true
@@ -12176,7 +12239,19 @@ func (p *TBackend) Field4DeepEqual(src *TPort) bool {
 	}
 	return true
 }
-func (p *TBackend) Field5DeepEqual(src *int64) bool {
+func (p *TBackend) Field5DeepEqual(src *bool) bool {
+
+	if p.IsAlive == src {
+		return true
+	} else if p.IsAlive == nil || src == nil {
+		return false
+	}
+	if *p.IsAlive != *src {
+		return false
+	}
+	return true
+}
+func (p *TBackend) Field6DeepEqual(src *int64) bool {
 
 	if p.Id == src {
 		return true

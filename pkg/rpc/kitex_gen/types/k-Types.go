@@ -7410,8 +7410,22 @@ func (p *TBackend) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 5:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.BOOL {
 				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField6(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -7532,6 +7546,19 @@ func (p *TBackend) FastReadField4(buf []byte) (int, error) {
 func (p *TBackend) FastReadField5(buf []byte) (int, error) {
 	offset := 0
 
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.IsAlive = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TBackend) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
 	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -7555,6 +7582,7 @@ func (p *TBackend) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWriter
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
+		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
@@ -7571,6 +7599,7 @@ func (p *TBackend) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field6Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -7617,8 +7646,19 @@ func (p *TBackend) fastWriteField4(buf []byte, binaryWriter bthrift.BinaryWriter
 
 func (p *TBackend) fastWriteField5(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
+	if p.IsSetIsAlive() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "is_alive", thrift.BOOL, 5)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.IsAlive)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TBackend) fastWriteField6(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
 	if p.IsSetId() {
-		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "id", thrift.I64, 5)
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "id", thrift.I64, 6)
 		offset += bthrift.Binary.WriteI64(buf[offset:], *p.Id)
 
 		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
@@ -7666,8 +7706,19 @@ func (p *TBackend) field4Length() int {
 
 func (p *TBackend) field5Length() int {
 	l := 0
+	if p.IsSetIsAlive() {
+		l += bthrift.Binary.FieldBeginLength("is_alive", thrift.BOOL, 5)
+		l += bthrift.Binary.BoolLength(*p.IsAlive)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TBackend) field6Length() int {
+	l := 0
 	if p.IsSetId() {
-		l += bthrift.Binary.FieldBeginLength("id", thrift.I64, 5)
+		l += bthrift.Binary.FieldBeginLength("id", thrift.I64, 6)
 		l += bthrift.Binary.I64Length(*p.Id)
 
 		l += bthrift.Binary.FieldEndLength()
