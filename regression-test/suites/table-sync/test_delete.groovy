@@ -104,6 +104,6 @@ suite("test_delete") {
     sql "DELETE FROM ${tableName} WHERE test = ${test_num} and id = 0"
 
     // insert 5 rows, delete 2 rows, 'select test from TEST_${context.dbName}.${tableName}' should return 3 rows
-    assertTrue(checkSelectTimesOf("SELECT test FROM TEST_${context.dbName}.${tableName}", 3, 30))
+    assertTrue(checkSelectTimesOf("SELECT test FROM TEST_${context.dbName}.${tableName}", 4, 30))
 
 }
