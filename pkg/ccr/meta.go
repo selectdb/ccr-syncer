@@ -41,6 +41,19 @@ type Meta struct {
 	BackendHostPort2IdMap map[string]int64
 }
 
+func NewMeta(spec *base.Spec) *Meta {
+	return &Meta{
+		Spec: spec,
+		DatabaseMeta: DatabaseMeta{
+			Tables: make(map[int64]*TableMeta),
+		},
+		Backends:              make(map[int64]*base.Backend),
+		DatabaseName2IdMap:    make(map[string]int64),
+		TableName2IdMap:       make(map[string]int64),
+		BackendHostPort2IdMap: make(map[string]int64),
+	}
+}
+
 func (m *Meta) GetDbId() (int64, error) {
 	dbName := m.Database
 
@@ -467,11 +480,6 @@ func (m *Meta) UpdateBackends() error {
 		}
 
 		var port int64
-		port, err = rowParser.GetInt64("HeartbeatPort")
-		if err != nil {
-			return xerror.Wrapf(err, xerror.Normal, query)
-		}
-		backend.HeartbeatPort = uint16(port)
 		port, err = rowParser.GetInt64("BePort")
 		if err != nil {
 			return xerror.Wrapf(err, xerror.Normal, query)

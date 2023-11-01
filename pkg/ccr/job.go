@@ -447,6 +447,22 @@ func (j *Job) fullSync() error {
 		// TODO: retry && mark it for not start a new full sync
 		switch j.SyncType {
 		case DBSync:
+			tableMapping := make(map[int64]int64)
+			for srcTableId, _ := range j.progress.TableCommitSeqMap {
+				srcTableName, err := j.srcMeta.GetTableNameById(srcTableId)
+				if err != nil {
+					return err
+				}
+
+				destTableId, err := j.destMeta.GetTableId(srcTableName)
+				if err != nil {
+					return err
+				}
+
+				tableMapping[srcTableId] = destTableId
+			}
+
+			j.progress.TableMapping = tableMapping
 			j.progress.NextWithPersist(j.progress.CommitSeq, DBTablesIncrementalSync, Done, "")
 		case TableSync:
 			if destTable, err := j.destMeta.UpdateTable(j.Dest.Table, 0); err != nil {
@@ -461,6 +477,7 @@ func (j *Job) fullSync() error {
 			}
 
 			j.progress.TableCommitSeqMap = nil
+			j.progress.TableMapping = nil
 			j.progress.NextWithPersist(j.progress.CommitSeq, TableIncrementalSync, Done, "")
 		default:
 			return xerror.Errorf(xerror.Normal, "invalid sync type %d", j.SyncType)
@@ -580,7 +597,7 @@ func (j *Job) getReleatedTableRecords(upsert *record.Upsert) ([]*record.TableRec
 func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*ttypes.TTabletCommitInfo, error) {
 	log.Infof("ingestBinlog, txnId: %d", txnId)
 
-	job, err := j.jobFactory.CreateJob(NewIngestContext(txnId, tableRecords), j, "IngestBinlog")
+	job, err := j.jobFactory.CreateJob(NewIngestContext(txnId, tableRecords, j.progress.TableMapping), j, "IngestBinlog")
 	if err != nil {
 		return nil, err
 	}

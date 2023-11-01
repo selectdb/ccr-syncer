@@ -3193,10 +3193,11 @@ func (p *TStoragePolicy) Field6DeepEqual(src *int64) bool {
 }
 
 type TStorageResource struct {
-	Id             *int64           `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id,omitempty"`
-	Name           *string          `thrift:"name,2,optional" frugal:"2,optional,string" json:"name,omitempty"`
-	Version        *int64           `thrift:"version,3,optional" frugal:"3,optional,i64" json:"version,omitempty"`
-	S3StorageParam *TS3StorageParam `thrift:"s3_storage_param,4,optional" frugal:"4,optional,TS3StorageParam" json:"s3_storage_param,omitempty"`
+	Id               *int64                 `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id,omitempty"`
+	Name             *string                `thrift:"name,2,optional" frugal:"2,optional,string" json:"name,omitempty"`
+	Version          *int64                 `thrift:"version,3,optional" frugal:"3,optional,i64" json:"version,omitempty"`
+	S3StorageParam   *TS3StorageParam       `thrift:"s3_storage_param,4,optional" frugal:"4,optional,TS3StorageParam" json:"s3_storage_param,omitempty"`
+	HdfsStorageParam *plannodes.THdfsParams `thrift:"hdfs_storage_param,5,optional" frugal:"5,optional,plannodes.THdfsParams" json:"hdfs_storage_param,omitempty"`
 }
 
 func NewTStorageResource() *TStorageResource {
@@ -3242,6 +3243,15 @@ func (p *TStorageResource) GetS3StorageParam() (v *TS3StorageParam) {
 	}
 	return p.S3StorageParam
 }
+
+var TStorageResource_HdfsStorageParam_DEFAULT *plannodes.THdfsParams
+
+func (p *TStorageResource) GetHdfsStorageParam() (v *plannodes.THdfsParams) {
+	if !p.IsSetHdfsStorageParam() {
+		return TStorageResource_HdfsStorageParam_DEFAULT
+	}
+	return p.HdfsStorageParam
+}
 func (p *TStorageResource) SetId(val *int64) {
 	p.Id = val
 }
@@ -3254,12 +3264,16 @@ func (p *TStorageResource) SetVersion(val *int64) {
 func (p *TStorageResource) SetS3StorageParam(val *TS3StorageParam) {
 	p.S3StorageParam = val
 }
+func (p *TStorageResource) SetHdfsStorageParam(val *plannodes.THdfsParams) {
+	p.HdfsStorageParam = val
+}
 
 var fieldIDToName_TStorageResource = map[int16]string{
 	1: "id",
 	2: "name",
 	3: "version",
 	4: "s3_storage_param",
+	5: "hdfs_storage_param",
 }
 
 func (p *TStorageResource) IsSetId() bool {
@@ -3276,6 +3290,10 @@ func (p *TStorageResource) IsSetVersion() bool {
 
 func (p *TStorageResource) IsSetS3StorageParam() bool {
 	return p.S3StorageParam != nil
+}
+
+func (p *TStorageResource) IsSetHdfsStorageParam() bool {
+	return p.HdfsStorageParam != nil
 }
 
 func (p *TStorageResource) Read(iprot thrift.TProtocol) (err error) {
@@ -3330,6 +3348,16 @@ func (p *TStorageResource) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -3402,6 +3430,14 @@ func (p *TStorageResource) ReadField4(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TStorageResource) ReadField5(iprot thrift.TProtocol) error {
+	p.HdfsStorageParam = plannodes.NewTHdfsParams()
+	if err := p.HdfsStorageParam.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *TStorageResource) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TStorageResource"); err != nil {
@@ -3422,6 +3458,10 @@ func (p *TStorageResource) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 
@@ -3519,6 +3559,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 
+func (p *TStorageResource) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHdfsStorageParam() {
+		if err = oprot.WriteFieldBegin("hdfs_storage_param", thrift.STRUCT, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.HdfsStorageParam.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
 func (p *TStorageResource) String() string {
 	if p == nil {
 		return "<nil>"
@@ -3542,6 +3601,9 @@ func (p *TStorageResource) DeepEqual(ano *TStorageResource) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.S3StorageParam) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.HdfsStorageParam) {
 		return false
 	}
 	return true
@@ -3586,6 +3648,13 @@ func (p *TStorageResource) Field3DeepEqual(src *int64) bool {
 func (p *TStorageResource) Field4DeepEqual(src *TS3StorageParam) bool {
 
 	if !p.S3StorageParam.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TStorageResource) Field5DeepEqual(src *plannodes.THdfsParams) bool {
+
+	if !p.HdfsStorageParam.DeepEqual(src) {
 		return false
 	}
 	return true

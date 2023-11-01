@@ -34,6 +34,9 @@ type IFeRpc interface {
 	GetSnapshot(*base.Spec, string) (*festruct.TGetSnapshotResult_, error)
 	RestoreSnapshot(*base.Spec, []*festruct.TTableRef, string, *festruct.TGetSnapshotResult_) (*festruct.TRestoreSnapshotResult_, error)
 	GetMasterToken(*base.Spec) (string, error)
+	GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error)
+	GetTableMeta(spec *base.Spec, tableIds []int64) (*festruct.TGetMetaResult_, error)
+	GetBackends(spec *base.Spec) (*festruct.TGetBackendMetaResult_, error)
 }
 
 // TODO(Drogon): Add addrs to cached all spec clients
@@ -268,7 +271,36 @@ func (rpc *FeRpc) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableR
 }
 
 func (rpc *FeRpc) GetMasterToken(spec *base.Spec) (string, error) {
-	return rpc.masterClient.GetMasterToken(spec)
+	// return rpc.masterClient.GetMasterToken(spec)
+	caller := func(client *singleFeClient) (any, error) {
+		return client.GetMasterToken(spec)
+	}
+	result, err := rpc.callWithRetryAllClients(caller)
+	return result.(string), err
+}
+
+func (rpc *FeRpc) GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error) {
+	caller := func(client *singleFeClient) (any, error) {
+		return client.GetDbMeta(spec)
+	}
+	result, err := rpc.callWithRetryAllClients(caller)
+	return result.(*festruct.TGetMetaResult_), err
+}
+
+func (rpc *FeRpc) GetTableMeta(spec *base.Spec, tableIds []int64) (*festruct.TGetMetaResult_, error) {
+	caller := func(client *singleFeClient) (any, error) {
+		return client.GetTableMeta(spec, tableIds)
+	}
+	result, err := rpc.callWithRetryAllClients(caller)
+	return result.(*festruct.TGetMetaResult_), err
+}
+
+func (rpc *FeRpc) GetBackends(spec *base.Spec) (*festruct.TGetBackendMetaResult_, error) {
+	caller := func(client *singleFeClient) (any, error) {
+		return client.GetBackends(spec)
+	}
+	result, err := rpc.callWithRetryAllClients(caller)
+	return result.(*festruct.TGetBackendMetaResult_), err
 }
 
 type Request interface {
@@ -553,5 +585,71 @@ func (rpc *singleFeClient) GetMasterToken(spec *base.Spec) (string, error) {
 		return "", xerror.Wrapf(err, xerror.RPC, "GetMasterToken failed, req: %+v", req)
 	} else {
 		return resp.GetToken(), nil
+	}
+}
+
+func (rpc *singleFeClient) GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error) {
+	log.Debugf("GetMetaDB")
+
+	client := rpc.client
+	reqDb := &festruct.TGetMetaDB{}
+	reqDb.Id = &spec.DbId
+
+	req := &festruct.TGetMetaRequest{
+		User:   &spec.User,
+		Passwd: &spec.Password,
+		Db:     reqDb,
+	}
+
+	if resp, err := client.GetMeta(context.Background(), req); err != nil {
+		return nil, xerror.Wrapf(err, xerror.RPC, "GetMeta failed, req: %+v", req)
+	} else {
+		return resp, nil
+	}
+}
+
+func (rpc *singleFeClient) GetTableMeta(spec *base.Spec, tableIds []int64) (*festruct.TGetMetaResult_, error) {
+	log.Debugf("GetMetaTable tableIds: %v", tableIds)
+
+	client := rpc.client
+
+	reqTables := make([]*festruct.TGetMetaTable, 0, len(tableIds))
+	for _, tableId := range tableIds {
+		reqTable := festruct.NewTGetMetaTable()
+		reqTable.Id = &tableId
+		reqTables = append(reqTables, reqTable)
+	}
+
+	reqDb := festruct.NewTGetMetaDB() // festruct.NewTGetMetaTable()
+	reqDb.Id = &spec.DbId
+	reqDb.SetTables(reqTables)
+
+	req := &festruct.TGetMetaRequest{
+		User:   &spec.User,
+		Passwd: &spec.Password,
+		Db:     reqDb,
+	}
+
+	if resp, err := client.GetMeta(context.Background(), req); err != nil {
+		return nil, xerror.Wrapf(err, xerror.RPC, "GetMeta failed, req: %+v", req)
+	} else {
+		return resp, nil
+	}
+}
+
+func (rpc *singleFeClient) GetBackends(spec *base.Spec) (*festruct.TGetBackendMetaResult_, error) {
+	log.Debugf("GetBackends, spec: %s", spec)
+
+	client := rpc.client
+	req := &festruct.TGetBackendMetaRequest{
+		Cluster: &spec.Cluster,
+		User:    &spec.User,
+		Passwd:  &spec.Password,
+	}
+
+	if resp, err := client.GetBackendMeta(context.Background(), req); err != nil {
+		return nil, xerror.Wrapf(err, xerror.RPC, "GetBackendMeta failed, req: %+v", req)
+	} else {
+		return resp, nil
 	}
 }

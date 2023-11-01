@@ -118,6 +118,11 @@ get_lag: bin
 rows_parse: bin
 	$(V)go build -o bin/rows_parse ./cmd/rows_parse
 
+.PHONY: thrift_get_meta
+## thrift_get_meta : Build thrift_get_meta binary
+thrift_get_meta: bin
+	$(V)go build -o bin/thrift_get_meta ./cmd/thrift_get_meta
+
 .PHONY: todos
 ## todos : Print all todos
 todos:

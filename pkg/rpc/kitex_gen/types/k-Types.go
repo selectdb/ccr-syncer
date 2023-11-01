@@ -7395,6 +7395,48 @@ func (p *TBackend) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -7488,6 +7530,45 @@ func (p *TBackend) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TBackend) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.BrpcPort = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TBackend) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.IsAlive = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TBackend) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.Id = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TBackend) FastWrite(buf []byte) int {
 	return 0
@@ -7499,6 +7580,9 @@ func (p *TBackend) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWriter
 	if p != nil {
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
+		offset += p.fastWriteField4(buf[offset:], binaryWriter)
+		offset += p.fastWriteField5(buf[offset:], binaryWriter)
+		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
@@ -7513,6 +7597,9 @@ func (p *TBackend) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
+		l += p.field5Length()
+		l += p.field6Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -7546,6 +7633,39 @@ func (p *TBackend) fastWriteField3(buf []byte, binaryWriter bthrift.BinaryWriter
 	return offset
 }
 
+func (p *TBackend) fastWriteField4(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetBrpcPort() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "brpc_port", thrift.I32, 4)
+		offset += bthrift.Binary.WriteI32(buf[offset:], *p.BrpcPort)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TBackend) fastWriteField5(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetIsAlive() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "is_alive", thrift.BOOL, 5)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.IsAlive)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TBackend) fastWriteField6(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetId() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "id", thrift.I64, 6)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.Id)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TBackend) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("host", thrift.STRING, 1)
@@ -7570,6 +7690,39 @@ func (p *TBackend) field3Length() int {
 	l += bthrift.Binary.I32Length(p.HttpPort)
 
 	l += bthrift.Binary.FieldEndLength()
+	return l
+}
+
+func (p *TBackend) field4Length() int {
+	l := 0
+	if p.IsSetBrpcPort() {
+		l += bthrift.Binary.FieldBeginLength("brpc_port", thrift.I32, 4)
+		l += bthrift.Binary.I32Length(*p.BrpcPort)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TBackend) field5Length() int {
+	l := 0
+	if p.IsSetIsAlive() {
+		l += bthrift.Binary.FieldBeginLength("is_alive", thrift.BOOL, 5)
+		l += bthrift.Binary.BoolLength(*p.IsAlive)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TBackend) field6Length() int {
+	l := 0
+	if p.IsSetId() {
+		l += bthrift.Binary.FieldBeginLength("id", thrift.I64, 6)
+		l += bthrift.Binary.I64Length(*p.Id)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
 	return l
 }
 

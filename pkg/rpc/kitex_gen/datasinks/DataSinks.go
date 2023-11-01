@@ -30,6 +30,7 @@ const (
 	TDataSinkType_JDBC_TABLE_SINK              TDataSinkType = 9
 	TDataSinkType_MULTI_CAST_DATA_STREAM_SINK  TDataSinkType = 10
 	TDataSinkType_GROUP_COMMIT_OLAP_TABLE_SINK TDataSinkType = 11
+	TDataSinkType_GROUP_COMMIT_BLOCK_SINK      TDataSinkType = 12
 )
 
 func (p TDataSinkType) String() string {
@@ -58,6 +59,8 @@ func (p TDataSinkType) String() string {
 		return "MULTI_CAST_DATA_STREAM_SINK"
 	case TDataSinkType_GROUP_COMMIT_OLAP_TABLE_SINK:
 		return "GROUP_COMMIT_OLAP_TABLE_SINK"
+	case TDataSinkType_GROUP_COMMIT_BLOCK_SINK:
+		return "GROUP_COMMIT_BLOCK_SINK"
 	}
 	return "<UNSET>"
 }
@@ -88,6 +91,8 @@ func TDataSinkTypeFromString(s string) (TDataSinkType, error) {
 		return TDataSinkType_MULTI_CAST_DATA_STREAM_SINK, nil
 	case "GROUP_COMMIT_OLAP_TABLE_SINK":
 		return TDataSinkType_GROUP_COMMIT_OLAP_TABLE_SINK, nil
+	case "GROUP_COMMIT_BLOCK_SINK":
+		return TDataSinkType_GROUP_COMMIT_BLOCK_SINK, nil
 	}
 	return TDataSinkType(0), fmt.Errorf("not a valid TDataSinkType string")
 }
@@ -7103,6 +7108,7 @@ type TOlapTableSink struct {
 	SlaveLocation        *descriptors.TOlapTableLocationParam  `thrift:"slave_location,18,optional" frugal:"18,optional,descriptors.TOlapTableLocationParam" json:"slave_location,omitempty"`
 	TxnTimeoutS          *int64                                `thrift:"txn_timeout_s,19,optional" frugal:"19,optional,i64" json:"txn_timeout_s,omitempty"`
 	WriteFileCache       *bool                                 `thrift:"write_file_cache,20,optional" frugal:"20,optional,bool" json:"write_file_cache,omitempty"`
+	BaseSchemaVersion    *int64                                `thrift:"base_schema_version,21,optional" frugal:"21,optional,i64" json:"base_schema_version,omitempty"`
 }
 
 func NewTOlapTableSink() *TOlapTableSink {
@@ -7262,6 +7268,15 @@ func (p *TOlapTableSink) GetWriteFileCache() (v bool) {
 	}
 	return *p.WriteFileCache
 }
+
+var TOlapTableSink_BaseSchemaVersion_DEFAULT int64
+
+func (p *TOlapTableSink) GetBaseSchemaVersion() (v int64) {
+	if !p.IsSetBaseSchemaVersion() {
+		return TOlapTableSink_BaseSchemaVersion_DEFAULT
+	}
+	return *p.BaseSchemaVersion
+}
 func (p *TOlapTableSink) SetLoadId(val *types.TUniqueId) {
 	p.LoadId = val
 }
@@ -7322,6 +7337,9 @@ func (p *TOlapTableSink) SetTxnTimeoutS(val *int64) {
 func (p *TOlapTableSink) SetWriteFileCache(val *bool) {
 	p.WriteFileCache = val
 }
+func (p *TOlapTableSink) SetBaseSchemaVersion(val *int64) {
+	p.BaseSchemaVersion = val
+}
 
 var fieldIDToName_TOlapTableSink = map[int16]string{
 	1:  "load_id",
@@ -7344,6 +7362,7 @@ var fieldIDToName_TOlapTableSink = map[int16]string{
 	18: "slave_location",
 	19: "txn_timeout_s",
 	20: "write_file_cache",
+	21: "base_schema_version",
 }
 
 func (p *TOlapTableSink) IsSetLoadId() bool {
@@ -7400,6 +7419,10 @@ func (p *TOlapTableSink) IsSetTxnTimeoutS() bool {
 
 func (p *TOlapTableSink) IsSetWriteFileCache() bool {
 	return p.WriteFileCache != nil
+}
+
+func (p *TOlapTableSink) IsSetBaseSchemaVersion() bool {
+	return p.BaseSchemaVersion != nil
 }
 
 func (p *TOlapTableSink) Read(iprot thrift.TProtocol) (err error) {
@@ -7636,6 +7659,16 @@ func (p *TOlapTableSink) Read(iprot thrift.TProtocol) (err error) {
 		case 20:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField20(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 21:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField21(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -7903,6 +7936,15 @@ func (p *TOlapTableSink) ReadField20(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TOlapTableSink) ReadField21(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.BaseSchemaVersion = &v
+	}
+	return nil
+}
+
 func (p *TOlapTableSink) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TOlapTableSink"); err != nil {
@@ -7987,6 +8029,10 @@ func (p *TOlapTableSink) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField20(oprot); err != nil {
 			fieldId = 20
+			goto WriteFieldError
+		}
+		if err = p.writeField21(oprot); err != nil {
+			fieldId = 21
 			goto WriteFieldError
 		}
 
@@ -8366,6 +8412,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
 }
 
+func (p *TOlapTableSink) writeField21(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBaseSchemaVersion() {
+		if err = oprot.WriteFieldBegin("base_schema_version", thrift.I64, 21); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.BaseSchemaVersion); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
+}
+
 func (p *TOlapTableSink) String() string {
 	if p == nil {
 		return "<nil>"
@@ -8437,6 +8502,9 @@ func (p *TOlapTableSink) DeepEqual(ano *TOlapTableSink) bool {
 		return false
 	}
 	if !p.Field20DeepEqual(ano.WriteFileCache) {
+		return false
+	}
+	if !p.Field21DeepEqual(ano.BaseSchemaVersion) {
 		return false
 	}
 	return true
@@ -8618,6 +8686,18 @@ func (p *TOlapTableSink) Field20DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.WriteFileCache != *src {
+		return false
+	}
+	return true
+}
+func (p *TOlapTableSink) Field21DeepEqual(src *int64) bool {
+
+	if p.BaseSchemaVersion == src {
+		return true
+	} else if p.BaseSchemaVersion == nil || src == nil {
+		return false
+	}
+	if *p.BaseSchemaVersion != *src {
 		return false
 	}
 	return true

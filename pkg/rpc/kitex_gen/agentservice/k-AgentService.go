@@ -2174,6 +2174,20 @@ func (p *TStorageResource) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -2261,6 +2275,19 @@ func (p *TStorageResource) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TStorageResource) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	tmp := plannodes.NewTHdfsParams()
+	if l, err := tmp.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.HdfsStorageParam = tmp
+	return offset, nil
+}
+
 // for compatibility
 func (p *TStorageResource) FastWrite(buf []byte) int {
 	return 0
@@ -2274,6 +2301,7 @@ func (p *TStorageResource) FastWriteNocopy(buf []byte, binaryWriter bthrift.Bina
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
+		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -2288,6 +2316,7 @@ func (p *TStorageResource) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -2337,6 +2366,16 @@ func (p *TStorageResource) fastWriteField4(buf []byte, binaryWriter bthrift.Bina
 	return offset
 }
 
+func (p *TStorageResource) fastWriteField5(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetHdfsStorageParam() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "hdfs_storage_param", thrift.STRUCT, 5)
+		offset += p.HdfsStorageParam.FastWriteNocopy(buf[offset:], binaryWriter)
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TStorageResource) field1Length() int {
 	l := 0
 	if p.IsSetId() {
@@ -2375,6 +2414,16 @@ func (p *TStorageResource) field4Length() int {
 	if p.IsSetS3StorageParam() {
 		l += bthrift.Binary.FieldBeginLength("s3_storage_param", thrift.STRUCT, 4)
 		l += p.S3StorageParam.BLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TStorageResource) field5Length() int {
+	l := 0
+	if p.IsSetHdfsStorageParam() {
+		l += bthrift.Binary.FieldBeginLength("hdfs_storage_param", thrift.STRUCT, 5)
+		l += p.HdfsStorageParam.BLength()
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l

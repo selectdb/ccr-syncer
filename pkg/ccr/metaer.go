@@ -27,12 +27,13 @@ func (t *TableMeta) String() string {
 }
 
 type PartitionMeta struct {
-	TableMeta    *TableMeta
-	Id           int64
-	Name         string
-	Range        string
-	IndexIdMap   map[int64]*IndexMeta  // indexId -> indexMeta
-	IndexNameMap map[string]*IndexMeta // indexName -> indexMeta
+	TableMeta      *TableMeta
+	Id             int64
+	Name           string
+	Range          string
+	VisibleVersion int64
+	IndexIdMap     map[int64]*IndexMeta  // indexId -> indexMeta
+	IndexNameMap   map[string]*IndexMeta // indexName -> indexMeta
 }
 
 // Stringer
@@ -59,11 +60,21 @@ type ReplicaMeta struct {
 	Id         int64
 	TabletId   int64
 	BackendId  int64
+	Version    int64
 }
 
 type MetaCleaner interface {
 	ClearDB(dbName string)
 	ClearTable(dbName string, tableName string)
+}
+
+type IngestBinlogMetaer interface {
+	GetTablets(tableId, partitionId, indexId int64) (*btree.Map[int64, *TabletMeta], error)
+	GetPartitionIdByRange(tableId int64, partitionRange string) (int64, error)
+	GetPartitionRangeMap(tableId int64) (map[string]*PartitionMeta, error)
+	GetIndexIdMap(tableId, partitionId int64) (map[int64]*IndexMeta, error)
+	GetIndexNameMap(tableId, partitionId int64) (map[string]*IndexMeta, error)
+	GetBackendMap() (map[int64]*base.Backend, error)
 }
 
 type Metaer interface {
@@ -78,32 +89,27 @@ type Metaer interface {
 
 	UpdatePartitions(tableId int64) error
 	GetPartitionIdMap(tableId int64) (map[int64]*PartitionMeta, error)
-	GetPartitionRangeMap(tableId int64) (map[string]*PartitionMeta, error)
 	GetPartitionIds(tableName string) ([]int64, error)
 	GetPartitionName(tableId int64, partitionId int64) (string, error)
 	GetPartitionRange(tableId int64, partitionId int64) (string, error)
 	GetPartitionIdByName(tableId int64, partitionName string) (int64, error)
-	GetPartitionIdByRange(tableId int64, partitionRange string) (int64, error)
 
 	UpdateBackends() error
 	GetBackends() ([]*base.Backend, error)
-	GetBackendMap() (map[int64]*base.Backend, error)
 	GetBackendId(host, portStr string) (int64, error)
 
 	UpdateIndexes(tableId, partitionId int64) error
-	GetIndexIdMap(tableId, partitionId int64) (map[int64]*IndexMeta, error)
-	GetIndexNameMap(tableId, partitionId int64) (map[string]*IndexMeta, error)
 
 	UpdateReplicas(tableId, partitionId int64) error
 	GetReplicas(tableId, partitionId int64) (*btree.Map[int64, *ReplicaMeta], error)
-
-	GetTablets(tableId, partitionId, indexId int64) (*btree.Map[int64, *TabletMeta], error)
 
 	UpdateToken(rpcFactory rpc.IRpcFactory) error
 	GetMasterToken(rpcFactory rpc.IRpcFactory) (string, error)
 
 	CheckBinlogFeature() error
 	DirtyGetTables() map[int64]*TableMeta
+
+	IngestBinlogMetaer
 
 	// from Spec
 	DbExec(sql string) error

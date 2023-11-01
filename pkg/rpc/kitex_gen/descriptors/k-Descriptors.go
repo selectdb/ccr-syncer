@@ -1316,6 +1316,34 @@ func (p *TSlotDescriptor) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 16:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField16(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 17:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField17(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1627,6 +1655,33 @@ func (p *TSlotDescriptor) FastReadField15(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TSlotDescriptor) FastReadField16(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.ColDefaultValue = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TSlotDescriptor) FastReadField17(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.PrimitiveType = types.TPrimitiveType(v)
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TSlotDescriptor) FastWrite(buf []byte) int {
 	return 0
@@ -1651,6 +1706,8 @@ func (p *TSlotDescriptor) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binar
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 		offset += p.fastWriteField8(buf[offset:], binaryWriter)
 		offset += p.fastWriteField15(buf[offset:], binaryWriter)
+		offset += p.fastWriteField16(buf[offset:], binaryWriter)
+		offset += p.fastWriteField17(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -1676,6 +1733,8 @@ func (p *TSlotDescriptor) BLength() int {
 		l += p.field13Length()
 		l += p.field14Length()
 		l += p.field15Length()
+		l += p.field16Length()
+		l += p.field17Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -1834,6 +1893,28 @@ func (p *TSlotDescriptor) fastWriteField15(buf []byte, binaryWriter bthrift.Bina
 	return offset
 }
 
+func (p *TSlotDescriptor) fastWriteField16(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetColDefaultValue() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "col_default_value", thrift.STRING, 16)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.ColDefaultValue)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TSlotDescriptor) fastWriteField17(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetPrimitiveType() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "primitive_type", thrift.I32, 17)
+		offset += bthrift.Binary.WriteI32(buf[offset:], int32(p.PrimitiveType))
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TSlotDescriptor) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("id", thrift.I32, 1)
@@ -1977,6 +2058,28 @@ func (p *TSlotDescriptor) field15Length() int {
 
 		}
 		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TSlotDescriptor) field16Length() int {
+	l := 0
+	if p.IsSetColDefaultValue() {
+		l += bthrift.Binary.FieldBeginLength("col_default_value", thrift.STRING, 16)
+		l += bthrift.Binary.StringLengthNocopy(*p.ColDefaultValue)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TSlotDescriptor) field17Length() int {
+	l := 0
+	if p.IsSetPrimitiveType() {
+		l += bthrift.Binary.FieldBeginLength("primitive_type", thrift.I32, 17)
+		l += bthrift.Binary.I32Length(int32(p.PrimitiveType))
+
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l
@@ -9587,6 +9690,20 @@ func (p *TMCTable) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -9700,6 +9817,19 @@ func (p *TMCTable) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TMCTable) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.PartitionSpec = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TMCTable) FastWrite(buf []byte) int {
 	return 0
@@ -9715,6 +9845,7 @@ func (p *TMCTable) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWriter
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
+		offset += p.fastWriteField7(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -9731,6 +9862,7 @@ func (p *TMCTable) BLength() int {
 		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
+		l += p.field7Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -9803,6 +9935,17 @@ func (p *TMCTable) fastWriteField6(buf []byte, binaryWriter bthrift.BinaryWriter
 	return offset
 }
 
+func (p *TMCTable) fastWriteField7(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetPartitionSpec() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "partition_spec", thrift.STRING, 7)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.PartitionSpec)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TMCTable) field1Length() int {
 	l := 0
 	if p.IsSetRegion() {
@@ -9863,6 +10006,17 @@ func (p *TMCTable) field6Length() int {
 	if p.IsSetPublicAccess() {
 		l += bthrift.Binary.FieldBeginLength("public_access", thrift.STRING, 6)
 		l += bthrift.Binary.StringLengthNocopy(*p.PublicAccess)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TMCTable) field7Length() int {
+	l := 0
+	if p.IsSetPartitionSpec() {
+		l += bthrift.Binary.FieldBeginLength("partition_spec", thrift.STRING, 7)
+		l += bthrift.Binary.StringLengthNocopy(*p.PartitionSpec)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
