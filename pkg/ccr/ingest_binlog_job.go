@@ -2,6 +2,7 @@ package ccr
 
 import (
 	"context"
+	"math/rand"
 	"sync"
 	"sync/atomic"
 
@@ -56,29 +57,12 @@ type tabletIngestBinlogHandler struct {
 
 	*commitInfosCollector
 
-	err     error
-	errLock sync.Mutex
-
 	cancel atomic.Bool
 	wg     sync.WaitGroup
 }
 
-func (h *tabletIngestBinlogHandler) setError(err error) {
-	h.errLock.Lock()
-	defer h.errLock.Unlock()
-
-	h.err = err
-}
-
-func (h *tabletIngestBinlogHandler) error() error {
-	h.errLock.Lock()
-	defer h.errLock.Unlock()
-
-	return h.err
-}
-
 // handle Replica
-func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool {
+func (h *tabletIngestBinlogHandler) handleReplica(srcReplica, destReplica *ReplicaMeta) bool {
 	destReplicaId := destReplica.Id
 	log.Debugf("handle dest replica id: %d", destReplicaId)
 
@@ -104,24 +88,15 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 		j.setError(err)
 		return false
 	}
-	loadId := ttypes.NewTUniqueId()
-	loadId.SetHi(-1)
-	loadId.SetLo(-1)
-
-	srcReplicas := srcTablet.ReplicaMetas
-	// srcBackendIds := make([]int64, 0, srcReplicas.Len())
-	iter := srcReplicas.Iter()
-	if ok := iter.First(); !ok {
-		j.setError(xerror.Errorf(xerror.Meta, "src replicas is empty"))
-		return false
-	}
-	srcReplica := iter.Value()
 	srcBackendId := srcReplica.BackendId
 	srcBackend := j.GetSrcBackend(srcBackendId)
 	if srcBackend == nil {
 		j.setError(xerror.XWrapf(errBackendNotFound, "backend id: %d", srcBackendId))
 		return false
 	}
+	loadId := ttypes.NewTUniqueId()
+	loadId.SetHi(-1)
+	loadId.SetLo(-1)
 	req := &bestruct.TIngestBinlogRequest{
 		TxnId:          utils.ThriftValueWrapper(j.txnId),
 		RemoteTabletId: utils.ThriftValueWrapper[int64](srcTablet.Id),
@@ -171,8 +146,25 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 func (h *tabletIngestBinlogHandler) handle() {
 	log.Debugf("handle tablet ingest binlog, src tablet id: %d, dest tablet id: %d", h.srcTablet.Id, h.destTablet.Id)
 
+	// all src replicas version > binlogVersion
+	srcReplicas := make([]*ReplicaMeta, 0, h.srcTablet.ReplicaMetas.Len())
+	h.srcTablet.ReplicaMetas.Scan(func(srcReplicaId int64, srcReplica *ReplicaMeta) bool {
+		if srcReplica.Version >= h.binlogVersion {
+			srcReplicas = append(srcReplicas, srcReplica)
+		}
+		return true
+	})
+
+	if len(srcReplicas) == 0 {
+		h.ingestJob.setError(xerror.Errorf(xerror.Meta, "no src replica version > %d", h.binlogVersion))
+		return
+	}
+
 	h.destTablet.ReplicaMetas.Scan(func(destReplicaId int64, destReplica *ReplicaMeta) bool {
-		return h.handleReplica(destReplica)
+		// get random src replica
+		randNum := rand.Intn(len(srcReplicas))
+		srcReplica := srcReplicas[randNum]
+		return h.handleReplica(srcReplica, destReplica)
 	})
 	h.wg.Wait()
 
@@ -283,8 +275,7 @@ func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 
 	// Step 1: check tablets
 	log.Debugf("arg %+v", arg)
-	job := j.ccrJob
-	srcTablets, err := job.srcMeta.GetTablets(arg.srcTableId, arg.srcPartitionId, arg.srcIndexMeta.Id)
+	srcTablets, err := j.srcMeta.GetTablets(arg.srcTableId, arg.srcPartitionId, arg.srcIndexMeta.Id)
 	if err != nil {
 		j.setError(err)
 		return
@@ -449,7 +440,7 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 	}
 
 	// Step 1: check all partitions in partition records are in src/dest cluster
-	srcPartitionMap, err := job.srcMeta.GetPartitionRangeMap(srcTableId)
+	srcPartitionMap, err := j.srcMeta.GetPartitionRangeMap(srcTableId)
 	if err != nil {
 		j.setError(err)
 		return

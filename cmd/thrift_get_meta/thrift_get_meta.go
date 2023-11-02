@@ -68,6 +68,12 @@ func test_get_table_meta(m ccr.Metaer, spec *base.Spec) {
 		panic(err)
 	}
 	log.Infof("found db meta: %s", s)
+
+	thriftMeta, err := ccr.NewThriftMeta(spec, rpcFactory, tableIds)
+	if err != nil {
+		panic(err)
+	}
+	log.Infof("found thrift meta: %+v", thriftMeta)
 }
 
 func test_get_db_meta(m ccr.Metaer, spec *base.Spec) {
@@ -89,7 +95,7 @@ func test_get_db_meta(m ccr.Metaer, spec *base.Spec) {
 		panic(err)
 	}
 	// toJson
-	s, err := json.Marshal(&result)
+	s, err := json.Marshal(result)
 	if err != nil {
 		panic(err)
 	}
