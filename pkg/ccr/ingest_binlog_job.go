@@ -127,11 +127,11 @@ func (h *tabletIngestBinlogHandler) handleReplica(srcReplica, destReplica *Repli
 
 		log.Debugf("ingest resp: %v", resp)
 		if !resp.IsSetStatus() {
-			err = xerror.Errorf(xerror.BE, "ingest resp status not set")
+			err = xerror.Errorf(xerror.BE, "ingest resp status not set, req: %+v", req)
 			j.setError(err)
 			return
 		} else if resp.Status.StatusCode != tstatus.TStatusCode_OK {
-			err = xerror.Errorf(xerror.BE, "ingest resp status code: %v, msg: %v", resp.Status.StatusCode, resp.Status.ErrorMsgs)
+			err = xerror.Errorf(xerror.BE, "ingest error, req %v, resp status code: %v, msg: %v", req, resp.Status.StatusCode, resp.Status.ErrorMsgs)
 			j.setError(err)
 			return
 		} else {
