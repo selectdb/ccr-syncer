@@ -75,18 +75,18 @@ func (s *HttpService) versionHandler(w http.ResponseWriter, r *http.Request) {
 
 // createCcr creates a new CCR job and adds it to the job manager.
 // It takes a CreateCcrRequest as input and returns an error if there was a problem creating the job or adding it to the job manager.
-func (s *HttpService) createCcr(request *CreateCcrRequest) error {
+func createCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobManager) error {
 	log.Infof("create ccr %s", request)
 
 	// _job
-	ctx := ccr.NewJobContext(request.Src, request.Dest, s.db, s.jobManager.GetFactory())
+	ctx := ccr.NewJobContext(request.Src, request.Dest, db, jobManager.GetFactory())
 	job, err := ccr.NewJobFromService(request.Name, ctx)
 	if err != nil {
 		return err
 	}
 
 	// add to job manager
-	err = s.jobManager.AddJob(job)
+	err = jobManager.AddJob(job)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func (s *HttpService) createHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Call the createCcr function to create the CCR
-	err = s.createCcr(&request)
+	err = createCcr(&request, s.db, s.jobManager)
 	if err != nil {
 		log.Errorf("create ccr failed: %+v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
