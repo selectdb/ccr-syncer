@@ -2,7 +2,6 @@ package ccr
 
 import (
 	"context"
-	"math/rand"
 	"sync"
 	"sync/atomic"
 
@@ -160,10 +159,11 @@ func (h *tabletIngestBinlogHandler) handle() {
 		return
 	}
 
+	srcReplicaIndex := 0
 	h.destTablet.ReplicaMetas.Scan(func(destReplicaId int64, destReplica *ReplicaMeta) bool {
-		// get random src replica
-		randNum := rand.Intn(len(srcReplicas))
-		srcReplica := srcReplicas[randNum]
+		// round robbin
+		srcReplica := srcReplicas[srcReplicaIndex%len(srcReplicas)]
+		srcReplicaIndex++
 		return h.handleReplica(srcReplica, destReplica)
 	})
 	h.wg.Wait()
