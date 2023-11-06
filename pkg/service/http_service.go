@@ -15,11 +15,31 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// TODO(Drogon): impl a generic http request handle parse json
+
 func writeJson(w http.ResponseWriter, data interface{}) {
 	if data, err := json.Marshal(data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
 		w.Write(data)
+	}
+}
+
+type defaultResult struct {
+	Success  bool   `json:"success"`
+	ErrorMsg string `json:"error_msg,omitempty"`
+}
+
+func newErrorResult(errMsg string) *defaultResult {
+	return &defaultResult{
+		Success:  false,
+		ErrorMsg: errMsg,
+	}
+}
+
+func newSuccessResult() *defaultResult {
+	return &defaultResult{
+		Success: true,
 	}
 }
 
@@ -95,13 +115,13 @@ func createCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobMana
 }
 
 func (s *HttpService) isRedirected(jobName string, w http.ResponseWriter) (bool, error) {
-	belong, err := s.db.GetJobBelong(jobName)
+	belongHost, err := s.db.GetJobBelong(jobName)
 	if err != nil {
 		return false, err
 	}
 
-	if belong != s.hostInfo {
-		w.Write([]byte(fmt.Sprintf("%s is located in syncer %s, please redirect to %s", jobName, belong, belong)))
+	if belongHost != s.hostInfo {
+		w.Write([]byte(fmt.Sprintf("%s is located in syncer %s, please redirect to %s", jobName, belongHost, belongHost)))
 		return true, nil
 	}
 
@@ -112,6 +132,9 @@ func (s *HttpService) isRedirected(jobName string, w http.ResponseWriter) (bool,
 func (s *HttpService) createHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("create ccr")
 
+	var createResult *defaultResult
+	defer writeJson(w, &createResult)
+
 	// Parse the JSON request body
 	var request CreateCcrRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
@@ -121,18 +144,12 @@ func (s *HttpService) createHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Call the createCcr function to create the CCR
-	err = createCcr(&request, s.db, s.jobManager)
-	if err != nil {
+	if err = createCcr(&request, s.db, s.jobManager); err != nil {
 		log.Errorf("create ccr failed: %+v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		createResult = newErrorResult(err.Error())
+	} else {
+		createResult = newSuccessResult()
 	}
-
-	type result struct {
-		Success bool `json:"success"`
-	}
-	createResult := result{Success: true}
-	writeJson(w, createResult)
 }
 
 type CcrCommonRequest struct {
@@ -144,202 +161,237 @@ type CcrCommonRequest struct {
 func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("get lag")
 
+	type result struct {
+		*defaultResult
+		Lag int64 `json:"lag,omitempty"`
+	}
+	var lagResult *result
+	defer writeJson(w, &lagResult)
+
 	// Parse the JSON request body
 	var request CcrCommonRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		lagResult = &result{
+			defaultResult: newErrorResult(err.Error()),
+		}
 		return
 	}
+
 	if request.Name == "" {
-		http.Error(w, "name is empty", http.StatusBadRequest)
+		lagResult = &result{
+			defaultResult: newErrorResult("name is empty"),
+		}
 		return
 	}
 
 	if isRedirected, err := s.isRedirected(request.Name, w); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		lagResult = &result{
+			defaultResult: newErrorResult(err.Error()),
+		}
+		return
 	} else if isRedirected {
 		return
 	}
 
 	lag, err := s.jobManager.GetLag(request.Name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		lagResult = &result{
+			defaultResult: newErrorResult(err.Error()),
+		}
 		return
 	}
 
-	type result struct {
-		Lag int64 `json:"lag"`
+	lagResult = &result{
+		defaultResult: newSuccessResult(),
+		Lag:           lag,
 	}
-	lagResult := result{Lag: lag}
-	writeJson(w, lagResult)
 }
 
 // Pause service
 func (s *HttpService) pauseHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("pause job")
 
+	var pauseResult *defaultResult
+	defer writeJson(w, &pauseResult)
+
 	// Parse the JSON request body
 	var request CcrCommonRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		pauseResult = newErrorResult(err.Error())
 		return
 	}
+
 	if request.Name == "" {
-		http.Error(w, "name is empty", http.StatusBadRequest)
+		pauseResult = newErrorResult("name is empty")
 		return
 	}
 
 	if isRedirected, err := s.isRedirected(request.Name, w); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		pauseResult = newErrorResult(err.Error())
 	} else if isRedirected {
 		return
 	}
 
 	err = s.jobManager.Pause(request.Name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		pauseResult = newErrorResult(err.Error())
 		return
 	}
 
-	type result struct {
-		Success bool `json:"success"`
-	}
-	pauseResult := result{Success: true}
-	writeJson(w, pauseResult)
+	pauseResult = newSuccessResult()
 }
 
 // Resume service
 func (s *HttpService) resumeHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("resume job")
 
+	var resumeResult *defaultResult
+	defer writeJson(w, &resumeResult)
+
 	// Parse the JSON request body
 	var request CcrCommonRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		resumeResult = newErrorResult(err.Error())
 		return
 	}
+
 	if request.Name == "" {
-		http.Error(w, "name is empty", http.StatusBadRequest)
+		resumeResult = newErrorResult("name is empty")
 		return
 	}
 
 	if isRedirected, err := s.isRedirected(request.Name, w); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		resumeResult = newErrorResult(err.Error())
 	} else if isRedirected {
 		return
 	}
 
 	err = s.jobManager.Resume(request.Name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		resumeResult = newErrorResult(err.Error())
 		return
 	}
 
-	type result struct {
-		Success bool `json:"success"`
-	}
-	resumeResult := result{Success: true}
-	writeJson(w, resumeResult)
+	resumeResult = newSuccessResult()
 }
 
 func (s *HttpService) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("delete job")
 
+	var deleteResult *defaultResult
+	defer writeJson(w, &deleteResult)
+
 	// Parse the JSON request body
 	var request CcrCommonRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		deleteResult = newErrorResult(err.Error())
 		return
 	}
+
 	if request.Name == "" {
-		http.Error(w, "name is empty", http.StatusBadRequest)
+		deleteResult = newErrorResult("name is empty")
 		return
 	}
 
 	if isRedirected, err := s.isRedirected(request.Name, w); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		deleteResult = newErrorResult(err.Error())
 	} else if isRedirected {
 		return
 	}
 
 	err = s.jobManager.RemoveJob(request.Name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		deleteResult = newErrorResult(err.Error())
 		return
 	}
 
-	type result struct {
-		Success bool `json:"success"`
-	}
-	deleteResult := result{Success: true}
-	writeJson(w, deleteResult)
+	deleteResult = newSuccessResult()
 }
 
 func (s *HttpService) statusHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("get job status")
 
+	type result struct {
+		*defaultResult
+		JobStatus *ccr.JobStatus `json:"status,omitempty"`
+	}
+	var jobStatusResult *result
+	defer writeJson(w, &jobStatusResult)
+
 	// Parse the JSON request body
 	var request CcrCommonRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		jobStatusResult = &result{
+			defaultResult: newErrorResult(err.Error()),
+		}
 		return
 	}
+
 	if request.Name == "" {
-		http.Error(w, "name is empty", http.StatusBadRequest)
+		jobStatusResult = &result{
+			defaultResult: newErrorResult("name is empty"),
+		}
 		return
 	}
 
 	if isRedirected, err := s.isRedirected(request.Name, w); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		jobStatusResult = &result{
+			defaultResult: newErrorResult(err.Error()),
+		}
+		return
 	} else if isRedirected {
 		return
 	}
 
-	jobStatus, err := s.jobManager.GetJobStatus(request.Name)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	if jobStatus, err := s.jobManager.GetJobStatus(request.Name); err != nil {
+		jobStatusResult = &result{
+			defaultResult: newErrorResult(err.Error()),
+		}
+	} else {
+		jobStatusResult = &result{
+			defaultResult: newSuccessResult(),
+			JobStatus:     jobStatus,
+		}
 	}
-
-	writeJson(w, jobStatus)
 }
 
 func (s *HttpService) desyncHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("desync job")
 
+	var desyncResult *defaultResult
+	defer writeJson(w, &desyncResult)
+
 	// Parse the JSON request body
 	var request CcrCommonRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		desyncResult = newErrorResult(err.Error())
+		writeJson(w, desyncResult)
 		return
 	}
+
 	if request.Name == "" {
-		http.Error(w, "name is empty", http.StatusBadRequest)
+		desyncResult = newErrorResult("name is empty")
 		return
 	}
 
 	if isRedirected, err := s.isRedirected(request.Name, w); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		desyncResult = newErrorResult(err.Error())
+		return
 	} else if isRedirected {
 		return
 	}
 
 	if err := s.jobManager.Desync(request.Name); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		desyncResult = newErrorResult(err.Error())
+	} else {
+		desyncResult = newSuccessResult()
 	}
-
-	type result struct {
-		Success bool `json:"success"`
-	}
-	desyncResult := result{Success: true}
-	writeJson(w, desyncResult)
 }
 
 // ListJobs service
