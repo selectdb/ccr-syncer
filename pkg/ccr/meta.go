@@ -9,6 +9,7 @@ import (
 
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	"github.com/selectdb/ccr_syncer/pkg/rpc"
+	tstatus "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/status"
 	utils "github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
@@ -849,10 +850,12 @@ func (m *Meta) UpdateToken(rpcFactory rpc.IRpcFactory) error {
 		return err
 	}
 
-	if token, err := rpc.GetMasterToken(spec); err != nil {
+	if resp, err := rpc.GetMasterToken(spec); err != nil {
 		return err
+	} else if resp.GetStatus().GetStatusCode() != tstatus.TStatusCode_OK {
+		return xerror.Errorf(xerror.Meta, "get master token failed, status: %s", resp.GetStatus().String())
 	} else {
-		m.token = token
+		m.token = resp.GetToken()
 		return nil
 	}
 }

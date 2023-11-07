@@ -426,6 +426,9 @@ func (j *Job) fullSync() error {
 		if err != nil {
 			return err
 		}
+		if restoreResp.Status.GetStatusCode() != tstatus.TStatusCode_OK {
+			return xerror.Errorf(xerror.Normal, "restore snapshot failed, status: %v", restoreResp.Status)
+		}
 		log.Infof("resp: %v", restoreResp)
 
 		// TODO: impl wait for done, use show restore

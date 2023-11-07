@@ -33,7 +33,7 @@ type IFeRpc interface {
 	GetBinlogLag(*base.Spec, int64) (*festruct.TGetBinlogLagResult_, error)
 	GetSnapshot(*base.Spec, string) (*festruct.TGetSnapshotResult_, error)
 	RestoreSnapshot(*base.Spec, []*festruct.TTableRef, string, *festruct.TGetSnapshotResult_) (*festruct.TRestoreSnapshotResult_, error)
-	GetMasterToken(*base.Spec) (string, error)
+	GetMasterToken(*base.Spec) (*festruct.TGetMasterTokenResult_, error)
 	GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error)
 	GetTableMeta(spec *base.Spec, tableIds []int64) (*festruct.TGetMetaResult_, error)
 	GetBackends(spec *base.Spec) (*festruct.TGetBackendMetaResult_, error)
@@ -270,13 +270,13 @@ func (rpc *FeRpc) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableR
 	return result.(*festruct.TRestoreSnapshotResult_), err
 }
 
-func (rpc *FeRpc) GetMasterToken(spec *base.Spec) (string, error) {
+func (rpc *FeRpc) GetMasterToken(spec *base.Spec) (*festruct.TGetMasterTokenResult_, error) {
 	// return rpc.masterClient.GetMasterToken(spec)
-	caller := func(client *singleFeClient) (any, error) {
+	caller := func(client *singleFeClient) (resultType, error) {
 		return client.GetMasterToken(spec)
 	}
-	result, err := rpc.callWithRetryAllClients(caller)
-	return result.(string), err
+	result, err := rpc.callWithMasterRedirect(caller)
+	return result.(*festruct.TGetMasterTokenResult_), err
 }
 
 func (rpc *FeRpc) GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error) {
@@ -570,7 +570,7 @@ func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, tableRefs []*festruc
 	}
 }
 
-func (rpc *singleFeClient) GetMasterToken(spec *base.Spec) (string, error) {
+func (rpc *singleFeClient) GetMasterToken(spec *base.Spec) (*festruct.TGetMasterTokenResult_, error) {
 	log.Debugf("GetMasterToken, spec: %s", spec)
 
 	client := rpc.client
@@ -582,9 +582,9 @@ func (rpc *singleFeClient) GetMasterToken(spec *base.Spec) (string, error) {
 
 	log.Debugf("GetMasterToken user: %s", *req.User)
 	if resp, err := client.GetMasterToken(context.Background(), req); err != nil {
-		return "", xerror.Wrapf(err, xerror.RPC, "GetMasterToken failed, req: %+v", req)
+		return nil, xerror.Wrapf(err, xerror.RPC, "GetMasterToken failed, req: %+v", req)
 	} else {
-		return resp.GetToken(), nil
+		return resp, nil
 	}
 }
 
