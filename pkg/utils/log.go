@@ -39,12 +39,11 @@ func InitLog() {
 
 	syncHook := NewHook()
 	log.AddHook(syncHook)
-	if level > log.InfoLevel {
-		// log.SetReportCaller(true), caller by filename
-		filenameHook := filename.NewHook()
-		filenameHook.Field = "line"
-		log.AddHook(filenameHook)
-	}
+
+	// log.SetReportCaller(true), caller by filename
+	filenameHook := filename.NewHook()
+	filenameHook.Field = "line"
+	log.AddHook(filenameHook)
 
 	if logFilename == "" {
 		log.SetOutput(os.Stdout)
