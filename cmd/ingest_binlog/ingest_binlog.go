@@ -108,12 +108,11 @@ func test_commit(t *base.Spec) {
 
 func test_ingest_be() {
 	backend := base.Backend{
-		Id:            10028,
-		Host:          "127.0.0.1",
-		HeartbeatPort: 9050,
-		BePort:        9060,
-		HttpPort:      8040,
-		BrpcPort:      8060,
+		Id:       10028,
+		Host:     "127.0.0.1",
+		BePort:   9060,
+		HttpPort: 8040,
+		BrpcPort: 8060,
 	}
 	rpcFactory := rpc.NewRpcFactory()
 	rpc, err := rpcFactory.NewBeRpc(&backend)
