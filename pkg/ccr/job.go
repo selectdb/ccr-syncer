@@ -818,7 +818,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			return xerror.Errorf(xerror.Normal, "rollback txn failed, status: %v", resp.Status)
 		}
 		log.Infof("rollback TxnId: %d resp: %v", txnId, resp)
-		j.progress.Done()
+		j.progress.Rollback()
 		return nil
 
 	default:
