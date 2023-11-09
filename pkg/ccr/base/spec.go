@@ -98,6 +98,11 @@ type Frontend struct {
 	Host       string `json:"host"`
 	Port       string `json:"port"`
 	ThriftPort string `json:"thrift_port"`
+	IsMaster   bool   `json:"is_master"`
+}
+
+func (f *Frontend) String() string {
+	return fmt.Sprintf("host: %s, port: %s, thrift_port: %s, is_master: %v", f.Host, f.Port, f.ThriftPort, f.IsMaster)
 }
 
 // TODO(Drogon): timeout config

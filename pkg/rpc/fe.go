@@ -2,11 +2,11 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
-	"github.com/cloudwego/kitex/client"
-	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	festruct "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/frontendservice"
 	feservice "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/frontendservice/frontendservice"
 	tstatus "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/status"
@@ -14,6 +14,9 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
+	"github.com/cloudwego/kitex/client"
+	"github.com/cloudwego/kitex/pkg/kerrors"
+	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -24,6 +27,32 @@ const (
 var (
 	ErrFeNotMasterCompatible = xerror.NewWithoutStack(xerror.FE, "not master compatible")
 )
+
+// canUseNextAddr means can try next addr, err is a connection error, not a method not found or other error
+func canUseNextAddr(err error) bool {
+	if errors.Is(err, kerrors.ErrNoConnection) {
+		return true
+	}
+	if errors.Is(err, kerrors.ErrNoResolver) {
+		return true
+	}
+	if errors.Is(err, kerrors.ErrNoDestAddress) {
+		return true
+	}
+
+	errMsg := err.Error()
+	if strings.Contains(errMsg, "connection has been closed by peer") {
+		return true
+	}
+	if strings.Contains(errMsg, "closed network connection") {
+		return true
+	}
+	if strings.Contains(errMsg, "connection reset by peer") {
+		return true
+	}
+
+	return false
+}
 
 type IFeRpc interface {
 	BeginTransaction(*base.Spec, string, []int64) (*festruct.TBeginTxnResult_, error)
@@ -62,6 +91,17 @@ func NewFeRpc(spec *base.Spec) (*FeRpc, error) {
 	cachedFeAddrs := make(map[string]bool)
 	for _, fe := range spec.Frontends {
 		addr := fmt.Sprintf("%s:%s", fe.Host, fe.ThriftPort)
+
+		if _, ok := cachedFeAddrs[addr]; ok {
+			continue
+		}
+
+		// for cached all spec clients
+		if client, err := newSingleFeClient(addr); err != nil {
+			log.Warnf("new fe client error: %v", err)
+		} else {
+			clients[client.Address()] = client
+		}
 		cachedFeAddrs[addr] = true
 	}
 
@@ -124,41 +164,129 @@ func (rpc *FeRpc) getCacheFeAddrs() map[string]bool {
 	return utils.CopyMap(rpc.cachedFeAddrs)
 }
 
-func (rpc *FeRpc) callWithMasterRedirect(caller callerType) (resultType, error) {
-	masterClient := rpc.getMasterClient()
+type retryWithMasterRedirectAndCachedClientsRpc struct {
+	rpc            *FeRpc
+	caller         callerType
+	notriedClients map[string]*singleFeClient
+}
 
-	result, err := caller(masterClient)
+type call0Result struct {
+	canUseNextAddr bool
+	resp           resultType
+	err            error
+	masterAddr     string
+}
+
+func (r *retryWithMasterRedirectAndCachedClientsRpc) call0(masterClient *singleFeClient) *call0Result {
+	caller := r.caller
+	resp, err := caller(masterClient)
+	log.Tracef("call resp: %+v, error: %+v", resp, err)
+
+	// Step 1: check error
 	if err != nil {
-		return result, err
+		if !canUseNextAddr(err) {
+			return &call0Result{
+				canUseNextAddr: false,
+				err:            xerror.Wrap(err, xerror.FE, "thrift error"),
+			}
+		} else {
+			log.Warnf("call error: %v, try next addr", err)
+			return &call0Result{
+				canUseNextAddr: true,
+				err:            xerror.Wrap(err, xerror.FE, "thrift error"),
+			}
+		}
 	}
 
-	if result.GetStatus().GetStatusCode() != tstatus.TStatusCode_NOT_MASTER {
-		return result, err
+	// Step 2: check need redirect
+	if resp.GetStatus().GetStatusCode() != tstatus.TStatusCode_NOT_MASTER {
+		return &call0Result{
+			canUseNextAddr: false,
+			resp:           resp,
+			err:            nil,
+		}
 	}
 
 	// no compatible for master
-	if !result.IsSetMasterAddress() {
-		return result, xerror.XPanicWrapf(ErrFeNotMasterCompatible, "fe addr [%s]", masterClient.Address())
+	if !resp.IsSetMasterAddress() {
+		err = xerror.XPanicWrapf(ErrFeNotMasterCompatible, "fe addr [%s]", masterClient.Address())
+		return &call0Result{
+			canUseNextAddr: true,
+			err:            err, // not nil
+		}
 	}
 
 	// switch to master
-	masterAddr := result.GetMasterAddress()
-	log.Infof("switch to master %s", masterAddr)
-	addr := fmt.Sprintf("%s:%d", masterAddr.Hostname, masterAddr.Port)
-
-	client, ok := rpc.getClient(addr)
-	if ok {
-		masterClient = client
-	} else {
-		masterClient, err = newSingleFeClient(addr)
-		if err != nil {
-			return nil, xerror.Wrapf(err, xerror.RPC, "NewFeClient error: %v", err)
-		}
+	masterAddr := resp.GetMasterAddress()
+	err = xerror.Errorf(xerror.FE, "addr [%s] is not master", masterAddr)
+	return &call0Result{
+		canUseNextAddr: true,
+		resp:           resp,
+		masterAddr:     fmt.Sprintf("%s:%d", masterAddr.Hostname, masterAddr.Port),
+		err:            err, // not nil
 	}
-	rpc.updateMasterClient(masterClient)
+}
 
-	// retry
-	return caller(masterClient)
+func (r *retryWithMasterRedirectAndCachedClientsRpc) call() (resultType, error) {
+	rpc := r.rpc
+	masterClient := rpc.masterClient
+
+	// Step 1: try master
+	result := r.call0(masterClient)
+	log.Tracef("call0 result: %+v", result)
+	if result.err == nil {
+		return result.resp, nil
+	}
+
+	// Step 2: check error, if can't use next addr, return error
+	// canUseNextAddr means can try next addr, contains ErrNoConnection, ErrNoResolver, ErrNoDestAddress => (feredirect && use next cached addr)
+	if !result.canUseNextAddr {
+		return nil, result.err
+	}
+
+	// Step 3: if set master addr, redirect to master
+	// redirect to master
+	if result.masterAddr != "" {
+		masterAddr := result.masterAddr
+		log.Infof("switch to master %s", masterAddr)
+
+		var err error
+		client, ok := rpc.getClient(masterAddr)
+		if ok {
+			masterClient = client
+		} else {
+			masterClient, err = newSingleFeClient(masterAddr)
+			if err != nil {
+				return nil, xerror.Wrapf(err, xerror.RPC, "NewFeClient [%s] error: %v", masterAddr, err)
+			}
+		}
+		rpc.updateMasterClient(masterClient)
+		return r.call()
+	}
+
+	// Step 4: try all cached fe clients
+	if r.notriedClients == nil {
+		r.notriedClients = rpc.getClients()
+	}
+	delete(r.notriedClients, masterClient.Address())
+	if len(r.notriedClients) == 0 {
+		return nil, result.err
+	}
+	// get first notried client
+	var client *singleFeClient
+	for _, client = range r.notriedClients {
+		break
+	}
+	// because call0 failed, so original masterClient is not master now, set client as masterClient for retry
+	rpc.updateMasterClient(client)
+	return r.call()
+}
+
+func (rpc *FeRpc) callWithMasterRedirect(caller callerType) (resultType, error) {
+	r := &retryWithMasterRedirectAndCachedClientsRpc{rpc: rpc,
+		caller: caller,
+	}
+	return r.call()
 }
 
 type retryCallerType func(client *singleFeClient) (any, error)
@@ -194,7 +322,7 @@ func (rpc *FeRpc) callWithRetryAllClients(caller retryCallerType) (result any, e
 
 		usedClientAddrs[addr] = true
 		if client, err := newSingleFeClient(addr); err != nil {
-			log.Errorf("new fe client error: %v", err)
+			log.Warnf("new fe client error: %v", err)
 		} else {
 			rpc.addClient(client)
 			if result, err = caller(client); err == nil {

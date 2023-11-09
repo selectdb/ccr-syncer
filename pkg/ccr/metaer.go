@@ -94,6 +94,7 @@ type Metaer interface {
 	GetPartitionRange(tableId int64, partitionId int64) (string, error)
 	GetPartitionIdByName(tableId int64, partitionName string) (int64, error)
 
+	GetFrontends() ([]*base.Frontend, error)
 	UpdateBackends() error
 	GetBackends() ([]*base.Backend, error)
 	GetBackendId(host, portStr string) (int64, error)

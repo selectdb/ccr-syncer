@@ -54,7 +54,7 @@ bash bin/start_syncer.sh --log_dir /path/to/ccr_syncer.log
 ```bash
 bash bin/start_syncer.sh --log_level info
 ```
-日志的格式如下，其中hook只会在`log_level > info`的时候打印：
+
 ```
 #        time         level        msg                  hooks
 [2023-07-18 16:30:18] TRACE This is trace type. ccrName=xxx line=xxx

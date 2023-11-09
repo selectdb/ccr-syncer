@@ -511,6 +511,53 @@ func (m *Meta) UpdateBackends() error {
 	return nil
 }
 
+func (m *Meta) GetFrontends() ([]*base.Frontend, error) {
+	db, err := m.Connect()
+	if err != nil {
+		return nil, err
+	}
+
+	query := "select Host, QueryPort, RpcPort, IsMaster from frontends();"
+	log.Debug(query)
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, xerror.Wrap(err, xerror.Normal, query)
+	}
+
+	frontends := make([]*base.Frontend, 0)
+	defer rows.Close()
+	for rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, query)
+		}
+
+		var fe base.Frontend
+		fe.Host, err = rowParser.GetString("Host")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, query)
+		}
+
+		fe.Port, err = rowParser.GetString("QueryPort")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, query)
+		}
+
+		fe.ThriftPort, err = rowParser.GetString("RpcPort")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, query)
+		}
+
+		fe.IsMaster, err = rowParser.GetBool("IsMaster")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, query)
+		}
+
+		frontends = append(frontends, &fe)
+	}
+	return frontends, nil
+}
+
 func (m *Meta) GetBackends() ([]*base.Backend, error) {
 	if len(m.Backends) > 0 {
 		backends := make([]*base.Backend, 0, len(m.Backends))

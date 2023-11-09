@@ -317,7 +317,8 @@ func (j *Job) fullSync() error {
 		}
 
 		if snapshotResp.Status.GetStatusCode() != tstatus.TStatusCode_OK {
-			log.Errorf("get snapshot failed, status: %v", snapshotResp.Status)
+			err = xerror.Errorf(xerror.FE, "get snapshot failed, status: %v", snapshotResp.Status)
+			return err
 		}
 
 		log.Debugf("job: %s", string(snapshotResp.GetJobInfo()))
@@ -1159,7 +1160,7 @@ func (j *Job) incrementalSync() error {
 
 		getBinlogResp, err := srcRpc.GetBinlog(src, commitSeq)
 		if err != nil {
-			return nil
+			return err
 		}
 		log.Debugf("resp: %v", getBinlogResp)
 
@@ -1434,6 +1435,16 @@ func (j *Job) Stop() {
 
 func (j *Job) FirstRun() error {
 	log.Info("first run check job", zap.String("src", j.Src.String()), zap.String("dest", j.Dest.String()))
+
+	// Step 0: get all frontends
+	if frontends, err := j.srcMeta.GetFrontends(); err != nil {
+		return err
+	} else {
+		for _, frontend := range frontends {
+			j.Src.Frontends = append(j.Src.Frontends, *frontend)
+		}
+	}
+	log.Debugf("src frontends %+v", j.Src.Frontends)
 
 	// Step 1: check fe and be binlog feature is enabled
 	if err := j.srcMeta.CheckBinlogFeature(); err != nil {
