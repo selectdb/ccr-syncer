@@ -68,9 +68,6 @@ type IFeRpc interface {
 	GetBackends(spec *base.Spec) (*festruct.TGetBackendMetaResult_, error)
 }
 
-// TODO(Drogon): Add addrs to cached all spec clients
-// now only cached master client, so callWithRetryAllClients only try with master clients(maybe not master now)
-// TODO(Drgon): cached no update clients & cachedFeAddrs for readOnly
 type FeRpc struct {
 	spec          *base.Spec
 	masterClient  *singleFeClient

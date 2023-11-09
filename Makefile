@@ -78,7 +78,6 @@ run_get_binlog: get_binlog
 
 .PHONY: sync_thrift
 ## sync_thrift : Sync thrift
-# TODO(Drogon): Add build thrift
 sync_thrift:
 	$(V)rsync -avc $(THRIFT_DIR)/ pkg/rpc/thrift/
 	$(V)$(MAKE) -C pkg/rpc/ gen_thrift
@@ -126,4 +125,4 @@ thrift_get_meta: bin
 .PHONY: todos
 ## todos : Print all todos
 todos:
-	$(V)grep -rnw . -e "TODO" | grep -v '^./rpc/thrift' | grep -v '^./.git'
+	$(V)grep -rnw . -e "TODO" | grep -v '^./pkg/rpc/thrift' | grep -v '^./.git'
