@@ -1315,7 +1315,7 @@ func (j *Job) run() {
 				break
 			}
 
-			log.Errorf("job sync failed, job: %s, err: %+v", j.Name, err)
+			log.Warnf("job sync failed, job: %s, err: %+v", j.Name, err)
 			panicError = j.handleError(err)
 		}
 	}

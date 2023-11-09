@@ -10,6 +10,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
+
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/zap"
 )
@@ -356,7 +357,7 @@ func (s *Spec) CreateTable(stmt string) error {
 }
 
 func (s *Spec) CheckDatabaseExists() (bool, error) {
-	log.Debug("check database exist by spec", zap.String("spec", s.String()))
+	log.Debugf("check database exist by spec: %s", s.String())
 	db, err := s.Connect()
 	if err != nil {
 		return false, err
