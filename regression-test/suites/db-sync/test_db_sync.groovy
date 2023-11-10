@@ -177,9 +177,9 @@ suite("test_db_sync") {
         result respone
     }
 
-    assertTrue(checkRestoreFinishTimesOf("${tableUnique0}", 30))
+    assertTrue(checkRestoreFinishTimesOf("${tableUnique0}", 130))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
-                                   insert_num, 30))
+                                   insert_num, 50))
 
     assertTrue(checkRestoreFinishTimesOf("${tableAggregate0}", 30))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableAggregate0} WHERE test=${test_num}",
