@@ -95,7 +95,7 @@ func NewFeRpc(spec *base.Spec) (*FeRpc, error) {
 
 		// for cached all spec clients
 		if client, err := newSingleFeClient(addr); err != nil {
-			log.Warnf("new fe client error: %v", err)
+			log.Warnf("new fe client error: %+v", err)
 		} else {
 			clients[client.Address()] = client
 		}
@@ -187,7 +187,7 @@ func (r *retryWithMasterRedirectAndCachedClientsRpc) call0(masterClient *singleF
 				err:            xerror.Wrap(err, xerror.FE, "thrift error"),
 			}
 		} else {
-			log.Warnf("call error: %v, try next addr", err)
+			log.Warnf("call error: %+v, try next addr", err)
 			return &call0Result{
 				canUseNextAddr: true,
 				err:            xerror.Wrap(err, xerror.FE, "thrift error"),
@@ -319,7 +319,7 @@ func (rpc *FeRpc) callWithRetryAllClients(caller retryCallerType) (result any, e
 
 		usedClientAddrs[addr] = true
 		if client, err := newSingleFeClient(addr); err != nil {
-			log.Warnf("new fe client error: %v", err)
+			log.Warnf("new fe client error: %+v", err)
 		} else {
 			rpc.addClient(client)
 			if result, err = caller(client); err == nil {
