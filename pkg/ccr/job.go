@@ -899,9 +899,23 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 	sql := createTable.Sql
 	log.Infof("createTableSql: %s", sql)
 	// HACK: for drop table
-	err = j.IDest.DbExec(sql)
+	if err := j.IDest.DbExec(sql); err != nil {
+		return err
+	}
 	j.srcMeta.GetTables()
 	j.destMeta.GetTables()
+	// TODO(Drogon): handle err recovery
+	var srcTableName string
+	srcTableName, err = j.srcMeta.GetTableNameById(createTable.TableId)
+	if err != nil {
+		return nil
+	}
+	destTableId, err := j.destMeta.GetTableId(srcTableName)
+	if err != nil {
+		return nil
+	}
+	j.progress.TableMapping[createTable.TableId] = destTableId
+	j.progress.Done()
 	return err
 }
 
