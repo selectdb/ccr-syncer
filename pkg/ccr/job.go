@@ -452,7 +452,7 @@ func (j *Job) fullSync() error {
 		switch j.SyncType {
 		case DBSync:
 			tableMapping := make(map[int64]int64)
-			for srcTableId, _ := range j.progress.TableCommitSeqMap {
+			for srcTableId := range j.progress.TableCommitSeqMap {
 				srcTableName, err := j.srcMeta.GetTableNameById(srcTableId)
 				if err != nil {
 					return err
@@ -1433,11 +1433,9 @@ func (j *Job) Stop() {
 	close(j.stop)
 }
 
-func (j *Job) FirstRun() error {
-	log.Info("first run check job", zap.String("src", j.Src.String()), zap.String("dest", j.Dest.String()))
-
-	// Step 0: get all frontends
+func (j *Job) updateFrontends() error {
 	if frontends, err := j.srcMeta.GetFrontends(); err != nil {
+		log.Warnf("get src frontends failed, fe: %+v", j.Src)
 		return err
 	} else {
 		for _, frontend := range frontends {
@@ -1445,6 +1443,27 @@ func (j *Job) FirstRun() error {
 		}
 	}
 	log.Debugf("src frontends %+v", j.Src.Frontends)
+
+	if frontends, err := j.destMeta.GetFrontends(); err != nil {
+		log.Warnf("get dest frontends failed, fe: %+v", j.Dest)
+		return err
+	} else {
+		for _, frontend := range frontends {
+			j.Dest.Frontends = append(j.Dest.Frontends, *frontend)
+		}
+	}
+	log.Debugf("dest frontends %+v", j.Dest.Frontends)
+
+	return nil
+}
+
+func (j *Job) FirstRun() error {
+	log.Info("first run check job", zap.String("src", j.Src.String()), zap.String("dest", j.Dest.String()))
+
+	// Step 0: get all frontends
+	if err := j.updateFrontends(); err != nil {
+		return err
+	}
 
 	// Step 1: check fe and be binlog feature is enabled
 	if err := j.srcMeta.CheckBinlogFeature(); err != nil {
