@@ -488,7 +488,7 @@ func (rpc *singleFeClient) Address() string {
 //	    11: optional string token
 //	}
 func (rpc *singleFeClient) BeginTransaction(spec *base.Spec, label string, tableIds []int64) (*festruct.TBeginTxnResult_, error) {
-	log.Debugf("BeginTransaction spec: %s, label: %s, tableIds: %v", spec, label, tableIds)
+	log.Debugf("Call BeginTransaction, addr: %s, spec: %s, label: %s, tableIds: %v", rpc.Address(), spec, label, tableIds)
 
 	client := rpc.client
 	req := &festruct.TBeginTxnRequest{
@@ -520,7 +520,7 @@ func (rpc *singleFeClient) BeginTransaction(spec *base.Spec, label string, table
 //	    12: optional i64 db_id
 //	}
 func (rpc *singleFeClient) CommitTransaction(spec *base.Spec, txnId int64, commitInfos []*festruct_types.TTabletCommitInfo) (*festruct.TCommitTxnResult_, error) {
-	log.Debugf("CommitTransaction spec: %s, txnId: %d, commitInfos: %v", spec, txnId, commitInfos)
+	log.Debugf("Call CommitTransaction, addr: %s spec: %s, txnId: %d, commitInfos: %v", rpc.Address(), spec, txnId, commitInfos)
 
 	client := rpc.client
 	req := &festruct.TCommitTxnRequest{}
@@ -549,7 +549,7 @@ func (rpc *singleFeClient) CommitTransaction(spec *base.Spec, txnId int64, commi
 //	    12: optional i64 db_id
 //	}
 func (rpc *singleFeClient) RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.TRollbackTxnResult_, error) {
-	log.Debugf("RollbackTransaction spec: %s, txnId: %d", spec, txnId)
+	log.Debugf("Call RollbackTransaction, addr: %s, spec: %s, txnId: %d", rpc.Address(), spec, txnId)
 
 	client := rpc.client
 	req := &festruct.TRollbackTxnRequest{}
@@ -574,7 +574,7 @@ func (rpc *singleFeClient) RollbackTransaction(spec *base.Spec, txnId int64) (*f
 //	    8: required i64 prev_commit_seq
 //	}
 func (rpc *singleFeClient) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogResult_, error) {
-	log.Debugf("GetBinlog, spec: %s, commit seq: %d", spec, commitSeq)
+	log.Debugf("Call GetBinlog, addr: %s, spec: %s, commit seq: %d", rpc.Address(), spec, commitSeq)
 
 	client := rpc.client
 	req := &festruct.TGetBinlogRequest{
@@ -599,7 +599,7 @@ func (rpc *singleFeClient) GetBinlog(spec *base.Spec, commitSeq int64) (*festruc
 }
 
 func (rpc *singleFeClient) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogLagResult_, error) {
-	log.Debugf("GetBinlogLag, spec: %s, commit seq: %d", spec, commitSeq)
+	log.Debugf("Call GetBinlogLag, addr: %s, spec: %s, commit seq: %d", rpc.Address(), spec, commitSeq)
 
 	client := rpc.client
 	req := &festruct.TGetBinlogRequest{
@@ -636,7 +636,7 @@ func (rpc *singleFeClient) GetBinlogLag(spec *base.Spec, commitSeq int64) (*fest
 //	    9: optional TSnapshotType snapshot_type
 //	}
 func (rpc *singleFeClient) GetSnapshot(spec *base.Spec, labelName string) (*festruct.TGetSnapshotResult_, error) {
-	log.Debugf("GetSnapshot %s, spec: %s", labelName, spec)
+	log.Debugf("Call GetSnapshot, addr: %s, spec: %s, label: %s", rpc.Address(), spec, labelName)
 
 	client := rpc.client
 	snapshotType := festruct.TSnapshotType_LOCAL
@@ -676,7 +676,7 @@ func (rpc *singleFeClient) GetSnapshot(spec *base.Spec, labelName string) (*fest
 // Restore Snapshot rpc
 func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableRef, label string, snapshotResult *festruct.TGetSnapshotResult_) (*festruct.TRestoreSnapshotResult_, error) {
 	// NOTE: ignore meta, because it's too large
-	log.Debugf("RestoreSnapshot, spec: %s", spec)
+	log.Debugf("Call RestoreSnapshot, addr: %s, spec: %s", rpc.Address(), spec)
 
 	client := rpc.client
 	repoName := "__keep_on_local__"
@@ -704,7 +704,7 @@ func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, tableRefs []*festruc
 }
 
 func (rpc *singleFeClient) GetMasterToken(spec *base.Spec) (*festruct.TGetMasterTokenResult_, error) {
-	log.Debugf("GetMasterToken, spec: %s", spec)
+	log.Debugf("Call GetMasterToken, addr: %s, spec: %s", rpc.Address(), spec)
 
 	client := rpc.client
 	req := &festruct.TGetMasterTokenRequest{
@@ -722,7 +722,7 @@ func (rpc *singleFeClient) GetMasterToken(spec *base.Spec) (*festruct.TGetMaster
 }
 
 func (rpc *singleFeClient) GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error) {
-	log.Debugf("GetMetaDB")
+	log.Debugf("GetMetaDb, addr: %s, spec: %s", rpc.Address(), spec)
 
 	client := rpc.client
 	reqDb := &festruct.TGetMetaDB{}
@@ -742,7 +742,7 @@ func (rpc *singleFeClient) GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_
 }
 
 func (rpc *singleFeClient) GetTableMeta(spec *base.Spec, tableIds []int64) (*festruct.TGetMetaResult_, error) {
-	log.Debugf("GetMetaTable, addr: %s, tableIds: %v", rpc.addr, tableIds)
+	log.Debugf("GetMetaTable, addr: %s, tableIds: %v", rpc.Address(), tableIds)
 
 	client := rpc.client
 
@@ -771,7 +771,7 @@ func (rpc *singleFeClient) GetTableMeta(spec *base.Spec, tableIds []int64) (*fes
 }
 
 func (rpc *singleFeClient) GetBackends(spec *base.Spec) (*festruct.TGetBackendMetaResult_, error) {
-	log.Debugf("GetBackends, addr: %s, spec: %s", rpc.addr, spec)
+	log.Debugf("GetBackends, addr: %s, spec: %s", rpc.Address(), spec)
 
 	client := rpc.client
 	req := &festruct.TGetBackendMetaRequest{
