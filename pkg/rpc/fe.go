@@ -332,13 +332,21 @@ func (rpc *FeRpc) callWithRetryAllClients(caller retryCallerType) (result any, e
 	return result, err
 }
 
+func convertResult[T any](result any, err error) (*T, error) {
+	if result == nil {
+		return nil, err
+	}
+
+	return result.(*T), err
+}
+
 func (rpc *FeRpc) BeginTransaction(spec *base.Spec, label string, tableIds []int64) (*festruct.TBeginTxnResult_, error) {
 	// return rpc.masterClient.BeginTransaction(spec, label, tableIds)
 	caller := func(client *singleFeClient) (resultType, error) {
 		return client.BeginTransaction(spec, label, tableIds)
 	}
 	result, err := rpc.callWithMasterRedirect(caller)
-	return result.(*festruct.TBeginTxnResult_), err
+	return convertResult[festruct.TBeginTxnResult_](result, err)
 }
 
 func (rpc *FeRpc) CommitTransaction(spec *base.Spec, txnId int64, commitInfos []*festruct_types.TTabletCommitInfo) (*festruct.TCommitTxnResult_, error) {
@@ -347,7 +355,7 @@ func (rpc *FeRpc) CommitTransaction(spec *base.Spec, txnId int64, commitInfos []
 		return client.CommitTransaction(spec, txnId, commitInfos)
 	}
 	result, err := rpc.callWithMasterRedirect(caller)
-	return result.(*festruct.TCommitTxnResult_), err
+	return convertResult[festruct.TCommitTxnResult_](result, err)
 }
 
 func (rpc *FeRpc) RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.TRollbackTxnResult_, error) {
@@ -356,7 +364,7 @@ func (rpc *FeRpc) RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.T
 		return client.RollbackTransaction(spec, txnId)
 	}
 	result, err := rpc.callWithMasterRedirect(caller)
-	return result.(*festruct.TRollbackTxnResult_), err
+	return convertResult[festruct.TRollbackTxnResult_](result, err)
 }
 
 func (rpc *FeRpc) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogResult_, error) {
@@ -365,7 +373,7 @@ func (rpc *FeRpc) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGetBin
 		return client.GetBinlog(spec, commitSeq)
 	}
 	result, err := rpc.callWithRetryAllClients(caller)
-	return result.(*festruct.TGetBinlogResult_), err
+	return convertResult[festruct.TGetBinlogResult_](result, err)
 }
 
 func (rpc *FeRpc) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogLagResult_, error) {
@@ -374,7 +382,7 @@ func (rpc *FeRpc) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.TGet
 		return client.GetBinlogLag(spec, commitSeq)
 	}
 	result, err := rpc.callWithRetryAllClients(caller)
-	return result.(*festruct.TGetBinlogLagResult_), err
+	return convertResult[festruct.TGetBinlogLagResult_](result, err)
 }
 
 func (rpc *FeRpc) GetSnapshot(spec *base.Spec, labelName string) (*festruct.TGetSnapshotResult_, error) {
@@ -383,7 +391,7 @@ func (rpc *FeRpc) GetSnapshot(spec *base.Spec, labelName string) (*festruct.TGet
 		return client.GetSnapshot(spec, labelName)
 	}
 	result, err := rpc.callWithMasterRedirect(caller)
-	return result.(*festruct.TGetSnapshotResult_), err
+	return convertResult[festruct.TGetSnapshotResult_](result, err)
 }
 
 func (rpc *FeRpc) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableRef, label string, snapshotResult *festruct.TGetSnapshotResult_) (*festruct.TRestoreSnapshotResult_, error) {
@@ -392,7 +400,7 @@ func (rpc *FeRpc) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableR
 		return client.RestoreSnapshot(spec, tableRefs, label, snapshotResult)
 	}
 	result, err := rpc.callWithMasterRedirect(caller)
-	return result.(*festruct.TRestoreSnapshotResult_), err
+	return convertResult[festruct.TRestoreSnapshotResult_](result, err)
 }
 
 func (rpc *FeRpc) GetMasterToken(spec *base.Spec) (*festruct.TGetMasterTokenResult_, error) {
@@ -401,7 +409,7 @@ func (rpc *FeRpc) GetMasterToken(spec *base.Spec) (*festruct.TGetMasterTokenResu
 		return client.GetMasterToken(spec)
 	}
 	result, err := rpc.callWithMasterRedirect(caller)
-	return result.(*festruct.TGetMasterTokenResult_), err
+	return convertResult[festruct.TGetMasterTokenResult_](result, err)
 }
 
 func (rpc *FeRpc) GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error) {
@@ -409,7 +417,7 @@ func (rpc *FeRpc) GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error) 
 		return client.GetDbMeta(spec)
 	}
 	result, err := rpc.callWithRetryAllClients(caller)
-	return result.(*festruct.TGetMetaResult_), err
+	return convertResult[festruct.TGetMetaResult_](result, err)
 }
 
 func (rpc *FeRpc) GetTableMeta(spec *base.Spec, tableIds []int64) (*festruct.TGetMetaResult_, error) {
@@ -417,7 +425,7 @@ func (rpc *FeRpc) GetTableMeta(spec *base.Spec, tableIds []int64) (*festruct.TGe
 		return client.GetTableMeta(spec, tableIds)
 	}
 	result, err := rpc.callWithRetryAllClients(caller)
-	return result.(*festruct.TGetMetaResult_), err
+	return convertResult[festruct.TGetMetaResult_](result, err)
 }
 
 func (rpc *FeRpc) GetBackends(spec *base.Spec) (*festruct.TGetBackendMetaResult_, error) {
@@ -425,7 +433,7 @@ func (rpc *FeRpc) GetBackends(spec *base.Spec) (*festruct.TGetBackendMetaResult_
 		return client.GetBackends(spec)
 	}
 	result, err := rpc.callWithRetryAllClients(caller)
-	return result.(*festruct.TGetBackendMetaResult_), err
+	return convertResult[festruct.TGetBackendMetaResult_](result, err)
 }
 
 type Request interface {
@@ -734,7 +742,7 @@ func (rpc *singleFeClient) GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_
 }
 
 func (rpc *singleFeClient) GetTableMeta(spec *base.Spec, tableIds []int64) (*festruct.TGetMetaResult_, error) {
-	log.Debugf("GetMetaTable tableIds: %v", tableIds)
+	log.Debugf("GetMetaTable, addr: %s, tableIds: %v", rpc.addr, tableIds)
 
 	client := rpc.client
 
@@ -763,7 +771,7 @@ func (rpc *singleFeClient) GetTableMeta(spec *base.Spec, tableIds []int64) (*fes
 }
 
 func (rpc *singleFeClient) GetBackends(spec *base.Spec) (*festruct.TGetBackendMetaResult_, error) {
-	log.Debugf("GetBackends, spec: %s", spec)
+	log.Debugf("GetBackends, addr: %s, spec: %s", rpc.addr, spec)
 
 	client := rpc.client
 	req := &festruct.TGetBackendMetaRequest{
