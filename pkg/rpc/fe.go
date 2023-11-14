@@ -66,12 +66,14 @@ type IFeRpc interface {
 	GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error)
 	GetTableMeta(spec *base.Spec, tableIds []int64) (*festruct.TGetMetaResult_, error)
 	GetBackends(spec *base.Spec) (*festruct.TGetBackendMetaResult_, error)
+
+	Address() string
 }
 
 type FeRpc struct {
 	spec          *base.Spec
-	masterClient  *singleFeClient
-	clients       map[string]*singleFeClient
+	masterClient  IFeRpc
+	clients       map[string]IFeRpc
 	cachedFeAddrs map[string]bool
 	lock          sync.RWMutex // for get client
 }
@@ -83,7 +85,7 @@ func NewFeRpc(spec *base.Spec) (*FeRpc, error) {
 		return nil, xerror.Wrapf(err, xerror.RPC, "NewFeClient error: %v", err)
 	}
 
-	clients := make(map[string]*singleFeClient)
+	clients := make(map[string]IFeRpc)
 	clients[client.Address()] = client
 	cachedFeAddrs := make(map[string]bool)
 	for _, fe := range spec.Frontends {
@@ -110,21 +112,37 @@ func NewFeRpc(spec *base.Spec) (*FeRpc, error) {
 	}, nil
 }
 
+// get all fe addrs
+// "[masterAddr],otherCachedFeAddrs" => "[127.0.0.1:1000],127.0.1:1001,127.0.1:1002"
+func (rpc *FeRpc) Address() string {
+	cachedFeAddrs := rpc.getCacheFeAddrs()
+	masterClient := rpc.getMasterClient()
+
+	var addrBuilder strings.Builder
+	addrBuilder.WriteString(fmt.Sprintf("[%s]", masterClient.Address()))
+	delete(cachedFeAddrs, masterClient.Address())
+	for addr := range cachedFeAddrs {
+		addrBuilder.WriteString(",")
+		addrBuilder.WriteString(addr)
+	}
+	return addrBuilder.String()
+}
+
 type resultType interface {
 	GetStatus() *tstatus.TStatus
 	IsSetMasterAddress() bool
 	GetMasterAddress() *festruct_types.TNetworkAddress
 }
-type callerType func(client *singleFeClient) (resultType, error)
+type callerType func(client IFeRpc) (resultType, error)
 
-func (rpc *FeRpc) getMasterClient() *singleFeClient {
+func (rpc *FeRpc) getMasterClient() IFeRpc {
 	rpc.lock.RLock()
 	defer rpc.lock.RUnlock()
 
 	return rpc.masterClient
 }
 
-func (rpc *FeRpc) updateMasterClient(masterClient *singleFeClient) {
+func (rpc *FeRpc) updateMasterClient(masterClient IFeRpc) {
 	rpc.lock.Lock()
 	defer rpc.lock.Unlock()
 
@@ -132,7 +150,7 @@ func (rpc *FeRpc) updateMasterClient(masterClient *singleFeClient) {
 	rpc.masterClient = masterClient
 }
 
-func (rpc *FeRpc) getClient(addr string) (*singleFeClient, bool) {
+func (rpc *FeRpc) getClient(addr string) (IFeRpc, bool) {
 	rpc.lock.RLock()
 	defer rpc.lock.RUnlock()
 
@@ -140,14 +158,14 @@ func (rpc *FeRpc) getClient(addr string) (*singleFeClient, bool) {
 	return client, ok
 }
 
-func (rpc *FeRpc) addClient(client *singleFeClient) {
+func (rpc *FeRpc) addClient(client IFeRpc) {
 	rpc.lock.Lock()
 	defer rpc.lock.Unlock()
 
 	rpc.clients[client.Address()] = client
 }
 
-func (rpc *FeRpc) getClients() map[string]*singleFeClient {
+func (rpc *FeRpc) getClients() map[string]IFeRpc {
 	rpc.lock.RLock()
 	defer rpc.lock.RUnlock()
 
@@ -164,7 +182,7 @@ func (rpc *FeRpc) getCacheFeAddrs() map[string]bool {
 type retryWithMasterRedirectAndCachedClientsRpc struct {
 	rpc            *FeRpc
 	caller         callerType
-	notriedClients map[string]*singleFeClient
+	notriedClients map[string]IFeRpc
 }
 
 type call0Result struct {
@@ -174,7 +192,7 @@ type call0Result struct {
 	masterAddr     string
 }
 
-func (r *retryWithMasterRedirectAndCachedClientsRpc) call0(masterClient *singleFeClient) *call0Result {
+func (r *retryWithMasterRedirectAndCachedClientsRpc) call0(masterClient IFeRpc) *call0Result {
 	caller := r.caller
 	resp, err := caller(masterClient)
 	log.Tracef("call resp: %+v, error: %+v", resp, err)
@@ -270,7 +288,7 @@ func (r *retryWithMasterRedirectAndCachedClientsRpc) call() (resultType, error) 
 		return nil, result.err
 	}
 	// get first notried client
-	var client *singleFeClient
+	var client IFeRpc
 	for _, client = range r.notriedClients {
 		break
 	}
@@ -286,7 +304,7 @@ func (rpc *FeRpc) callWithMasterRedirect(caller callerType) (resultType, error) 
 	return r.call()
 }
 
-type retryCallerType func(client *singleFeClient) (any, error)
+type retryCallerType func(client IFeRpc) (any, error)
 
 func (rpc *FeRpc) callWithRetryAllClients(caller retryCallerType) (result any, err error) {
 	client := rpc.getMasterClient()
@@ -342,7 +360,7 @@ func convertResult[T any](result any, err error) (*T, error) {
 
 func (rpc *FeRpc) BeginTransaction(spec *base.Spec, label string, tableIds []int64) (*festruct.TBeginTxnResult_, error) {
 	// return rpc.masterClient.BeginTransaction(spec, label, tableIds)
-	caller := func(client *singleFeClient) (resultType, error) {
+	caller := func(client IFeRpc) (resultType, error) {
 		return client.BeginTransaction(spec, label, tableIds)
 	}
 	result, err := rpc.callWithMasterRedirect(caller)
@@ -351,7 +369,7 @@ func (rpc *FeRpc) BeginTransaction(spec *base.Spec, label string, tableIds []int
 
 func (rpc *FeRpc) CommitTransaction(spec *base.Spec, txnId int64, commitInfos []*festruct_types.TTabletCommitInfo) (*festruct.TCommitTxnResult_, error) {
 	// return rpc.masterClient.CommitTransaction(spec, txnId, commitInfos)
-	caller := func(client *singleFeClient) (resultType, error) {
+	caller := func(client IFeRpc) (resultType, error) {
 		return client.CommitTransaction(spec, txnId, commitInfos)
 	}
 	result, err := rpc.callWithMasterRedirect(caller)
@@ -360,7 +378,7 @@ func (rpc *FeRpc) CommitTransaction(spec *base.Spec, txnId int64, commitInfos []
 
 func (rpc *FeRpc) RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.TRollbackTxnResult_, error) {
 	// return rpc.masterClient.RollbackTransaction(spec, txnId)
-	caller := func(client *singleFeClient) (resultType, error) {
+	caller := func(client IFeRpc) (resultType, error) {
 		return client.RollbackTransaction(spec, txnId)
 	}
 	result, err := rpc.callWithMasterRedirect(caller)
@@ -369,7 +387,7 @@ func (rpc *FeRpc) RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.T
 
 func (rpc *FeRpc) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogResult_, error) {
 	// return rpc.masterClient.GetBinlog(spec, commitSeq)
-	caller := func(client *singleFeClient) (any, error) {
+	caller := func(client IFeRpc) (any, error) {
 		return client.GetBinlog(spec, commitSeq)
 	}
 	result, err := rpc.callWithRetryAllClients(caller)
@@ -378,7 +396,7 @@ func (rpc *FeRpc) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGetBin
 
 func (rpc *FeRpc) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogLagResult_, error) {
 	// return rpc.masterClient.GetBinlogLag(spec, commitSeq)
-	caller := func(client *singleFeClient) (any, error) {
+	caller := func(client IFeRpc) (any, error) {
 		return client.GetBinlogLag(spec, commitSeq)
 	}
 	result, err := rpc.callWithRetryAllClients(caller)
@@ -387,7 +405,7 @@ func (rpc *FeRpc) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.TGet
 
 func (rpc *FeRpc) GetSnapshot(spec *base.Spec, labelName string) (*festruct.TGetSnapshotResult_, error) {
 	// return rpc.masterClient.GetSnapshot(spec, labelName)
-	caller := func(client *singleFeClient) (resultType, error) {
+	caller := func(client IFeRpc) (resultType, error) {
 		return client.GetSnapshot(spec, labelName)
 	}
 	result, err := rpc.callWithMasterRedirect(caller)
@@ -396,7 +414,7 @@ func (rpc *FeRpc) GetSnapshot(spec *base.Spec, labelName string) (*festruct.TGet
 
 func (rpc *FeRpc) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableRef, label string, snapshotResult *festruct.TGetSnapshotResult_) (*festruct.TRestoreSnapshotResult_, error) {
 	// return rpc.masterClient.RestoreSnapshot(spec, tableRefs, label, snapshotResult)
-	caller := func(client *singleFeClient) (resultType, error) {
+	caller := func(client IFeRpc) (resultType, error) {
 		return client.RestoreSnapshot(spec, tableRefs, label, snapshotResult)
 	}
 	result, err := rpc.callWithMasterRedirect(caller)
@@ -405,7 +423,7 @@ func (rpc *FeRpc) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableR
 
 func (rpc *FeRpc) GetMasterToken(spec *base.Spec) (*festruct.TGetMasterTokenResult_, error) {
 	// return rpc.masterClient.GetMasterToken(spec)
-	caller := func(client *singleFeClient) (resultType, error) {
+	caller := func(client IFeRpc) (resultType, error) {
 		return client.GetMasterToken(spec)
 	}
 	result, err := rpc.callWithMasterRedirect(caller)
@@ -413,7 +431,7 @@ func (rpc *FeRpc) GetMasterToken(spec *base.Spec) (*festruct.TGetMasterTokenResu
 }
 
 func (rpc *FeRpc) GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error) {
-	caller := func(client *singleFeClient) (any, error) {
+	caller := func(client IFeRpc) (any, error) {
 		return client.GetDbMeta(spec)
 	}
 	result, err := rpc.callWithRetryAllClients(caller)
@@ -421,7 +439,7 @@ func (rpc *FeRpc) GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error) 
 }
 
 func (rpc *FeRpc) GetTableMeta(spec *base.Spec, tableIds []int64) (*festruct.TGetMetaResult_, error) {
-	caller := func(client *singleFeClient) (any, error) {
+	caller := func(client IFeRpc) (any, error) {
 		return client.GetTableMeta(spec, tableIds)
 	}
 	result, err := rpc.callWithRetryAllClients(caller)
@@ -429,7 +447,7 @@ func (rpc *FeRpc) GetTableMeta(spec *base.Spec, tableIds []int64) (*festruct.TGe
 }
 
 func (rpc *FeRpc) GetBackends(spec *base.Spec) (*festruct.TGetBackendMetaResult_, error) {
-	caller := func(client *singleFeClient) (any, error) {
+	caller := func(client IFeRpc) (any, error) {
 		return client.GetBackends(spec)
 	}
 	result, err := rpc.callWithRetryAllClients(caller)
