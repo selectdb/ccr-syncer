@@ -22,6 +22,7 @@ func TestJobProgress_MarshalJSON(t *testing.T) {
 		SubSyncState      SubSyncState
 		PrevCommitSeq     int64
 		CommitSeq         int64
+		TableMapping      map[int64]int64
 		TransactionId     int64
 		TableCommitSeqMap map[int64]int64
 		InMemoryData      any
@@ -46,7 +47,7 @@ func TestJobProgress_MarshalJSON(t *testing.T) {
 				InMemoryData:      nil,
 				PersistData:       "test-data",
 			},
-			want:    []byte(`{"job_name":"test-job","sync_state":500,"sub_sync_state":{"state":0,"binlog_type":-1},"prev_commit_seq":0,"commit_seq":1,"table_commit_seq_map":{"1":2},"data":"test-data"}`),
+			want:    []byte(`{"job_name":"test-job","sync_state":500,"sub_sync_state":{"state":0,"binlog_type":-1},"prev_commit_seq":0,"commit_seq":1,"table_mapping":null,"table_commit_seq_map":{"1":2},"data":"test-data"}`),
 			wantErr: false,
 		},
 	}

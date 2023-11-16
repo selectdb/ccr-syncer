@@ -15,6 +15,8 @@ import (
 	ttypes "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/types"
 	"github.com/selectdb/ccr_syncer/pkg/test_util"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
+
+	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/btree"
 	"go.uber.org/mock/gomock"
 )
@@ -201,7 +203,6 @@ func newPartitionMeta(partitionId int64) *PartitionMeta {
 	return &PartitionMeta{
 		Id:           partitionId,
 		Name:         fmt.Sprint(partitionId),
-		Key:          fmt.Sprint(partitionId),
 		Range:        fmt.Sprint(partitionId),
 		IndexIdMap:   make(map[int64]*IndexMeta),
 		IndexNameMap: make(map[string]*IndexMeta),
@@ -234,12 +235,11 @@ func newBackendMap(backendNum int) map[int64]*base.Backend {
 	for i := 0; i < backendNum; i++ {
 		backendId := backendBaseId + int64(i)
 		backendMap[backendId] = &base.Backend{
-			Id:            backendId,
-			Host:          "localhost",
-			HeartbeatPort: 0xbeef,
-			BePort:        0xbeef,
-			HttpPort:      0xbeef,
-			BrpcPort:      0xbeef,
+			Id:       backendId,
+			Host:     "localhost",
+			BePort:   0xbeef,
+			HttpPort: 0xbeef,
+			BrpcPort: 0xbeef,
 		}
 	}
 
@@ -964,9 +964,7 @@ func TestHandleCreateTable(t *testing.T) {
 	// init job
 	ctx := NewJobContext(dbSrcSpec, dbDestSpec, db, factory)
 	job, err := NewJobFromService("Test", ctx)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.Nil(t, err)
 
 	// init binlog
 	tableIds := make([]int64, 0, 1)
