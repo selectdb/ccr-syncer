@@ -739,37 +739,8 @@ func (rpc *singleFeClient) GetMasterToken(spec *base.Spec) (*festruct.TGetMaster
 	}
 }
 
-func (rpc *singleFeClient) GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error) {
-	log.Debugf("GetMetaDb, addr: %s, spec: %s", rpc.Address(), spec)
-
+func (rpc *singleFeClient) getMeta(spec *base.Spec, reqTables []*festruct.TGetMetaTable) (*festruct.TGetMetaResult_, error) {
 	client := rpc.client
-	reqDb := &festruct.TGetMetaDB{}
-	reqDb.Id = &spec.DbId
-
-	req := &festruct.TGetMetaRequest{
-		User:   &spec.User,
-		Passwd: &spec.Password,
-		Db:     reqDb,
-	}
-
-	if resp, err := client.GetMeta(context.Background(), req); err != nil {
-		return nil, xerror.Wrapf(err, xerror.RPC, "GetMeta failed, req: %+v", req)
-	} else {
-		return resp, nil
-	}
-}
-
-func (rpc *singleFeClient) GetTableMeta(spec *base.Spec, tableIds []int64) (*festruct.TGetMetaResult_, error) {
-	log.Debugf("GetMetaTable, addr: %s, tableIds: %v", rpc.Address(), tableIds)
-
-	client := rpc.client
-
-	reqTables := make([]*festruct.TGetMetaTable, 0, len(tableIds))
-	for _, tableId := range tableIds {
-		reqTable := festruct.NewTGetMetaTable()
-		reqTable.Id = &tableId
-		reqTables = append(reqTables, reqTable)
-	}
 
 	reqDb := festruct.NewTGetMetaDB() // festruct.NewTGetMetaTable()
 	reqDb.Id = &spec.DbId
@@ -786,6 +757,25 @@ func (rpc *singleFeClient) GetTableMeta(spec *base.Spec, tableIds []int64) (*fes
 	} else {
 		return resp, nil
 	}
+}
+
+func (rpc *singleFeClient) GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error) {
+	log.Debugf("GetMetaDb, addr: %s, spec: %s", rpc.Address(), spec)
+
+	return rpc.getMeta(spec, nil)
+}
+
+func (rpc *singleFeClient) GetTableMeta(spec *base.Spec, tableIds []int64) (*festruct.TGetMetaResult_, error) {
+	log.Debugf("GetMetaTable, addr: %s, tableIds: %v", rpc.Address(), tableIds)
+
+	reqTables := make([]*festruct.TGetMetaTable, 0, len(tableIds))
+	for _, tableId := range tableIds {
+		reqTable := festruct.NewTGetMetaTable()
+		reqTable.Id = &tableId
+		reqTables = append(reqTables, reqTable)
+	}
+
+	return rpc.getMeta(spec, reqTables)
 }
 
 func (rpc *singleFeClient) GetBackends(spec *base.Spec) (*festruct.TGetBackendMetaResult_, error) {
