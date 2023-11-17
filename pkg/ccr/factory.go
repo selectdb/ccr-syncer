@@ -9,12 +9,14 @@ type Factory struct {
 	rpc.IRpcFactory
 	MetaerFactory
 	base.SpecerFactory
+	ThriftMetaFactory
 }
 
-func NewFactory(rpcFactory rpc.IRpcFactory, metaFactory MetaerFactory, ISpecFactory base.SpecerFactory) *Factory {
+func NewFactory(rpcFactory rpc.IRpcFactory, metaFactory MetaerFactory, ISpecFactory base.SpecerFactory, thriftMetaFactory ThriftMetaFactory) *Factory {
 	return &Factory{
-		IRpcFactory:   rpcFactory,
-		MetaerFactory: metaFactory,
-		SpecerFactory: ISpecFactory,
+		IRpcFactory:       rpcFactory,
+		MetaerFactory:     metaFactory,
+		SpecerFactory:     ISpecFactory,
+		ThriftMetaFactory: thriftMetaFactory,
 	}
 }

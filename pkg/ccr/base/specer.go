@@ -13,6 +13,7 @@ const (
 	httpNotFoundEvent SpecEvent = 1
 )
 
+// this interface is used to for spec operation, treat it as a mysql dao
 type Specer interface {
 	Valid() error
 	Connect() (*sql.DB, error)

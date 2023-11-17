@@ -82,7 +82,7 @@ func main() {
 	}
 
 	// Step 2: init factory
-	factory := ccr.NewFactory(rpc.NewRpcFactory(), ccr.NewMetaFactory(), base.NewSpecerFactory())
+	factory := ccr.NewFactory(rpc.NewRpcFactory(), ccr.NewMetaFactory(), base.NewSpecerFactory(), ccr.DefaultThriftMetaFactory)
 
 	// Step 3: create job manager && http service && checker
 	hostInfo := fmt.Sprintf("%s:%d", syncer.Host, syncer.Port)

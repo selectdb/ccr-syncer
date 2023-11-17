@@ -10,8 +10,19 @@ import (
 	"github.com/tidwall/btree"
 )
 
-type ThriftMeta struct {
-	meta *Meta
+var (
+	DefaultThriftMetaFactory ThriftMetaFactory = &defaultThriftMetaFactory{}
+)
+
+type ThriftMetaFactory interface {
+	NewThriftMeta(spec *base.Spec, rpcFactory rpc.IRpcFactory, tableIds []int64) (*ThriftMeta, error)
+}
+
+type defaultThriftMetaFactory struct {
+}
+
+func (dtmf *defaultThriftMetaFactory) NewThriftMeta(spec *base.Spec, rpcFactory rpc.IRpcFactory, tableIds []int64) (*ThriftMeta, error) {
+	return NewThriftMeta(spec, rpcFactory, tableIds)
 }
 
 func NewThriftMeta(spec *base.Spec, rpcFactory rpc.IRpcFactory, tableIds []int64) (*ThriftMeta, error) {
@@ -122,6 +133,10 @@ func NewThriftMeta(spec *base.Spec, rpcFactory rpc.IRpcFactory, tableIds []int64
 	return &ThriftMeta{
 		meta: meta,
 	}, nil
+}
+
+type ThriftMeta struct {
+	meta *Meta
 }
 
 func (tm *ThriftMeta) GetTablets(tableId, partitionId, indexId int64) (*btree.Map[int64, *TabletMeta], error) {

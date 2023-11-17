@@ -188,7 +188,9 @@ func NewIngestContext(txnId int64, tableRecords []*record.TableRecord, tableMapp
 }
 
 type IngestBinlogJob struct {
-	ccrJob       *Job // ccr job
+	ccrJob  *Job // ccr job
+	factory *Factory
+
 	tableMapping map[int64]int64
 	srcMeta      IngestBinlogMetaer
 	destMeta     IngestBinlogMetaer
@@ -217,7 +219,9 @@ func NewIngestBinlogJob(ctx context.Context, ccrJob *Job) (*IngestBinlogJob, err
 	}
 
 	return &IngestBinlogJob{
-		ccrJob:       ccrJob,
+		ccrJob:  ccrJob,
+		factory: ccrJob.factory,
+
 		tableMapping: ingestCtx.tableMapping,
 		txnId:        ingestCtx.txnId,
 		tableRecords: ingestCtx.tableRecords,
@@ -517,6 +521,7 @@ func (j *IngestBinlogJob) prepareMeta() {
 	log.Debug("prepareMeta")
 	srcTableIds := make([]int64, 0, len(j.tableRecords))
 	job := j.ccrJob
+	factory := j.factory
 
 	switch job.SyncType {
 	case DBSync:
@@ -531,7 +536,7 @@ func (j *IngestBinlogJob) prepareMeta() {
 		return
 	}
 
-	srcMeta, err := NewThriftMeta(&job.Src, j.ccrJob.factory, srcTableIds)
+	srcMeta, err := factory.NewThriftMeta(&job.Src, j.ccrJob.factory, srcTableIds)
 	if err != nil {
 		j.setError(err)
 		return
@@ -557,7 +562,7 @@ func (j *IngestBinlogJob) prepareMeta() {
 		return
 	}
 
-	destMeta, err := NewThriftMeta(&job.Dest, j.ccrJob.factory, destTableIds)
+	destMeta, err := factory.NewThriftMeta(&job.Dest, j.ccrJob.factory, destTableIds)
 	if err != nil {
 		j.setError(err)
 		return
