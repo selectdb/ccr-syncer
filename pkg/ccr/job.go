@@ -119,20 +119,19 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 		return nil, xerror.Errorf(xerror.Normal, "invalid context type: %T", ctx)
 	}
 
-	metaFactory := jobContext.factory.MetaFactory
-	iSpecFactory := jobContext.factory.ISpecFactory
+	factory := jobContext.factory
 	src := jobContext.src
 	dest := jobContext.dest
 	job := &Job{
 		Name:     name,
 		Src:      src,
-		ISrc:     iSpecFactory.NewSpecer(&src),
-		srcMeta:  metaFactory.NewMeta(&jobContext.src),
+		ISrc:     factory.NewSpecer(&src),
+		srcMeta:  factory.NewMeta(&jobContext.src),
 		Dest:     dest,
-		IDest:    iSpecFactory.NewSpecer(&dest),
-		destMeta: metaFactory.NewMeta(&jobContext.dest),
+		IDest:    factory.NewSpecer(&dest),
+		destMeta: factory.NewMeta(&jobContext.dest),
 		State:    JobRunning,
-		factory:  jobContext.factory,
+		factory:  factory,
 
 		destSrcTableIdMap: make(map[int64]int64),
 		progress:          nil,
@@ -162,10 +161,10 @@ func NewJobFromJson(jsonData string, db storage.DB, factory *Factory) (*Job, err
 		return nil, xerror.Wrapf(err, xerror.Normal, "unmarshal json failed, json: %s", jsonData)
 	}
 	job.factory = factory
-	job.ISrc = factory.ISpecFactory.NewSpecer(&job.Src)
-	job.IDest = factory.ISpecFactory.NewSpecer(&job.Dest)
-	job.srcMeta = factory.MetaFactory.NewMeta(&job.Src)
-	job.destMeta = factory.MetaFactory.NewMeta(&job.Dest)
+	job.ISrc = factory.NewSpecer(&job.Src)
+	job.IDest = factory.NewSpecer(&job.Dest)
+	job.srcMeta = factory.NewMeta(&job.Src)
+	job.destMeta = factory.NewMeta(&job.Dest)
 	job.destSrcTableIdMap = make(map[int64]int64)
 	job.progress = nil
 	job.db = db
