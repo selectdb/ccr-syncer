@@ -82,7 +82,7 @@ func (h *tabletIngestBinlogHandler) handleReplica(srcReplica, destReplica *Repli
 	}
 	destTabletId := destReplica.TabletId
 
-	destRpc, err := h.ingestJob.ccrJob.rpcFactory.NewBeRpc(destBackend)
+	destRpc, err := h.ingestJob.ccrJob.factory.NewBeRpc(destBackend)
 	if err != nil {
 		j.setError(err)
 		return false
@@ -531,7 +531,7 @@ func (j *IngestBinlogJob) prepareMeta() {
 		return
 	}
 
-	srcMeta, err := NewThriftMeta(&job.Src, j.ccrJob.rpcFactory, srcTableIds)
+	srcMeta, err := NewThriftMeta(&job.Src, j.ccrJob.factory, srcTableIds)
 	if err != nil {
 		j.setError(err)
 		return
@@ -557,7 +557,7 @@ func (j *IngestBinlogJob) prepareMeta() {
 		return
 	}
 
-	destMeta, err := NewThriftMeta(&job.Dest, j.ccrJob.rpcFactory, destTableIds)
+	destMeta, err := NewThriftMeta(&job.Dest, j.ccrJob.factory, destTableIds)
 	if err != nil {
 		j.setError(err)
 		return

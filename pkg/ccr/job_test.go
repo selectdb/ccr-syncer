@@ -930,6 +930,7 @@ func TestHandleCreateTable(t *testing.T) {
 	// init db_mock
 	db := test_util.NewMockDB(ctrl)
 	db.EXPECT().IsJobExist("Test").Return(false, nil)
+	db.EXPECT().UpdateProgress("Test", gomock.Any()).Return(nil)
 
 	// init factory
 	metaFactory := NewMockMetaerFactory(ctrl)
@@ -940,11 +941,13 @@ func TestHandleCreateTable(t *testing.T) {
 	metaFactory.EXPECT().NewMeta(&dbSrcSpec).DoAndReturn(func(_ *base.Spec) Metaer {
 		mockMeta := NewMockMetaer(ctrl)
 		mockMeta.EXPECT().GetTables().Return(make(map[int64]*TableMeta), nil)
+		mockMeta.EXPECT().GetTableNameById(tableBaseId).Return(fmt.Sprint(tableBaseId), nil)
 		return mockMeta
 	})
 	metaFactory.EXPECT().NewMeta(&dbDestSpec).DoAndReturn(func(_ *base.Spec) Metaer {
 		mockMeta := NewMockMetaer(ctrl)
 		mockMeta.EXPECT().GetTables().Return(make(map[int64]*TableMeta), nil)
+		mockMeta.EXPECT().GetTableId(fmt.Sprint(tableBaseId)).Return(tableBaseId, nil)
 		return mockMeta
 	})
 
@@ -965,6 +968,9 @@ func TestHandleCreateTable(t *testing.T) {
 	ctx := NewJobContext(dbSrcSpec, dbDestSpec, db, factory)
 	job, err := NewJobFromService("Test", ctx)
 	assert.Nil(t, err)
+
+	// TODO(Drogon): find a better way for job init, not direct given the progress
+	job.progress = NewJobProgress(job.Name, job.SyncType, job.db)
 
 	// init binlog
 	tableIds := make([]int64, 0, 1)

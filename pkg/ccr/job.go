@@ -15,7 +15,6 @@ import (
 
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/record"
-	"github.com/selectdb/ccr_syncer/pkg/rpc"
 	"github.com/selectdb/ccr_syncer/pkg/storage"
 	utils "github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
@@ -73,22 +72,26 @@ func (j JobState) String() string {
 
 // TODO: refactor merge Src && Isrc, Dest && IDest
 type Job struct {
-	SyncType          SyncType        `json:"sync_type"`
-	Name              string          `json:"name"`
-	Src               base.Spec       `json:"src"`
-	ISrc              base.Specer     `json:"-"`
-	srcMeta           Metaer          `json:"-"`
-	Dest              base.Spec       `json:"dest"`
-	IDest             base.Specer     `json:"-"`
-	destMeta          Metaer          `json:"-"`
-	State             JobState        `json:"state"`
+	SyncType SyncType    `json:"sync_type"`
+	Name     string      `json:"name"`
+	Src      base.Spec   `json:"src"`
+	ISrc     base.Specer `json:"-"`
+	srcMeta  Metaer      `json:"-"`
+	Dest     base.Spec   `json:"dest"`
+	IDest    base.Specer `json:"-"`
+	destMeta Metaer      `json:"-"`
+	State    JobState    `json:"state"`
+
+	factory *Factory `json:"-"`
+
 	destSrcTableIdMap map[int64]int64 `json:"-"`
 	progress          *JobProgress    `json:"-"`
 	db                storage.DB      `json:"-"`
 	jobFactory        *JobFactory     `json:"-"`
-	rpcFactory        rpc.IRpcFactory `json:"-"`
-	stop              chan struct{}   `json:"-"`
-	lock              sync.Mutex      `json:"-"`
+
+	stop chan struct{} `json:"-"`
+
+	lock sync.Mutex `json:"-"`
 }
 
 type JobContext struct {
@@ -121,14 +124,16 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 	src := jobContext.src
 	dest := jobContext.dest
 	job := &Job{
-		Name:              name,
-		Src:               src,
-		ISrc:              iSpecFactory.NewSpecer(&src),
-		srcMeta:           metaFactory.NewMeta(&jobContext.src),
-		Dest:              dest,
-		IDest:             iSpecFactory.NewSpecer(&dest),
-		destMeta:          metaFactory.NewMeta(&jobContext.dest),
-		State:             JobRunning,
+		Name:     name,
+		Src:      src,
+		ISrc:     iSpecFactory.NewSpecer(&src),
+		srcMeta:  metaFactory.NewMeta(&jobContext.src),
+		Dest:     dest,
+		IDest:    iSpecFactory.NewSpecer(&dest),
+		destMeta: metaFactory.NewMeta(&jobContext.dest),
+		State:    JobRunning,
+		factory:  jobContext.factory,
+
 		destSrcTableIdMap: make(map[int64]int64),
 		progress:          nil,
 		db:                jobContext.db,
@@ -146,7 +151,6 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 	}
 
 	job.jobFactory = NewJobFactory()
-	job.rpcFactory = jobContext.factory.RpcFactory
 
 	return job, nil
 }
@@ -157,6 +161,7 @@ func NewJobFromJson(jsonData string, db storage.DB, factory *Factory) (*Job, err
 	if err != nil {
 		return nil, xerror.Wrapf(err, xerror.Normal, "unmarshal json failed, json: %s", jsonData)
 	}
+	job.factory = factory
 	job.ISrc = factory.ISpecFactory.NewSpecer(&job.Src)
 	job.IDest = factory.ISpecFactory.NewSpecer(&job.Dest)
 	job.srcMeta = factory.MetaFactory.NewMeta(&job.Src)
@@ -166,7 +171,6 @@ func NewJobFromJson(jsonData string, db storage.DB, factory *Factory) (*Job, err
 	job.db = db
 	job.stop = make(chan struct{})
 	job.jobFactory = NewJobFactory()
-	job.rpcFactory = factory.RpcFactory
 	return &job, nil
 }
 
@@ -226,7 +230,7 @@ func (j *Job) DatabaseSync() error {
 
 func (j *Job) genExtraInfo() (*base.ExtraInfo, error) {
 	meta := j.srcMeta
-	masterToken, err := meta.GetMasterToken(j.rpcFactory)
+	masterToken, err := meta.GetMasterToken(j.factory)
 	if err != nil {
 		return nil, err
 	}
@@ -305,7 +309,7 @@ func (j *Job) fullSync() error {
 
 		snapshotName := j.progress.PersistData
 		src := &j.Src
-		srcRpc, err := j.rpcFactory.NewFeRpc(src)
+		srcRpc, err := j.factory.NewFeRpc(src)
 		if err != nil {
 			return err
 		}
@@ -407,7 +411,7 @@ func (j *Job) fullSync() error {
 
 		// Step 4.2: restore snapshot to dest
 		dest := &j.Dest
-		destRpc, err := j.rpcFactory.NewFeRpc(dest)
+		destRpc, err := j.factory.NewFeRpc(dest)
 		if err != nil {
 			return err
 		}
@@ -703,7 +707,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		commitSeq := inMemoryData.CommitSeq
 		log.Debugf("begin txn, dest: %v, commitSeq: %d", dest, commitSeq)
 
-		destRpc, err := j.rpcFactory.NewFeRpc(dest)
+		destRpc, err := j.factory.NewFeRpc(dest)
 		if err != nil {
 			return err
 		}
@@ -755,7 +759,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		txnId := inMemoryData.TxnId
 		commitInfos := inMemoryData.CommitInfos
 
-		destRpc, err := j.rpcFactory.NewFeRpc(dest)
+		destRpc, err := j.factory.NewFeRpc(dest)
 		if err != nil {
 			rollback(err, inMemoryData)
 			break
@@ -805,7 +809,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
 		txnId := inMemoryData.TxnId
-		destRpc, err := j.rpcFactory.NewFeRpc(dest)
+		destRpc, err := j.factory.NewFeRpc(dest)
 		if err != nil {
 			return err
 		}
@@ -913,6 +917,9 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 	destTableId, err := j.destMeta.GetTableId(srcTableName)
 	if err != nil {
 		return nil
+	}
+	if j.progress.TableMapping == nil {
+		j.progress.TableMapping = make(map[int64]int64)
 	}
 	j.progress.TableMapping[createTable.TableId] = destTableId
 	j.progress.Done()
@@ -1161,7 +1168,7 @@ func (j *Job) incrementalSync() error {
 	// Step 1: get binlog
 	log.Debug("start incremental sync")
 	src := &j.Src
-	srcRpc, err := j.rpcFactory.NewFeRpc(src)
+	srcRpc, err := j.factory.NewFeRpc(src)
 	if err != nil {
 		log.Errorf("new fe rpc failed, src: %v, err: %+v", src, err)
 		return err
@@ -1562,7 +1569,7 @@ func (j *Job) GetLag() (int64, error) {
 	defer j.lock.Unlock()
 
 	srcSpec := &j.Src
-	rpc, err := j.rpcFactory.NewFeRpc(srcSpec)
+	rpc, err := j.factory.NewFeRpc(srcSpec)
 	if err != nil {
 		return 0, err
 	}

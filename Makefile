@@ -68,6 +68,7 @@ gen_mock:
 	$(V)mockgen -source=pkg/rpc/fe.go -destination=pkg/ccr/fe_mock.go -package=ccr
 	$(V)mockgen -source=pkg/ccr/metaer.go -destination=pkg/ccr/metaer_mock.go -package=ccr
 	$(V)mockgen -source=pkg/ccr/metaer_factory.go -destination=pkg/ccr/metaer_factory_mock.go -package=ccr
+	$(V)mockgen -source=pkg/rpc/rpc_factory.go -destination=pkg/ccr/rpc_factory_mock.go -package=ccr
 
 .PHONY: ccr_syncer
 ## ccr_syncer : Build ccr_syncer binary
