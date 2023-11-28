@@ -114,18 +114,23 @@ func createCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobMana
 	return nil
 }
 
-func (s *HttpService) isRedirected(jobName string, w http.ResponseWriter) (bool, error) {
+// return continue(bool)
+func (s *HttpService) redirect(jobName string, w http.ResponseWriter, r *http.Request) bool {
 	belongHost, err := s.db.GetJobBelong(jobName)
 	if err != nil {
-		return false, err
+		log.Warnf("get job %s belong failed: %+v", jobName, err)
+		result := newErrorResult(err.Error())
+		writeJson(w, result)
+		return false
 	}
 
-	if belongHost != s.hostInfo {
-		w.Write([]byte(fmt.Sprintf("%s is located in syncer %s, please redirect to %s", jobName, belongHost, belongHost)))
-		return true, nil
+	if belongHost == s.hostInfo {
+		return true
 	}
 
-	return false, nil
+	log.Infof("%s is located in syncer %s, please redirect to %s", jobName, belongHost, belongHost)
+	http.Redirect(w, r, fmt.Sprintf("http://%s/job_status", belongHost), http.StatusSeeOther)
+	return false
 }
 
 // HttpServer serving /create_ccr by json http rpc
@@ -185,12 +190,7 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if isRedirected, err := s.isRedirected(request.Name, w); err != nil {
-		lagResult = &result{
-			defaultResult: newErrorResult(err.Error()),
-		}
-		return
-	} else if isRedirected {
+	if s.redirect(request.Name, w, r) {
 		return
 	}
 
@@ -228,9 +228,7 @@ func (s *HttpService) pauseHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if isRedirected, err := s.isRedirected(request.Name, w); err != nil {
-		pauseResult = newErrorResult(err.Error())
-	} else if isRedirected {
+	if s.redirect(request.Name, w, r) {
 		return
 	}
 
@@ -263,9 +261,7 @@ func (s *HttpService) resumeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if isRedirected, err := s.isRedirected(request.Name, w); err != nil {
-		resumeResult = newErrorResult(err.Error())
-	} else if isRedirected {
+	if s.redirect(request.Name, w, r) {
 		return
 	}
 
@@ -297,9 +293,7 @@ func (s *HttpService) deleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if isRedirected, err := s.isRedirected(request.Name, w); err != nil {
-		deleteResult = newErrorResult(err.Error())
-	} else if isRedirected {
+	if s.redirect(request.Name, w, r) {
 		return
 	}
 
@@ -339,12 +333,7 @@ func (s *HttpService) statusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if isRedirected, err := s.isRedirected(request.Name, w); err != nil {
-		jobStatusResult = &result{
-			defaultResult: newErrorResult(err.Error()),
-		}
-		return
-	} else if isRedirected {
+	if s.redirect(request.Name, w, r) {
 		return
 	}
 
@@ -380,10 +369,7 @@ func (s *HttpService) desyncHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if isRedirected, err := s.isRedirected(request.Name, w); err != nil {
-		desyncResult = newErrorResult(err.Error())
-		return
-	} else if isRedirected {
+	if s.redirect(request.Name, w, r) {
 		return
 	}
 
