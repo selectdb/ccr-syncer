@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
 
 	"github.com/selectdb/ccr_syncer/pkg/ccr"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
@@ -18,6 +19,11 @@ import (
 // TODO(Drogon): impl a generic http request handle parse json
 
 func writeJson(w http.ResponseWriter, data interface{}) {
+	// if exit in redirect, data == nil, do not write data
+	if data == nil || (reflect.ValueOf(data).Kind() == reflect.Ptr && reflect.ValueOf(data).IsNil()) {
+		return
+	}
+
 	if data, err := json.Marshal(data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
@@ -113,23 +119,35 @@ func createCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobMana
 	return nil
 }
 
-// return continue(bool)
+// return exit(bool)
 func (s *HttpService) redirect(jobName string, w http.ResponseWriter, r *http.Request) bool {
+	if jobExist, err := s.db.IsJobExist(jobName); err != nil {
+		log.Warnf("get job %s exist failed: %+v", jobName, err)
+		result := newErrorResult(err.Error())
+		writeJson(w, result)
+		return true
+	} else if !jobExist {
+		log.Warnf("job %s not exist", jobName)
+		result := newErrorResult(fmt.Sprintf("job %s not exist", jobName))
+		writeJson(w, result)
+		return true
+	}
+
 	belongHost, err := s.db.GetJobBelong(jobName)
 	if err != nil {
 		log.Warnf("get job %s belong failed: %+v", jobName, err)
 		result := newErrorResult(err.Error())
 		writeJson(w, result)
-		return false
+		return true
 	}
 
 	if belongHost == s.hostInfo {
-		return true
+		return false
 	}
 
 	log.Infof("%s is located in syncer %s, please redirect to %s", jobName, belongHost, belongHost)
 	http.Redirect(w, r, fmt.Sprintf("http://%s/job_status", belongHost), http.StatusSeeOther)
-	return false
+	return true
 }
 
 // HttpServer serving /create_ccr by json http rpc
@@ -137,7 +155,7 @@ func (s *HttpService) createHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("create ccr")
 
 	var createResult *defaultResult
-	defer writeJson(w, &createResult)
+	defer func() { writeJson(w, createResult) }()
 
 	// Parse the JSON request body
 	var request CreateCcrRequest
@@ -171,7 +189,7 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 		Lag int64 `json:"lag,omitempty"`
 	}
 	var lagResult *result
-	defer writeJson(w, &lagResult)
+	defer func() { writeJson(w, lagResult) }()
 
 	// Parse the JSON request body
 	var request CcrCommonRequest
@@ -194,7 +212,7 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.redirect(request.Name, w, r) {
+	if exit := s.redirect(request.Name, w, r); exit {
 		return
 	}
 
@@ -217,7 +235,7 @@ func (s *HttpService) pauseHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("pause job")
 
 	var pauseResult *defaultResult
-	defer writeJson(w, &pauseResult)
+	defer func() { writeJson(w, pauseResult) }()
 
 	// Parse the JSON request body
 	var request CcrCommonRequest
@@ -255,7 +273,7 @@ func (s *HttpService) resumeHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("resume job")
 
 	var resumeResult *defaultResult
-	defer writeJson(w, &resumeResult)
+	defer func() { writeJson(w, resumeResult) }()
 
 	// Parse the JSON request body
 	var request CcrCommonRequest
@@ -292,7 +310,7 @@ func (s *HttpService) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("delete job")
 
 	var deleteResult *defaultResult
-	defer writeJson(w, &deleteResult)
+	defer func() { writeJson(w, deleteResult) }()
 
 	// Parse the JSON request body
 	var request CcrCommonRequest
@@ -333,7 +351,7 @@ func (s *HttpService) statusHandler(w http.ResponseWriter, r *http.Request) {
 		JobStatus *ccr.JobStatus `json:"status,omitempty"`
 	}
 	var jobStatusResult *result
-	defer writeJson(w, &jobStatusResult)
+	defer func() { writeJson(w, jobStatusResult) }()
 
 	// Parse the JSON request body
 	var request CcrCommonRequest
@@ -378,7 +396,7 @@ func (s *HttpService) desyncHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("desync job")
 
 	var desyncResult *defaultResult
-	defer writeJson(w, &desyncResult)
+	defer func() { writeJson(w, desyncResult) }()
 
 	// Parse the JSON request body
 	var request CcrCommonRequest
@@ -420,7 +438,7 @@ func (s *HttpService) listJobsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var jobResult *result
-	defer writeJson(w, &jobResult)
+	defer func() { writeJson(w, jobResult) }()
 
 	if _, jobs, err := s.db.GetStampAndJobs(s.hostInfo); err != nil {
 		log.Warnf("get jobs failed: %+v", err)
