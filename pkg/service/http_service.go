@@ -98,7 +98,6 @@ func (s *HttpService) versionHandler(w http.ResponseWriter, r *http.Request) {
 func createCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobManager) error {
 	log.Infof("create ccr %s", request)
 
-	// _job
 	ctx := ccr.NewJobContext(request.Src, request.Dest, db, jobManager.GetFactory())
 	job, err := ccr.NewJobFromService(request.Name, ctx)
 	if err != nil {
@@ -144,13 +143,14 @@ func (s *HttpService) createHandler(w http.ResponseWriter, r *http.Request) {
 	var request CreateCcrRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
+		log.Warnf("create ccr failed: %+v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Call the createCcr function to create the CCR
 	if err = createCcr(&request, s.db, s.jobManager); err != nil {
-		log.Errorf("create ccr failed: %+v", err)
+		log.Warnf("create ccr failed: %+v", err)
 		createResult = newErrorResult(err.Error())
 	} else {
 		createResult = newSuccessResult()
@@ -177,6 +177,8 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 	var request CcrCommonRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
+		log.Warnf("get lag failed: %+v", err)
+
 		lagResult = &result{
 			defaultResult: newErrorResult(err.Error()),
 		}
@@ -184,6 +186,8 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if request.Name == "" {
+		log.Warnf("get lag failed: name is empty")
+
 		lagResult = &result{
 			defaultResult: newErrorResult("name is empty"),
 		}
@@ -194,17 +198,17 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lag, err := s.jobManager.GetLag(request.Name)
-	if err != nil {
+	if lag, err := s.jobManager.GetLag(request.Name); err != nil {
+		log.Warnf("get lag failed: %+v", err)
+
 		lagResult = &result{
 			defaultResult: newErrorResult(err.Error()),
 		}
-		return
-	}
-
-	lagResult = &result{
-		defaultResult: newSuccessResult(),
-		Lag:           lag,
+	} else {
+		lagResult = &result{
+			defaultResult: newSuccessResult(),
+			Lag:           lag,
+		}
 	}
 }
 
@@ -219,11 +223,15 @@ func (s *HttpService) pauseHandler(w http.ResponseWriter, r *http.Request) {
 	var request CcrCommonRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
+		log.Warnf("pause job failed: %+v", err)
+
 		pauseResult = newErrorResult(err.Error())
 		return
 	}
 
 	if request.Name == "" {
+		log.Warnf("pause job failed: name is empty")
+
 		pauseResult = newErrorResult("name is empty")
 		return
 	}
@@ -232,13 +240,14 @@ func (s *HttpService) pauseHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.jobManager.Pause(request.Name)
-	if err != nil {
+	if err = s.jobManager.Pause(request.Name); err != nil {
+		log.Warnf("pause job failed: %+v", err)
+
 		pauseResult = newErrorResult(err.Error())
 		return
+	} else {
+		pauseResult = newSuccessResult()
 	}
-
-	pauseResult = newSuccessResult()
 }
 
 // Resume service
@@ -252,11 +261,15 @@ func (s *HttpService) resumeHandler(w http.ResponseWriter, r *http.Request) {
 	var request CcrCommonRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
+		log.Warnf("resume job failed: %+v", err)
+
 		resumeResult = newErrorResult(err.Error())
 		return
 	}
 
 	if request.Name == "" {
+		log.Warnf("resume job failed: name is empty")
+
 		resumeResult = newErrorResult("name is empty")
 		return
 	}
@@ -265,13 +278,14 @@ func (s *HttpService) resumeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.jobManager.Resume(request.Name)
-	if err != nil {
+	if err = s.jobManager.Resume(request.Name); err != nil {
+		log.Warnf("resume job failed: %+v", err)
+
 		resumeResult = newErrorResult(err.Error())
 		return
+	} else {
+		resumeResult = newSuccessResult()
 	}
-
-	resumeResult = newSuccessResult()
 }
 
 func (s *HttpService) deleteHandler(w http.ResponseWriter, r *http.Request) {
@@ -284,11 +298,15 @@ func (s *HttpService) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	var request CcrCommonRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
+		log.Warnf("delete job failed: %+v", err)
+
 		deleteResult = newErrorResult(err.Error())
 		return
 	}
 
 	if request.Name == "" {
+		log.Warnf("delete job failed: name is empty")
+
 		deleteResult = newErrorResult("name is empty")
 		return
 	}
@@ -297,13 +315,14 @@ func (s *HttpService) deleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.jobManager.RemoveJob(request.Name)
-	if err != nil {
+	if err = s.jobManager.RemoveJob(request.Name); err != nil {
+		log.Warnf("delete job failed: %+v", err)
+
 		deleteResult = newErrorResult(err.Error())
 		return
+	} else {
+		deleteResult = newSuccessResult()
 	}
-
-	deleteResult = newSuccessResult()
 }
 
 func (s *HttpService) statusHandler(w http.ResponseWriter, r *http.Request) {
@@ -320,6 +339,8 @@ func (s *HttpService) statusHandler(w http.ResponseWriter, r *http.Request) {
 	var request CcrCommonRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
+		log.Warnf("get job status failed: %+v", err)
+
 		jobStatusResult = &result{
 			defaultResult: newErrorResult(err.Error()),
 		}
@@ -327,6 +348,8 @@ func (s *HttpService) statusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if request.Name == "" {
+		log.Warnf("get job status failed: name is empty")
+
 		jobStatusResult = &result{
 			defaultResult: newErrorResult("name is empty"),
 		}
@@ -338,6 +361,8 @@ func (s *HttpService) statusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if jobStatus, err := s.jobManager.GetJobStatus(request.Name); err != nil {
+		log.Warnf("get job status failed: %+v", err)
+
 		jobStatusResult = &result{
 			defaultResult: newErrorResult(err.Error()),
 		}
@@ -359,12 +384,15 @@ func (s *HttpService) desyncHandler(w http.ResponseWriter, r *http.Request) {
 	var request CcrCommonRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
+		log.Warnf("desync job failed: %+v", err)
+
 		desyncResult = newErrorResult(err.Error())
-		writeJson(w, desyncResult)
 		return
 	}
 
 	if request.Name == "" {
+		log.Warnf("desync job failed: name is empty")
+
 		desyncResult = newErrorResult("name is empty")
 		return
 	}
@@ -374,6 +402,8 @@ func (s *HttpService) desyncHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.jobManager.Desync(request.Name); err != nil {
+		log.Warnf("desync job failed: %+v", err)
+
 		desyncResult = newErrorResult(err.Error())
 	} else {
 		desyncResult = newSuccessResult()
@@ -385,12 +415,25 @@ func (s *HttpService) listJobsHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("list jobs")
 
 	type result struct {
-		Jobs []*ccr.JobStatus `json:"jobs"`
+		*defaultResult
+		Jobs []string `json:"jobs,omitempty"`
 	}
 
-	jobs := s.jobManager.ListJobs()
-	jobResult := result{Jobs: jobs}
-	writeJson(w, jobResult)
+	var jobResult *result
+	defer writeJson(w, &jobResult)
+
+	if _, jobs, err := s.db.GetStampAndJobs(s.hostInfo); err != nil {
+		log.Warnf("get jobs failed: %+v", err)
+
+		jobResult = &result{
+			defaultResult: newErrorResult(err.Error()),
+		}
+	} else {
+		jobResult = &result{
+			defaultResult: newSuccessResult(),
+			Jobs:          jobs,
+		}
+	}
 }
 
 func (s *HttpService) RegisterHandlers() {

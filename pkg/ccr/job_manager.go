@@ -82,6 +82,7 @@ func (jm *JobManager) Recover(jobNames []string) error {
 		if _, ok := jm.jobs[jobName]; ok {
 			continue
 		}
+
 		log.Infof("recover job: %s", jobName)
 
 		if jobInfo, err := jm.db.GetJobInfo(jobName); err != nil {
