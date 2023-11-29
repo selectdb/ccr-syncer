@@ -304,52 +304,6 @@ func (rpc *FeRpc) callWithMasterRedirect(caller callerType) (resultType, error) 
 	return r.call()
 }
 
-type retryCallerType func(client IFeRpc) (any, error)
-
-func (rpc *FeRpc) callWithRetryAllClients(caller retryCallerType) (result any, err error) {
-	client := rpc.getMasterClient()
-	if result, err = caller(client); err == nil {
-		return result, nil
-	}
-
-	usedClientAddrs := make(map[string]bool)
-	usedClientAddrs[client.Address()] = true
-
-	// Step 1: try all cached fe clients
-	clients := rpc.getClients()
-	for addr, client := range clients {
-		if _, ok := usedClientAddrs[addr]; ok {
-			continue
-		}
-
-		usedClientAddrs[addr] = true
-		if result, err = caller(client); err == nil {
-			return result, nil
-		}
-	}
-
-	// Step 2: try all cached fe addrs
-	cachedFeAddrs := rpc.getCacheFeAddrs()
-	for addr := range cachedFeAddrs {
-		if _, ok := usedClientAddrs[addr]; ok {
-			continue
-		}
-
-		usedClientAddrs[addr] = true
-		if client, err := newSingleFeClient(addr); err != nil {
-			log.Warnf("new fe client error: %+v", err)
-		} else {
-			rpc.addClient(client)
-			if result, err = caller(client); err == nil {
-				return result, nil
-			}
-		}
-	}
-
-	// Step 3: return last error
-	return result, err
-}
-
 func convertResult[T any](result any, err error) (*T, error) {
 	if result == nil {
 		return nil, err
@@ -387,19 +341,19 @@ func (rpc *FeRpc) RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.T
 
 func (rpc *FeRpc) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogResult_, error) {
 	// return rpc.masterClient.GetBinlog(spec, commitSeq)
-	caller := func(client IFeRpc) (any, error) {
+	caller := func(client IFeRpc) (resultType, error) {
 		return client.GetBinlog(spec, commitSeq)
 	}
-	result, err := rpc.callWithRetryAllClients(caller)
+	result, err := rpc.callWithMasterRedirect(caller)
 	return convertResult[festruct.TGetBinlogResult_](result, err)
 }
 
 func (rpc *FeRpc) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogLagResult_, error) {
 	// return rpc.masterClient.GetBinlogLag(spec, commitSeq)
-	caller := func(client IFeRpc) (any, error) {
+	caller := func(client IFeRpc) (resultType, error) {
 		return client.GetBinlogLag(spec, commitSeq)
 	}
-	result, err := rpc.callWithRetryAllClients(caller)
+	result, err := rpc.callWithMasterRedirect(caller)
 	return convertResult[festruct.TGetBinlogLagResult_](result, err)
 }
 
@@ -431,26 +385,26 @@ func (rpc *FeRpc) GetMasterToken(spec *base.Spec) (*festruct.TGetMasterTokenResu
 }
 
 func (rpc *FeRpc) GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error) {
-	caller := func(client IFeRpc) (any, error) {
+	caller := func(client IFeRpc) (resultType, error) {
 		return client.GetDbMeta(spec)
 	}
-	result, err := rpc.callWithRetryAllClients(caller)
+	result, err := rpc.callWithMasterRedirect(caller)
 	return convertResult[festruct.TGetMetaResult_](result, err)
 }
 
 func (rpc *FeRpc) GetTableMeta(spec *base.Spec, tableIds []int64) (*festruct.TGetMetaResult_, error) {
-	caller := func(client IFeRpc) (any, error) {
+	caller := func(client IFeRpc) (resultType, error) {
 		return client.GetTableMeta(spec, tableIds)
 	}
-	result, err := rpc.callWithRetryAllClients(caller)
+	result, err := rpc.callWithMasterRedirect(caller)
 	return convertResult[festruct.TGetMetaResult_](result, err)
 }
 
 func (rpc *FeRpc) GetBackends(spec *base.Spec) (*festruct.TGetBackendMetaResult_, error) {
-	caller := func(client IFeRpc) (any, error) {
+	caller := func(client IFeRpc) (resultType, error) {
 		return client.GetBackends(spec)
 	}
-	result, err := rpc.callWithRetryAllClients(caller)
+	result, err := rpc.callWithMasterRedirect(caller)
 	return convertResult[festruct.TGetBackendMetaResult_](result, err)
 }
 
