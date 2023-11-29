@@ -307,6 +307,20 @@ func (p *TColumn) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 19:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField19(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -609,6 +623,20 @@ func (p *TColumn) FastReadField18(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TColumn) FastReadField19(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.ClusterKeyId = v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TColumn) FastWrite(buf []byte) int {
 	return 0
@@ -629,6 +657,7 @@ func (p *TColumn) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWriter)
 		offset += p.fastWriteField15(buf[offset:], binaryWriter)
 		offset += p.fastWriteField17(buf[offset:], binaryWriter)
 		offset += p.fastWriteField18(buf[offset:], binaryWriter)
+		offset += p.fastWriteField19(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -664,6 +693,7 @@ func (p *TColumn) BLength() int {
 		l += p.field16Length()
 		l += p.field17Length()
 		l += p.field18Length()
+		l += p.field19Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -869,6 +899,17 @@ func (p *TColumn) fastWriteField18(buf []byte, binaryWriter bthrift.BinaryWriter
 	return offset
 }
 
+func (p *TColumn) fastWriteField19(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetClusterKeyId() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "cluster_key_id", thrift.I32, 19)
+		offset += bthrift.Binary.WriteI32(buf[offset:], p.ClusterKeyId)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TColumn) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("column_name", thrift.STRING, 1)
@@ -1058,6 +1099,17 @@ func (p *TColumn) field18Length() int {
 	if p.IsSetIsAutoIncrement() {
 		l += bthrift.Binary.FieldBeginLength("is_auto_increment", thrift.BOOL, 18)
 		l += bthrift.Binary.BoolLength(p.IsAutoIncrement)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TColumn) field19Length() int {
+	l := 0
+	if p.IsSetClusterKeyId() {
+		l += bthrift.Binary.FieldBeginLength("cluster_key_id", thrift.I32, 19)
+		l += bthrift.Binary.I32Length(p.ClusterKeyId)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

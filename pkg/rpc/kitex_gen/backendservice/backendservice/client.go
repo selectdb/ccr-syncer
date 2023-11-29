@@ -37,6 +37,8 @@ type Client interface {
 	CleanTrash(ctx context.Context, callOptions ...callopt.Option) (err error)
 	CheckStorageFormat(ctx context.Context, callOptions ...callopt.Option) (r *backendservice.TCheckStorageFormatResult_, err error)
 	IngestBinlog(ctx context.Context, ingestBinlogRequest *backendservice.TIngestBinlogRequest, callOptions ...callopt.Option) (r *backendservice.TIngestBinlogResult_, err error)
+	QueryIngestBinlog(ctx context.Context, queryIngestBinlogRequest *backendservice.TQueryIngestBinlogRequest, callOptions ...callopt.Option) (r *backendservice.TQueryIngestBinlogResult_, err error)
+	PublishTopicInfo(ctx context.Context, topicRequest *backendservice.TPublishTopicRequest, callOptions ...callopt.Option) (r *backendservice.TPublishTopicResult_, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -171,4 +173,14 @@ func (p *kBackendServiceClient) CheckStorageFormat(ctx context.Context, callOpti
 func (p *kBackendServiceClient) IngestBinlog(ctx context.Context, ingestBinlogRequest *backendservice.TIngestBinlogRequest, callOptions ...callopt.Option) (r *backendservice.TIngestBinlogResult_, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.IngestBinlog(ctx, ingestBinlogRequest)
+}
+
+func (p *kBackendServiceClient) QueryIngestBinlog(ctx context.Context, queryIngestBinlogRequest *backendservice.TQueryIngestBinlogRequest, callOptions ...callopt.Option) (r *backendservice.TQueryIngestBinlogResult_, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.QueryIngestBinlog(ctx, queryIngestBinlogRequest)
+}
+
+func (p *kBackendServiceClient) PublishTopicInfo(ctx context.Context, topicRequest *backendservice.TPublishTopicRequest, callOptions ...callopt.Option) (r *backendservice.TPublishTopicResult_, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.PublishTopicInfo(ctx, topicRequest)
 }

@@ -16845,9 +16845,190 @@ func (p *TFrontendsMetadataParams) Field1DeepEqual(src *string) bool {
 	return true
 }
 
+type TMaterializedViewsMetadataParams struct {
+	Database *string `thrift:"database,1,optional" frugal:"1,optional,string" json:"database,omitempty"`
+}
+
+func NewTMaterializedViewsMetadataParams() *TMaterializedViewsMetadataParams {
+	return &TMaterializedViewsMetadataParams{}
+}
+
+func (p *TMaterializedViewsMetadataParams) InitDefault() {
+	*p = TMaterializedViewsMetadataParams{}
+}
+
+var TMaterializedViewsMetadataParams_Database_DEFAULT string
+
+func (p *TMaterializedViewsMetadataParams) GetDatabase() (v string) {
+	if !p.IsSetDatabase() {
+		return TMaterializedViewsMetadataParams_Database_DEFAULT
+	}
+	return *p.Database
+}
+func (p *TMaterializedViewsMetadataParams) SetDatabase(val *string) {
+	p.Database = val
+}
+
+var fieldIDToName_TMaterializedViewsMetadataParams = map[int16]string{
+	1: "database",
+}
+
+func (p *TMaterializedViewsMetadataParams) IsSetDatabase() bool {
+	return p.Database != nil
+}
+
+func (p *TMaterializedViewsMetadataParams) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TMaterializedViewsMetadataParams[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TMaterializedViewsMetadataParams) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		p.Database = &v
+	}
+	return nil
+}
+
+func (p *TMaterializedViewsMetadataParams) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TMaterializedViewsMetadataParams"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TMaterializedViewsMetadataParams) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDatabase() {
+		if err = oprot.WriteFieldBegin("database", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Database); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TMaterializedViewsMetadataParams) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TMaterializedViewsMetadataParams(%+v)", *p)
+}
+
+func (p *TMaterializedViewsMetadataParams) DeepEqual(ano *TMaterializedViewsMetadataParams) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Database) {
+		return false
+	}
+	return true
+}
+
+func (p *TMaterializedViewsMetadataParams) Field1DeepEqual(src *string) bool {
+
+	if p.Database == src {
+		return true
+	} else if p.Database == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Database, *src) != 0 {
+		return false
+	}
+	return true
+}
+
 type TQueriesMetadataParams struct {
-	ClusterName    *string `thrift:"cluster_name,1,optional" frugal:"1,optional,string" json:"cluster_name,omitempty"`
-	RelayToOtherFe *bool   `thrift:"relay_to_other_fe,2,optional" frugal:"2,optional,bool" json:"relay_to_other_fe,omitempty"`
+	ClusterName             *string                           `thrift:"cluster_name,1,optional" frugal:"1,optional,string" json:"cluster_name,omitempty"`
+	RelayToOtherFe          *bool                             `thrift:"relay_to_other_fe,2,optional" frugal:"2,optional,bool" json:"relay_to_other_fe,omitempty"`
+	MaterializedViewsParams *TMaterializedViewsMetadataParams `thrift:"materialized_views_params,3,optional" frugal:"3,optional,TMaterializedViewsMetadataParams" json:"materialized_views_params,omitempty"`
 }
 
 func NewTQueriesMetadataParams() *TQueriesMetadataParams {
@@ -16875,16 +17056,29 @@ func (p *TQueriesMetadataParams) GetRelayToOtherFe() (v bool) {
 	}
 	return *p.RelayToOtherFe
 }
+
+var TQueriesMetadataParams_MaterializedViewsParams_DEFAULT *TMaterializedViewsMetadataParams
+
+func (p *TQueriesMetadataParams) GetMaterializedViewsParams() (v *TMaterializedViewsMetadataParams) {
+	if !p.IsSetMaterializedViewsParams() {
+		return TQueriesMetadataParams_MaterializedViewsParams_DEFAULT
+	}
+	return p.MaterializedViewsParams
+}
 func (p *TQueriesMetadataParams) SetClusterName(val *string) {
 	p.ClusterName = val
 }
 func (p *TQueriesMetadataParams) SetRelayToOtherFe(val *bool) {
 	p.RelayToOtherFe = val
 }
+func (p *TQueriesMetadataParams) SetMaterializedViewsParams(val *TMaterializedViewsMetadataParams) {
+	p.MaterializedViewsParams = val
+}
 
 var fieldIDToName_TQueriesMetadataParams = map[int16]string{
 	1: "cluster_name",
 	2: "relay_to_other_fe",
+	3: "materialized_views_params",
 }
 
 func (p *TQueriesMetadataParams) IsSetClusterName() bool {
@@ -16893,6 +17087,10 @@ func (p *TQueriesMetadataParams) IsSetClusterName() bool {
 
 func (p *TQueriesMetadataParams) IsSetRelayToOtherFe() bool {
 	return p.RelayToOtherFe != nil
+}
+
+func (p *TQueriesMetadataParams) IsSetMaterializedViewsParams() bool {
+	return p.MaterializedViewsParams != nil
 }
 
 func (p *TQueriesMetadataParams) Read(iprot thrift.TProtocol) (err error) {
@@ -16927,6 +17125,16 @@ func (p *TQueriesMetadataParams) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -16982,6 +17190,14 @@ func (p *TQueriesMetadataParams) ReadField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TQueriesMetadataParams) ReadField3(iprot thrift.TProtocol) error {
+	p.MaterializedViewsParams = NewTMaterializedViewsMetadataParams()
+	if err := p.MaterializedViewsParams.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *TQueriesMetadataParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TQueriesMetadataParams"); err != nil {
@@ -16994,6 +17210,10 @@ func (p *TQueriesMetadataParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 
@@ -17053,6 +17273,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 
+func (p *TQueriesMetadataParams) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMaterializedViewsParams() {
+		if err = oprot.WriteFieldBegin("materialized_views_params", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.MaterializedViewsParams.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
 func (p *TQueriesMetadataParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -17070,6 +17309,9 @@ func (p *TQueriesMetadataParams) DeepEqual(ano *TQueriesMetadataParams) bool {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.RelayToOtherFe) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.MaterializedViewsParams) {
 		return false
 	}
 	return true
@@ -17099,13 +17341,21 @@ func (p *TQueriesMetadataParams) Field2DeepEqual(src *bool) bool {
 	}
 	return true
 }
+func (p *TQueriesMetadataParams) Field3DeepEqual(src *TMaterializedViewsMetadataParams) bool {
+
+	if !p.MaterializedViewsParams.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 
 type TMetaScanRange struct {
-	MetadataType    *types.TMetadataType      `thrift:"metadata_type,1,optional" frugal:"1,optional,TMetadataType" json:"metadata_type,omitempty"`
-	IcebergParams   *TIcebergMetadataParams   `thrift:"iceberg_params,2,optional" frugal:"2,optional,TIcebergMetadataParams" json:"iceberg_params,omitempty"`
-	BackendsParams  *TBackendsMetadataParams  `thrift:"backends_params,3,optional" frugal:"3,optional,TBackendsMetadataParams" json:"backends_params,omitempty"`
-	FrontendsParams *TFrontendsMetadataParams `thrift:"frontends_params,4,optional" frugal:"4,optional,TFrontendsMetadataParams" json:"frontends_params,omitempty"`
-	QueriesParams   *TQueriesMetadataParams   `thrift:"queries_params,5,optional" frugal:"5,optional,TQueriesMetadataParams" json:"queries_params,omitempty"`
+	MetadataType            *types.TMetadataType              `thrift:"metadata_type,1,optional" frugal:"1,optional,TMetadataType" json:"metadata_type,omitempty"`
+	IcebergParams           *TIcebergMetadataParams           `thrift:"iceberg_params,2,optional" frugal:"2,optional,TIcebergMetadataParams" json:"iceberg_params,omitempty"`
+	BackendsParams          *TBackendsMetadataParams          `thrift:"backends_params,3,optional" frugal:"3,optional,TBackendsMetadataParams" json:"backends_params,omitempty"`
+	FrontendsParams         *TFrontendsMetadataParams         `thrift:"frontends_params,4,optional" frugal:"4,optional,TFrontendsMetadataParams" json:"frontends_params,omitempty"`
+	QueriesParams           *TQueriesMetadataParams           `thrift:"queries_params,5,optional" frugal:"5,optional,TQueriesMetadataParams" json:"queries_params,omitempty"`
+	MaterializedViewsParams *TMaterializedViewsMetadataParams `thrift:"materialized_views_params,6,optional" frugal:"6,optional,TMaterializedViewsMetadataParams" json:"materialized_views_params,omitempty"`
 }
 
 func NewTMetaScanRange() *TMetaScanRange {
@@ -17160,6 +17410,15 @@ func (p *TMetaScanRange) GetQueriesParams() (v *TQueriesMetadataParams) {
 	}
 	return p.QueriesParams
 }
+
+var TMetaScanRange_MaterializedViewsParams_DEFAULT *TMaterializedViewsMetadataParams
+
+func (p *TMetaScanRange) GetMaterializedViewsParams() (v *TMaterializedViewsMetadataParams) {
+	if !p.IsSetMaterializedViewsParams() {
+		return TMetaScanRange_MaterializedViewsParams_DEFAULT
+	}
+	return p.MaterializedViewsParams
+}
 func (p *TMetaScanRange) SetMetadataType(val *types.TMetadataType) {
 	p.MetadataType = val
 }
@@ -17175,6 +17434,9 @@ func (p *TMetaScanRange) SetFrontendsParams(val *TFrontendsMetadataParams) {
 func (p *TMetaScanRange) SetQueriesParams(val *TQueriesMetadataParams) {
 	p.QueriesParams = val
 }
+func (p *TMetaScanRange) SetMaterializedViewsParams(val *TMaterializedViewsMetadataParams) {
+	p.MaterializedViewsParams = val
+}
 
 var fieldIDToName_TMetaScanRange = map[int16]string{
 	1: "metadata_type",
@@ -17182,6 +17444,7 @@ var fieldIDToName_TMetaScanRange = map[int16]string{
 	3: "backends_params",
 	4: "frontends_params",
 	5: "queries_params",
+	6: "materialized_views_params",
 }
 
 func (p *TMetaScanRange) IsSetMetadataType() bool {
@@ -17202,6 +17465,10 @@ func (p *TMetaScanRange) IsSetFrontendsParams() bool {
 
 func (p *TMetaScanRange) IsSetQueriesParams() bool {
 	return p.QueriesParams != nil
+}
+
+func (p *TMetaScanRange) IsSetMaterializedViewsParams() bool {
+	return p.MaterializedViewsParams != nil
 }
 
 func (p *TMetaScanRange) Read(iprot thrift.TProtocol) (err error) {
@@ -17266,6 +17533,16 @@ func (p *TMetaScanRange) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -17345,6 +17622,14 @@ func (p *TMetaScanRange) ReadField5(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TMetaScanRange) ReadField6(iprot thrift.TProtocol) error {
+	p.MaterializedViewsParams = NewTMaterializedViewsMetadataParams()
+	if err := p.MaterializedViewsParams.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *TMetaScanRange) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TMetaScanRange"); err != nil {
@@ -17369,6 +17654,10 @@ func (p *TMetaScanRange) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 
@@ -17485,6 +17774,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 
+func (p *TMetaScanRange) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMaterializedViewsParams() {
+		if err = oprot.WriteFieldBegin("materialized_views_params", thrift.STRUCT, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.MaterializedViewsParams.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
 func (p *TMetaScanRange) String() string {
 	if p == nil {
 		return "<nil>"
@@ -17511,6 +17819,9 @@ func (p *TMetaScanRange) DeepEqual(ano *TMetaScanRange) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.QueriesParams) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.MaterializedViewsParams) {
 		return false
 	}
 	return true
@@ -17552,6 +17863,13 @@ func (p *TMetaScanRange) Field4DeepEqual(src *TFrontendsMetadataParams) bool {
 func (p *TMetaScanRange) Field5DeepEqual(src *TQueriesMetadataParams) bool {
 
 	if !p.QueriesParams.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TMetaScanRange) Field6DeepEqual(src *TMaterializedViewsMetadataParams) bool {
+
+	if !p.MaterializedViewsParams.DeepEqual(src) {
 		return false
 	}
 	return true

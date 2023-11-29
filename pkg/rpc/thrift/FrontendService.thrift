@@ -641,6 +641,7 @@ struct TStreamLoadPutRequest {
     52: optional i8 escape
     53: optional bool memtable_on_sink_node;
     54: optional bool group_commit
+    55: optional i32 stream_per_node;
 }
 
 struct TStreamLoadPutResult {
@@ -652,6 +653,8 @@ struct TStreamLoadPutResult {
     4: optional i64 base_schema_version
     5: optional i64 db_id
     6: optional i64 table_id
+    7: optional bool wait_internal_group_commit_finish = false
+    8: optional i64 group_commit_interval_ms
 }
 
 struct TStreamLoadMultiTablePutResult {
@@ -888,6 +891,7 @@ struct TMetadataTableRequestParams {
   5: optional PlanNodes.TFrontendsMetadataParams frontends_metadata_params
   6: optional Types.TUserIdentity current_user_ident
   7: optional PlanNodes.TQueriesMetadataParams queries_metadata_params
+  8: optional PlanNodes.TMaterializedViewsMetadataParams materialized_views_metadata_params
 }
 
 struct TFetchSchemaTableDataRequest {
@@ -899,23 +903,6 @@ struct TFetchSchemaTableDataRequest {
 struct TFetchSchemaTableDataResult {
   1: required Status.TStatus status
   2: optional list<Data.TRow> data_batch;
-}
-
-// Only support base table add columns
-struct TAddColumnsRequest {
-    1: optional i64 table_id
-    2: optional list<TColumnDef> addColumns
-    3: optional string table_name
-    4: optional string db_name
-    5: optional bool allow_type_conflict
-}
-
-// Only support base table add columns
-struct TAddColumnsResult {
-    1: optional Status.TStatus status
-    2: optional i64 table_id
-    3: optional list<Descriptors.TColumn> allColumns
-    4: optional i32 schema_version
 }
 
 struct TMySqlLoadAcquireTokenResult {
@@ -1069,6 +1056,7 @@ struct TGetBinlogResult {
     3: optional list<TBinlog> binlogs
     4: optional string fe_version
     5: optional i64 fe_meta_version
+    6: optional Types.TNetworkAddress master_address
 }
 
 struct TGetTabletReplicaInfosRequest {
@@ -1147,6 +1135,7 @@ typedef TGetBinlogRequest TGetBinlogLagRequest
 struct TGetBinlogLagResult {
     1: optional Status.TStatus status
     2: optional i64 lag
+    3: optional Types.TNetworkAddress master_address
 }
 
 struct TUpdateFollowerStatsCacheRequest {
@@ -1274,6 +1263,7 @@ struct TGetMetaDBMeta {
 struct TGetMetaResult {
     1: required Status.TStatus status
     2: optional TGetMetaDBMeta db_meta
+    3: optional Types.TNetworkAddress master_address
 }
 
 struct TGetBackendMetaRequest {
@@ -1288,6 +1278,17 @@ struct TGetBackendMetaRequest {
 struct TGetBackendMetaResult {
     1: required Status.TStatus status
     2: optional list<Types.TBackend> backends
+    3: optional Types.TNetworkAddress master_address
+}
+
+struct TGetColumnInfoRequest {
+    1: optional i64 db_id
+    2: optional i64 table_id
+}
+
+struct TGetColumnInfoResult {
+    1: optional Status.TStatus status
+    2: optional string column_info
 }
 
 service FrontendService {
@@ -1336,8 +1337,6 @@ service FrontendService {
 
     TFrontendPingFrontendResult ping(1: TFrontendPingFrontendRequest request)
 
-    TAddColumnsResult addColumns(1: TAddColumnsRequest request)
-
     TInitExternalCtlMetaResult initExternalCtlMeta(1: TInitExternalCtlMetaRequest request)
 
     TFetchSchemaTableDataResult fetchSchemaTableData(1: TFetchSchemaTableDataRequest request)
@@ -1365,4 +1364,6 @@ service FrontendService {
     TGetMetaResult getMeta(1: TGetMetaRequest request)
 
     TGetBackendMetaResult getBackendMeta(1: TGetBackendMetaRequest request)
+
+    TGetColumnInfoResult getColumnInfo(1: TGetColumnInfoRequest request)
 }

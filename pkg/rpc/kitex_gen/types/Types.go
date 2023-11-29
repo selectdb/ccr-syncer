@@ -194,6 +194,9 @@ const (
 	TPrimitiveType_VARIANT           TPrimitiveType = 34
 	TPrimitiveType_LAMBDA_FUNCTION   TPrimitiveType = 35
 	TPrimitiveType_AGG_STATE         TPrimitiveType = 36
+	TPrimitiveType_DECIMAL256        TPrimitiveType = 37
+	TPrimitiveType_IPV4              TPrimitiveType = 38
+	TPrimitiveType_IPV6              TPrimitiveType = 39
 )
 
 func (p TPrimitiveType) String() string {
@@ -272,6 +275,12 @@ func (p TPrimitiveType) String() string {
 		return "LAMBDA_FUNCTION"
 	case TPrimitiveType_AGG_STATE:
 		return "AGG_STATE"
+	case TPrimitiveType_DECIMAL256:
+		return "DECIMAL256"
+	case TPrimitiveType_IPV4:
+		return "IPV4"
+	case TPrimitiveType_IPV6:
+		return "IPV6"
 	}
 	return "<UNSET>"
 }
@@ -352,6 +361,12 @@ func TPrimitiveTypeFromString(s string) (TPrimitiveType, error) {
 		return TPrimitiveType_LAMBDA_FUNCTION, nil
 	case "AGG_STATE":
 		return TPrimitiveType_AGG_STATE, nil
+	case "DECIMAL256":
+		return TPrimitiveType_DECIMAL256, nil
+	case "IPV4":
+		return TPrimitiveType_IPV4, nil
+	case "IPV6":
+		return TPrimitiveType_IPV6, nil
 	}
 	return TPrimitiveType(0), fmt.Errorf("not a valid TPrimitiveType string")
 }
@@ -1872,13 +1887,14 @@ func (p *TSortType) Value() (driver.Value, error) {
 type TMetadataType int64
 
 const (
-	TMetadataType_ICEBERG         TMetadataType = 0
-	TMetadataType_BACKENDS        TMetadataType = 1
-	TMetadataType_WORKLOAD_GROUPS TMetadataType = 2
-	TMetadataType_FRONTENDS       TMetadataType = 3
-	TMetadataType_CATALOGS        TMetadataType = 4
-	TMetadataType_FRONTENDS_DISKS TMetadataType = 5
-	TMetadataType_QUERIES         TMetadataType = 6
+	TMetadataType_ICEBERG            TMetadataType = 0
+	TMetadataType_BACKENDS           TMetadataType = 1
+	TMetadataType_WORKLOAD_GROUPS    TMetadataType = 2
+	TMetadataType_FRONTENDS          TMetadataType = 3
+	TMetadataType_CATALOGS           TMetadataType = 4
+	TMetadataType_FRONTENDS_DISKS    TMetadataType = 5
+	TMetadataType_MATERIALIZED_VIEWS TMetadataType = 6
+	TMetadataType_QUERIES            TMetadataType = 7
 )
 
 func (p TMetadataType) String() string {
@@ -1895,6 +1911,8 @@ func (p TMetadataType) String() string {
 		return "CATALOGS"
 	case TMetadataType_FRONTENDS_DISKS:
 		return "FRONTENDS_DISKS"
+	case TMetadataType_MATERIALIZED_VIEWS:
+		return "MATERIALIZED_VIEWS"
 	case TMetadataType_QUERIES:
 		return "QUERIES"
 	}
@@ -1915,6 +1933,8 @@ func TMetadataTypeFromString(s string) (TMetadataType, error) {
 		return TMetadataType_CATALOGS, nil
 	case "FRONTENDS_DISKS":
 		return TMetadataType_FRONTENDS_DISKS, nil
+	case "MATERIALIZED_VIEWS":
+		return TMetadataType_MATERIALIZED_VIEWS, nil
 	case "QUERIES":
 		return TMetadataType_QUERIES, nil
 	}

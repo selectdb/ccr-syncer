@@ -319,6 +319,20 @@ func (p *TTabletSchema) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 19:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField19(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -655,6 +669,36 @@ func (p *TTabletSchema) FastReadField18(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TTabletSchema) FastReadField19(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := bthrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.ClusterKeyIdxes = make([]int32, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem int32
+		if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_elem = v
+
+		}
+
+		p.ClusterKeyIdxes = append(p.ClusterKeyIdxes, _elem)
+	}
+	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TTabletSchema) FastWrite(buf []byte) int {
 	return 0
@@ -682,6 +726,7 @@ func (p *TTabletSchema) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryW
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 		offset += p.fastWriteField7(buf[offset:], binaryWriter)
 		offset += p.fastWriteField11(buf[offset:], binaryWriter)
+		offset += p.fastWriteField19(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -710,6 +755,7 @@ func (p *TTabletSchema) BLength() int {
 		l += p.field16Length()
 		l += p.field17Length()
 		l += p.field18Length()
+		l += p.field19Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -918,6 +964,25 @@ func (p *TTabletSchema) fastWriteField18(buf []byte, binaryWriter bthrift.Binary
 	return offset
 }
 
+func (p *TTabletSchema) fastWriteField19(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetClusterKeyIdxes() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "cluster_key_idxes", thrift.LIST, 19)
+		listBeginOffset := offset
+		offset += bthrift.Binary.ListBeginLength(thrift.I32, 0)
+		var length int
+		for _, v := range p.ClusterKeyIdxes {
+			length++
+			offset += bthrift.Binary.WriteI32(buf[offset:], v)
+
+		}
+		bthrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I32, length)
+		offset += bthrift.Binary.WriteListEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TTabletSchema) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("short_key_column_count", thrift.I16, 1)
@@ -1107,6 +1172,19 @@ func (p *TTabletSchema) field18Length() int {
 		l += bthrift.Binary.FieldBeginLength("skip_write_index_on_load", thrift.BOOL, 18)
 		l += bthrift.Binary.BoolLength(p.SkipWriteIndexOnLoad)
 
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TTabletSchema) field19Length() int {
+	l := 0
+	if p.IsSetClusterKeyIdxes() {
+		l += bthrift.Binary.FieldBeginLength("cluster_key_idxes", thrift.LIST, 19)
+		l += bthrift.Binary.ListBeginLength(thrift.I32, len(p.ClusterKeyIdxes))
+		var tmpV int32
+		l += bthrift.Binary.I32Length(int32(tmpV)) * len(p.ClusterKeyIdxes)
+		l += bthrift.Binary.ListEndLength()
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l

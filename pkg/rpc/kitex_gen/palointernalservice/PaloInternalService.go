@@ -1631,6 +1631,10 @@ type TQueryOptions struct {
 	EnablePageCache                        bool            `thrift:"enable_page_cache,85,optional" frugal:"85,optional,bool" json:"enable_page_cache,omitempty"`
 	AnalyzeTimeout                         int32           `thrift:"analyze_timeout,86,optional" frugal:"86,optional,i32" json:"analyze_timeout,omitempty"`
 	FasterFloatConvert                     bool            `thrift:"faster_float_convert,87,optional" frugal:"87,optional,bool" json:"faster_float_convert,omitempty"`
+	EnableDecimal256                       bool            `thrift:"enable_decimal256,88,optional" frugal:"88,optional,bool" json:"enable_decimal256,omitempty"`
+	EnableLocalShuffle                     bool            `thrift:"enable_local_shuffle,89,optional" frugal:"89,optional,bool" json:"enable_local_shuffle,omitempty"`
+	SkipMissingVersion                     bool            `thrift:"skip_missing_version,90,optional" frugal:"90,optional,bool" json:"skip_missing_version,omitempty"`
+	RuntimeFilterWaitInfinitely            bool            `thrift:"runtime_filter_wait_infinitely,91,optional" frugal:"91,optional,bool" json:"runtime_filter_wait_infinitely,omitempty"`
 }
 
 func NewTQueryOptions() *TQueryOptions {
@@ -1704,6 +1708,10 @@ func NewTQueryOptions() *TQueryOptions {
 		EnablePageCache:                        false,
 		AnalyzeTimeout:                         43200,
 		FasterFloatConvert:                     false,
+		EnableDecimal256:                       false,
+		EnableLocalShuffle:                     false,
+		SkipMissingVersion:                     false,
+		RuntimeFilterWaitInfinitely:            false,
 	}
 }
 
@@ -1778,6 +1786,10 @@ func (p *TQueryOptions) InitDefault() {
 		EnablePageCache:                        false,
 		AnalyzeTimeout:                         43200,
 		FasterFloatConvert:                     false,
+		EnableDecimal256:                       false,
+		EnableLocalShuffle:                     false,
+		SkipMissingVersion:                     false,
+		RuntimeFilterWaitInfinitely:            false,
 	}
 }
 
@@ -2482,6 +2494,42 @@ func (p *TQueryOptions) GetFasterFloatConvert() (v bool) {
 	}
 	return p.FasterFloatConvert
 }
+
+var TQueryOptions_EnableDecimal256_DEFAULT bool = false
+
+func (p *TQueryOptions) GetEnableDecimal256() (v bool) {
+	if !p.IsSetEnableDecimal256() {
+		return TQueryOptions_EnableDecimal256_DEFAULT
+	}
+	return p.EnableDecimal256
+}
+
+var TQueryOptions_EnableLocalShuffle_DEFAULT bool = false
+
+func (p *TQueryOptions) GetEnableLocalShuffle() (v bool) {
+	if !p.IsSetEnableLocalShuffle() {
+		return TQueryOptions_EnableLocalShuffle_DEFAULT
+	}
+	return p.EnableLocalShuffle
+}
+
+var TQueryOptions_SkipMissingVersion_DEFAULT bool = false
+
+func (p *TQueryOptions) GetSkipMissingVersion() (v bool) {
+	if !p.IsSetSkipMissingVersion() {
+		return TQueryOptions_SkipMissingVersion_DEFAULT
+	}
+	return p.SkipMissingVersion
+}
+
+var TQueryOptions_RuntimeFilterWaitInfinitely_DEFAULT bool = false
+
+func (p *TQueryOptions) GetRuntimeFilterWaitInfinitely() (v bool) {
+	if !p.IsSetRuntimeFilterWaitInfinitely() {
+		return TQueryOptions_RuntimeFilterWaitInfinitely_DEFAULT
+	}
+	return p.RuntimeFilterWaitInfinitely
+}
 func (p *TQueryOptions) SetAbortOnError(val bool) {
 	p.AbortOnError = val
 }
@@ -2716,6 +2764,18 @@ func (p *TQueryOptions) SetAnalyzeTimeout(val int32) {
 func (p *TQueryOptions) SetFasterFloatConvert(val bool) {
 	p.FasterFloatConvert = val
 }
+func (p *TQueryOptions) SetEnableDecimal256(val bool) {
+	p.EnableDecimal256 = val
+}
+func (p *TQueryOptions) SetEnableLocalShuffle(val bool) {
+	p.EnableLocalShuffle = val
+}
+func (p *TQueryOptions) SetSkipMissingVersion(val bool) {
+	p.SkipMissingVersion = val
+}
+func (p *TQueryOptions) SetRuntimeFilterWaitInfinitely(val bool) {
+	p.RuntimeFilterWaitInfinitely = val
+}
 
 var fieldIDToName_TQueryOptions = map[int16]string{
 	1:  "abort_on_error",
@@ -2796,6 +2856,10 @@ var fieldIDToName_TQueryOptions = map[int16]string{
 	85: "enable_page_cache",
 	86: "analyze_timeout",
 	87: "faster_float_convert",
+	88: "enable_decimal256",
+	89: "enable_local_shuffle",
+	90: "skip_missing_version",
+	91: "runtime_filter_wait_infinitely",
 }
 
 func (p *TQueryOptions) IsSetAbortOnError() bool {
@@ -3108,6 +3172,22 @@ func (p *TQueryOptions) IsSetAnalyzeTimeout() bool {
 
 func (p *TQueryOptions) IsSetFasterFloatConvert() bool {
 	return p.FasterFloatConvert != TQueryOptions_FasterFloatConvert_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableDecimal256() bool {
+	return p.EnableDecimal256 != TQueryOptions_EnableDecimal256_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableLocalShuffle() bool {
+	return p.EnableLocalShuffle != TQueryOptions_EnableLocalShuffle_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetSkipMissingVersion() bool {
+	return p.SkipMissingVersion != TQueryOptions_SkipMissingVersion_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetRuntimeFilterWaitInfinitely() bool {
+	return p.RuntimeFilterWaitInfinitely != TQueryOptions_RuntimeFilterWaitInfinitely_DEFAULT
 }
 
 func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
@@ -3909,6 +3989,46 @@ func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
 					goto SkipFieldError
 				}
 			}
+		case 88:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField88(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 89:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField89(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 90:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField90(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 91:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField91(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
@@ -4640,6 +4760,42 @@ func (p *TQueryOptions) ReadField87(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TQueryOptions) ReadField88(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.EnableDecimal256 = v
+	}
+	return nil
+}
+
+func (p *TQueryOptions) ReadField89(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.EnableLocalShuffle = v
+	}
+	return nil
+}
+
+func (p *TQueryOptions) ReadField90(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.SkipMissingVersion = v
+	}
+	return nil
+}
+
+func (p *TQueryOptions) ReadField91(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.RuntimeFilterWaitInfinitely = v
+	}
+	return nil
+}
+
 func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TQueryOptions"); err != nil {
@@ -4956,6 +5112,22 @@ func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField87(oprot); err != nil {
 			fieldId = 87
+			goto WriteFieldError
+		}
+		if err = p.writeField88(oprot); err != nil {
+			fieldId = 88
+			goto WriteFieldError
+		}
+		if err = p.writeField89(oprot); err != nil {
+			fieldId = 89
+			goto WriteFieldError
+		}
+		if err = p.writeField90(oprot); err != nil {
+			fieldId = 90
+			goto WriteFieldError
+		}
+		if err = p.writeField91(oprot); err != nil {
+			fieldId = 91
 			goto WriteFieldError
 		}
 
@@ -6459,6 +6631,82 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 87 end error: ", p), err)
 }
 
+func (p *TQueryOptions) writeField88(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableDecimal256() {
+		if err = oprot.WriteFieldBegin("enable_decimal256", thrift.BOOL, 88); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableDecimal256); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 88 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 88 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField89(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableLocalShuffle() {
+		if err = oprot.WriteFieldBegin("enable_local_shuffle", thrift.BOOL, 89); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableLocalShuffle); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 89 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 89 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField90(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSkipMissingVersion() {
+		if err = oprot.WriteFieldBegin("skip_missing_version", thrift.BOOL, 90); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.SkipMissingVersion); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 90 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 90 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField91(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRuntimeFilterWaitInfinitely() {
+		if err = oprot.WriteFieldBegin("runtime_filter_wait_infinitely", thrift.BOOL, 91); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.RuntimeFilterWaitInfinitely); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 91 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 91 end error: ", p), err)
+}
+
 func (p *TQueryOptions) String() string {
 	if p == nil {
 		return "<nil>"
@@ -6704,6 +6952,18 @@ func (p *TQueryOptions) DeepEqual(ano *TQueryOptions) bool {
 		return false
 	}
 	if !p.Field87DeepEqual(ano.FasterFloatConvert) {
+		return false
+	}
+	if !p.Field88DeepEqual(ano.EnableDecimal256) {
+		return false
+	}
+	if !p.Field89DeepEqual(ano.EnableLocalShuffle) {
+		return false
+	}
+	if !p.Field90DeepEqual(ano.SkipMissingVersion) {
+		return false
+	}
+	if !p.Field91DeepEqual(ano.RuntimeFilterWaitInfinitely) {
 		return false
 	}
 	return true
@@ -7296,6 +7556,34 @@ func (p *TQueryOptions) Field86DeepEqual(src int32) bool {
 func (p *TQueryOptions) Field87DeepEqual(src bool) bool {
 
 	if p.FasterFloatConvert != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field88DeepEqual(src bool) bool {
+
+	if p.EnableDecimal256 != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field89DeepEqual(src bool) bool {
+
+	if p.EnableLocalShuffle != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field90DeepEqual(src bool) bool {
+
+	if p.SkipMissingVersion != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field91DeepEqual(src bool) bool {
+
+	if p.RuntimeFilterWaitInfinitely != src {
 		return false
 	}
 	return true
@@ -11689,6 +11977,9 @@ type TExecPlanFragmentParams struct {
 	TableName                      *string                                               `thrift:"table_name,23,optional" frugal:"23,optional,string" json:"table_name,omitempty"`
 	FileScanParams                 map[types.TPlanNodeId]*plannodes.TFileScanRangeParams `thrift:"file_scan_params,24,optional" frugal:"24,optional,map<i32:plannodes.TFileScanRangeParams>" json:"file_scan_params,omitempty"`
 	WalId                          *int64                                                `thrift:"wal_id,25,optional" frugal:"25,optional,i64" json:"wal_id,omitempty"`
+	LoadStreamPerNode              *int32                                                `thrift:"load_stream_per_node,26,optional" frugal:"26,optional,i32" json:"load_stream_per_node,omitempty"`
+	TotalLoadStreams               *int32                                                `thrift:"total_load_streams,27,optional" frugal:"27,optional,i32" json:"total_load_streams,omitempty"`
+	NumLocalSink                   *int32                                                `thrift:"num_local_sink,28,optional" frugal:"28,optional,i32" json:"num_local_sink,omitempty"`
 }
 
 func NewTExecPlanFragmentParams() *TExecPlanFragmentParams {
@@ -11928,6 +12219,33 @@ func (p *TExecPlanFragmentParams) GetWalId() (v int64) {
 	}
 	return *p.WalId
 }
+
+var TExecPlanFragmentParams_LoadStreamPerNode_DEFAULT int32
+
+func (p *TExecPlanFragmentParams) GetLoadStreamPerNode() (v int32) {
+	if !p.IsSetLoadStreamPerNode() {
+		return TExecPlanFragmentParams_LoadStreamPerNode_DEFAULT
+	}
+	return *p.LoadStreamPerNode
+}
+
+var TExecPlanFragmentParams_TotalLoadStreams_DEFAULT int32
+
+func (p *TExecPlanFragmentParams) GetTotalLoadStreams() (v int32) {
+	if !p.IsSetTotalLoadStreams() {
+		return TExecPlanFragmentParams_TotalLoadStreams_DEFAULT
+	}
+	return *p.TotalLoadStreams
+}
+
+var TExecPlanFragmentParams_NumLocalSink_DEFAULT int32
+
+func (p *TExecPlanFragmentParams) GetNumLocalSink() (v int32) {
+	if !p.IsSetNumLocalSink() {
+		return TExecPlanFragmentParams_NumLocalSink_DEFAULT
+	}
+	return *p.NumLocalSink
+}
 func (p *TExecPlanFragmentParams) SetProtocolVersion(val PaloInternalServiceVersion) {
 	p.ProtocolVersion = val
 }
@@ -12003,6 +12321,15 @@ func (p *TExecPlanFragmentParams) SetFileScanParams(val map[types.TPlanNodeId]*p
 func (p *TExecPlanFragmentParams) SetWalId(val *int64) {
 	p.WalId = val
 }
+func (p *TExecPlanFragmentParams) SetLoadStreamPerNode(val *int32) {
+	p.LoadStreamPerNode = val
+}
+func (p *TExecPlanFragmentParams) SetTotalLoadStreams(val *int32) {
+	p.TotalLoadStreams = val
+}
+func (p *TExecPlanFragmentParams) SetNumLocalSink(val *int32) {
+	p.NumLocalSink = val
+}
 
 var fieldIDToName_TExecPlanFragmentParams = map[int16]string{
 	1:  "protocol_version",
@@ -12030,6 +12357,9 @@ var fieldIDToName_TExecPlanFragmentParams = map[int16]string{
 	23: "table_name",
 	24: "file_scan_params",
 	25: "wal_id",
+	26: "load_stream_per_node",
+	27: "total_load_streams",
+	28: "num_local_sink",
 }
 
 func (p *TExecPlanFragmentParams) IsSetFragment() bool {
@@ -12126,6 +12456,18 @@ func (p *TExecPlanFragmentParams) IsSetFileScanParams() bool {
 
 func (p *TExecPlanFragmentParams) IsSetWalId() bool {
 	return p.WalId != nil
+}
+
+func (p *TExecPlanFragmentParams) IsSetLoadStreamPerNode() bool {
+	return p.LoadStreamPerNode != nil
+}
+
+func (p *TExecPlanFragmentParams) IsSetTotalLoadStreams() bool {
+	return p.TotalLoadStreams != nil
+}
+
+func (p *TExecPlanFragmentParams) IsSetNumLocalSink() bool {
+	return p.NumLocalSink != nil
 }
 
 func (p *TExecPlanFragmentParams) Read(iprot thrift.TProtocol) (err error) {
@@ -12392,6 +12734,36 @@ func (p *TExecPlanFragmentParams) Read(iprot thrift.TProtocol) (err error) {
 		case 25:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField25(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 26:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField26(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 27:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField27(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 28:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField28(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -12678,6 +13050,33 @@ func (p *TExecPlanFragmentParams) ReadField25(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TExecPlanFragmentParams) ReadField26(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		p.LoadStreamPerNode = &v
+	}
+	return nil
+}
+
+func (p *TExecPlanFragmentParams) ReadField27(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		p.TotalLoadStreams = &v
+	}
+	return nil
+}
+
+func (p *TExecPlanFragmentParams) ReadField28(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		p.NumLocalSink = &v
+	}
+	return nil
+}
+
 func (p *TExecPlanFragmentParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TExecPlanFragmentParams"); err != nil {
@@ -12782,6 +13181,18 @@ func (p *TExecPlanFragmentParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField25(oprot); err != nil {
 			fieldId = 25
+			goto WriteFieldError
+		}
+		if err = p.writeField26(oprot); err != nil {
+			fieldId = 26
+			goto WriteFieldError
+		}
+		if err = p.writeField27(oprot); err != nil {
+			fieldId = 27
+			goto WriteFieldError
+		}
+		if err = p.writeField28(oprot); err != nil {
+			fieldId = 28
 			goto WriteFieldError
 		}
 
@@ -13297,6 +13708,63 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 25 end error: ", p), err)
 }
 
+func (p *TExecPlanFragmentParams) writeField26(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLoadStreamPerNode() {
+		if err = oprot.WriteFieldBegin("load_stream_per_node", thrift.I32, 26); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.LoadStreamPerNode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 26 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 26 end error: ", p), err)
+}
+
+func (p *TExecPlanFragmentParams) writeField27(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTotalLoadStreams() {
+		if err = oprot.WriteFieldBegin("total_load_streams", thrift.I32, 27); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.TotalLoadStreams); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 27 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 27 end error: ", p), err)
+}
+
+func (p *TExecPlanFragmentParams) writeField28(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNumLocalSink() {
+		if err = oprot.WriteFieldBegin("num_local_sink", thrift.I32, 28); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.NumLocalSink); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 28 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 28 end error: ", p), err)
+}
+
 func (p *TExecPlanFragmentParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -13383,6 +13851,15 @@ func (p *TExecPlanFragmentParams) DeepEqual(ano *TExecPlanFragmentParams) bool {
 		return false
 	}
 	if !p.Field25DeepEqual(ano.WalId) {
+		return false
+	}
+	if !p.Field26DeepEqual(ano.LoadStreamPerNode) {
+		return false
+	}
+	if !p.Field27DeepEqual(ano.TotalLoadStreams) {
+		return false
+	}
+	if !p.Field28DeepEqual(ano.NumLocalSink) {
 		return false
 	}
 	return true
@@ -13616,6 +14093,42 @@ func (p *TExecPlanFragmentParams) Field25DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.WalId != *src {
+		return false
+	}
+	return true
+}
+func (p *TExecPlanFragmentParams) Field26DeepEqual(src *int32) bool {
+
+	if p.LoadStreamPerNode == src {
+		return true
+	} else if p.LoadStreamPerNode == nil || src == nil {
+		return false
+	}
+	if *p.LoadStreamPerNode != *src {
+		return false
+	}
+	return true
+}
+func (p *TExecPlanFragmentParams) Field27DeepEqual(src *int32) bool {
+
+	if p.TotalLoadStreams == src {
+		return true
+	} else if p.TotalLoadStreams == nil || src == nil {
+		return false
+	}
+	if *p.TotalLoadStreams != *src {
+		return false
+	}
+	return true
+}
+func (p *TExecPlanFragmentParams) Field28DeepEqual(src *int32) bool {
+
+	if p.NumLocalSink == src {
+		return true
+	} else if p.NumLocalSink == nil || src == nil {
+		return false
+	}
+	if *p.NumLocalSink != *src {
 		return false
 	}
 	return true
@@ -21447,6 +21960,9 @@ type TPipelineFragmentParams struct {
 	TableName                         *string                                               `thrift:"table_name,28,optional" frugal:"28,optional,string" json:"table_name,omitempty"`
 	FileScanParams                    map[types.TPlanNodeId]*plannodes.TFileScanRangeParams `thrift:"file_scan_params,29,optional" frugal:"29,optional,map<i32:plannodes.TFileScanRangeParams>" json:"file_scan_params,omitempty"`
 	GroupCommit                       bool                                                  `thrift:"group_commit,30,optional" frugal:"30,optional,bool" json:"group_commit,omitempty"`
+	LoadStreamPerNode                 *int32                                                `thrift:"load_stream_per_node,31,optional" frugal:"31,optional,i32" json:"load_stream_per_node,omitempty"`
+	TotalLoadStreams                  *int32                                                `thrift:"total_load_streams,32,optional" frugal:"32,optional,i32" json:"total_load_streams,omitempty"`
+	NumLocalSink                      *int32                                                `thrift:"num_local_sink,33,optional" frugal:"33,optional,i32" json:"num_local_sink,omitempty"`
 }
 
 func NewTPipelineFragmentParams() *TPipelineFragmentParams {
@@ -21707,6 +22223,33 @@ func (p *TPipelineFragmentParams) GetGroupCommit() (v bool) {
 	}
 	return p.GroupCommit
 }
+
+var TPipelineFragmentParams_LoadStreamPerNode_DEFAULT int32
+
+func (p *TPipelineFragmentParams) GetLoadStreamPerNode() (v int32) {
+	if !p.IsSetLoadStreamPerNode() {
+		return TPipelineFragmentParams_LoadStreamPerNode_DEFAULT
+	}
+	return *p.LoadStreamPerNode
+}
+
+var TPipelineFragmentParams_TotalLoadStreams_DEFAULT int32
+
+func (p *TPipelineFragmentParams) GetTotalLoadStreams() (v int32) {
+	if !p.IsSetTotalLoadStreams() {
+		return TPipelineFragmentParams_TotalLoadStreams_DEFAULT
+	}
+	return *p.TotalLoadStreams
+}
+
+var TPipelineFragmentParams_NumLocalSink_DEFAULT int32
+
+func (p *TPipelineFragmentParams) GetNumLocalSink() (v int32) {
+	if !p.IsSetNumLocalSink() {
+		return TPipelineFragmentParams_NumLocalSink_DEFAULT
+	}
+	return *p.NumLocalSink
+}
 func (p *TPipelineFragmentParams) SetProtocolVersion(val PaloInternalServiceVersion) {
 	p.ProtocolVersion = val
 }
@@ -21794,6 +22337,15 @@ func (p *TPipelineFragmentParams) SetFileScanParams(val map[types.TPlanNodeId]*p
 func (p *TPipelineFragmentParams) SetGroupCommit(val bool) {
 	p.GroupCommit = val
 }
+func (p *TPipelineFragmentParams) SetLoadStreamPerNode(val *int32) {
+	p.LoadStreamPerNode = val
+}
+func (p *TPipelineFragmentParams) SetTotalLoadStreams(val *int32) {
+	p.TotalLoadStreams = val
+}
+func (p *TPipelineFragmentParams) SetNumLocalSink(val *int32) {
+	p.NumLocalSink = val
+}
 
 var fieldIDToName_TPipelineFragmentParams = map[int16]string{
 	1:  "protocol_version",
@@ -21825,6 +22377,9 @@ var fieldIDToName_TPipelineFragmentParams = map[int16]string{
 	28: "table_name",
 	29: "file_scan_params",
 	30: "group_commit",
+	31: "load_stream_per_node",
+	32: "total_load_streams",
+	33: "num_local_sink",
 }
 
 func (p *TPipelineFragmentParams) IsSetQueryId() bool {
@@ -21925,6 +22480,18 @@ func (p *TPipelineFragmentParams) IsSetFileScanParams() bool {
 
 func (p *TPipelineFragmentParams) IsSetGroupCommit() bool {
 	return p.GroupCommit != TPipelineFragmentParams_GroupCommit_DEFAULT
+}
+
+func (p *TPipelineFragmentParams) IsSetLoadStreamPerNode() bool {
+	return p.LoadStreamPerNode != nil
+}
+
+func (p *TPipelineFragmentParams) IsSetTotalLoadStreams() bool {
+	return p.TotalLoadStreams != nil
+}
+
+func (p *TPipelineFragmentParams) IsSetNumLocalSink() bool {
+	return p.NumLocalSink != nil
 }
 
 func (p *TPipelineFragmentParams) Read(iprot thrift.TProtocol) (err error) {
@@ -22235,6 +22802,36 @@ func (p *TPipelineFragmentParams) Read(iprot thrift.TProtocol) (err error) {
 		case 30:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField30(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 31:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField31(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 32:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField32(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 33:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField33(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -22620,6 +23217,33 @@ func (p *TPipelineFragmentParams) ReadField30(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TPipelineFragmentParams) ReadField31(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		p.LoadStreamPerNode = &v
+	}
+	return nil
+}
+
+func (p *TPipelineFragmentParams) ReadField32(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		p.TotalLoadStreams = &v
+	}
+	return nil
+}
+
+func (p *TPipelineFragmentParams) ReadField33(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		p.NumLocalSink = &v
+	}
+	return nil
+}
+
 func (p *TPipelineFragmentParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TPipelineFragmentParams"); err != nil {
@@ -22740,6 +23364,18 @@ func (p *TPipelineFragmentParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField30(oprot); err != nil {
 			fieldId = 30
+			goto WriteFieldError
+		}
+		if err = p.writeField31(oprot); err != nil {
+			fieldId = 31
+			goto WriteFieldError
+		}
+		if err = p.writeField32(oprot); err != nil {
+			fieldId = 32
+			goto WriteFieldError
+		}
+		if err = p.writeField33(oprot); err != nil {
+			fieldId = 33
 			goto WriteFieldError
 		}
 
@@ -23360,6 +23996,63 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 30 end error: ", p), err)
 }
 
+func (p *TPipelineFragmentParams) writeField31(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLoadStreamPerNode() {
+		if err = oprot.WriteFieldBegin("load_stream_per_node", thrift.I32, 31); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.LoadStreamPerNode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 31 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 31 end error: ", p), err)
+}
+
+func (p *TPipelineFragmentParams) writeField32(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTotalLoadStreams() {
+		if err = oprot.WriteFieldBegin("total_load_streams", thrift.I32, 32); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.TotalLoadStreams); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 32 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 32 end error: ", p), err)
+}
+
+func (p *TPipelineFragmentParams) writeField33(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNumLocalSink() {
+		if err = oprot.WriteFieldBegin("num_local_sink", thrift.I32, 33); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.NumLocalSink); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 33 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 33 end error: ", p), err)
+}
+
 func (p *TPipelineFragmentParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -23458,6 +24151,15 @@ func (p *TPipelineFragmentParams) DeepEqual(ano *TPipelineFragmentParams) bool {
 		return false
 	}
 	if !p.Field30DeepEqual(ano.GroupCommit) {
+		return false
+	}
+	if !p.Field31DeepEqual(ano.LoadStreamPerNode) {
+		return false
+	}
+	if !p.Field32DeepEqual(ano.TotalLoadStreams) {
+		return false
+	}
+	if !p.Field33DeepEqual(ano.NumLocalSink) {
 		return false
 	}
 	return true
@@ -23743,6 +24445,42 @@ func (p *TPipelineFragmentParams) Field29DeepEqual(src map[types.TPlanNodeId]*pl
 func (p *TPipelineFragmentParams) Field30DeepEqual(src bool) bool {
 
 	if p.GroupCommit != src {
+		return false
+	}
+	return true
+}
+func (p *TPipelineFragmentParams) Field31DeepEqual(src *int32) bool {
+
+	if p.LoadStreamPerNode == src {
+		return true
+	} else if p.LoadStreamPerNode == nil || src == nil {
+		return false
+	}
+	if *p.LoadStreamPerNode != *src {
+		return false
+	}
+	return true
+}
+func (p *TPipelineFragmentParams) Field32DeepEqual(src *int32) bool {
+
+	if p.TotalLoadStreams == src {
+		return true
+	} else if p.TotalLoadStreams == nil || src == nil {
+		return false
+	}
+	if *p.TotalLoadStreams != *src {
+		return false
+	}
+	return true
+}
+func (p *TPipelineFragmentParams) Field33DeepEqual(src *int32) bool {
+
+	if p.NumLocalSink == src {
+		return true
+	} else if p.NumLocalSink == nil || src == nil {
+		return false
+	}
+	if *p.NumLocalSink != *src {
 		return false
 	}
 	return true

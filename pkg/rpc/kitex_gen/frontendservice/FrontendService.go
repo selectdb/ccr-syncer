@@ -22397,6 +22397,7 @@ type TStreamLoadPutRequest struct {
 	Escape               *int8                        `thrift:"escape,52,optional" frugal:"52,optional,i8" json:"escape,omitempty"`
 	MemtableOnSinkNode   *bool                        `thrift:"memtable_on_sink_node,53,optional" frugal:"53,optional,bool" json:"memtable_on_sink_node,omitempty"`
 	GroupCommit          *bool                        `thrift:"group_commit,54,optional" frugal:"54,optional,bool" json:"group_commit,omitempty"`
+	StreamPerNode        *int32                       `thrift:"stream_per_node,55,optional" frugal:"55,optional,i32" json:"stream_per_node,omitempty"`
 }
 
 func NewTStreamLoadPutRequest() *TStreamLoadPutRequest {
@@ -22857,6 +22858,15 @@ func (p *TStreamLoadPutRequest) GetGroupCommit() (v bool) {
 	}
 	return *p.GroupCommit
 }
+
+var TStreamLoadPutRequest_StreamPerNode_DEFAULT int32
+
+func (p *TStreamLoadPutRequest) GetStreamPerNode() (v int32) {
+	if !p.IsSetStreamPerNode() {
+		return TStreamLoadPutRequest_StreamPerNode_DEFAULT
+	}
+	return *p.StreamPerNode
+}
 func (p *TStreamLoadPutRequest) SetCluster(val *string) {
 	p.Cluster = val
 }
@@ -23019,6 +23029,9 @@ func (p *TStreamLoadPutRequest) SetMemtableOnSinkNode(val *bool) {
 func (p *TStreamLoadPutRequest) SetGroupCommit(val *bool) {
 	p.GroupCommit = val
 }
+func (p *TStreamLoadPutRequest) SetStreamPerNode(val *int32) {
+	p.StreamPerNode = val
+}
 
 var fieldIDToName_TStreamLoadPutRequest = map[int16]string{
 	1:  "cluster",
@@ -23075,6 +23088,7 @@ var fieldIDToName_TStreamLoadPutRequest = map[int16]string{
 	52: "escape",
 	53: "memtable_on_sink_node",
 	54: "group_commit",
+	55: "stream_per_node",
 }
 
 func (p *TStreamLoadPutRequest) IsSetCluster() bool {
@@ -23263,6 +23277,10 @@ func (p *TStreamLoadPutRequest) IsSetMemtableOnSinkNode() bool {
 
 func (p *TStreamLoadPutRequest) IsSetGroupCommit() bool {
 	return p.GroupCommit != nil
+}
+
+func (p *TStreamLoadPutRequest) IsSetStreamPerNode() bool {
+	return p.StreamPerNode != nil
 }
 
 func (p *TStreamLoadPutRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -23833,6 +23851,16 @@ func (p *TStreamLoadPutRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 54:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField54(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 55:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField55(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -24411,6 +24439,15 @@ func (p *TStreamLoadPutRequest) ReadField54(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TStreamLoadPutRequest) ReadField55(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		p.StreamPerNode = &v
+	}
+	return nil
+}
+
 func (p *TStreamLoadPutRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TStreamLoadPutRequest"); err != nil {
@@ -24631,6 +24668,10 @@ func (p *TStreamLoadPutRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField54(oprot); err != nil {
 			fieldId = 54
+			goto WriteFieldError
+		}
+		if err = p.writeField55(oprot); err != nil {
+			fieldId = 55
 			goto WriteFieldError
 		}
 
@@ -25670,6 +25711,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 54 end error: ", p), err)
 }
 
+func (p *TStreamLoadPutRequest) writeField55(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStreamPerNode() {
+		if err = oprot.WriteFieldBegin("stream_per_node", thrift.I32, 55); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.StreamPerNode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 55 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 55 end error: ", p), err)
+}
+
 func (p *TStreamLoadPutRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -25843,6 +25903,9 @@ func (p *TStreamLoadPutRequest) DeepEqual(ano *TStreamLoadPutRequest) bool {
 		return false
 	}
 	if !p.Field54DeepEqual(ano.GroupCommit) {
+		return false
+	}
+	if !p.Field55DeepEqual(ano.StreamPerNode) {
 		return false
 	}
 	return true
@@ -26457,22 +26520,42 @@ func (p *TStreamLoadPutRequest) Field54DeepEqual(src *bool) bool {
 	}
 	return true
 }
+func (p *TStreamLoadPutRequest) Field55DeepEqual(src *int32) bool {
+
+	if p.StreamPerNode == src {
+		return true
+	} else if p.StreamPerNode == nil || src == nil {
+		return false
+	}
+	if *p.StreamPerNode != *src {
+		return false
+	}
+	return true
+}
 
 type TStreamLoadPutResult_ struct {
-	Status            *status.TStatus                              `thrift:"status,1,required" frugal:"1,required,status.TStatus" json:"status"`
-	Params            *palointernalservice.TExecPlanFragmentParams `thrift:"params,2,optional" frugal:"2,optional,palointernalservice.TExecPlanFragmentParams" json:"params,omitempty"`
-	PipelineParams    *palointernalservice.TPipelineFragmentParams `thrift:"pipeline_params,3,optional" frugal:"3,optional,palointernalservice.TPipelineFragmentParams" json:"pipeline_params,omitempty"`
-	BaseSchemaVersion *int64                                       `thrift:"base_schema_version,4,optional" frugal:"4,optional,i64" json:"base_schema_version,omitempty"`
-	DbId              *int64                                       `thrift:"db_id,5,optional" frugal:"5,optional,i64" json:"db_id,omitempty"`
-	TableId           *int64                                       `thrift:"table_id,6,optional" frugal:"6,optional,i64" json:"table_id,omitempty"`
+	Status                        *status.TStatus                              `thrift:"status,1,required" frugal:"1,required,status.TStatus" json:"status"`
+	Params                        *palointernalservice.TExecPlanFragmentParams `thrift:"params,2,optional" frugal:"2,optional,palointernalservice.TExecPlanFragmentParams" json:"params,omitempty"`
+	PipelineParams                *palointernalservice.TPipelineFragmentParams `thrift:"pipeline_params,3,optional" frugal:"3,optional,palointernalservice.TPipelineFragmentParams" json:"pipeline_params,omitempty"`
+	BaseSchemaVersion             *int64                                       `thrift:"base_schema_version,4,optional" frugal:"4,optional,i64" json:"base_schema_version,omitempty"`
+	DbId                          *int64                                       `thrift:"db_id,5,optional" frugal:"5,optional,i64" json:"db_id,omitempty"`
+	TableId                       *int64                                       `thrift:"table_id,6,optional" frugal:"6,optional,i64" json:"table_id,omitempty"`
+	WaitInternalGroupCommitFinish bool                                         `thrift:"wait_internal_group_commit_finish,7,optional" frugal:"7,optional,bool" json:"wait_internal_group_commit_finish,omitempty"`
+	GroupCommitIntervalMs         *int64                                       `thrift:"group_commit_interval_ms,8,optional" frugal:"8,optional,i64" json:"group_commit_interval_ms,omitempty"`
 }
 
 func NewTStreamLoadPutResult_() *TStreamLoadPutResult_ {
-	return &TStreamLoadPutResult_{}
+	return &TStreamLoadPutResult_{
+
+		WaitInternalGroupCommitFinish: false,
+	}
 }
 
 func (p *TStreamLoadPutResult_) InitDefault() {
-	*p = TStreamLoadPutResult_{}
+	*p = TStreamLoadPutResult_{
+
+		WaitInternalGroupCommitFinish: false,
+	}
 }
 
 var TStreamLoadPutResult__Status_DEFAULT *status.TStatus
@@ -26528,6 +26611,24 @@ func (p *TStreamLoadPutResult_) GetTableId() (v int64) {
 	}
 	return *p.TableId
 }
+
+var TStreamLoadPutResult__WaitInternalGroupCommitFinish_DEFAULT bool = false
+
+func (p *TStreamLoadPutResult_) GetWaitInternalGroupCommitFinish() (v bool) {
+	if !p.IsSetWaitInternalGroupCommitFinish() {
+		return TStreamLoadPutResult__WaitInternalGroupCommitFinish_DEFAULT
+	}
+	return p.WaitInternalGroupCommitFinish
+}
+
+var TStreamLoadPutResult__GroupCommitIntervalMs_DEFAULT int64
+
+func (p *TStreamLoadPutResult_) GetGroupCommitIntervalMs() (v int64) {
+	if !p.IsSetGroupCommitIntervalMs() {
+		return TStreamLoadPutResult__GroupCommitIntervalMs_DEFAULT
+	}
+	return *p.GroupCommitIntervalMs
+}
 func (p *TStreamLoadPutResult_) SetStatus(val *status.TStatus) {
 	p.Status = val
 }
@@ -26546,6 +26647,12 @@ func (p *TStreamLoadPutResult_) SetDbId(val *int64) {
 func (p *TStreamLoadPutResult_) SetTableId(val *int64) {
 	p.TableId = val
 }
+func (p *TStreamLoadPutResult_) SetWaitInternalGroupCommitFinish(val bool) {
+	p.WaitInternalGroupCommitFinish = val
+}
+func (p *TStreamLoadPutResult_) SetGroupCommitIntervalMs(val *int64) {
+	p.GroupCommitIntervalMs = val
+}
 
 var fieldIDToName_TStreamLoadPutResult_ = map[int16]string{
 	1: "status",
@@ -26554,6 +26661,8 @@ var fieldIDToName_TStreamLoadPutResult_ = map[int16]string{
 	4: "base_schema_version",
 	5: "db_id",
 	6: "table_id",
+	7: "wait_internal_group_commit_finish",
+	8: "group_commit_interval_ms",
 }
 
 func (p *TStreamLoadPutResult_) IsSetStatus() bool {
@@ -26578,6 +26687,14 @@ func (p *TStreamLoadPutResult_) IsSetDbId() bool {
 
 func (p *TStreamLoadPutResult_) IsSetTableId() bool {
 	return p.TableId != nil
+}
+
+func (p *TStreamLoadPutResult_) IsSetWaitInternalGroupCommitFinish() bool {
+	return p.WaitInternalGroupCommitFinish != TStreamLoadPutResult__WaitInternalGroupCommitFinish_DEFAULT
+}
+
+func (p *TStreamLoadPutResult_) IsSetGroupCommitIntervalMs() bool {
+	return p.GroupCommitIntervalMs != nil
 }
 
 func (p *TStreamLoadPutResult_) Read(iprot thrift.TProtocol) (err error) {
@@ -26654,6 +26771,26 @@ func (p *TStreamLoadPutResult_) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 8:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -26748,6 +26885,24 @@ func (p *TStreamLoadPutResult_) ReadField6(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TStreamLoadPutResult_) ReadField7(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		p.WaitInternalGroupCommitFinish = v
+	}
+	return nil
+}
+
+func (p *TStreamLoadPutResult_) ReadField8(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.GroupCommitIntervalMs = &v
+	}
+	return nil
+}
+
 func (p *TStreamLoadPutResult_) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TStreamLoadPutResult"); err != nil {
@@ -26776,6 +26931,14 @@ func (p *TStreamLoadPutResult_) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
 			goto WriteFieldError
 		}
 
@@ -26909,6 +27072,44 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 
+func (p *TStreamLoadPutResult_) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWaitInternalGroupCommitFinish() {
+		if err = oprot.WriteFieldBegin("wait_internal_group_commit_finish", thrift.BOOL, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.WaitInternalGroupCommitFinish); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
+func (p *TStreamLoadPutResult_) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetGroupCommitIntervalMs() {
+		if err = oprot.WriteFieldBegin("group_commit_interval_ms", thrift.I64, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.GroupCommitIntervalMs); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
 func (p *TStreamLoadPutResult_) String() string {
 	if p == nil {
 		return "<nil>"
@@ -26938,6 +27139,12 @@ func (p *TStreamLoadPutResult_) DeepEqual(ano *TStreamLoadPutResult_) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.TableId) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.WaitInternalGroupCommitFinish) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.GroupCommitIntervalMs) {
 		return false
 	}
 	return true
@@ -26996,6 +27203,25 @@ func (p *TStreamLoadPutResult_) Field6DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.TableId != *src {
+		return false
+	}
+	return true
+}
+func (p *TStreamLoadPutResult_) Field7DeepEqual(src bool) bool {
+
+	if p.WaitInternalGroupCommitFinish != src {
+		return false
+	}
+	return true
+}
+func (p *TStreamLoadPutResult_) Field8DeepEqual(src *int64) bool {
+
+	if p.GroupCommitIntervalMs == src {
+		return true
+	} else if p.GroupCommitIntervalMs == nil || src == nil {
+		return false
+	}
+	if *p.GroupCommitIntervalMs != *src {
 		return false
 	}
 	return true
@@ -39722,13 +39948,14 @@ func (p *TInitExternalCtlMetaResult_) Field2DeepEqual(src *string) bool {
 }
 
 type TMetadataTableRequestParams struct {
-	MetadataType            *types.TMetadataType                `thrift:"metadata_type,1,optional" frugal:"1,optional,TMetadataType" json:"metadata_type,omitempty"`
-	IcebergMetadataParams   *plannodes.TIcebergMetadataParams   `thrift:"iceberg_metadata_params,2,optional" frugal:"2,optional,plannodes.TIcebergMetadataParams" json:"iceberg_metadata_params,omitempty"`
-	BackendsMetadataParams  *plannodes.TBackendsMetadataParams  `thrift:"backends_metadata_params,3,optional" frugal:"3,optional,plannodes.TBackendsMetadataParams" json:"backends_metadata_params,omitempty"`
-	ColumnsName             []string                            `thrift:"columns_name,4,optional" frugal:"4,optional,list<string>" json:"columns_name,omitempty"`
-	FrontendsMetadataParams *plannodes.TFrontendsMetadataParams `thrift:"frontends_metadata_params,5,optional" frugal:"5,optional,plannodes.TFrontendsMetadataParams" json:"frontends_metadata_params,omitempty"`
-	CurrentUserIdent        *types.TUserIdentity                `thrift:"current_user_ident,6,optional" frugal:"6,optional,types.TUserIdentity" json:"current_user_ident,omitempty"`
-	QueriesMetadataParams   *plannodes.TQueriesMetadataParams   `thrift:"queries_metadata_params,7,optional" frugal:"7,optional,plannodes.TQueriesMetadataParams" json:"queries_metadata_params,omitempty"`
+	MetadataType                    *types.TMetadataType                        `thrift:"metadata_type,1,optional" frugal:"1,optional,TMetadataType" json:"metadata_type,omitempty"`
+	IcebergMetadataParams           *plannodes.TIcebergMetadataParams           `thrift:"iceberg_metadata_params,2,optional" frugal:"2,optional,plannodes.TIcebergMetadataParams" json:"iceberg_metadata_params,omitempty"`
+	BackendsMetadataParams          *plannodes.TBackendsMetadataParams          `thrift:"backends_metadata_params,3,optional" frugal:"3,optional,plannodes.TBackendsMetadataParams" json:"backends_metadata_params,omitempty"`
+	ColumnsName                     []string                                    `thrift:"columns_name,4,optional" frugal:"4,optional,list<string>" json:"columns_name,omitempty"`
+	FrontendsMetadataParams         *plannodes.TFrontendsMetadataParams         `thrift:"frontends_metadata_params,5,optional" frugal:"5,optional,plannodes.TFrontendsMetadataParams" json:"frontends_metadata_params,omitempty"`
+	CurrentUserIdent                *types.TUserIdentity                        `thrift:"current_user_ident,6,optional" frugal:"6,optional,types.TUserIdentity" json:"current_user_ident,omitempty"`
+	QueriesMetadataParams           *plannodes.TQueriesMetadataParams           `thrift:"queries_metadata_params,7,optional" frugal:"7,optional,plannodes.TQueriesMetadataParams" json:"queries_metadata_params,omitempty"`
+	MaterializedViewsMetadataParams *plannodes.TMaterializedViewsMetadataParams `thrift:"materialized_views_metadata_params,8,optional" frugal:"8,optional,plannodes.TMaterializedViewsMetadataParams" json:"materialized_views_metadata_params,omitempty"`
 }
 
 func NewTMetadataTableRequestParams() *TMetadataTableRequestParams {
@@ -39801,6 +40028,15 @@ func (p *TMetadataTableRequestParams) GetQueriesMetadataParams() (v *plannodes.T
 	}
 	return p.QueriesMetadataParams
 }
+
+var TMetadataTableRequestParams_MaterializedViewsMetadataParams_DEFAULT *plannodes.TMaterializedViewsMetadataParams
+
+func (p *TMetadataTableRequestParams) GetMaterializedViewsMetadataParams() (v *plannodes.TMaterializedViewsMetadataParams) {
+	if !p.IsSetMaterializedViewsMetadataParams() {
+		return TMetadataTableRequestParams_MaterializedViewsMetadataParams_DEFAULT
+	}
+	return p.MaterializedViewsMetadataParams
+}
 func (p *TMetadataTableRequestParams) SetMetadataType(val *types.TMetadataType) {
 	p.MetadataType = val
 }
@@ -39822,6 +40058,9 @@ func (p *TMetadataTableRequestParams) SetCurrentUserIdent(val *types.TUserIdenti
 func (p *TMetadataTableRequestParams) SetQueriesMetadataParams(val *plannodes.TQueriesMetadataParams) {
 	p.QueriesMetadataParams = val
 }
+func (p *TMetadataTableRequestParams) SetMaterializedViewsMetadataParams(val *plannodes.TMaterializedViewsMetadataParams) {
+	p.MaterializedViewsMetadataParams = val
+}
 
 var fieldIDToName_TMetadataTableRequestParams = map[int16]string{
 	1: "metadata_type",
@@ -39831,6 +40070,7 @@ var fieldIDToName_TMetadataTableRequestParams = map[int16]string{
 	5: "frontends_metadata_params",
 	6: "current_user_ident",
 	7: "queries_metadata_params",
+	8: "materialized_views_metadata_params",
 }
 
 func (p *TMetadataTableRequestParams) IsSetMetadataType() bool {
@@ -39859,6 +40099,10 @@ func (p *TMetadataTableRequestParams) IsSetCurrentUserIdent() bool {
 
 func (p *TMetadataTableRequestParams) IsSetQueriesMetadataParams() bool {
 	return p.QueriesMetadataParams != nil
+}
+
+func (p *TMetadataTableRequestParams) IsSetMaterializedViewsMetadataParams() bool {
+	return p.MaterializedViewsMetadataParams != nil
 }
 
 func (p *TMetadataTableRequestParams) Read(iprot thrift.TProtocol) (err error) {
@@ -39943,6 +40187,16 @@ func (p *TMetadataTableRequestParams) Read(iprot thrift.TProtocol) (err error) {
 		case 7:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 8:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -40052,6 +40306,14 @@ func (p *TMetadataTableRequestParams) ReadField7(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TMetadataTableRequestParams) ReadField8(iprot thrift.TProtocol) error {
+	p.MaterializedViewsMetadataParams = plannodes.NewTMaterializedViewsMetadataParams()
+	if err := p.MaterializedViewsMetadataParams.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *TMetadataTableRequestParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TMetadataTableRequestParams"); err != nil {
@@ -40084,6 +40346,10 @@ func (p *TMetadataTableRequestParams) Write(oprot thrift.TProtocol) (err error) 
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
 			goto WriteFieldError
 		}
 
@@ -40246,6 +40512,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
 
+func (p *TMetadataTableRequestParams) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMaterializedViewsMetadataParams() {
+		if err = oprot.WriteFieldBegin("materialized_views_metadata_params", thrift.STRUCT, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.MaterializedViewsMetadataParams.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
 func (p *TMetadataTableRequestParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -40278,6 +40563,9 @@ func (p *TMetadataTableRequestParams) DeepEqual(ano *TMetadataTableRequestParams
 		return false
 	}
 	if !p.Field7DeepEqual(ano.QueriesMetadataParams) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.MaterializedViewsMetadataParams) {
 		return false
 	}
 	return true
@@ -40339,6 +40627,13 @@ func (p *TMetadataTableRequestParams) Field6DeepEqual(src *types.TUserIdentity) 
 func (p *TMetadataTableRequestParams) Field7DeepEqual(src *plannodes.TQueriesMetadataParams) bool {
 
 	if !p.QueriesMetadataParams.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TMetadataTableRequestParams) Field8DeepEqual(src *plannodes.TMaterializedViewsMetadataParams) bool {
+
+	if !p.MaterializedViewsMetadataParams.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -40940,925 +41235,6 @@ func (p *TFetchSchemaTableDataResult_) Field2DeepEqual(src []*data.TRow) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
-	}
-	return true
-}
-
-type TAddColumnsRequest struct {
-	TableId           *int64        `thrift:"table_id,1,optional" frugal:"1,optional,i64" json:"table_id,omitempty"`
-	AddColumns        []*TColumnDef `thrift:"addColumns,2,optional" frugal:"2,optional,list<TColumnDef>" json:"addColumns,omitempty"`
-	TableName         *string       `thrift:"table_name,3,optional" frugal:"3,optional,string" json:"table_name,omitempty"`
-	DbName            *string       `thrift:"db_name,4,optional" frugal:"4,optional,string" json:"db_name,omitempty"`
-	AllowTypeConflict *bool         `thrift:"allow_type_conflict,5,optional" frugal:"5,optional,bool" json:"allow_type_conflict,omitempty"`
-}
-
-func NewTAddColumnsRequest() *TAddColumnsRequest {
-	return &TAddColumnsRequest{}
-}
-
-func (p *TAddColumnsRequest) InitDefault() {
-	*p = TAddColumnsRequest{}
-}
-
-var TAddColumnsRequest_TableId_DEFAULT int64
-
-func (p *TAddColumnsRequest) GetTableId() (v int64) {
-	if !p.IsSetTableId() {
-		return TAddColumnsRequest_TableId_DEFAULT
-	}
-	return *p.TableId
-}
-
-var TAddColumnsRequest_AddColumns_DEFAULT []*TColumnDef
-
-func (p *TAddColumnsRequest) GetAddColumns() (v []*TColumnDef) {
-	if !p.IsSetAddColumns() {
-		return TAddColumnsRequest_AddColumns_DEFAULT
-	}
-	return p.AddColumns
-}
-
-var TAddColumnsRequest_TableName_DEFAULT string
-
-func (p *TAddColumnsRequest) GetTableName() (v string) {
-	if !p.IsSetTableName() {
-		return TAddColumnsRequest_TableName_DEFAULT
-	}
-	return *p.TableName
-}
-
-var TAddColumnsRequest_DbName_DEFAULT string
-
-func (p *TAddColumnsRequest) GetDbName() (v string) {
-	if !p.IsSetDbName() {
-		return TAddColumnsRequest_DbName_DEFAULT
-	}
-	return *p.DbName
-}
-
-var TAddColumnsRequest_AllowTypeConflict_DEFAULT bool
-
-func (p *TAddColumnsRequest) GetAllowTypeConflict() (v bool) {
-	if !p.IsSetAllowTypeConflict() {
-		return TAddColumnsRequest_AllowTypeConflict_DEFAULT
-	}
-	return *p.AllowTypeConflict
-}
-func (p *TAddColumnsRequest) SetTableId(val *int64) {
-	p.TableId = val
-}
-func (p *TAddColumnsRequest) SetAddColumns(val []*TColumnDef) {
-	p.AddColumns = val
-}
-func (p *TAddColumnsRequest) SetTableName(val *string) {
-	p.TableName = val
-}
-func (p *TAddColumnsRequest) SetDbName(val *string) {
-	p.DbName = val
-}
-func (p *TAddColumnsRequest) SetAllowTypeConflict(val *bool) {
-	p.AllowTypeConflict = val
-}
-
-var fieldIDToName_TAddColumnsRequest = map[int16]string{
-	1: "table_id",
-	2: "addColumns",
-	3: "table_name",
-	4: "db_name",
-	5: "allow_type_conflict",
-}
-
-func (p *TAddColumnsRequest) IsSetTableId() bool {
-	return p.TableId != nil
-}
-
-func (p *TAddColumnsRequest) IsSetAddColumns() bool {
-	return p.AddColumns != nil
-}
-
-func (p *TAddColumnsRequest) IsSetTableName() bool {
-	return p.TableName != nil
-}
-
-func (p *TAddColumnsRequest) IsSetDbName() bool {
-	return p.DbName != nil
-}
-
-func (p *TAddColumnsRequest) IsSetAllowTypeConflict() bool {
-	return p.AllowTypeConflict != nil
-}
-
-func (p *TAddColumnsRequest) Read(iprot thrift.TProtocol) (err error) {
-
-	var fieldTypeId thrift.TType
-	var fieldId int16
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField1(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				if err = iprot.Skip(fieldTypeId); err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 2:
-			if fieldTypeId == thrift.LIST {
-				if err = p.ReadField2(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				if err = iprot.Skip(fieldTypeId); err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 3:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField3(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				if err = iprot.Skip(fieldTypeId); err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 4:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField4(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				if err = iprot.Skip(fieldTypeId); err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 5:
-			if fieldTypeId == thrift.BOOL {
-				if err = p.ReadField5(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				if err = iprot.Skip(fieldTypeId); err != nil {
-					goto SkipFieldError
-				}
-			}
-		default:
-			if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		}
-
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TAddColumnsRequest[fieldId]), err)
-SkipFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-}
-
-func (p *TAddColumnsRequest) ReadField1(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		p.TableId = &v
-	}
-	return nil
-}
-
-func (p *TAddColumnsRequest) ReadField2(iprot thrift.TProtocol) error {
-	_, size, err := iprot.ReadListBegin()
-	if err != nil {
-		return err
-	}
-	p.AddColumns = make([]*TColumnDef, 0, size)
-	for i := 0; i < size; i++ {
-		_elem := NewTColumnDef()
-		if err := _elem.Read(iprot); err != nil {
-			return err
-		}
-
-		p.AddColumns = append(p.AddColumns, _elem)
-	}
-	if err := iprot.ReadListEnd(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (p *TAddColumnsRequest) ReadField3(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		p.TableName = &v
-	}
-	return nil
-}
-
-func (p *TAddColumnsRequest) ReadField4(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		p.DbName = &v
-	}
-	return nil
-}
-
-func (p *TAddColumnsRequest) ReadField5(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadBool(); err != nil {
-		return err
-	} else {
-		p.AllowTypeConflict = &v
-	}
-	return nil
-}
-
-func (p *TAddColumnsRequest) Write(oprot thrift.TProtocol) (err error) {
-	var fieldId int16
-	if err = oprot.WriteStructBegin("TAddColumnsRequest"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-		if err = p.writeField1(oprot); err != nil {
-			fieldId = 1
-			goto WriteFieldError
-		}
-		if err = p.writeField2(oprot); err != nil {
-			fieldId = 2
-			goto WriteFieldError
-		}
-		if err = p.writeField3(oprot); err != nil {
-			fieldId = 3
-			goto WriteFieldError
-		}
-		if err = p.writeField4(oprot); err != nil {
-			fieldId = 4
-			goto WriteFieldError
-		}
-		if err = p.writeField5(oprot); err != nil {
-			fieldId = 5
-			goto WriteFieldError
-		}
-
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *TAddColumnsRequest) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTableId() {
-		if err = oprot.WriteFieldBegin("table_id", thrift.I64, 1); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI64(*p.TableId); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
-}
-
-func (p *TAddColumnsRequest) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetAddColumns() {
-		if err = oprot.WriteFieldBegin("addColumns", thrift.LIST, 2); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.AddColumns)); err != nil {
-			return err
-		}
-		for _, v := range p.AddColumns {
-			if err := v.Write(oprot); err != nil {
-				return err
-			}
-		}
-		if err := oprot.WriteListEnd(); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
-}
-
-func (p *TAddColumnsRequest) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTableName() {
-		if err = oprot.WriteFieldBegin("table_name", thrift.STRING, 3); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.TableName); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
-}
-
-func (p *TAddColumnsRequest) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetDbName() {
-		if err = oprot.WriteFieldBegin("db_name", thrift.STRING, 4); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.DbName); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
-}
-
-func (p *TAddColumnsRequest) writeField5(oprot thrift.TProtocol) (err error) {
-	if p.IsSetAllowTypeConflict() {
-		if err = oprot.WriteFieldBegin("allow_type_conflict", thrift.BOOL, 5); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteBool(*p.AllowTypeConflict); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
-}
-
-func (p *TAddColumnsRequest) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("TAddColumnsRequest(%+v)", *p)
-}
-
-func (p *TAddColumnsRequest) DeepEqual(ano *TAddColumnsRequest) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
-	}
-	if !p.Field1DeepEqual(ano.TableId) {
-		return false
-	}
-	if !p.Field2DeepEqual(ano.AddColumns) {
-		return false
-	}
-	if !p.Field3DeepEqual(ano.TableName) {
-		return false
-	}
-	if !p.Field4DeepEqual(ano.DbName) {
-		return false
-	}
-	if !p.Field5DeepEqual(ano.AllowTypeConflict) {
-		return false
-	}
-	return true
-}
-
-func (p *TAddColumnsRequest) Field1DeepEqual(src *int64) bool {
-
-	if p.TableId == src {
-		return true
-	} else if p.TableId == nil || src == nil {
-		return false
-	}
-	if *p.TableId != *src {
-		return false
-	}
-	return true
-}
-func (p *TAddColumnsRequest) Field2DeepEqual(src []*TColumnDef) bool {
-
-	if len(p.AddColumns) != len(src) {
-		return false
-	}
-	for i, v := range p.AddColumns {
-		_src := src[i]
-		if !v.DeepEqual(_src) {
-			return false
-		}
-	}
-	return true
-}
-func (p *TAddColumnsRequest) Field3DeepEqual(src *string) bool {
-
-	if p.TableName == src {
-		return true
-	} else if p.TableName == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.TableName, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *TAddColumnsRequest) Field4DeepEqual(src *string) bool {
-
-	if p.DbName == src {
-		return true
-	} else if p.DbName == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.DbName, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *TAddColumnsRequest) Field5DeepEqual(src *bool) bool {
-
-	if p.AllowTypeConflict == src {
-		return true
-	} else if p.AllowTypeConflict == nil || src == nil {
-		return false
-	}
-	if *p.AllowTypeConflict != *src {
-		return false
-	}
-	return true
-}
-
-type TAddColumnsResult_ struct {
-	Status        *status.TStatus        `thrift:"status,1,optional" frugal:"1,optional,status.TStatus" json:"status,omitempty"`
-	TableId       *int64                 `thrift:"table_id,2,optional" frugal:"2,optional,i64" json:"table_id,omitempty"`
-	AllColumns    []*descriptors.TColumn `thrift:"allColumns,3,optional" frugal:"3,optional,list<descriptors.TColumn>" json:"allColumns,omitempty"`
-	SchemaVersion *int32                 `thrift:"schema_version,4,optional" frugal:"4,optional,i32" json:"schema_version,omitempty"`
-}
-
-func NewTAddColumnsResult_() *TAddColumnsResult_ {
-	return &TAddColumnsResult_{}
-}
-
-func (p *TAddColumnsResult_) InitDefault() {
-	*p = TAddColumnsResult_{}
-}
-
-var TAddColumnsResult__Status_DEFAULT *status.TStatus
-
-func (p *TAddColumnsResult_) GetStatus() (v *status.TStatus) {
-	if !p.IsSetStatus() {
-		return TAddColumnsResult__Status_DEFAULT
-	}
-	return p.Status
-}
-
-var TAddColumnsResult__TableId_DEFAULT int64
-
-func (p *TAddColumnsResult_) GetTableId() (v int64) {
-	if !p.IsSetTableId() {
-		return TAddColumnsResult__TableId_DEFAULT
-	}
-	return *p.TableId
-}
-
-var TAddColumnsResult__AllColumns_DEFAULT []*descriptors.TColumn
-
-func (p *TAddColumnsResult_) GetAllColumns() (v []*descriptors.TColumn) {
-	if !p.IsSetAllColumns() {
-		return TAddColumnsResult__AllColumns_DEFAULT
-	}
-	return p.AllColumns
-}
-
-var TAddColumnsResult__SchemaVersion_DEFAULT int32
-
-func (p *TAddColumnsResult_) GetSchemaVersion() (v int32) {
-	if !p.IsSetSchemaVersion() {
-		return TAddColumnsResult__SchemaVersion_DEFAULT
-	}
-	return *p.SchemaVersion
-}
-func (p *TAddColumnsResult_) SetStatus(val *status.TStatus) {
-	p.Status = val
-}
-func (p *TAddColumnsResult_) SetTableId(val *int64) {
-	p.TableId = val
-}
-func (p *TAddColumnsResult_) SetAllColumns(val []*descriptors.TColumn) {
-	p.AllColumns = val
-}
-func (p *TAddColumnsResult_) SetSchemaVersion(val *int32) {
-	p.SchemaVersion = val
-}
-
-var fieldIDToName_TAddColumnsResult_ = map[int16]string{
-	1: "status",
-	2: "table_id",
-	3: "allColumns",
-	4: "schema_version",
-}
-
-func (p *TAddColumnsResult_) IsSetStatus() bool {
-	return p.Status != nil
-}
-
-func (p *TAddColumnsResult_) IsSetTableId() bool {
-	return p.TableId != nil
-}
-
-func (p *TAddColumnsResult_) IsSetAllColumns() bool {
-	return p.AllColumns != nil
-}
-
-func (p *TAddColumnsResult_) IsSetSchemaVersion() bool {
-	return p.SchemaVersion != nil
-}
-
-func (p *TAddColumnsResult_) Read(iprot thrift.TProtocol) (err error) {
-
-	var fieldTypeId thrift.TType
-	var fieldId int16
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField1(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				if err = iprot.Skip(fieldTypeId); err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 2:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField2(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				if err = iprot.Skip(fieldTypeId); err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 3:
-			if fieldTypeId == thrift.LIST {
-				if err = p.ReadField3(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				if err = iprot.Skip(fieldTypeId); err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 4:
-			if fieldTypeId == thrift.I32 {
-				if err = p.ReadField4(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				if err = iprot.Skip(fieldTypeId); err != nil {
-					goto SkipFieldError
-				}
-			}
-		default:
-			if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		}
-
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TAddColumnsResult_[fieldId]), err)
-SkipFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-}
-
-func (p *TAddColumnsResult_) ReadField1(iprot thrift.TProtocol) error {
-	p.Status = status.NewTStatus()
-	if err := p.Status.Read(iprot); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (p *TAddColumnsResult_) ReadField2(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		p.TableId = &v
-	}
-	return nil
-}
-
-func (p *TAddColumnsResult_) ReadField3(iprot thrift.TProtocol) error {
-	_, size, err := iprot.ReadListBegin()
-	if err != nil {
-		return err
-	}
-	p.AllColumns = make([]*descriptors.TColumn, 0, size)
-	for i := 0; i < size; i++ {
-		_elem := descriptors.NewTColumn()
-		if err := _elem.Read(iprot); err != nil {
-			return err
-		}
-
-		p.AllColumns = append(p.AllColumns, _elem)
-	}
-	if err := iprot.ReadListEnd(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (p *TAddColumnsResult_) ReadField4(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadI32(); err != nil {
-		return err
-	} else {
-		p.SchemaVersion = &v
-	}
-	return nil
-}
-
-func (p *TAddColumnsResult_) Write(oprot thrift.TProtocol) (err error) {
-	var fieldId int16
-	if err = oprot.WriteStructBegin("TAddColumnsResult"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-		if err = p.writeField1(oprot); err != nil {
-			fieldId = 1
-			goto WriteFieldError
-		}
-		if err = p.writeField2(oprot); err != nil {
-			fieldId = 2
-			goto WriteFieldError
-		}
-		if err = p.writeField3(oprot); err != nil {
-			fieldId = 3
-			goto WriteFieldError
-		}
-		if err = p.writeField4(oprot); err != nil {
-			fieldId = 4
-			goto WriteFieldError
-		}
-
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *TAddColumnsResult_) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetStatus() {
-		if err = oprot.WriteFieldBegin("status", thrift.STRUCT, 1); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := p.Status.Write(oprot); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
-}
-
-func (p *TAddColumnsResult_) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTableId() {
-		if err = oprot.WriteFieldBegin("table_id", thrift.I64, 2); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI64(*p.TableId); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
-}
-
-func (p *TAddColumnsResult_) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetAllColumns() {
-		if err = oprot.WriteFieldBegin("allColumns", thrift.LIST, 3); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.AllColumns)); err != nil {
-			return err
-		}
-		for _, v := range p.AllColumns {
-			if err := v.Write(oprot); err != nil {
-				return err
-			}
-		}
-		if err := oprot.WriteListEnd(); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
-}
-
-func (p *TAddColumnsResult_) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSchemaVersion() {
-		if err = oprot.WriteFieldBegin("schema_version", thrift.I32, 4); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI32(*p.SchemaVersion); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
-}
-
-func (p *TAddColumnsResult_) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("TAddColumnsResult_(%+v)", *p)
-}
-
-func (p *TAddColumnsResult_) DeepEqual(ano *TAddColumnsResult_) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
-	}
-	if !p.Field1DeepEqual(ano.Status) {
-		return false
-	}
-	if !p.Field2DeepEqual(ano.TableId) {
-		return false
-	}
-	if !p.Field3DeepEqual(ano.AllColumns) {
-		return false
-	}
-	if !p.Field4DeepEqual(ano.SchemaVersion) {
-		return false
-	}
-	return true
-}
-
-func (p *TAddColumnsResult_) Field1DeepEqual(src *status.TStatus) bool {
-
-	if !p.Status.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-func (p *TAddColumnsResult_) Field2DeepEqual(src *int64) bool {
-
-	if p.TableId == src {
-		return true
-	} else if p.TableId == nil || src == nil {
-		return false
-	}
-	if *p.TableId != *src {
-		return false
-	}
-	return true
-}
-func (p *TAddColumnsResult_) Field3DeepEqual(src []*descriptors.TColumn) bool {
-
-	if len(p.AllColumns) != len(src) {
-		return false
-	}
-	for i, v := range p.AllColumns {
-		_src := src[i]
-		if !v.DeepEqual(_src) {
-			return false
-		}
-	}
-	return true
-}
-func (p *TAddColumnsResult_) Field4DeepEqual(src *int32) bool {
-
-	if p.SchemaVersion == src {
-		return true
-	} else if p.SchemaVersion == nil || src == nil {
-		return false
-	}
-	if *p.SchemaVersion != *src {
-		return false
 	}
 	return true
 }
@@ -47556,11 +46932,12 @@ func (p *TBinlog) Field9DeepEqual(src *bool) bool {
 }
 
 type TGetBinlogResult_ struct {
-	Status        *status.TStatus `thrift:"status,1,optional" frugal:"1,optional,status.TStatus" json:"status,omitempty"`
-	NextCommitSeq *int64          `thrift:"next_commit_seq,2,optional" frugal:"2,optional,i64" json:"next_commit_seq,omitempty"`
-	Binlogs       []*TBinlog      `thrift:"binlogs,3,optional" frugal:"3,optional,list<TBinlog>" json:"binlogs,omitempty"`
-	FeVersion     *string         `thrift:"fe_version,4,optional" frugal:"4,optional,string" json:"fe_version,omitempty"`
-	FeMetaVersion *int64          `thrift:"fe_meta_version,5,optional" frugal:"5,optional,i64" json:"fe_meta_version,omitempty"`
+	Status        *status.TStatus        `thrift:"status,1,optional" frugal:"1,optional,status.TStatus" json:"status,omitempty"`
+	NextCommitSeq *int64                 `thrift:"next_commit_seq,2,optional" frugal:"2,optional,i64" json:"next_commit_seq,omitempty"`
+	Binlogs       []*TBinlog             `thrift:"binlogs,3,optional" frugal:"3,optional,list<TBinlog>" json:"binlogs,omitempty"`
+	FeVersion     *string                `thrift:"fe_version,4,optional" frugal:"4,optional,string" json:"fe_version,omitempty"`
+	FeMetaVersion *int64                 `thrift:"fe_meta_version,5,optional" frugal:"5,optional,i64" json:"fe_meta_version,omitempty"`
+	MasterAddress *types.TNetworkAddress `thrift:"master_address,6,optional" frugal:"6,optional,types.TNetworkAddress" json:"master_address,omitempty"`
 }
 
 func NewTGetBinlogResult_() *TGetBinlogResult_ {
@@ -47615,6 +46992,15 @@ func (p *TGetBinlogResult_) GetFeMetaVersion() (v int64) {
 	}
 	return *p.FeMetaVersion
 }
+
+var TGetBinlogResult__MasterAddress_DEFAULT *types.TNetworkAddress
+
+func (p *TGetBinlogResult_) GetMasterAddress() (v *types.TNetworkAddress) {
+	if !p.IsSetMasterAddress() {
+		return TGetBinlogResult__MasterAddress_DEFAULT
+	}
+	return p.MasterAddress
+}
 func (p *TGetBinlogResult_) SetStatus(val *status.TStatus) {
 	p.Status = val
 }
@@ -47630,6 +47016,9 @@ func (p *TGetBinlogResult_) SetFeVersion(val *string) {
 func (p *TGetBinlogResult_) SetFeMetaVersion(val *int64) {
 	p.FeMetaVersion = val
 }
+func (p *TGetBinlogResult_) SetMasterAddress(val *types.TNetworkAddress) {
+	p.MasterAddress = val
+}
 
 var fieldIDToName_TGetBinlogResult_ = map[int16]string{
 	1: "status",
@@ -47637,6 +47026,7 @@ var fieldIDToName_TGetBinlogResult_ = map[int16]string{
 	3: "binlogs",
 	4: "fe_version",
 	5: "fe_meta_version",
+	6: "master_address",
 }
 
 func (p *TGetBinlogResult_) IsSetStatus() bool {
@@ -47657,6 +47047,10 @@ func (p *TGetBinlogResult_) IsSetFeVersion() bool {
 
 func (p *TGetBinlogResult_) IsSetFeMetaVersion() bool {
 	return p.FeMetaVersion != nil
+}
+
+func (p *TGetBinlogResult_) IsSetMasterAddress() bool {
+	return p.MasterAddress != nil
 }
 
 func (p *TGetBinlogResult_) Read(iprot thrift.TProtocol) (err error) {
@@ -47721,6 +47115,16 @@ func (p *TGetBinlogResult_) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -47813,6 +47217,14 @@ func (p *TGetBinlogResult_) ReadField5(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TGetBinlogResult_) ReadField6(iprot thrift.TProtocol) error {
+	p.MasterAddress = types.NewTNetworkAddress()
+	if err := p.MasterAddress.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *TGetBinlogResult_) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TGetBinlogResult"); err != nil {
@@ -47837,6 +47249,10 @@ func (p *TGetBinlogResult_) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 
@@ -47961,6 +47377,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 
+func (p *TGetBinlogResult_) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMasterAddress() {
+		if err = oprot.WriteFieldBegin("master_address", thrift.STRUCT, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.MasterAddress.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
 func (p *TGetBinlogResult_) String() string {
 	if p == nil {
 		return "<nil>"
@@ -47987,6 +47422,9 @@ func (p *TGetBinlogResult_) DeepEqual(ano *TGetBinlogResult_) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.FeMetaVersion) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.MasterAddress) {
 		return false
 	}
 	return true
@@ -48044,6 +47482,13 @@ func (p *TGetBinlogResult_) Field5DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.FeMetaVersion != *src {
+		return false
+	}
+	return true
+}
+func (p *TGetBinlogResult_) Field6DeepEqual(src *types.TNetworkAddress) bool {
+
+	if !p.MasterAddress.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -51990,8 +51435,9 @@ func (p *TGetMasterTokenResult_) Field3DeepEqual(src *types.TNetworkAddress) boo
 }
 
 type TGetBinlogLagResult_ struct {
-	Status *status.TStatus `thrift:"status,1,optional" frugal:"1,optional,status.TStatus" json:"status,omitempty"`
-	Lag    *int64          `thrift:"lag,2,optional" frugal:"2,optional,i64" json:"lag,omitempty"`
+	Status        *status.TStatus        `thrift:"status,1,optional" frugal:"1,optional,status.TStatus" json:"status,omitempty"`
+	Lag           *int64                 `thrift:"lag,2,optional" frugal:"2,optional,i64" json:"lag,omitempty"`
+	MasterAddress *types.TNetworkAddress `thrift:"master_address,3,optional" frugal:"3,optional,types.TNetworkAddress" json:"master_address,omitempty"`
 }
 
 func NewTGetBinlogLagResult_() *TGetBinlogLagResult_ {
@@ -52019,16 +51465,29 @@ func (p *TGetBinlogLagResult_) GetLag() (v int64) {
 	}
 	return *p.Lag
 }
+
+var TGetBinlogLagResult__MasterAddress_DEFAULT *types.TNetworkAddress
+
+func (p *TGetBinlogLagResult_) GetMasterAddress() (v *types.TNetworkAddress) {
+	if !p.IsSetMasterAddress() {
+		return TGetBinlogLagResult__MasterAddress_DEFAULT
+	}
+	return p.MasterAddress
+}
 func (p *TGetBinlogLagResult_) SetStatus(val *status.TStatus) {
 	p.Status = val
 }
 func (p *TGetBinlogLagResult_) SetLag(val *int64) {
 	p.Lag = val
 }
+func (p *TGetBinlogLagResult_) SetMasterAddress(val *types.TNetworkAddress) {
+	p.MasterAddress = val
+}
 
 var fieldIDToName_TGetBinlogLagResult_ = map[int16]string{
 	1: "status",
 	2: "lag",
+	3: "master_address",
 }
 
 func (p *TGetBinlogLagResult_) IsSetStatus() bool {
@@ -52037,6 +51496,10 @@ func (p *TGetBinlogLagResult_) IsSetStatus() bool {
 
 func (p *TGetBinlogLagResult_) IsSetLag() bool {
 	return p.Lag != nil
+}
+
+func (p *TGetBinlogLagResult_) IsSetMasterAddress() bool {
+	return p.MasterAddress != nil
 }
 
 func (p *TGetBinlogLagResult_) Read(iprot thrift.TProtocol) (err error) {
@@ -52071,6 +51534,16 @@ func (p *TGetBinlogLagResult_) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -52125,6 +51598,14 @@ func (p *TGetBinlogLagResult_) ReadField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TGetBinlogLagResult_) ReadField3(iprot thrift.TProtocol) error {
+	p.MasterAddress = types.NewTNetworkAddress()
+	if err := p.MasterAddress.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *TGetBinlogLagResult_) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TGetBinlogLagResult"); err != nil {
@@ -52137,6 +51618,10 @@ func (p *TGetBinlogLagResult_) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 
@@ -52196,6 +51681,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 
+func (p *TGetBinlogLagResult_) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMasterAddress() {
+		if err = oprot.WriteFieldBegin("master_address", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.MasterAddress.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
 func (p *TGetBinlogLagResult_) String() string {
 	if p == nil {
 		return "<nil>"
@@ -52213,6 +51717,9 @@ func (p *TGetBinlogLagResult_) DeepEqual(ano *TGetBinlogLagResult_) bool {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.Lag) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.MasterAddress) {
 		return false
 	}
 	return true
@@ -52233,6 +51740,13 @@ func (p *TGetBinlogLagResult_) Field2DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.Lag != *src {
+		return false
+	}
+	return true
+}
+func (p *TGetBinlogLagResult_) Field3DeepEqual(src *types.TNetworkAddress) bool {
+
+	if !p.MasterAddress.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -59378,8 +58892,9 @@ func (p *TGetMetaDBMeta) Field3DeepEqual(src []*TGetMetaTableMeta) bool {
 }
 
 type TGetMetaResult_ struct {
-	Status *status.TStatus `thrift:"status,1,required" frugal:"1,required,status.TStatus" json:"status"`
-	DbMeta *TGetMetaDBMeta `thrift:"db_meta,2,optional" frugal:"2,optional,TGetMetaDBMeta" json:"db_meta,omitempty"`
+	Status        *status.TStatus        `thrift:"status,1,required" frugal:"1,required,status.TStatus" json:"status"`
+	DbMeta        *TGetMetaDBMeta        `thrift:"db_meta,2,optional" frugal:"2,optional,TGetMetaDBMeta" json:"db_meta,omitempty"`
+	MasterAddress *types.TNetworkAddress `thrift:"master_address,3,optional" frugal:"3,optional,types.TNetworkAddress" json:"master_address,omitempty"`
 }
 
 func NewTGetMetaResult_() *TGetMetaResult_ {
@@ -59407,16 +58922,29 @@ func (p *TGetMetaResult_) GetDbMeta() (v *TGetMetaDBMeta) {
 	}
 	return p.DbMeta
 }
+
+var TGetMetaResult__MasterAddress_DEFAULT *types.TNetworkAddress
+
+func (p *TGetMetaResult_) GetMasterAddress() (v *types.TNetworkAddress) {
+	if !p.IsSetMasterAddress() {
+		return TGetMetaResult__MasterAddress_DEFAULT
+	}
+	return p.MasterAddress
+}
 func (p *TGetMetaResult_) SetStatus(val *status.TStatus) {
 	p.Status = val
 }
 func (p *TGetMetaResult_) SetDbMeta(val *TGetMetaDBMeta) {
 	p.DbMeta = val
 }
+func (p *TGetMetaResult_) SetMasterAddress(val *types.TNetworkAddress) {
+	p.MasterAddress = val
+}
 
 var fieldIDToName_TGetMetaResult_ = map[int16]string{
 	1: "status",
 	2: "db_meta",
+	3: "master_address",
 }
 
 func (p *TGetMetaResult_) IsSetStatus() bool {
@@ -59425,6 +58953,10 @@ func (p *TGetMetaResult_) IsSetStatus() bool {
 
 func (p *TGetMetaResult_) IsSetDbMeta() bool {
 	return p.DbMeta != nil
+}
+
+func (p *TGetMetaResult_) IsSetMasterAddress() bool {
+	return p.MasterAddress != nil
 }
 
 func (p *TGetMetaResult_) Read(iprot thrift.TProtocol) (err error) {
@@ -59461,6 +58993,16 @@ func (p *TGetMetaResult_) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -59520,6 +59062,14 @@ func (p *TGetMetaResult_) ReadField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TGetMetaResult_) ReadField3(iprot thrift.TProtocol) error {
+	p.MasterAddress = types.NewTNetworkAddress()
+	if err := p.MasterAddress.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *TGetMetaResult_) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TGetMetaResult"); err != nil {
@@ -59532,6 +59082,10 @@ func (p *TGetMetaResult_) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 
@@ -59589,6 +59143,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 
+func (p *TGetMetaResult_) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMasterAddress() {
+		if err = oprot.WriteFieldBegin("master_address", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.MasterAddress.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
 func (p *TGetMetaResult_) String() string {
 	if p == nil {
 		return "<nil>"
@@ -59608,6 +59181,9 @@ func (p *TGetMetaResult_) DeepEqual(ano *TGetMetaResult_) bool {
 	if !p.Field2DeepEqual(ano.DbMeta) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.MasterAddress) {
+		return false
+	}
 	return true
 }
 
@@ -59621,6 +59197,13 @@ func (p *TGetMetaResult_) Field1DeepEqual(src *status.TStatus) bool {
 func (p *TGetMetaResult_) Field2DeepEqual(src *TGetMetaDBMeta) bool {
 
 	if !p.DbMeta.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TGetMetaResult_) Field3DeepEqual(src *types.TNetworkAddress) bool {
+
+	if !p.MasterAddress.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -60182,8 +59765,9 @@ func (p *TGetBackendMetaRequest) Field6DeepEqual(src *int64) bool {
 }
 
 type TGetBackendMetaResult_ struct {
-	Status   *status.TStatus   `thrift:"status,1,required" frugal:"1,required,status.TStatus" json:"status"`
-	Backends []*types.TBackend `thrift:"backends,2,optional" frugal:"2,optional,list<types.TBackend>" json:"backends,omitempty"`
+	Status        *status.TStatus        `thrift:"status,1,required" frugal:"1,required,status.TStatus" json:"status"`
+	Backends      []*types.TBackend      `thrift:"backends,2,optional" frugal:"2,optional,list<types.TBackend>" json:"backends,omitempty"`
+	MasterAddress *types.TNetworkAddress `thrift:"master_address,3,optional" frugal:"3,optional,types.TNetworkAddress" json:"master_address,omitempty"`
 }
 
 func NewTGetBackendMetaResult_() *TGetBackendMetaResult_ {
@@ -60211,16 +59795,29 @@ func (p *TGetBackendMetaResult_) GetBackends() (v []*types.TBackend) {
 	}
 	return p.Backends
 }
+
+var TGetBackendMetaResult__MasterAddress_DEFAULT *types.TNetworkAddress
+
+func (p *TGetBackendMetaResult_) GetMasterAddress() (v *types.TNetworkAddress) {
+	if !p.IsSetMasterAddress() {
+		return TGetBackendMetaResult__MasterAddress_DEFAULT
+	}
+	return p.MasterAddress
+}
 func (p *TGetBackendMetaResult_) SetStatus(val *status.TStatus) {
 	p.Status = val
 }
 func (p *TGetBackendMetaResult_) SetBackends(val []*types.TBackend) {
 	p.Backends = val
 }
+func (p *TGetBackendMetaResult_) SetMasterAddress(val *types.TNetworkAddress) {
+	p.MasterAddress = val
+}
 
 var fieldIDToName_TGetBackendMetaResult_ = map[int16]string{
 	1: "status",
 	2: "backends",
+	3: "master_address",
 }
 
 func (p *TGetBackendMetaResult_) IsSetStatus() bool {
@@ -60229,6 +59826,10 @@ func (p *TGetBackendMetaResult_) IsSetStatus() bool {
 
 func (p *TGetBackendMetaResult_) IsSetBackends() bool {
 	return p.Backends != nil
+}
+
+func (p *TGetBackendMetaResult_) IsSetMasterAddress() bool {
+	return p.MasterAddress != nil
 }
 
 func (p *TGetBackendMetaResult_) Read(iprot thrift.TProtocol) (err error) {
@@ -60265,6 +59866,16 @@ func (p *TGetBackendMetaResult_) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -60336,6 +59947,14 @@ func (p *TGetBackendMetaResult_) ReadField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TGetBackendMetaResult_) ReadField3(iprot thrift.TProtocol) error {
+	p.MasterAddress = types.NewTNetworkAddress()
+	if err := p.MasterAddress.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *TGetBackendMetaResult_) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TGetBackendMetaResult"); err != nil {
@@ -60348,6 +59967,10 @@ func (p *TGetBackendMetaResult_) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 
@@ -60413,6 +60036,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 
+func (p *TGetBackendMetaResult_) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMasterAddress() {
+		if err = oprot.WriteFieldBegin("master_address", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.MasterAddress.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
 func (p *TGetBackendMetaResult_) String() string {
 	if p == nil {
 		return "<nil>"
@@ -60430,6 +60072,9 @@ func (p *TGetBackendMetaResult_) DeepEqual(ano *TGetBackendMetaResult_) bool {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.Backends) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.MasterAddress) {
 		return false
 	}
 	return true
@@ -60452,6 +60097,517 @@ func (p *TGetBackendMetaResult_) Field2DeepEqual(src []*types.TBackend) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *TGetBackendMetaResult_) Field3DeepEqual(src *types.TNetworkAddress) bool {
+
+	if !p.MasterAddress.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type TGetColumnInfoRequest struct {
+	DbId    *int64 `thrift:"db_id,1,optional" frugal:"1,optional,i64" json:"db_id,omitempty"`
+	TableId *int64 `thrift:"table_id,2,optional" frugal:"2,optional,i64" json:"table_id,omitempty"`
+}
+
+func NewTGetColumnInfoRequest() *TGetColumnInfoRequest {
+	return &TGetColumnInfoRequest{}
+}
+
+func (p *TGetColumnInfoRequest) InitDefault() {
+	*p = TGetColumnInfoRequest{}
+}
+
+var TGetColumnInfoRequest_DbId_DEFAULT int64
+
+func (p *TGetColumnInfoRequest) GetDbId() (v int64) {
+	if !p.IsSetDbId() {
+		return TGetColumnInfoRequest_DbId_DEFAULT
+	}
+	return *p.DbId
+}
+
+var TGetColumnInfoRequest_TableId_DEFAULT int64
+
+func (p *TGetColumnInfoRequest) GetTableId() (v int64) {
+	if !p.IsSetTableId() {
+		return TGetColumnInfoRequest_TableId_DEFAULT
+	}
+	return *p.TableId
+}
+func (p *TGetColumnInfoRequest) SetDbId(val *int64) {
+	p.DbId = val
+}
+func (p *TGetColumnInfoRequest) SetTableId(val *int64) {
+	p.TableId = val
+}
+
+var fieldIDToName_TGetColumnInfoRequest = map[int16]string{
+	1: "db_id",
+	2: "table_id",
+}
+
+func (p *TGetColumnInfoRequest) IsSetDbId() bool {
+	return p.DbId != nil
+}
+
+func (p *TGetColumnInfoRequest) IsSetTableId() bool {
+	return p.TableId != nil
+}
+
+func (p *TGetColumnInfoRequest) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TGetColumnInfoRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TGetColumnInfoRequest) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.DbId = &v
+	}
+	return nil
+}
+
+func (p *TGetColumnInfoRequest) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.TableId = &v
+	}
+	return nil
+}
+
+func (p *TGetColumnInfoRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TGetColumnInfoRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TGetColumnInfoRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDbId() {
+		if err = oprot.WriteFieldBegin("db_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.DbId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TGetColumnInfoRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTableId() {
+		if err = oprot.WriteFieldBegin("table_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TableId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TGetColumnInfoRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TGetColumnInfoRequest(%+v)", *p)
+}
+
+func (p *TGetColumnInfoRequest) DeepEqual(ano *TGetColumnInfoRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.DbId) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.TableId) {
+		return false
+	}
+	return true
+}
+
+func (p *TGetColumnInfoRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.DbId == src {
+		return true
+	} else if p.DbId == nil || src == nil {
+		return false
+	}
+	if *p.DbId != *src {
+		return false
+	}
+	return true
+}
+func (p *TGetColumnInfoRequest) Field2DeepEqual(src *int64) bool {
+
+	if p.TableId == src {
+		return true
+	} else if p.TableId == nil || src == nil {
+		return false
+	}
+	if *p.TableId != *src {
+		return false
+	}
+	return true
+}
+
+type TGetColumnInfoResult_ struct {
+	Status     *status.TStatus `thrift:"status,1,optional" frugal:"1,optional,status.TStatus" json:"status,omitempty"`
+	ColumnInfo *string         `thrift:"column_info,2,optional" frugal:"2,optional,string" json:"column_info,omitempty"`
+}
+
+func NewTGetColumnInfoResult_() *TGetColumnInfoResult_ {
+	return &TGetColumnInfoResult_{}
+}
+
+func (p *TGetColumnInfoResult_) InitDefault() {
+	*p = TGetColumnInfoResult_{}
+}
+
+var TGetColumnInfoResult__Status_DEFAULT *status.TStatus
+
+func (p *TGetColumnInfoResult_) GetStatus() (v *status.TStatus) {
+	if !p.IsSetStatus() {
+		return TGetColumnInfoResult__Status_DEFAULT
+	}
+	return p.Status
+}
+
+var TGetColumnInfoResult__ColumnInfo_DEFAULT string
+
+func (p *TGetColumnInfoResult_) GetColumnInfo() (v string) {
+	if !p.IsSetColumnInfo() {
+		return TGetColumnInfoResult__ColumnInfo_DEFAULT
+	}
+	return *p.ColumnInfo
+}
+func (p *TGetColumnInfoResult_) SetStatus(val *status.TStatus) {
+	p.Status = val
+}
+func (p *TGetColumnInfoResult_) SetColumnInfo(val *string) {
+	p.ColumnInfo = val
+}
+
+var fieldIDToName_TGetColumnInfoResult_ = map[int16]string{
+	1: "status",
+	2: "column_info",
+}
+
+func (p *TGetColumnInfoResult_) IsSetStatus() bool {
+	return p.Status != nil
+}
+
+func (p *TGetColumnInfoResult_) IsSetColumnInfo() bool {
+	return p.ColumnInfo != nil
+}
+
+func (p *TGetColumnInfoResult_) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TGetColumnInfoResult_[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TGetColumnInfoResult_) ReadField1(iprot thrift.TProtocol) error {
+	p.Status = status.NewTStatus()
+	if err := p.Status.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *TGetColumnInfoResult_) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		p.ColumnInfo = &v
+	}
+	return nil
+}
+
+func (p *TGetColumnInfoResult_) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TGetColumnInfoResult"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TGetColumnInfoResult_) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStatus() {
+		if err = oprot.WriteFieldBegin("status", thrift.STRUCT, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Status.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TGetColumnInfoResult_) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetColumnInfo() {
+		if err = oprot.WriteFieldBegin("column_info", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ColumnInfo); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TGetColumnInfoResult_) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TGetColumnInfoResult_(%+v)", *p)
+}
+
+func (p *TGetColumnInfoResult_) DeepEqual(ano *TGetColumnInfoResult_) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Status) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.ColumnInfo) {
+		return false
+	}
+	return true
+}
+
+func (p *TGetColumnInfoResult_) Field1DeepEqual(src *status.TStatus) bool {
+
+	if !p.Status.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TGetColumnInfoResult_) Field2DeepEqual(src *string) bool {
+
+	if p.ColumnInfo == src {
+		return true
+	} else if p.ColumnInfo == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ColumnInfo, *src) != 0 {
+		return false
 	}
 	return true
 }
@@ -60521,8 +60677,6 @@ type FrontendService interface {
 
 	Ping(ctx context.Context, request *TFrontendPingFrontendRequest) (r *TFrontendPingFrontendResult_, err error)
 
-	AddColumns(ctx context.Context, request *TAddColumnsRequest) (r *TAddColumnsResult_, err error)
-
 	InitExternalCtlMeta(ctx context.Context, request *TInitExternalCtlMetaRequest) (r *TInitExternalCtlMetaResult_, err error)
 
 	FetchSchemaTableData(ctx context.Context, request *TFetchSchemaTableDataRequest) (r *TFetchSchemaTableDataResult_, err error)
@@ -60550,6 +60704,8 @@ type FrontendService interface {
 	GetMeta(ctx context.Context, request *TGetMetaRequest) (r *TGetMetaResult_, err error)
 
 	GetBackendMeta(ctx context.Context, request *TGetBackendMetaRequest) (r *TGetBackendMetaResult_, err error)
+
+	GetColumnInfo(ctx context.Context, request *TGetColumnInfoRequest) (r *TGetColumnInfoResult_, err error)
 }
 
 type FrontendServiceClient struct {
@@ -60865,15 +61021,6 @@ func (p *FrontendServiceClient) Ping(ctx context.Context, request *TFrontendPing
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *FrontendServiceClient) AddColumns(ctx context.Context, request *TAddColumnsRequest) (r *TAddColumnsResult_, err error) {
-	var _args FrontendServiceAddColumnsArgs
-	_args.Request = request
-	var _result FrontendServiceAddColumnsResult
-	if err = p.Client_().Call(ctx, "addColumns", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
 func (p *FrontendServiceClient) InitExternalCtlMeta(ctx context.Context, request *TInitExternalCtlMetaRequest) (r *TInitExternalCtlMetaResult_, err error) {
 	var _args FrontendServiceInitExternalCtlMetaArgs
 	_args.Request = request
@@ -60999,6 +61146,15 @@ func (p *FrontendServiceClient) GetBackendMeta(ctx context.Context, request *TGe
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *FrontendServiceClient) GetColumnInfo(ctx context.Context, request *TGetColumnInfoRequest) (r *TGetColumnInfoResult_, err error) {
+	var _args FrontendServiceGetColumnInfoArgs
+	_args.Request = request
+	var _result FrontendServiceGetColumnInfoResult
+	if err = p.Client_().Call(ctx, "getColumnInfo", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 
 type FrontendServiceProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
@@ -61052,7 +61208,6 @@ func NewFrontendServiceProcessor(handler FrontendService) *FrontendServiceProces
 	self.AddToProcessorMap("streamLoadMultiTablePut", &frontendServiceProcessorStreamLoadMultiTablePut{handler: handler})
 	self.AddToProcessorMap("snapshotLoaderReport", &frontendServiceProcessorSnapshotLoaderReport{handler: handler})
 	self.AddToProcessorMap("ping", &frontendServiceProcessorPing{handler: handler})
-	self.AddToProcessorMap("addColumns", &frontendServiceProcessorAddColumns{handler: handler})
 	self.AddToProcessorMap("initExternalCtlMeta", &frontendServiceProcessorInitExternalCtlMeta{handler: handler})
 	self.AddToProcessorMap("fetchSchemaTableData", &frontendServiceProcessorFetchSchemaTableData{handler: handler})
 	self.AddToProcessorMap("acquireToken", &frontendServiceProcessorAcquireToken{handler: handler})
@@ -61067,6 +61222,7 @@ func NewFrontendServiceProcessor(handler FrontendService) *FrontendServiceProces
 	self.AddToProcessorMap("createPartition", &frontendServiceProcessorCreatePartition{handler: handler})
 	self.AddToProcessorMap("getMeta", &frontendServiceProcessorGetMeta{handler: handler})
 	self.AddToProcessorMap("getBackendMeta", &frontendServiceProcessorGetBackendMeta{handler: handler})
+	self.AddToProcessorMap("getColumnInfo", &frontendServiceProcessorGetColumnInfo{handler: handler})
 	return self
 }
 func (p *FrontendServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -62623,54 +62779,6 @@ func (p *frontendServiceProcessorPing) Process(ctx context.Context, seqId int32,
 	return true, err
 }
 
-type frontendServiceProcessorAddColumns struct {
-	handler FrontendService
-}
-
-func (p *frontendServiceProcessorAddColumns) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := FrontendServiceAddColumnsArgs{}
-	if err = args.Read(iprot); err != nil {
-		iprot.ReadMessageEnd()
-		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("addColumns", thrift.EXCEPTION, seqId)
-		x.Write(oprot)
-		oprot.WriteMessageEnd()
-		oprot.Flush(ctx)
-		return false, err
-	}
-
-	iprot.ReadMessageEnd()
-	var err2 error
-	result := FrontendServiceAddColumnsResult{}
-	var retval *TAddColumnsResult_
-	if retval, err2 = p.handler.AddColumns(ctx, args.Request); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing addColumns: "+err2.Error())
-		oprot.WriteMessageBegin("addColumns", thrift.EXCEPTION, seqId)
-		x.Write(oprot)
-		oprot.WriteMessageEnd()
-		oprot.Flush(ctx)
-		return true, err2
-	} else {
-		result.Success = retval
-	}
-	if err2 = oprot.WriteMessageBegin("addColumns", thrift.REPLY, seqId); err2 != nil {
-		err = err2
-	}
-	if err2 = result.Write(oprot); err == nil && err2 != nil {
-		err = err2
-	}
-	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
-		err = err2
-	}
-	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
-		err = err2
-	}
-	if err != nil {
-		return
-	}
-	return true, err
-}
-
 type frontendServiceProcessorInitExternalCtlMeta struct {
 	handler FrontendService
 }
@@ -63326,6 +63434,54 @@ func (p *frontendServiceProcessorGetBackendMeta) Process(ctx context.Context, se
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("getBackendMeta", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type frontendServiceProcessorGetColumnInfo struct {
+	handler FrontendService
+}
+
+func (p *frontendServiceProcessorGetColumnInfo) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := FrontendServiceGetColumnInfoArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("getColumnInfo", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := FrontendServiceGetColumnInfoResult{}
+	var retval *TGetColumnInfoResult_
+	if retval, err2 = p.handler.GetColumnInfo(ctx, args.Request); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getColumnInfo: "+err2.Error())
+		oprot.WriteMessageBegin("getColumnInfo", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("getColumnInfo", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -74337,352 +74493,6 @@ func (p *FrontendServicePingResult) Field0DeepEqual(src *TFrontendPingFrontendRe
 	return true
 }
 
-type FrontendServiceAddColumnsArgs struct {
-	Request *TAddColumnsRequest `thrift:"request,1" frugal:"1,default,TAddColumnsRequest" json:"request"`
-}
-
-func NewFrontendServiceAddColumnsArgs() *FrontendServiceAddColumnsArgs {
-	return &FrontendServiceAddColumnsArgs{}
-}
-
-func (p *FrontendServiceAddColumnsArgs) InitDefault() {
-	*p = FrontendServiceAddColumnsArgs{}
-}
-
-var FrontendServiceAddColumnsArgs_Request_DEFAULT *TAddColumnsRequest
-
-func (p *FrontendServiceAddColumnsArgs) GetRequest() (v *TAddColumnsRequest) {
-	if !p.IsSetRequest() {
-		return FrontendServiceAddColumnsArgs_Request_DEFAULT
-	}
-	return p.Request
-}
-func (p *FrontendServiceAddColumnsArgs) SetRequest(val *TAddColumnsRequest) {
-	p.Request = val
-}
-
-var fieldIDToName_FrontendServiceAddColumnsArgs = map[int16]string{
-	1: "request",
-}
-
-func (p *FrontendServiceAddColumnsArgs) IsSetRequest() bool {
-	return p.Request != nil
-}
-
-func (p *FrontendServiceAddColumnsArgs) Read(iprot thrift.TProtocol) (err error) {
-
-	var fieldTypeId thrift.TType
-	var fieldId int16
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField1(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				if err = iprot.Skip(fieldTypeId); err != nil {
-					goto SkipFieldError
-				}
-			}
-		default:
-			if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		}
-
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FrontendServiceAddColumnsArgs[fieldId]), err)
-SkipFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-}
-
-func (p *FrontendServiceAddColumnsArgs) ReadField1(iprot thrift.TProtocol) error {
-	p.Request = NewTAddColumnsRequest()
-	if err := p.Request.Read(iprot); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (p *FrontendServiceAddColumnsArgs) Write(oprot thrift.TProtocol) (err error) {
-	var fieldId int16
-	if err = oprot.WriteStructBegin("addColumns_args"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-		if err = p.writeField1(oprot); err != nil {
-			fieldId = 1
-			goto WriteFieldError
-		}
-
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *FrontendServiceAddColumnsArgs) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := p.Request.Write(oprot); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
-}
-
-func (p *FrontendServiceAddColumnsArgs) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("FrontendServiceAddColumnsArgs(%+v)", *p)
-}
-
-func (p *FrontendServiceAddColumnsArgs) DeepEqual(ano *FrontendServiceAddColumnsArgs) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
-	}
-	if !p.Field1DeepEqual(ano.Request) {
-		return false
-	}
-	return true
-}
-
-func (p *FrontendServiceAddColumnsArgs) Field1DeepEqual(src *TAddColumnsRequest) bool {
-
-	if !p.Request.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-
-type FrontendServiceAddColumnsResult struct {
-	Success *TAddColumnsResult_ `thrift:"success,0,optional" frugal:"0,optional,TAddColumnsResult_" json:"success,omitempty"`
-}
-
-func NewFrontendServiceAddColumnsResult() *FrontendServiceAddColumnsResult {
-	return &FrontendServiceAddColumnsResult{}
-}
-
-func (p *FrontendServiceAddColumnsResult) InitDefault() {
-	*p = FrontendServiceAddColumnsResult{}
-}
-
-var FrontendServiceAddColumnsResult_Success_DEFAULT *TAddColumnsResult_
-
-func (p *FrontendServiceAddColumnsResult) GetSuccess() (v *TAddColumnsResult_) {
-	if !p.IsSetSuccess() {
-		return FrontendServiceAddColumnsResult_Success_DEFAULT
-	}
-	return p.Success
-}
-func (p *FrontendServiceAddColumnsResult) SetSuccess(x interface{}) {
-	p.Success = x.(*TAddColumnsResult_)
-}
-
-var fieldIDToName_FrontendServiceAddColumnsResult = map[int16]string{
-	0: "success",
-}
-
-func (p *FrontendServiceAddColumnsResult) IsSetSuccess() bool {
-	return p.Success != nil
-}
-
-func (p *FrontendServiceAddColumnsResult) Read(iprot thrift.TProtocol) (err error) {
-
-	var fieldTypeId thrift.TType
-	var fieldId int16
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-
-		switch fieldId {
-		case 0:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField0(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				if err = iprot.Skip(fieldTypeId); err != nil {
-					goto SkipFieldError
-				}
-			}
-		default:
-			if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		}
-
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FrontendServiceAddColumnsResult[fieldId]), err)
-SkipFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-}
-
-func (p *FrontendServiceAddColumnsResult) ReadField0(iprot thrift.TProtocol) error {
-	p.Success = NewTAddColumnsResult_()
-	if err := p.Success.Read(iprot); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (p *FrontendServiceAddColumnsResult) Write(oprot thrift.TProtocol) (err error) {
-	var fieldId int16
-	if err = oprot.WriteStructBegin("addColumns_result"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-		if err = p.writeField0(oprot); err != nil {
-			fieldId = 0
-			goto WriteFieldError
-		}
-
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *FrontendServiceAddColumnsResult) writeField0(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSuccess() {
-		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := p.Success.Write(oprot); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
-}
-
-func (p *FrontendServiceAddColumnsResult) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("FrontendServiceAddColumnsResult(%+v)", *p)
-}
-
-func (p *FrontendServiceAddColumnsResult) DeepEqual(ano *FrontendServiceAddColumnsResult) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
-	}
-	if !p.Field0DeepEqual(ano.Success) {
-		return false
-	}
-	return true
-}
-
-func (p *FrontendServiceAddColumnsResult) Field0DeepEqual(src *TAddColumnsResult_) bool {
-
-	if !p.Success.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-
 type FrontendServiceInitExternalCtlMetaArgs struct {
 	Request *TInitExternalCtlMetaRequest `thrift:"request,1" frugal:"1,default,TInitExternalCtlMetaRequest" json:"request"`
 }
@@ -79442,6 +79252,352 @@ func (p *FrontendServiceGetBackendMetaResult) DeepEqual(ano *FrontendServiceGetB
 }
 
 func (p *FrontendServiceGetBackendMetaResult) Field0DeepEqual(src *TGetBackendMetaResult_) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type FrontendServiceGetColumnInfoArgs struct {
+	Request *TGetColumnInfoRequest `thrift:"request,1" frugal:"1,default,TGetColumnInfoRequest" json:"request"`
+}
+
+func NewFrontendServiceGetColumnInfoArgs() *FrontendServiceGetColumnInfoArgs {
+	return &FrontendServiceGetColumnInfoArgs{}
+}
+
+func (p *FrontendServiceGetColumnInfoArgs) InitDefault() {
+	*p = FrontendServiceGetColumnInfoArgs{}
+}
+
+var FrontendServiceGetColumnInfoArgs_Request_DEFAULT *TGetColumnInfoRequest
+
+func (p *FrontendServiceGetColumnInfoArgs) GetRequest() (v *TGetColumnInfoRequest) {
+	if !p.IsSetRequest() {
+		return FrontendServiceGetColumnInfoArgs_Request_DEFAULT
+	}
+	return p.Request
+}
+func (p *FrontendServiceGetColumnInfoArgs) SetRequest(val *TGetColumnInfoRequest) {
+	p.Request = val
+}
+
+var fieldIDToName_FrontendServiceGetColumnInfoArgs = map[int16]string{
+	1: "request",
+}
+
+func (p *FrontendServiceGetColumnInfoArgs) IsSetRequest() bool {
+	return p.Request != nil
+}
+
+func (p *FrontendServiceGetColumnInfoArgs) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FrontendServiceGetColumnInfoArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetColumnInfoArgs) ReadField1(iprot thrift.TProtocol) error {
+	p.Request = NewTGetColumnInfoRequest()
+	if err := p.Request.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *FrontendServiceGetColumnInfoArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("getColumnInfo_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetColumnInfoArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Request.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *FrontendServiceGetColumnInfoArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("FrontendServiceGetColumnInfoArgs(%+v)", *p)
+}
+
+func (p *FrontendServiceGetColumnInfoArgs) DeepEqual(ano *FrontendServiceGetColumnInfoArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Request) {
+		return false
+	}
+	return true
+}
+
+func (p *FrontendServiceGetColumnInfoArgs) Field1DeepEqual(src *TGetColumnInfoRequest) bool {
+
+	if !p.Request.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type FrontendServiceGetColumnInfoResult struct {
+	Success *TGetColumnInfoResult_ `thrift:"success,0,optional" frugal:"0,optional,TGetColumnInfoResult_" json:"success,omitempty"`
+}
+
+func NewFrontendServiceGetColumnInfoResult() *FrontendServiceGetColumnInfoResult {
+	return &FrontendServiceGetColumnInfoResult{}
+}
+
+func (p *FrontendServiceGetColumnInfoResult) InitDefault() {
+	*p = FrontendServiceGetColumnInfoResult{}
+}
+
+var FrontendServiceGetColumnInfoResult_Success_DEFAULT *TGetColumnInfoResult_
+
+func (p *FrontendServiceGetColumnInfoResult) GetSuccess() (v *TGetColumnInfoResult_) {
+	if !p.IsSetSuccess() {
+		return FrontendServiceGetColumnInfoResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *FrontendServiceGetColumnInfoResult) SetSuccess(x interface{}) {
+	p.Success = x.(*TGetColumnInfoResult_)
+}
+
+var fieldIDToName_FrontendServiceGetColumnInfoResult = map[int16]string{
+	0: "success",
+}
+
+func (p *FrontendServiceGetColumnInfoResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *FrontendServiceGetColumnInfoResult) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FrontendServiceGetColumnInfoResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetColumnInfoResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = NewTGetColumnInfoResult_()
+	if err := p.Success.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *FrontendServiceGetColumnInfoResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("getColumnInfo_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetColumnInfoResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *FrontendServiceGetColumnInfoResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("FrontendServiceGetColumnInfoResult(%+v)", *p)
+}
+
+func (p *FrontendServiceGetColumnInfoResult) DeepEqual(ano *FrontendServiceGetColumnInfoResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *FrontendServiceGetColumnInfoResult) Field0DeepEqual(src *TGetColumnInfoResult_) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

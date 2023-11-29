@@ -2228,6 +2228,62 @@ func (p *TQueryOptions) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 88:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField88(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 89:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField89(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 90:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField90(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 91:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField91(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -3345,6 +3401,62 @@ func (p *TQueryOptions) FastReadField87(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TQueryOptions) FastReadField88(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.EnableDecimal256 = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField89(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.EnableLocalShuffle = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField90(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.SkipMissingVersion = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField91(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.RuntimeFilterWaitInfinitely = v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TQueryOptions) FastWrite(buf []byte) int {
 	return 0
@@ -3428,6 +3540,10 @@ func (p *TQueryOptions) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryW
 		offset += p.fastWriteField85(buf[offset:], binaryWriter)
 		offset += p.fastWriteField86(buf[offset:], binaryWriter)
 		offset += p.fastWriteField87(buf[offset:], binaryWriter)
+		offset += p.fastWriteField88(buf[offset:], binaryWriter)
+		offset += p.fastWriteField89(buf[offset:], binaryWriter)
+		offset += p.fastWriteField90(buf[offset:], binaryWriter)
+		offset += p.fastWriteField91(buf[offset:], binaryWriter)
 		offset += p.fastWriteField18(buf[offset:], binaryWriter)
 		offset += p.fastWriteField42(buf[offset:], binaryWriter)
 		offset += p.fastWriteField46(buf[offset:], binaryWriter)
@@ -3520,6 +3636,10 @@ func (p *TQueryOptions) BLength() int {
 		l += p.field85Length()
 		l += p.field86Length()
 		l += p.field87Length()
+		l += p.field88Length()
+		l += p.field89Length()
+		l += p.field90Length()
+		l += p.field91Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -4383,6 +4503,50 @@ func (p *TQueryOptions) fastWriteField87(buf []byte, binaryWriter bthrift.Binary
 	return offset
 }
 
+func (p *TQueryOptions) fastWriteField88(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetEnableDecimal256() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_decimal256", thrift.BOOL, 88)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableDecimal256)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField89(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetEnableLocalShuffle() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_local_shuffle", thrift.BOOL, 89)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableLocalShuffle)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField90(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetSkipMissingVersion() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "skip_missing_version", thrift.BOOL, 90)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.SkipMissingVersion)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField91(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetRuntimeFilterWaitInfinitely() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "runtime_filter_wait_infinitely", thrift.BOOL, 91)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.RuntimeFilterWaitInfinitely)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TQueryOptions) field1Length() int {
 	l := 0
 	if p.IsSetAbortOnError() {
@@ -5234,6 +5398,50 @@ func (p *TQueryOptions) field87Length() int {
 	if p.IsSetFasterFloatConvert() {
 		l += bthrift.Binary.FieldBeginLength("faster_float_convert", thrift.BOOL, 87)
 		l += bthrift.Binary.BoolLength(p.FasterFloatConvert)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field88Length() int {
+	l := 0
+	if p.IsSetEnableDecimal256() {
+		l += bthrift.Binary.FieldBeginLength("enable_decimal256", thrift.BOOL, 88)
+		l += bthrift.Binary.BoolLength(p.EnableDecimal256)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field89Length() int {
+	l := 0
+	if p.IsSetEnableLocalShuffle() {
+		l += bthrift.Binary.FieldBeginLength("enable_local_shuffle", thrift.BOOL, 89)
+		l += bthrift.Binary.BoolLength(p.EnableLocalShuffle)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field90Length() int {
+	l := 0
+	if p.IsSetSkipMissingVersion() {
+		l += bthrift.Binary.FieldBeginLength("skip_missing_version", thrift.BOOL, 90)
+		l += bthrift.Binary.BoolLength(p.SkipMissingVersion)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field91Length() int {
+	l := 0
+	if p.IsSetRuntimeFilterWaitInfinitely() {
+		l += bthrift.Binary.FieldBeginLength("runtime_filter_wait_infinitely", thrift.BOOL, 91)
+		l += bthrift.Binary.BoolLength(p.RuntimeFilterWaitInfinitely)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -8937,6 +9145,48 @@ func (p *TExecPlanFragmentParams) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 26:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField26(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 27:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField27(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 28:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField28(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -9344,6 +9594,45 @@ func (p *TExecPlanFragmentParams) FastReadField25(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TExecPlanFragmentParams) FastReadField26(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.LoadStreamPerNode = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TExecPlanFragmentParams) FastReadField27(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.TotalLoadStreams = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TExecPlanFragmentParams) FastReadField28(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.NumLocalSink = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TExecPlanFragmentParams) FastWrite(buf []byte) int {
 	return 0
@@ -9362,6 +9651,9 @@ func (p *TExecPlanFragmentParams) FastWriteNocopy(buf []byte, binaryWriter bthri
 		offset += p.fastWriteField20(buf[offset:], binaryWriter)
 		offset += p.fastWriteField21(buf[offset:], binaryWriter)
 		offset += p.fastWriteField25(buf[offset:], binaryWriter)
+		offset += p.fastWriteField26(buf[offset:], binaryWriter)
+		offset += p.fastWriteField27(buf[offset:], binaryWriter)
+		offset += p.fastWriteField28(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -9413,6 +9705,9 @@ func (p *TExecPlanFragmentParams) BLength() int {
 		l += p.field23Length()
 		l += p.field24Length()
 		l += p.field25Length()
+		l += p.field26Length()
+		l += p.field27Length()
+		l += p.field28Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -9699,6 +9994,39 @@ func (p *TExecPlanFragmentParams) fastWriteField25(buf []byte, binaryWriter bthr
 	return offset
 }
 
+func (p *TExecPlanFragmentParams) fastWriteField26(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetLoadStreamPerNode() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "load_stream_per_node", thrift.I32, 26)
+		offset += bthrift.Binary.WriteI32(buf[offset:], *p.LoadStreamPerNode)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TExecPlanFragmentParams) fastWriteField27(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTotalLoadStreams() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "total_load_streams", thrift.I32, 27)
+		offset += bthrift.Binary.WriteI32(buf[offset:], *p.TotalLoadStreams)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TExecPlanFragmentParams) fastWriteField28(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetNumLocalSink() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "num_local_sink", thrift.I32, 28)
+		offset += bthrift.Binary.WriteI32(buf[offset:], *p.NumLocalSink)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TExecPlanFragmentParams) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("protocol_version", thrift.I32, 1)
@@ -9965,6 +10293,39 @@ func (p *TExecPlanFragmentParams) field25Length() int {
 	if p.IsSetWalId() {
 		l += bthrift.Binary.FieldBeginLength("wal_id", thrift.I64, 25)
 		l += bthrift.Binary.I64Length(*p.WalId)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TExecPlanFragmentParams) field26Length() int {
+	l := 0
+	if p.IsSetLoadStreamPerNode() {
+		l += bthrift.Binary.FieldBeginLength("load_stream_per_node", thrift.I32, 26)
+		l += bthrift.Binary.I32Length(*p.LoadStreamPerNode)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TExecPlanFragmentParams) field27Length() int {
+	l := 0
+	if p.IsSetTotalLoadStreams() {
+		l += bthrift.Binary.FieldBeginLength("total_load_streams", thrift.I32, 27)
+		l += bthrift.Binary.I32Length(*p.TotalLoadStreams)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TExecPlanFragmentParams) field28Length() int {
+	l := 0
+	if p.IsSetNumLocalSink() {
+		l += bthrift.Binary.FieldBeginLength("num_local_sink", thrift.I32, 28)
+		l += bthrift.Binary.I32Length(*p.NumLocalSink)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -16424,6 +16785,48 @@ func (p *TPipelineFragmentParams) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 31:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField31(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 32:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField32(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 33:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField33(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -16962,6 +17365,45 @@ func (p *TPipelineFragmentParams) FastReadField30(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TPipelineFragmentParams) FastReadField31(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.LoadStreamPerNode = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TPipelineFragmentParams) FastReadField32(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.TotalLoadStreams = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TPipelineFragmentParams) FastReadField33(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.NumLocalSink = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TPipelineFragmentParams) FastWrite(buf []byte) int {
 	return 0
@@ -16980,6 +17422,9 @@ func (p *TPipelineFragmentParams) FastWriteNocopy(buf []byte, binaryWriter bthri
 		offset += p.fastWriteField19(buf[offset:], binaryWriter)
 		offset += p.fastWriteField21(buf[offset:], binaryWriter)
 		offset += p.fastWriteField30(buf[offset:], binaryWriter)
+		offset += p.fastWriteField31(buf[offset:], binaryWriter)
+		offset += p.fastWriteField32(buf[offset:], binaryWriter)
+		offset += p.fastWriteField33(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
@@ -17039,6 +17484,9 @@ func (p *TPipelineFragmentParams) BLength() int {
 		l += p.field28Length()
 		l += p.field29Length()
 		l += p.field30Length()
+		l += p.field31Length()
+		l += p.field32Length()
+		l += p.field33Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -17393,6 +17841,39 @@ func (p *TPipelineFragmentParams) fastWriteField30(buf []byte, binaryWriter bthr
 	return offset
 }
 
+func (p *TPipelineFragmentParams) fastWriteField31(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetLoadStreamPerNode() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "load_stream_per_node", thrift.I32, 31)
+		offset += bthrift.Binary.WriteI32(buf[offset:], *p.LoadStreamPerNode)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TPipelineFragmentParams) fastWriteField32(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTotalLoadStreams() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "total_load_streams", thrift.I32, 32)
+		offset += bthrift.Binary.WriteI32(buf[offset:], *p.TotalLoadStreams)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TPipelineFragmentParams) fastWriteField33(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetNumLocalSink() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "num_local_sink", thrift.I32, 33)
+		offset += bthrift.Binary.WriteI32(buf[offset:], *p.NumLocalSink)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TPipelineFragmentParams) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("protocol_version", thrift.I32, 1)
@@ -17707,6 +18188,39 @@ func (p *TPipelineFragmentParams) field30Length() int {
 	if p.IsSetGroupCommit() {
 		l += bthrift.Binary.FieldBeginLength("group_commit", thrift.BOOL, 30)
 		l += bthrift.Binary.BoolLength(p.GroupCommit)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TPipelineFragmentParams) field31Length() int {
+	l := 0
+	if p.IsSetLoadStreamPerNode() {
+		l += bthrift.Binary.FieldBeginLength("load_stream_per_node", thrift.I32, 31)
+		l += bthrift.Binary.I32Length(*p.LoadStreamPerNode)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TPipelineFragmentParams) field32Length() int {
+	l := 0
+	if p.IsSetTotalLoadStreams() {
+		l += bthrift.Binary.FieldBeginLength("total_load_streams", thrift.I32, 32)
+		l += bthrift.Binary.I32Length(*p.TotalLoadStreams)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TPipelineFragmentParams) field33Length() int {
+	l := 0
+	if p.IsSetNumLocalSink() {
+		l += bthrift.Binary.FieldBeginLength("num_local_sink", thrift.I32, 33)
+		l += bthrift.Binary.I32Length(*p.NumLocalSink)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

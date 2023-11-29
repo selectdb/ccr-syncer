@@ -49,6 +49,8 @@ const (
 	TExprNodeType_LAMBDA_FUNCTION_EXPR      TExprNodeType = 31
 	TExprNodeType_LAMBDA_FUNCTION_CALL_EXPR TExprNodeType = 32
 	TExprNodeType_COLUMN_REF                TExprNodeType = 33
+	TExprNodeType_IPV4_LITERAL              TExprNodeType = 34
+	TExprNodeType_IPV6_LITERAL              TExprNodeType = 35
 )
 
 func (p TExprNodeType) String() string {
@@ -121,6 +123,10 @@ func (p TExprNodeType) String() string {
 		return "LAMBDA_FUNCTION_CALL_EXPR"
 	case TExprNodeType_COLUMN_REF:
 		return "COLUMN_REF"
+	case TExprNodeType_IPV4_LITERAL:
+		return "IPV4_LITERAL"
+	case TExprNodeType_IPV6_LITERAL:
+		return "IPV6_LITERAL"
 	}
 	return "<UNSET>"
 }
@@ -195,6 +201,10 @@ func TExprNodeTypeFromString(s string) (TExprNodeType, error) {
 		return TExprNodeType_LAMBDA_FUNCTION_CALL_EXPR, nil
 	case "COLUMN_REF":
 		return TExprNodeType_COLUMN_REF, nil
+	case "IPV4_LITERAL":
+		return TExprNodeType_IPV4_LITERAL, nil
+	case "IPV6_LITERAL":
+		return TExprNodeType_IPV6_LITERAL, nil
 	}
 	return TExprNodeType(0), fmt.Errorf("not a valid TExprNodeType string")
 }
@@ -1786,6 +1796,350 @@ func (p *TLargeIntLiteral) DeepEqual(ano *TLargeIntLiteral) bool {
 }
 
 func (p *TLargeIntLiteral) Field1DeepEqual(src string) bool {
+
+	if strings.Compare(p.Value, src) != 0 {
+		return false
+	}
+	return true
+}
+
+type TIPv4Literal struct {
+	Value int64 `thrift:"value,1,required" frugal:"1,required,i64" json:"value"`
+}
+
+func NewTIPv4Literal() *TIPv4Literal {
+	return &TIPv4Literal{}
+}
+
+func (p *TIPv4Literal) InitDefault() {
+	*p = TIPv4Literal{}
+}
+
+func (p *TIPv4Literal) GetValue() (v int64) {
+	return p.Value
+}
+func (p *TIPv4Literal) SetValue(val int64) {
+	p.Value = val
+}
+
+var fieldIDToName_TIPv4Literal = map[int16]string{
+	1: "value",
+}
+
+func (p *TIPv4Literal) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetValue bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetValue = true
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetValue {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TIPv4Literal[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_TIPv4Literal[fieldId]))
+}
+
+func (p *TIPv4Literal) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		p.Value = v
+	}
+	return nil
+}
+
+func (p *TIPv4Literal) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TIPv4Literal"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TIPv4Literal) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("value", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.Value); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TIPv4Literal) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TIPv4Literal(%+v)", *p)
+}
+
+func (p *TIPv4Literal) DeepEqual(ano *TIPv4Literal) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Value) {
+		return false
+	}
+	return true
+}
+
+func (p *TIPv4Literal) Field1DeepEqual(src int64) bool {
+
+	if p.Value != src {
+		return false
+	}
+	return true
+}
+
+type TIPv6Literal struct {
+	Value string `thrift:"value,1,required" frugal:"1,required,string" json:"value"`
+}
+
+func NewTIPv6Literal() *TIPv6Literal {
+	return &TIPv6Literal{}
+}
+
+func (p *TIPv6Literal) InitDefault() {
+	*p = TIPv6Literal{}
+}
+
+func (p *TIPv6Literal) GetValue() (v string) {
+	return p.Value
+}
+func (p *TIPv6Literal) SetValue(val string) {
+	p.Value = val
+}
+
+var fieldIDToName_TIPv6Literal = map[int16]string{
+	1: "value",
+}
+
+func (p *TIPv6Literal) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetValue bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetValue = true
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetValue {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TIPv6Literal[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_TIPv6Literal[fieldId]))
+}
+
+func (p *TIPv6Literal) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		p.Value = v
+	}
+	return nil
+}
+
+func (p *TIPv6Literal) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TIPv6Literal"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TIPv6Literal) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("value", thrift.STRING, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Value); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TIPv6Literal) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TIPv6Literal(%+v)", *p)
+}
+
+func (p *TIPv6Literal) DeepEqual(ano *TIPv6Literal) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Value) {
+		return false
+	}
+	return true
+}
+
+func (p *TIPv6Literal) Field1DeepEqual(src string) bool {
 
 	if strings.Compare(p.Value, src) != 0 {
 		return false
@@ -4788,6 +5142,8 @@ type TExprNode struct {
 	SchemaChangeExpr *TSchemaChangeExpr     `thrift:"schema_change_expr,31,optional" frugal:"31,optional,TSchemaChangeExpr" json:"schema_change_expr,omitempty"`
 	ColumnRef        *TColumnRef            `thrift:"column_ref,32,optional" frugal:"32,optional,TColumnRef" json:"column_ref,omitempty"`
 	MatchPredicate   *TMatchPredicate       `thrift:"match_predicate,33,optional" frugal:"33,optional,TMatchPredicate" json:"match_predicate,omitempty"`
+	Ipv4Literal      *TIPv4Literal          `thrift:"ipv4_literal,34,optional" frugal:"34,optional,TIPv4Literal" json:"ipv4_literal,omitempty"`
+	Ipv6Literal      *TIPv6Literal          `thrift:"ipv6_literal,35,optional" frugal:"35,optional,TIPv6Literal" json:"ipv6_literal,omitempty"`
 }
 
 func NewTExprNode() *TExprNode {
@@ -5079,6 +5435,24 @@ func (p *TExprNode) GetMatchPredicate() (v *TMatchPredicate) {
 	}
 	return p.MatchPredicate
 }
+
+var TExprNode_Ipv4Literal_DEFAULT *TIPv4Literal
+
+func (p *TExprNode) GetIpv4Literal() (v *TIPv4Literal) {
+	if !p.IsSetIpv4Literal() {
+		return TExprNode_Ipv4Literal_DEFAULT
+	}
+	return p.Ipv4Literal
+}
+
+var TExprNode_Ipv6Literal_DEFAULT *TIPv6Literal
+
+func (p *TExprNode) GetIpv6Literal() (v *TIPv6Literal) {
+	if !p.IsSetIpv6Literal() {
+		return TExprNode_Ipv6Literal_DEFAULT
+	}
+	return p.Ipv6Literal
+}
 func (p *TExprNode) SetNodeType(val TExprNodeType) {
 	p.NodeType = val
 }
@@ -5178,6 +5552,12 @@ func (p *TExprNode) SetColumnRef(val *TColumnRef) {
 func (p *TExprNode) SetMatchPredicate(val *TMatchPredicate) {
 	p.MatchPredicate = val
 }
+func (p *TExprNode) SetIpv4Literal(val *TIPv4Literal) {
+	p.Ipv4Literal = val
+}
+func (p *TExprNode) SetIpv6Literal(val *TIPv6Literal) {
+	p.Ipv6Literal = val
+}
 
 var fieldIDToName_TExprNode = map[int16]string{
 	1:  "node_type",
@@ -5213,6 +5593,8 @@ var fieldIDToName_TExprNode = map[int16]string{
 	31: "schema_change_expr",
 	32: "column_ref",
 	33: "match_predicate",
+	34: "ipv4_literal",
+	35: "ipv6_literal",
 }
 
 func (p *TExprNode) IsSetType() bool {
@@ -5333,6 +5715,14 @@ func (p *TExprNode) IsSetColumnRef() bool {
 
 func (p *TExprNode) IsSetMatchPredicate() bool {
 	return p.MatchPredicate != nil
+}
+
+func (p *TExprNode) IsSetIpv4Literal() bool {
+	return p.Ipv4Literal != nil
+}
+
+func (p *TExprNode) IsSetIpv6Literal() bool {
+	return p.Ipv6Literal != nil
 }
 
 func (p *TExprNode) Read(iprot thrift.TProtocol) (err error) {
@@ -5692,6 +6082,26 @@ func (p *TExprNode) Read(iprot thrift.TProtocol) (err error) {
 					goto SkipFieldError
 				}
 			}
+		case 34:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField34(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 35:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField35(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
@@ -6019,6 +6429,22 @@ func (p *TExprNode) ReadField33(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TExprNode) ReadField34(iprot thrift.TProtocol) error {
+	p.Ipv4Literal = NewTIPv4Literal()
+	if err := p.Ipv4Literal.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *TExprNode) ReadField35(iprot thrift.TProtocol) error {
+	p.Ipv6Literal = NewTIPv6Literal()
+	if err := p.Ipv6Literal.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *TExprNode) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TExprNode"); err != nil {
@@ -6155,6 +6581,14 @@ func (p *TExprNode) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField33(oprot); err != nil {
 			fieldId = 33
+			goto WriteFieldError
+		}
+		if err = p.writeField34(oprot); err != nil {
+			fieldId = 34
+			goto WriteFieldError
+		}
+		if err = p.writeField35(oprot); err != nil {
+			fieldId = 35
 			goto WriteFieldError
 		}
 
@@ -6795,6 +7229,44 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 33 end error: ", p), err)
 }
 
+func (p *TExprNode) writeField34(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIpv4Literal() {
+		if err = oprot.WriteFieldBegin("ipv4_literal", thrift.STRUCT, 34); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Ipv4Literal.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 34 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 34 end error: ", p), err)
+}
+
+func (p *TExprNode) writeField35(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIpv6Literal() {
+		if err = oprot.WriteFieldBegin("ipv6_literal", thrift.STRUCT, 35); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Ipv6Literal.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 35 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 35 end error: ", p), err)
+}
+
 func (p *TExprNode) String() string {
 	if p == nil {
 		return "<nil>"
@@ -6905,6 +7377,12 @@ func (p *TExprNode) DeepEqual(ano *TExprNode) bool {
 		return false
 	}
 	if !p.Field33DeepEqual(ano.MatchPredicate) {
+		return false
+	}
+	if !p.Field34DeepEqual(ano.Ipv4Literal) {
+		return false
+	}
+	if !p.Field35DeepEqual(ano.Ipv6Literal) {
 		return false
 	}
 	return true
@@ -7167,6 +7645,20 @@ func (p *TExprNode) Field32DeepEqual(src *TColumnRef) bool {
 func (p *TExprNode) Field33DeepEqual(src *TMatchPredicate) bool {
 
 	if !p.MatchPredicate.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TExprNode) Field34DeepEqual(src *TIPv4Literal) bool {
+
+	if !p.Ipv4Literal.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TExprNode) Field35DeepEqual(src *TIPv6Literal) bool {
+
+	if !p.Ipv6Literal.DeepEqual(src) {
 		return false
 	}
 	return true

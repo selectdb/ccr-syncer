@@ -461,6 +461,7 @@ type TColumn struct {
 	Aggregation         *string                 `thrift:"aggregation,16,optional" frugal:"16,optional,string" json:"aggregation,omitempty"`
 	ResultIsNullable    *bool                   `thrift:"result_is_nullable,17,optional" frugal:"17,optional,bool" json:"result_is_nullable,omitempty"`
 	IsAutoIncrement     bool                    `thrift:"is_auto_increment,18,optional" frugal:"18,optional,bool" json:"is_auto_increment,omitempty"`
+	ClusterKeyId        int32                   `thrift:"cluster_key_id,19,optional" frugal:"19,optional,i32" json:"cluster_key_id,omitempty"`
 }
 
 func NewTColumn() *TColumn {
@@ -471,6 +472,7 @@ func NewTColumn() *TColumn {
 		HasBitmapIndex:  false,
 		HasNgramBfIndex: false,
 		IsAutoIncrement: false,
+		ClusterKeyId:    -1,
 	}
 }
 
@@ -482,6 +484,7 @@ func (p *TColumn) InitDefault() {
 		HasBitmapIndex:  false,
 		HasNgramBfIndex: false,
 		IsAutoIncrement: false,
+		ClusterKeyId:    -1,
 	}
 }
 
@@ -641,6 +644,15 @@ func (p *TColumn) GetIsAutoIncrement() (v bool) {
 	}
 	return p.IsAutoIncrement
 }
+
+var TColumn_ClusterKeyId_DEFAULT int32 = -1
+
+func (p *TColumn) GetClusterKeyId() (v int32) {
+	if !p.IsSetClusterKeyId() {
+		return TColumn_ClusterKeyId_DEFAULT
+	}
+	return p.ClusterKeyId
+}
 func (p *TColumn) SetColumnName(val string) {
 	p.ColumnName = val
 }
@@ -695,6 +707,9 @@ func (p *TColumn) SetResultIsNullable(val *bool) {
 func (p *TColumn) SetIsAutoIncrement(val bool) {
 	p.IsAutoIncrement = val
 }
+func (p *TColumn) SetClusterKeyId(val int32) {
+	p.ClusterKeyId = val
+}
 
 var fieldIDToName_TColumn = map[int16]string{
 	1:  "column_name",
@@ -715,6 +730,7 @@ var fieldIDToName_TColumn = map[int16]string{
 	16: "aggregation",
 	17: "result_is_nullable",
 	18: "is_auto_increment",
+	19: "cluster_key_id",
 }
 
 func (p *TColumn) IsSetColumnType() bool {
@@ -783,6 +799,10 @@ func (p *TColumn) IsSetResultIsNullable() bool {
 
 func (p *TColumn) IsSetIsAutoIncrement() bool {
 	return p.IsAutoIncrement != TColumn_IsAutoIncrement_DEFAULT
+}
+
+func (p *TColumn) IsSetClusterKeyId() bool {
+	return p.ClusterKeyId != TColumn_ClusterKeyId_DEFAULT
 }
 
 func (p *TColumn) Read(iprot thrift.TProtocol) (err error) {
@@ -981,6 +1001,16 @@ func (p *TColumn) Read(iprot thrift.TProtocol) (err error) {
 		case 18:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField18(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				if err = iprot.Skip(fieldTypeId); err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 19:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField19(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else {
@@ -1201,6 +1231,15 @@ func (p *TColumn) ReadField18(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TColumn) ReadField19(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		p.ClusterKeyId = v
+	}
+	return nil
+}
+
 func (p *TColumn) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	if err = oprot.WriteStructBegin("TColumn"); err != nil {
@@ -1277,6 +1316,10 @@ func (p *TColumn) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField18(oprot); err != nil {
 			fieldId = 18
+			goto WriteFieldError
+		}
+		if err = p.writeField19(oprot); err != nil {
+			fieldId = 19
 			goto WriteFieldError
 		}
 
@@ -1644,6 +1687,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 18 end error: ", p), err)
 }
 
+func (p *TColumn) writeField19(oprot thrift.TProtocol) (err error) {
+	if p.IsSetClusterKeyId() {
+		if err = oprot.WriteFieldBegin("cluster_key_id", thrift.I32, 19); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.ClusterKeyId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 end error: ", p), err)
+}
+
 func (p *TColumn) String() string {
 	if p == nil {
 		return "<nil>"
@@ -1709,6 +1771,9 @@ func (p *TColumn) DeepEqual(ano *TColumn) bool {
 		return false
 	}
 	if !p.Field18DeepEqual(ano.IsAutoIncrement) {
+		return false
+	}
+	if !p.Field19DeepEqual(ano.ClusterKeyId) {
 		return false
 	}
 	return true
@@ -1887,6 +1952,13 @@ func (p *TColumn) Field17DeepEqual(src *bool) bool {
 func (p *TColumn) Field18DeepEqual(src bool) bool {
 
 	if p.IsAutoIncrement != src {
+		return false
+	}
+	return true
+}
+func (p *TColumn) Field19DeepEqual(src int32) bool {
+
+	if p.ClusterKeyId != src {
 		return false
 	}
 	return true

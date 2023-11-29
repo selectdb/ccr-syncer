@@ -45,6 +45,8 @@ func NewServiceInfo() *kitex.ServiceInfo {
 		"clean_trash":                  kitex.NewMethodInfo(cleanTrashHandler, newBackendServiceCleanTrashArgs, nil, true),
 		"check_storage_format":         kitex.NewMethodInfo(checkStorageFormatHandler, newBackendServiceCheckStorageFormatArgs, newBackendServiceCheckStorageFormatResult, false),
 		"ingest_binlog":                kitex.NewMethodInfo(ingestBinlogHandler, newBackendServiceIngestBinlogArgs, newBackendServiceIngestBinlogResult, false),
+		"query_ingest_binlog":          kitex.NewMethodInfo(queryIngestBinlogHandler, newBackendServiceQueryIngestBinlogArgs, newBackendServiceQueryIngestBinlogResult, false),
+		"publish_topic_info":           kitex.NewMethodInfo(publishTopicInfoHandler, newBackendServicePublishTopicInfoArgs, newBackendServicePublishTopicInfoResult, false),
 	}
 	extra := map[string]interface{}{
 		"PackageName": "backendservice",
@@ -433,6 +435,42 @@ func newBackendServiceIngestBinlogResult() interface{} {
 	return backendservice.NewBackendServiceIngestBinlogResult()
 }
 
+func queryIngestBinlogHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*backendservice.BackendServiceQueryIngestBinlogArgs)
+	realResult := result.(*backendservice.BackendServiceQueryIngestBinlogResult)
+	success, err := handler.(backendservice.BackendService).QueryIngestBinlog(ctx, realArg.QueryIngestBinlogRequest)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBackendServiceQueryIngestBinlogArgs() interface{} {
+	return backendservice.NewBackendServiceQueryIngestBinlogArgs()
+}
+
+func newBackendServiceQueryIngestBinlogResult() interface{} {
+	return backendservice.NewBackendServiceQueryIngestBinlogResult()
+}
+
+func publishTopicInfoHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*backendservice.BackendServicePublishTopicInfoArgs)
+	realResult := result.(*backendservice.BackendServicePublishTopicInfoResult)
+	success, err := handler.(backendservice.BackendService).PublishTopicInfo(ctx, realArg.TopicRequest)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBackendServicePublishTopicInfoArgs() interface{} {
+	return backendservice.NewBackendServicePublishTopicInfoArgs()
+}
+
+func newBackendServicePublishTopicInfoResult() interface{} {
+	return backendservice.NewBackendServicePublishTopicInfoResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -642,6 +680,26 @@ func (p *kClient) IngestBinlog(ctx context.Context, ingestBinlogRequest *backend
 	_args.IngestBinlogRequest = ingestBinlogRequest
 	var _result backendservice.BackendServiceIngestBinlogResult
 	if err = p.c.Call(ctx, "ingest_binlog", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) QueryIngestBinlog(ctx context.Context, queryIngestBinlogRequest *backendservice.TQueryIngestBinlogRequest) (r *backendservice.TQueryIngestBinlogResult_, err error) {
+	var _args backendservice.BackendServiceQueryIngestBinlogArgs
+	_args.QueryIngestBinlogRequest = queryIngestBinlogRequest
+	var _result backendservice.BackendServiceQueryIngestBinlogResult
+	if err = p.c.Call(ctx, "query_ingest_binlog", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) PublishTopicInfo(ctx context.Context, topicRequest *backendservice.TPublishTopicRequest) (r *backendservice.TPublishTopicResult_, err error) {
+	var _args backendservice.BackendServicePublishTopicInfoArgs
+	_args.TopicRequest = topicRequest
+	var _result backendservice.BackendServicePublishTopicInfoResult
+	if err = p.c.Call(ctx, "publish_topic_info", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

@@ -45,7 +45,6 @@ type Client interface {
 	StreamLoadMultiTablePut(ctx context.Context, request *frontendservice.TStreamLoadPutRequest, callOptions ...callopt.Option) (r *frontendservice.TStreamLoadMultiTablePutResult_, err error)
 	SnapshotLoaderReport(ctx context.Context, request *frontendservice.TSnapshotLoaderReportRequest, callOptions ...callopt.Option) (r *status.TStatus, err error)
 	Ping(ctx context.Context, request *frontendservice.TFrontendPingFrontendRequest, callOptions ...callopt.Option) (r *frontendservice.TFrontendPingFrontendResult_, err error)
-	AddColumns(ctx context.Context, request *frontendservice.TAddColumnsRequest, callOptions ...callopt.Option) (r *frontendservice.TAddColumnsResult_, err error)
 	InitExternalCtlMeta(ctx context.Context, request *frontendservice.TInitExternalCtlMetaRequest, callOptions ...callopt.Option) (r *frontendservice.TInitExternalCtlMetaResult_, err error)
 	FetchSchemaTableData(ctx context.Context, request *frontendservice.TFetchSchemaTableDataRequest, callOptions ...callopt.Option) (r *frontendservice.TFetchSchemaTableDataResult_, err error)
 	AcquireToken(ctx context.Context, callOptions ...callopt.Option) (r *frontendservice.TMySqlLoadAcquireTokenResult_, err error)
@@ -60,6 +59,7 @@ type Client interface {
 	CreatePartition(ctx context.Context, request *frontendservice.TCreatePartitionRequest, callOptions ...callopt.Option) (r *frontendservice.TCreatePartitionResult_, err error)
 	GetMeta(ctx context.Context, request *frontendservice.TGetMetaRequest, callOptions ...callopt.Option) (r *frontendservice.TGetMetaResult_, err error)
 	GetBackendMeta(ctx context.Context, request *frontendservice.TGetBackendMetaRequest, callOptions ...callopt.Option) (r *frontendservice.TGetBackendMetaResult_, err error)
+	GetColumnInfo(ctx context.Context, request *frontendservice.TGetColumnInfoRequest, callOptions ...callopt.Option) (r *frontendservice.TGetColumnInfoResult_, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -251,11 +251,6 @@ func (p *kFrontendServiceClient) Ping(ctx context.Context, request *frontendserv
 	return p.kClient.Ping(ctx, request)
 }
 
-func (p *kFrontendServiceClient) AddColumns(ctx context.Context, request *frontendservice.TAddColumnsRequest, callOptions ...callopt.Option) (r *frontendservice.TAddColumnsResult_, err error) {
-	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.AddColumns(ctx, request)
-}
-
 func (p *kFrontendServiceClient) InitExternalCtlMeta(ctx context.Context, request *frontendservice.TInitExternalCtlMetaRequest, callOptions ...callopt.Option) (r *frontendservice.TInitExternalCtlMetaResult_, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.InitExternalCtlMeta(ctx, request)
@@ -324,4 +319,9 @@ func (p *kFrontendServiceClient) GetMeta(ctx context.Context, request *frontends
 func (p *kFrontendServiceClient) GetBackendMeta(ctx context.Context, request *frontendservice.TGetBackendMetaRequest, callOptions ...callopt.Option) (r *frontendservice.TGetBackendMetaResult_, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetBackendMeta(ctx, request)
+}
+
+func (p *kFrontendServiceClient) GetColumnInfo(ctx context.Context, request *frontendservice.TGetColumnInfoRequest, callOptions ...callopt.Option) (r *frontendservice.TGetColumnInfoResult_, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetColumnInfo(ctx, request)
 }

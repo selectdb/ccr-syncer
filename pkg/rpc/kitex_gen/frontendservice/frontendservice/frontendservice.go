@@ -53,7 +53,6 @@ func NewServiceInfo() *kitex.ServiceInfo {
 		"streamLoadMultiTablePut":   kitex.NewMethodInfo(streamLoadMultiTablePutHandler, newFrontendServiceStreamLoadMultiTablePutArgs, newFrontendServiceStreamLoadMultiTablePutResult, false),
 		"snapshotLoaderReport":      kitex.NewMethodInfo(snapshotLoaderReportHandler, newFrontendServiceSnapshotLoaderReportArgs, newFrontendServiceSnapshotLoaderReportResult, false),
 		"ping":                      kitex.NewMethodInfo(pingHandler, newFrontendServicePingArgs, newFrontendServicePingResult, false),
-		"addColumns":                kitex.NewMethodInfo(addColumnsHandler, newFrontendServiceAddColumnsArgs, newFrontendServiceAddColumnsResult, false),
 		"initExternalCtlMeta":       kitex.NewMethodInfo(initExternalCtlMetaHandler, newFrontendServiceInitExternalCtlMetaArgs, newFrontendServiceInitExternalCtlMetaResult, false),
 		"fetchSchemaTableData":      kitex.NewMethodInfo(fetchSchemaTableDataHandler, newFrontendServiceFetchSchemaTableDataArgs, newFrontendServiceFetchSchemaTableDataResult, false),
 		"acquireToken":              kitex.NewMethodInfo(acquireTokenHandler, newFrontendServiceAcquireTokenArgs, newFrontendServiceAcquireTokenResult, false),
@@ -68,6 +67,7 @@ func NewServiceInfo() *kitex.ServiceInfo {
 		"createPartition":           kitex.NewMethodInfo(createPartitionHandler, newFrontendServiceCreatePartitionArgs, newFrontendServiceCreatePartitionResult, false),
 		"getMeta":                   kitex.NewMethodInfo(getMetaHandler, newFrontendServiceGetMetaArgs, newFrontendServiceGetMetaResult, false),
 		"getBackendMeta":            kitex.NewMethodInfo(getBackendMetaHandler, newFrontendServiceGetBackendMetaArgs, newFrontendServiceGetBackendMetaResult, false),
+		"getColumnInfo":             kitex.NewMethodInfo(getColumnInfoHandler, newFrontendServiceGetColumnInfoArgs, newFrontendServiceGetColumnInfoResult, false),
 	}
 	extra := map[string]interface{}{
 		"PackageName": "frontendservice",
@@ -659,24 +659,6 @@ func newFrontendServicePingResult() interface{} {
 	return frontendservice.NewFrontendServicePingResult()
 }
 
-func addColumnsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*frontendservice.FrontendServiceAddColumnsArgs)
-	realResult := result.(*frontendservice.FrontendServiceAddColumnsResult)
-	success, err := handler.(frontendservice.FrontendService).AddColumns(ctx, realArg.Request)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-func newFrontendServiceAddColumnsArgs() interface{} {
-	return frontendservice.NewFrontendServiceAddColumnsArgs()
-}
-
-func newFrontendServiceAddColumnsResult() interface{} {
-	return frontendservice.NewFrontendServiceAddColumnsResult()
-}
-
 func initExternalCtlMetaHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*frontendservice.FrontendServiceInitExternalCtlMetaArgs)
 	realResult := result.(*frontendservice.FrontendServiceInitExternalCtlMetaResult)
@@ -927,6 +909,24 @@ func newFrontendServiceGetBackendMetaArgs() interface{} {
 
 func newFrontendServiceGetBackendMetaResult() interface{} {
 	return frontendservice.NewFrontendServiceGetBackendMetaResult()
+}
+
+func getColumnInfoHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*frontendservice.FrontendServiceGetColumnInfoArgs)
+	realResult := result.(*frontendservice.FrontendServiceGetColumnInfoResult)
+	success, err := handler.(frontendservice.FrontendService).GetColumnInfo(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newFrontendServiceGetColumnInfoArgs() interface{} {
+	return frontendservice.NewFrontendServiceGetColumnInfoArgs()
+}
+
+func newFrontendServiceGetColumnInfoResult() interface{} {
+	return frontendservice.NewFrontendServiceGetColumnInfoResult()
 }
 
 type kClient struct {
@@ -1258,16 +1258,6 @@ func (p *kClient) Ping(ctx context.Context, request *frontendservice.TFrontendPi
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) AddColumns(ctx context.Context, request *frontendservice.TAddColumnsRequest) (r *frontendservice.TAddColumnsResult_, err error) {
-	var _args frontendservice.FrontendServiceAddColumnsArgs
-	_args.Request = request
-	var _result frontendservice.FrontendServiceAddColumnsResult
-	if err = p.c.Call(ctx, "addColumns", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
 func (p *kClient) InitExternalCtlMeta(ctx context.Context, request *frontendservice.TInitExternalCtlMetaRequest) (r *frontendservice.TInitExternalCtlMetaResult_, err error) {
 	var _args frontendservice.FrontendServiceInitExternalCtlMetaArgs
 	_args.Request = request
@@ -1402,6 +1392,16 @@ func (p *kClient) GetBackendMeta(ctx context.Context, request *frontendservice.T
 	_args.Request = request
 	var _result frontendservice.FrontendServiceGetBackendMetaResult
 	if err = p.c.Call(ctx, "getBackendMeta", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetColumnInfo(ctx context.Context, request *frontendservice.TGetColumnInfoRequest) (r *frontendservice.TGetColumnInfoResult_, err error) {
+	var _args frontendservice.FrontendServiceGetColumnInfoArgs
+	_args.Request = request
+	var _result frontendservice.FrontendServiceGetColumnInfoResult
+	if err = p.c.Call(ctx, "getColumnInfo", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
