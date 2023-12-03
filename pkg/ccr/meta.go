@@ -62,14 +62,14 @@ func (m *Meta) GetDbId() (int64, error) {
 		return dbId, nil
 	}
 
-	dbFullName := "default_cluster:" + dbName
+    dbFullName := "default_cluster:" + dbName
 	// mysql> show proc '/dbs/';
 	// +-------+------------------------------------+----------+----------+-------------+--------------------------+--------------+--------------+------------------+
 	// | DbId  | DbName                             | TableNum | Size     | Quota       | LastConsistencyCheckTime | ReplicaCount | ReplicaQuota | TransactionQuota |
 	// +-------+------------------------------------+----------+----------+-------------+--------------------------+--------------+--------------+------------------+
-	// | 0     | default_cluster:information_schema | 24       | 0.000    | 1024.000 TB | NULL                     | 0            | 1073741824   | 100              |
-	// | 10002 | default_cluster:__internal_schema  | 4        | 0.000    | 1024.000 TB | NULL                     | 28           | 1073741824   | 100              |
-	// | 10116 | default_cluster:ccr                | 2        | 2.738 KB | 1024.000 TB | NULL                     | 27           | 1073741824   | 100              |
+	// | 0     | information_schema | 24       | 0.000    | 1024.000 TB | NULL                     | 0            | 1073741824   | 100              |
+	// | 10002 | __internal_schema  | 4        | 0.000    | 1024.000 TB | NULL                     | 28           | 1073741824   | 100              |
+	// | 10116 | ccr                | 2        | 2.738 KB | 1024.000 TB | NULL                     | 27           | 1073741824   | 100              |
 	// +-------+------------------------------------+----------+----------+-------------+--------------------------+--------------+--------------+------------------+
 	db, err := m.Connect()
 	if err != nil {
@@ -98,7 +98,9 @@ func (m *Meta) GetDbId() (int64, error) {
 		}
 
 		// match parsedDbname == dbname, return dbId
-		if parsedDbName == dbFullName {
+		// the defualt_cluster prefix of db name will be removed in Doris v2.1.
+		// here we compare both db name and db full name to make it compatible.
+		if parsedDbName == dbName || parsedDbName == dbFullName {
 			m.DatabaseName2IdMap[dbFullName] = dbId
 			m.DatabaseMeta.Id = dbId
 			return dbId, nil
