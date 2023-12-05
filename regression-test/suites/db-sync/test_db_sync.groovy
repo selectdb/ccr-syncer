@@ -75,8 +75,7 @@ suite("test_db_sync") {
         """
     }
 
-    def checkShowTimesOf = { sqlString, myClosure, times, func = "sql" -> Boolean
-        Boolean ret = false
+    def checkShowTimesOf = { sqlString, checkFunc, times, func = "sql" -> Boolean
         List<List<Object>> res
         while (times > 0) {
             try {
@@ -85,19 +84,20 @@ suite("test_db_sync") {
                 } else {
                     res = target_sql "${sqlString}"
                 }
-                if (myClosure.call(res)) {
-                    ret = true
-                }
-            } catch (Exception e) {}
 
-            if (ret) {
-                break
-            } else if (--times > 0) {
+                if (checkFunc.call(res)) {
+                    return true
+                }
+            } catch (Exception e) {
+                logger.warn("Exception: ${e}")
+            }
+
+            if (--times > 0) {
                 sleep(sync_gap_time)
             }
         }
 
-        return ret
+        return false
     }
 
     def checkSelectTimesOf = { sqlString, rowSize, times -> Boolean
