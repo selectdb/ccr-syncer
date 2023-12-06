@@ -666,8 +666,8 @@ func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, tableRefs []*festruc
 	setAuthInfo(req, spec)
 
 	// NOTE: ignore meta, because it's too large
-	log.Debugf("RestoreSnapshotRequest user %s, db %s, table %s, label name %s, properties %v, job info %v",
-		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), properties, snapshotResult.GetJobInfo())
+	log.Debugf("RestoreSnapshotRequest user %s, db %s, table %s, label name %s, properties %v",
+		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), properties)
 	if resp, err := client.RestoreSnapshot(context.Background(), req); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "RestoreSnapshot failed, req: %+v", req)
 	} else {
