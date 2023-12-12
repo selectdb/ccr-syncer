@@ -14,7 +14,6 @@ require (
 	github.com/t-tomalak/logrus-prefixed-formatter v0.5.2
 	github.com/tidwall/btree v1.6.0
 	go.uber.org/mock v0.2.0
-	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 
@@ -59,8 +58,6 @@ require (
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2 // indirect
-	go.uber.org/atomic v1.7.0 // indirect
-	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/arch v0.2.0 // indirect
 	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect

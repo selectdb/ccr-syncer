@@ -8,7 +8,6 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/storage"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 	log "github.com/sirupsen/logrus"
-	"go.uber.org/zap"
 )
 
 // TODO: rewrite all progress by two level state machine
@@ -179,7 +178,7 @@ func NewJobProgressFromJson(jobName string, db storage.DB) (*JobProgress, error)
 	for i := 0; i < 3; i++ {
 		jsonData, err = db.GetProgress(jobName)
 		if err != nil {
-			log.Error("get job progress failed", zap.String("job", jobName), zap.Error(err))
+			log.Errorf("get job progress failed, error: %+v", err)
 			continue
 		}
 		break
@@ -291,7 +290,7 @@ func (j *JobProgress) Persist() {
 		// TODO: fix to json error
 		jsonBytes, err := json.Marshal(j)
 		if err != nil {
-			log.Error("parse job progress failed", zap.String("job", j.JobName), zap.Error(err))
+			log.Errorf("parse job progress failed, error: %+v", err)
 			time.Sleep(UPDATE_JOB_PROGRESS_DURATION)
 			continue
 		}
@@ -299,7 +298,7 @@ func (j *JobProgress) Persist() {
 		// Step 2: write to db
 		err = j.db.UpdateProgress(j.JobName, string(jsonBytes))
 		if err != nil {
-			log.Error("update job progress failed", zap.String("job", j.JobName), zap.Error(err))
+			log.Errorf("update job progress failed, error: %+v", err)
 			time.Sleep(UPDATE_JOB_PROGRESS_DURATION)
 			continue
 		}

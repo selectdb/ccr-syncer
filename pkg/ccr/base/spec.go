@@ -12,7 +12,6 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
 	log "github.com/sirupsen/logrus"
-	"go.uber.org/zap"
 )
 
 const (
@@ -391,7 +390,7 @@ func (s *Spec) CheckDatabaseExists() (bool, error) {
 
 // check table exits in database dir by spec
 func (s *Spec) CheckTableExists() (bool, error) {
-	log.Debug("check table exists by spec", zap.String("spec", s.String()))
+	log.Debugf("check table exist by spec: %s", s.String())
 
 	db, err := s.Connect()
 	if err != nil {
@@ -507,7 +506,7 @@ func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, error) {
 }
 
 func (s *Spec) CheckBackupFinished(snapshotName string) (bool, error) {
-	log.Debug("check backup state", zap.String("database", s.Database))
+	log.Debugf("check backup state, datebase: %s, snapshot: %s", s.Database, snapshotName)
 
 	for i := 0; i < MAX_CHECK_RETRY_TIMES; i++ {
 		if backupState, err := s.checkBackupFinished(snapshotName); err != nil {
@@ -562,7 +561,7 @@ func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, error) {
 }
 
 func (s *Spec) CheckRestoreFinished(snapshotName string) (bool, error) {
-	log.Debug("check restore is finished", zap.String("spec", s.String()), zap.String("snapshot", snapshotName))
+	log.Debugf("check restore state is finished, spec: %s, datebase: %s, snapshot: %s", s.String(), s.Database, snapshotName)
 
 	for i := 0; i < MAX_CHECK_RETRY_TIMES; i++ {
 		if backupState, err := s.checkRestoreFinished(snapshotName); err != nil {

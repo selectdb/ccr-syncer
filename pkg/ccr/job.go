@@ -26,7 +26,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/modern-go/gls"
 	log "github.com/sirupsen/logrus"
-	"go.uber.org/zap"
 )
 
 const (
@@ -1482,7 +1481,7 @@ func (j *Job) updateFrontends() error {
 }
 
 func (j *Job) FirstRun() error {
-	log.Info("first run check job", zap.String("src", j.Src.String()), zap.String("dest", j.Dest.String()))
+	log.Infof("first run check job, src: %s, dest: %s", j.Src, j.Dest)
 
 	// Step 0: get all frontends
 	if err := j.updateFrontends(); err != nil {
