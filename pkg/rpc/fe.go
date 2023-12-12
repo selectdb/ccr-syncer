@@ -39,6 +39,9 @@ func canUseNextAddr(err error) bool {
 	if errors.Is(err, kerrors.ErrNoDestAddress) {
 		return true
 	}
+	if errors.Is(err, kerrors.ErrRemoteOrNetwork) {
+		return true
+	}
 
 	errMsg := err.Error()
 	if strings.Contains(errMsg, "connection has been closed by peer") {
