@@ -669,7 +669,7 @@ func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, tableRefs []*festruc
 	log.Debugf("RestoreSnapshotRequest user %s, db %s, table %s, label name %s, properties %v",
 		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), properties)
 	if resp, err := client.RestoreSnapshot(context.Background(), req); err != nil {
-		return nil, xerror.Wrapf(err, xerror.RPC, "RestoreSnapshot failed, req: %+v", req)
+		return nil, xerror.Wrapf(err, xerror.RPC, "RestoreSnapshot failed")
 	} else {
 		return resp, nil
 	}

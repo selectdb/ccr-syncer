@@ -272,6 +272,7 @@ func (j *Job) fullSync() error {
 	// TODO(Drogon): check last snapshot commitSeq > first commitSeq, maybe we can reuse this snapshot
 	switch j.progress.SubSyncState {
 	case Done:
+		log.Infof("fullsync status: done")
 		if err := j.newSnapshot(j.progress.CommitSeq); err != nil {
 			return err
 		}
@@ -1291,10 +1292,12 @@ func (j *Job) sync() error {
 func (j *Job) handleError(err error) error {
 	var xerr *xerror.XError
 	if !errors.As(err, &xerr) {
+		log.Warnf("convert error to xerror failed, err: %+v", err)
 		return nil
 	}
 
 	if xerr.IsPanic() {
+		log.Errorf("job panic, job: %s, err: %+v", j.Name, err)
 		return err
 	}
 
