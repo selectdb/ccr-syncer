@@ -283,7 +283,7 @@ func (j *JobProgress) Rollback() {
 // write progress to db, busy loop until success
 // TODO: add timeout check
 func (j *JobProgress) Persist() {
-	log.Debugf("update job progress: %s", j)
+	log.Trace("update job progress")
 
 	for {
 		// Step 1: to json
@@ -306,5 +306,5 @@ func (j *JobProgress) Persist() {
 		break
 	}
 
-	log.Debugf("update job progress done: %s", j)
+	log.Trace("update job progress done")
 }
