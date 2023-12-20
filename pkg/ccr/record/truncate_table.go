@@ -9,7 +9,7 @@ import (
 
 // {
 //   "dbId": 10079,
-//   "db": "default_cluster:ccr",
+//   "db": "default_cluster:ccr", # "default_cluster:" prefix will be removed in Doris v2.1
 //   "tblId": 77395,
 //   "table": "src_1_alias",
 //   "isEntireTable": false,

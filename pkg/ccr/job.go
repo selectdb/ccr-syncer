@@ -1020,6 +1020,7 @@ func (j *Job) handleLightningSchemaChange(binlog *festruct.TBinlog) error {
 	rawSql := lightningSchemaChange.RawSql
 	//   "rawSql": "ALTER TABLE `default_cluster:ccr`.`test_ddl` ADD COLUMN `nid1` int(11) NULL COMMENT \"\""
 	// replace `default_cluster:${Src.Database}`.`test_ddl` to `test_ddl`
+	// ATTN: default_cluster prefix will be removed in Doris v2.1
 	sql := strings.Replace(rawSql, fmt.Sprintf("`default_cluster:%s`.", j.Src.Database), "", 1)
 	log.Infof("lightningSchemaChangeSql, rawSql: %s, sql: %s", rawSql, sql)
 	return j.IDest.DbExec(sql)

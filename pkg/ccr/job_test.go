@@ -1309,7 +1309,7 @@ func TestHandleLightningSchemaChange(t *testing.T) {
 	defer ctrl.Finish()
 
 	// init data
-	testSql := fmt.Sprintf("`default_cluster:%s`.`%s` a test sql", tblSrcSpec.Database, tblSrcSpec.Table)
+	testSql := fmt.Sprintf("`%s`.`%s` a test sql", tblSrcSpec.Database, tblSrcSpec.Table)
 
 	// init db_mock
 	db := test_util.NewMockDB(ctrl)
