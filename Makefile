@@ -130,6 +130,11 @@ rows_parse: bin
 thrift_get_meta: bin
 	$(V)go build -o bin/thrift_get_meta ./cmd/thrift_get_meta
 
+.PHONY: metrics
+## metrics : Build metrics binary
+metrics: bin
+	$(V)go build -o bin/metrics ./cmd/metrics
+
 .PHONY: todos
 ## todos : Print all todos
 todos:
