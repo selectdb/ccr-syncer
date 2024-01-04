@@ -75,7 +75,7 @@ type errorMetrics struct {
 
 func ErrorMetrics(err *xerror.XError) IMetricsTag {
 	errMetrics := &errorMetrics{
-		metricsTag: metricsTag{[]string{"error", err.ErrType.String()}},
+		metricsTag: metricsTag{[]string{"error", err.Category().Name()}},
 	}
 
 	// use switch instead of ifelse maybe

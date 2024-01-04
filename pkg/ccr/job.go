@@ -18,6 +18,7 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/storage"
 	utils "github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
+	"github.com/selectdb/ccr_syncer/pkg/xmetrics"
 
 	festruct "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/frontendservice"
 	tstatus "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/status"
@@ -1113,6 +1114,7 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 
 	// Step 2: update job progress
 	j.progress.StartHandle(binlog.GetCommitSeq())
+	xmetrics.HandlingBinlog(j.Name, binlog.GetCommitSeq())
 
 	// TODO: use table driven, keep this and driven, conert BinlogType to TBinlogType
 	switch binlog.GetType() {
@@ -1296,6 +1298,7 @@ func (j *Job) handleError(err error) error {
 		return nil
 	}
 
+	xmetrics.AddError(xerr)
 	if xerr.IsPanic() {
 		log.Errorf("job panic, job: %s, err: %+v", j.Name, err)
 		return err

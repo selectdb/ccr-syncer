@@ -17,6 +17,8 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/version"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
+	"github.com/hashicorp/go-metrics"
+	"github.com/hashicorp/go-metrics/prometheus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -116,7 +118,14 @@ func main() {
 		checker.Start()
 	}()
 
-	// Step 6: start signal mux
+	// Step 7: init metrics
+	sink, err := prometheus.NewPrometheusSink()
+	if err != nil {
+		log.Fatalf("new prometheus sink failed: %+v", err)
+	}
+	metrics.NewGlobal(metrics.DefaultConfig("ccr-metrics"), sink)
+
+	// Step 8: start signal mux
 	// use closure to capture httpService, checker, jobManager
 	signalHandler := func(signal os.Signal) bool {
 		switch signal {
@@ -143,6 +152,6 @@ func main() {
 		signalMux.Serve()
 	}()
 
-	// Step 6: wait for all task done
+	// Step 9: wait for all task done
 	wg.Wait()
 }
