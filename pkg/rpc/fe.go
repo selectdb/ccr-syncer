@@ -53,6 +53,9 @@ func canUseNextAddr(err error) bool {
 	if strings.Contains(errMsg, "connection reset by peer") {
 		return true
 	}
+	if strings.Contains(errMsg, "connection reset by peer") {
+		return true
+	}
 
 	return false
 }
