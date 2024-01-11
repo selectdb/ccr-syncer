@@ -108,8 +108,6 @@ suite("test_truncate") {
 
 
 
-
-
     logger.info("=== Test 2: full partitions ===")
     test_num = 2
     for (int index = 0; index < insert_num; index++) {
@@ -132,6 +130,7 @@ suite("test_truncate") {
             INSERT INTO ${tableName} VALUES (${test_num}, 3, ${index})
             """
     }
+    sql "sync"
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num} AND id=0",
                                    insert_num, 30))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num} AND id=1",

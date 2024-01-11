@@ -141,7 +141,7 @@ suite("test_common") {
             INSERT INTO ${duplicateTable} VALUES (0, 99)
             """
     }
-
+    sql "sync"
 
     // test 1: target cluster follow source cluster
     logger.info("=== Test 1: backup/restore case ===")
@@ -205,6 +205,7 @@ suite("test_common") {
             INSERT INTO ${duplicateTable} VALUES (0, 99)
             """
     }
+    sql "sync"
     assertTrue(checkSelectTimesOf("SELECT * FROM ${uniqueTable} WHERE test=${test_num}",
                                    insert_num, 30))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${aggregateTable} WHERE test=${test_num}",
@@ -234,6 +235,7 @@ suite("test_common") {
             """
     }
 
+    sql "sync"
     assertTrue(!checkSelectTimesOf("SELECT * FROM ${uniqueTable} WHERE test=${test_num}",
                                    insert_num, 3))
 
@@ -289,6 +291,7 @@ suite("test_common") {
             """
     }
 
+    sql "sync"
     assertTrue(!checkSelectTimesOf("SELECT * FROM ${uniqueTable} WHERE test=${test_num}",
                                    insert_num, 5))
 }

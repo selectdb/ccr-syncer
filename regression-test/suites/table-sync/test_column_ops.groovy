@@ -133,6 +133,7 @@ suite("test_column_ops") {
             INSERT INTO ${tableName} VALUES (${test_num}, ${index})
             """
     }
+    sql "sync"
 
     httpTest {
         uri "/create_ccr"
@@ -172,6 +173,7 @@ suite("test_column_ops") {
     sql """
         INSERT INTO ${tableName} VALUES (${test_num}, 0, "8901")
         """
+    sql "sync"
     assertTrue(checkSelectRowTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
                                       1, 30))
 

@@ -128,7 +128,7 @@ suite("test_delete") {
         (28, 29, 30, 31, 119.2, 'd', 'c', '2023-01-29', '2023-01-29 00:01:02', true, 'ccc')
 
         """
-    
+    sql "sync"
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableName}",
                                   insert_num, 30))
 

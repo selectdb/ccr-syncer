@@ -166,6 +166,7 @@ suite("test_db_sync") {
     }
 
     sql "ALTER DATABASE ${context.dbName} SET properties (\"binlog.enable\" = \"true\")"
+    sql "sync"
 
     String respone
     httpTest {
@@ -207,6 +208,7 @@ suite("test_db_sync") {
             """
     }
 
+    sql "sync"
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
                                    insert_num, 30))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableAggregate0} WHERE test=${test_num}",
@@ -242,6 +244,7 @@ suite("test_db_sync") {
             """
     }
 
+    sql "sync"
     assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableUnique1}",
                                 exist, 30))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableUnique1} WHERE test=${test_num}",
@@ -262,6 +265,7 @@ suite("test_db_sync") {
     sql "DROP TABLE ${tableAggregate1}"
     sql "DROP TABLE ${tableDuplicate1}"
 
+    sql "sync"
     assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${tableUnique1}'", 
                                 notExist, 30, "target"))
     assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${tableAggregate1}'",
@@ -286,6 +290,7 @@ suite("test_db_sync") {
             """
     }
 
+    sql "sync"
     assertTrue(!checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
                                    insert_num, 3))
 
@@ -297,6 +302,7 @@ suite("test_db_sync") {
         op "post"
         result respone
     }
+    sql "sync"
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
                                    insert_num, 30))
 
@@ -326,6 +332,7 @@ suite("test_db_sync") {
         assertTrue(desynced)
     }
 
+    sql "sync"
     checkDesynced(tableUnique0)
     checkDesynced(tableAggregate0)
     checkDesynced(tableDuplicate0)
@@ -348,6 +355,7 @@ suite("test_db_sync") {
             """
     }
 
+    sql "sync"
     assertTrue(!checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
                                    insert_num, 5))
 }

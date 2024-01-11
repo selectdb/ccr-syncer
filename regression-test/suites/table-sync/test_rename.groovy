@@ -119,6 +119,7 @@ suite("test_rename") {
             INSERT INTO ${tableName} VALUES (${test_num}, ${index})
             """
     }
+    sql "sync"
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
                                   insert_num, 30))
 
@@ -134,6 +135,7 @@ suite("test_rename") {
             INSERT INTO ${newTableName} VALUES (${test_num}, ${index})
             """
     }
+    sql "sync"
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
                                   insert_num, 30))
 

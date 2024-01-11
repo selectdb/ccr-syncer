@@ -92,6 +92,7 @@ suite("test_bloomfilter_index") {
             """
     }
     sql """ALTER TABLE ${tableName} set ("binlog.enable" = "true")"""
+    sql "sync"
 
     logger.info("=== Test 1: full update bloom filter ===")
     httpTest {

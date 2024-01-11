@@ -96,6 +96,7 @@ suite("test_bitmap_index") {
         }
         return false
     }
+    sql "sync"
     assertTrue(checkShowTimesOf("""
                                 SHOW ALTER TABLE COLUMN
                                 WHERE TableName = \"${tableName}\"

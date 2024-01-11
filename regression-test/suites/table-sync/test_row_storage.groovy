@@ -120,6 +120,7 @@ suite("test_row_storage") {
             INSERT INTO ${tableName} VALUES (${test_num}, ${index})
             """
     }
+    sql "sync"
 
     httpTest {
         uri "/create_ccr"
@@ -164,6 +165,7 @@ suite("test_row_storage") {
     sql """
         INSERT INTO ${tableName} VALUES (${test_num}, 0, "addadd")
         """
+    sql "sync"
     assertTrue(checkSelectRowTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
                                    1, 30))
     res = target_sql "SELECT cost FROM TEST_${context.dbName}.${tableName} WHERE test=${test_num}"

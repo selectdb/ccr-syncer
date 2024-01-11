@@ -78,6 +78,7 @@ suite("test_mow") {
             """
     }
     sql """ALTER TABLE ${tableName} set ("binlog.enable" = "true")"""
+    sql "sync"
 
     logger.info("=== Test 1: full update mow ===")
     httpTest {
@@ -109,6 +110,7 @@ suite("test_mow") {
             INSERT INTO ${tableName} VALUES (${test_num}, ${index}, ${index})
             """
     }
+    sql "sync"
     def checkSeq1 = { inputRes -> Boolean
         for (List<Object> row : inputRes) {
             if ((row[2] as Integer) != 4) {
@@ -128,6 +130,7 @@ suite("test_mow") {
             INSERT INTO ${tableName} VALUES (${test_num}, ${test_num}, 5 - ${index})
             """
     }
+    sql "sync"
     def checkSeq2 = { inputRes -> Boolean
         for (List<Object> row : inputRes) {
             if ((row[2] as Integer) != 5) {

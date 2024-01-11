@@ -64,6 +64,7 @@ suite("test_inverted_index") {
             """
     }
     sql """ALTER TABLE ${tableName} set ("binlog.enable" = "true")"""
+    sql "sync"
 
     httpTest {
         uri "/create_ccr"
