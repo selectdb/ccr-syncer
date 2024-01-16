@@ -136,7 +136,7 @@ suite("test_rename") {
             """
     }
     sql "sync"
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
+    assertTrue(checkSelectTimesOf("SELECT * FROM ${newTableName} WHERE test=${test_num}",
                                   insert_num, 30))
 
 
