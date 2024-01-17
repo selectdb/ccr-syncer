@@ -257,7 +257,7 @@ func (s *Spec) IsTableEnableBinlog() (bool, error) {
 		return false, xerror.Wrap(err, xerror.Normal, query)
 	}
 
-	log.Infof("table %s.%s create string: %s", s.Database, s.Table, createTableString)
+	log.Tracef("table %s.%s create string: %s", s.Database, s.Table, createTableString)
 
 	// check "binlog.enable" = "true" in create table string
 	binlogEnableString := `"binlog.enable" = "true"`

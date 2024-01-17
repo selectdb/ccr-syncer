@@ -132,7 +132,7 @@ func (c *Checker) check() error {
 	c.reset()
 
 	for {
-		log.Debugf("checker state: %s", c.state.String())
+		log.Tracef("checker state: %s", c.state)
 		switch c.state {
 		case checkerStateRefresh:
 			c.handleRefresh()

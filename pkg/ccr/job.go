@@ -325,7 +325,7 @@ func (j *Job) fullSync() error {
 			return err
 		}
 
-		log.Debugf("job: %s", string(snapshotResp.GetJobInfo()))
+		log.Tracef("job: %.128s", snapshotResp.GetJobInfo())
 		if !snapshotResp.IsSetJobInfo() {
 			return xerror.New(xerror.Normal, "jobInfo is not set")
 		}
@@ -362,7 +362,7 @@ func (j *Job) fullSync() error {
 		if err != nil {
 			return xerror.Wrapf(err, xerror.Normal, "unmarshal jobInfo failed, jobInfo: %s", string(jobInfo))
 		}
-		log.Debugf("jobInfo: %v", jobInfoMap)
+		log.Debugf("jobInfoMap: %v", jobInfoMap)
 
 		extraInfo, err := j.genExtraInfo()
 		if err != nil {

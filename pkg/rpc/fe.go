@@ -201,7 +201,7 @@ type call0Result struct {
 func (r *retryWithMasterRedirectAndCachedClientsRpc) call0(masterClient IFeRpc) *call0Result {
 	caller := r.caller
 	resp, err := caller(masterClient)
-	log.Tracef("call resp: %+v, error: %+v", resp, err)
+	log.Tracef("call resp: %.128v, error: %+v", resp, err)
 
 	// Step 1: check error
 	if err != nil {
