@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	festruct "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/frontendservice"
 	feservice "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/frontendservice/frontendservice"
@@ -22,6 +23,8 @@ import (
 
 const (
 	LOCAL_REPO_NAME = ""
+	ConnectTimeout  = 1 * time.Second
+	RpcTimeout      = 3 * time.Second
 )
 
 var (
@@ -435,7 +438,7 @@ type singleFeClient struct {
 
 func newSingleFeClient(addr string) (*singleFeClient, error) {
 	// create kitex FrontendService client
-	if fe_client, err := feservice.NewClient("FrontendService", client.WithHostPorts(addr)); err != nil {
+	if fe_client, err := feservice.NewClient("FrontendService", client.WithHostPorts(addr), client.WithConnectTimeout(ConnectTimeout), client.WithRPCTimeout(RpcTimeout)); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "NewFeClient error: %v, addr: %s", err, addr)
 	} else {
 		return &singleFeClient{
