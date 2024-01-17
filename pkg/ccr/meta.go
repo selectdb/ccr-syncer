@@ -62,7 +62,7 @@ func (m *Meta) GetDbId() (int64, error) {
 		return dbId, nil
 	}
 
-    dbFullName := "default_cluster:" + dbName
+	dbFullName := "default_cluster:" + dbName
 	// mysql> show proc '/dbs/';
 	// +-------+------------------------------------+----------+----------+-------------+--------------------------+--------------+--------------+------------------+
 	// | DbId  | DbName                             | TableNum | Size     | Quota       | LastConsistencyCheckTime | ReplicaCount | ReplicaQuota | TransactionQuota |
@@ -1030,7 +1030,7 @@ func (m *Meta) CheckBinlogFeature() error {
 	if binlogIsEnabled, err := m.isFEBinlogFeature(); err != nil {
 		return err
 	} else if !binlogIsEnabled {
-		return xerror.Errorf(xerror.Normal, "Fe %v:%v enable_binlog_feature=false, please set it true in fe.conf",
+		return xerror.Errorf(xerror.Normal, "Fe %v:%v enable_feature_binlog=false, please set it true in fe.conf",
 			m.Spec.Host, m.Spec.Port)
 	}
 
