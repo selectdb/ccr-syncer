@@ -73,9 +73,10 @@ func NewHttpServer(host string, port int, db storage.DB, jobManager *ccr.JobMana
 
 type CreateCcrRequest struct {
 	// must need all fields required
-	Name string    `json:"name,required"`
-	Src  base.Spec `json:"src,required"`
-	Dest base.Spec `json:"dest,required"`
+	Name      string    `json:"name,required"`
+	Src       base.Spec `json:"src,required"`
+	Dest      base.Spec `json:"dest,required"`
+	SkipError bool      `json:"skip_error"`
 }
 
 // Stringer
@@ -105,7 +106,7 @@ func (s *HttpService) versionHandler(w http.ResponseWriter, r *http.Request) {
 func createCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobManager) error {
 	log.Infof("create ccr %s", request)
 
-	ctx := ccr.NewJobContext(request.Src, request.Dest, db, jobManager.GetFactory())
+	ctx := ccr.NewJobContext(request.Src, request.Dest, request.SkipError, db, jobManager.GetFactory())
 	job, err := ccr.NewJobFromService(request.Name, ctx)
 	if err != nil {
 		return err
@@ -429,6 +430,47 @@ func (s *HttpService) desyncHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type UpdateJobRequest struct {
+	Name      string `json:"name,required"`
+	SkipError bool   `json:"skip_error"`
+}
+
+func (s *HttpService) updateJobHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("update job")
+
+	var updateJobResult *defaultResult
+	defer func() { writeJson(w, updateJobResult) }()
+
+	// Parse the JSON request body
+	var request UpdateJobRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Warnf("update job failed: %+v", err)
+
+		updateJobResult = newErrorResult(err.Error())
+		return
+	}
+
+	if request.Name == "" {
+		log.Warnf("update job failed: name is empty")
+
+		updateJobResult = newErrorResult("name is empty")
+		return
+	}
+
+	if s.redirect(request.Name, w, r) {
+		return
+	}
+
+	if err := s.jobManager.UpdateJobSkipError(request.Name, request.SkipError); err != nil {
+		log.Warnf("desync job failed: %+v", err)
+
+		updateJobResult = newErrorResult(err.Error())
+	} else {
+		updateJobResult = newSuccessResult()
+	}
+}
+
 // ListJobs service
 func (s *HttpService) listJobsHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("list jobs")
@@ -464,6 +506,7 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/delete", s.deleteHandler)
 	s.mux.HandleFunc("/job_status", s.statusHandler)
 	s.mux.HandleFunc("/desync", s.desyncHandler)
+	s.mux.HandleFunc("/update_job", s.updateJobHandler)
 	s.mux.HandleFunc("/list_jobs", s.listJobsHandler)
 	s.mux.Handle("/metrics", promhttp.Handler())
 }

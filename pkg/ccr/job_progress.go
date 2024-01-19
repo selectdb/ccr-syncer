@@ -274,11 +274,15 @@ func (j *JobProgress) Done() {
 	j.Persist()
 }
 
-func (j *JobProgress) Rollback() {
+func (j *JobProgress) Rollback(skipError bool) {
 	log.Debugf("job %s step rollback", j.JobName)
 
 	j.SubSyncState = Done
-	j.CommitSeq = j.PrevCommitSeq
+	// if rollback, then prev commit seq is the last commit seq
+	// but if skip error, we can consume the binlog then prev commit seq is the last commit seq
+	if !skipError {
+		j.CommitSeq = j.PrevCommitSeq
+	}
 
 	xmetrics.Rollback(j.JobName, j.PrevCommitSeq)
 	j.Persist()

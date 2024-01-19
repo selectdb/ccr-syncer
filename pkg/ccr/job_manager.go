@@ -231,3 +231,14 @@ func (jm *JobManager) ListJobs() []*JobStatus {
 	}
 	return jobs
 }
+
+func (jm *JobManager) UpdateJobSkipError(jobName string, skipError bool) error {
+	jm.lock.Lock()
+	defer jm.lock.Unlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return job.UpdateSkipError(skipError)
+	} else {
+		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
+	}
+}

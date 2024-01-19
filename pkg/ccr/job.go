@@ -72,15 +72,16 @@ func (j JobState) String() string {
 
 // TODO: refactor merge Src && Isrc, Dest && IDest
 type Job struct {
-	SyncType SyncType    `json:"sync_type"`
-	Name     string      `json:"name"`
-	Src      base.Spec   `json:"src"`
-	ISrc     base.Specer `json:"-"`
-	srcMeta  Metaer      `json:"-"`
-	Dest     base.Spec   `json:"dest"`
-	IDest    base.Specer `json:"-"`
-	destMeta Metaer      `json:"-"`
-	State    JobState    `json:"state"`
+	SyncType  SyncType    `json:"sync_type"`
+	Name      string      `json:"name"`
+	Src       base.Spec   `json:"src"`
+	ISrc      base.Specer `json:"-"`
+	srcMeta   Metaer      `json:"-"`
+	Dest      base.Spec   `json:"dest"`
+	IDest     base.Specer `json:"-"`
+	destMeta  Metaer      `json:"-"`
+	SkipError bool        `json:"skip_error"`
+	State     JobState    `json:"state"`
 
 	factory *Factory `json:"-"`
 
@@ -94,27 +95,29 @@ type Job struct {
 	lock sync.Mutex `json:"-"`
 }
 
-type JobContext struct {
+type jobContext struct {
 	context.Context
-	src     base.Spec
-	dest    base.Spec
-	db      storage.DB
-	factory *Factory
+	src       base.Spec
+	dest      base.Spec
+	db        storage.DB
+	skipError bool
+	factory   *Factory
 }
 
-func NewJobContext(src, dest base.Spec, db storage.DB, factory *Factory) *JobContext {
-	return &JobContext{
-		Context: context.Background(),
-		src:     src,
-		dest:    dest,
-		db:      db,
-		factory: factory,
+func NewJobContext(src, dest base.Spec, skipError bool, db storage.DB, factory *Factory) *jobContext {
+	return &jobContext{
+		Context:   context.Background(),
+		src:       src,
+		dest:      dest,
+		skipError: skipError,
+		db:        db,
+		factory:   factory,
 	}
 }
 
 // new job
 func NewJobFromService(name string, ctx context.Context) (*Job, error) {
-	jobContext, ok := ctx.(*JobContext)
+	jobContext, ok := ctx.(*jobContext)
 	if !ok {
 		return nil, xerror.Errorf(xerror.Normal, "invalid context type: %T", ctx)
 	}
@@ -123,15 +126,17 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 	src := jobContext.src
 	dest := jobContext.dest
 	job := &Job{
-		Name:     name,
-		Src:      src,
-		ISrc:     factory.NewSpecer(&src),
-		srcMeta:  factory.NewMeta(&jobContext.src),
-		Dest:     dest,
-		IDest:    factory.NewSpecer(&dest),
-		destMeta: factory.NewMeta(&jobContext.dest),
-		State:    JobRunning,
-		factory:  factory,
+		Name:      name,
+		Src:       src,
+		ISrc:      factory.NewSpecer(&src),
+		srcMeta:   factory.NewMeta(&jobContext.src),
+		Dest:      dest,
+		IDest:     factory.NewSpecer(&dest),
+		destMeta:  factory.NewMeta(&jobContext.dest),
+		SkipError: jobContext.skipError,
+		State:     JobRunning,
+
+		factory: factory,
 
 		destSrcTableIdMap: make(map[int64]int64),
 		progress:          nil,
@@ -160,6 +165,8 @@ func NewJobFromJson(jsonData string, db storage.DB, factory *Factory) (*Job, err
 	if err != nil {
 		return nil, xerror.Wrapf(err, xerror.Normal, "unmarshal json failed, json: %s", jsonData)
 	}
+
+	// recover all not json fields
 	job.factory = factory
 	job.ISrc = factory.NewSpecer(&job.Src)
 	job.IDest = factory.NewSpecer(&job.Dest)
@@ -822,7 +829,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			return xerror.Errorf(xerror.Normal, "rollback txn failed, status: %v", resp.Status)
 		}
 		log.Infof("rollback TxnId: %d resp: %v", txnId, resp)
-		j.progress.Rollback()
+		j.progress.Rollback(j.SkipError)
 		return nil
 
 	default:
@@ -1154,7 +1161,7 @@ func (j *Job) recoverIncrementalSync() error {
 	case BinlogUpsert:
 		return j.handleUpsert(nil)
 	default:
-		j.progress.Rollback()
+		j.progress.Rollback(j.SkipError)
 	}
 
 	return nil
@@ -1451,6 +1458,24 @@ func (j *Job) Desync() error {
 		return j.desyncDB()
 	} else {
 		return j.desyncTable()
+	}
+}
+
+func (j *Job) UpdateSkipError(skipError bool) error {
+	j.lock.Lock()
+	defer j.lock.Unlock()
+
+	originSkipError := j.SkipError
+	if originSkipError == skipError {
+		return nil
+	}
+
+	j.SkipError = skipError
+	if err := j.persistJob(); err != nil {
+		j.SkipError = originSkipError
+		return err
+	} else {
+		return nil
 	}
 }
 
