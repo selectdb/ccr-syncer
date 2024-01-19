@@ -1,7 +1,7 @@
 #!/bin/bash
 
 curl -X POST -H "Content-Type: application/json" -d '{
-    "name": "ccr_table_alias",
+    "name": "ccr_table_many_rows",
     "src": {
       "host": "localhost",
       "port": "9030",
@@ -9,7 +9,7 @@ curl -X POST -H "Content-Type: application/json" -d '{
       "user": "root",
       "password": "",
       "database": "ccr",
-      "table": "src_1"
+      "table": "many"
     },
     "dest": {
       "host": "localhost",
@@ -18,7 +18,6 @@ curl -X POST -H "Content-Type: application/json" -d '{
       "user": "root",
       "password": "",
       "database": "ccr",
-      "table": "src_1_alias"
-    },
-    "skip_error": false
+      "table": "many_alias"
+    }
 }' http://127.0.0.1:9190/create_ccr
