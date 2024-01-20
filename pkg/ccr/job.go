@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -643,7 +644,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		CommitInfos  []*ttypes.TTabletCommitInfo `json:"commit_infos"`
 	}
 
-	upateInMemory := func() error {
+	updateInMemory := func() error {
 		if j.progress.InMemoryData == nil {
 			persistData := j.progress.PersistData
 			inMemoryData := &inMemoryData{}
@@ -658,6 +659,30 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 	rollback := func(err error, inMemoryData *inMemoryData) {
 		log.Errorf("need rollback, err: %+v", err)
 		j.progress.NextSubCheckpoint(RollbackTransaction, inMemoryData)
+	}
+
+	committed := func() {
+		log.Infof("txn committed, commitSeq: %d, cleanup", j.progress.CommitSeq)
+
+		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
+		commitSeq := j.progress.CommitSeq
+		destTableIds := inMemoryData.DestTableIds
+		if j.SyncType == DBSync && len(j.progress.TableCommitSeqMap) > 0 {
+			for _, tableId := range destTableIds {
+				tableCommitSeq, ok := j.progress.TableCommitSeqMap[tableId]
+				if !ok {
+					continue
+				}
+
+				if tableCommitSeq < commitSeq {
+					j.progress.TableCommitSeqMap[tableId] = commitSeq
+				}
+				// TODO: [PERFORMANCE] remove old commit seq
+			}
+
+			j.progress.Persist()
+		}
+		j.progress.Done()
 	}
 
 	dest := &j.Dest
@@ -737,7 +762,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 
 	case IngestBinlog:
 		log.Debug("ingest binlog")
-		if err := upateInMemory(); err != nil {
+		if err := updateInMemory(); err != nil {
 			return err
 		}
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
@@ -759,7 +784,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 	case CommitTransaction:
 		// Step 4: commit txn
 		log.Debug("commit txn")
-		if err := upateInMemory(); err != nil {
+		if err := updateInMemory(); err != nil {
 			return err
 		}
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
@@ -786,31 +811,15 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			break
 		}
 
-		log.Infof("commit TxnId: %d resp: %v", txnId, resp)
-		commitSeq := j.progress.CommitSeq
-		destTableIds := inMemoryData.DestTableIds
-		if j.SyncType == DBSync && len(j.progress.TableCommitSeqMap) > 0 {
-			for _, tableId := range destTableIds {
-				tableCommitSeq, ok := j.progress.TableCommitSeqMap[tableId]
-				if !ok {
-					continue
-				}
+		log.Infof("TxnId: %d committed, resp: %v", txnId, resp)
+		committed()
 
-				if tableCommitSeq < commitSeq {
-					j.progress.TableCommitSeqMap[tableId] = commitSeq
-				}
-				// TODO: [PERFORMANCE] remove old commit seq
-			}
-
-			j.progress.Persist()
-		}
-		j.progress.Done()
 		return nil
 
 	case RollbackTransaction:
 		log.Debugf("Rollback txn")
 		// Not Step 5: just rollback txn
-		if err := upateInMemory(); err != nil {
+		if err := updateInMemory(); err != nil {
 			return err
 		}
 
@@ -826,8 +835,17 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			return err
 		}
 		if resp.Status.GetStatusCode() != tstatus.TStatusCode_OK {
-			return xerror.Errorf(xerror.Normal, "rollback txn failed, status: %v", resp.Status)
+			if isTxnNotFound(resp.Status) {
+				log.Warnf("txn not found, txnId: %d", txnId)
+			} else if isTxnCommitted(resp.Status) {
+				log.Infof("txn already committed, txnId: %d", txnId)
+				committed()
+				return nil
+			} else {
+				return xerror.Errorf(xerror.Normal, "rollback txn failed, status: %v", resp.Status)
+			}
 		}
+
 		log.Infof("rollback TxnId: %d resp: %v", txnId, resp)
 		j.progress.Rollback(j.SkipError)
 		return nil
@@ -1670,4 +1688,26 @@ func (j *Job) Status() *JobStatus {
 		State:         state,
 		ProgressState: progress_state,
 	}
+}
+
+func isTxnCommitted(status *tstatus.TStatus) bool {
+	errMessages := status.GetErrorMsgs()
+	for _, errMessage := range errMessages {
+		if strings.Contains(errMessage, "is already COMMITTED") {
+			return true
+		}
+	}
+	return false
+}
+
+func isTxnNotFound(status *tstatus.TStatus) bool {
+	errMessages := status.GetErrorMsgs()
+	for _, errMessage := range errMessages {
+		// detailMessage = transaction not found
+		// or detailMessage = transaction [12356] not found
+		if strings.Contains(errMessage, "transaction not found") || regexp.MustCompile(`transaction \[\d+\] not found`).MatchString(errMessage) {
+			return true
+		}
+	}
+	return false
 }
