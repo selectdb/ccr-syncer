@@ -16,6 +16,7 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
 	"github.com/cloudwego/kitex/client"
+	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/kerrors"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	log "github.com/sirupsen/logrus"
@@ -23,8 +24,10 @@ import (
 
 const (
 	LOCAL_REPO_NAME = ""
-	ConnectTimeout  = 1 * time.Second
-	RpcTimeout      = 3 * time.Second
+	CONNECT_TIMEOUT = 1 * time.Second
+	RPC_TIMEOUT     = 3 * time.Second
+
+	COMMIT_TXN_TIMEOUT = 33 * time.Second
 )
 
 var (
@@ -438,7 +441,7 @@ type singleFeClient struct {
 
 func newSingleFeClient(addr string) (*singleFeClient, error) {
 	// create kitex FrontendService client
-	if fe_client, err := feservice.NewClient("FrontendService", client.WithHostPorts(addr), client.WithConnectTimeout(ConnectTimeout), client.WithRPCTimeout(RpcTimeout)); err != nil {
+	if fe_client, err := feservice.NewClient("FrontendService", client.WithHostPorts(addr), client.WithConnectTimeout(CONNECT_TIMEOUT), client.WithRPCTimeout(RPC_TIMEOUT)); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "NewFeClient error: %v, addr: %s", err, addr)
 	} else {
 		return &singleFeClient{
@@ -509,7 +512,7 @@ func (rpc *singleFeClient) CommitTransaction(spec *base.Spec, txnId int64, commi
 	req.TxnId = &txnId
 	req.CommitInfos = commitInfos
 
-	if result, err := client.CommitTxn(context.Background(), req); err != nil {
+	if result, err := client.CommitTxn(context.Background(), req, callopt.WithRPCTimeout(COMMIT_TXN_TIMEOUT)); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "CommitTransaction error: %v, req: %+v", err, req)
 	} else {
 		return result, nil
