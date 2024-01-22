@@ -105,7 +105,6 @@ func (f *Frontend) String() string {
 	return fmt.Sprintf("host: %s, port: %s, thrift_port: %s, is_master: %v", f.Host, f.Port, f.ThriftPort, f.IsMaster)
 }
 
-// TODO(Drogon): timeout config
 type Spec struct {
 	// embed Frontend as current master frontend
 	Frontend
@@ -576,7 +575,8 @@ func (s *Spec) CheckRestoreFinished(snapshotName string) (bool, error) {
 		}
 	}
 
-	return false, xerror.Errorf(xerror.Normal, "check restore state timeout, max try times: %d, spec: %s, snapshot: %s", MAX_CHECK_RETRY_TIMES, s.String(), snapshotName)
+	log.Warnf("check restore state timeout, max try times: %d, spec: %s, snapshot: %s", MAX_CHECK_RETRY_TIMES, s, snapshotName)
+	return false, nil
 }
 
 func (s *Spec) waitTransactionDone(txnId int64) error {

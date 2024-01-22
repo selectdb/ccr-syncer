@@ -444,16 +444,18 @@ func (j *Job) fullSync() error {
 		}
 		log.Infof("resp: %v", restoreResp)
 
-		// TODO: impl wait for done, use show restore
-		restoreFinished, err := j.IDest.CheckRestoreFinished(snapshotName)
-		if err != nil {
-			return err
+		for {
+			restoreFinished, err := j.IDest.CheckRestoreFinished(snapshotName)
+			if err != nil {
+				return err
+			}
+
+			if restoreFinished {
+				j.progress.NextSubCheckpoint(PersistRestoreInfo, snapshotName)
+				break
+			}
+			// retry for  MAX_CHECK_RETRY_TIMES, timeout, continue
 		}
-		if !restoreFinished {
-			err = xerror.Errorf(xerror.Normal, "check restore state timeout, max try times: %d", base.MAX_CHECK_RETRY_TIMES)
-			return err
-		}
-		j.progress.NextSubCheckpoint(PersistRestoreInfo, snapshotName)
 
 	case PersistRestoreInfo:
 		// Step 5: Update job progress && dest table id

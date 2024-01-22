@@ -669,8 +669,8 @@ func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, tableRefs []*festruc
 	properties["reserve_replica"] = "true"
 	req := &festruct.TRestoreSnapshotRequest{
 		Table:      &spec.Table,
-		LabelName:  &label,    // TODO: check remove
-		RepoName:   &repoName, // TODO: check remove
+		LabelName:  &label,
+		RepoName:   &repoName,
 		TableRefs:  tableRefs,
 		Properties: properties,
 		Meta:       snapshotResult.GetMeta(),
