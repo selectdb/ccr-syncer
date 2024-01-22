@@ -837,6 +837,8 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		if resp.Status.GetStatusCode() != tstatus.TStatusCode_OK {
 			if isTxnNotFound(resp.Status) {
 				log.Warnf("txn not found, txnId: %d", txnId)
+			} else if isTxnAborted(resp.Status) {
+				log.Infof("txn already aborted, txnId: %d", txnId)
 			} else if isTxnCommitted(resp.Status) {
 				log.Infof("txn already committed, txnId: %d", txnId)
 				committed()
@@ -1706,6 +1708,16 @@ func isTxnNotFound(status *tstatus.TStatus) bool {
 		// detailMessage = transaction not found
 		// or detailMessage = transaction [12356] not found
 		if strings.Contains(errMessage, "transaction not found") || regexp.MustCompile(`transaction \[\d+\] not found`).MatchString(errMessage) {
+			return true
+		}
+	}
+	return false
+}
+
+func isTxnAborted(status *tstatus.TStatus) bool {
+	errMessages := status.GetErrorMsgs()
+	for _, errMessage := range errMessages {
+		if strings.Contains(errMessage, "is already aborted") {
 			return true
 		}
 	}
