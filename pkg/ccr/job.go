@@ -522,7 +522,6 @@ func (j *Job) persistJob() error {
 	return nil
 }
 
-// FIXME: label will conflict when commitSeq equal
 func (j *Job) newLabel(commitSeq int64) string {
 	src := &j.Src
 	dest := &j.Dest
