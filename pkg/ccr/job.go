@@ -1530,7 +1530,7 @@ func (j *Job) updateFrontends() error {
 }
 
 func (j *Job) FirstRun() error {
-	log.Infof("first run check job, src: %s, dest: %s", j.Src, j.Dest)
+	log.Infof("first run check job, src: %s, dest: %s", &j.Src, &j.Dest)
 
 	// Step 0: get all frontends
 	if err := j.updateFrontends(); err != nil {

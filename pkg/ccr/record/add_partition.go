@@ -19,7 +19,6 @@ func NewAddPartitionFromJson(data string) (*AddPartition, error) {
 	}
 
 	if addPartition.Sql == "" {
-		// TODO: fallback to create sql from other fields
 		return nil, xerror.Errorf(xerror.Normal, "add partition sql is empty")
 	}
 
