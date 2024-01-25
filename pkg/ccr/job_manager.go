@@ -2,6 +2,7 @@ package ccr
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 
 	"github.com/selectdb/ccr_syncer/pkg/storage"
@@ -112,14 +113,21 @@ func (jm *JobManager) RemoveJob(name string) error {
 	jm.lock.Lock()
 	defer jm.lock.Unlock()
 
+	job := jm.jobs[name]
 	// check job exist
-	if job, ok := jm.jobs[name]; ok {
-		// stop job
-		job.Stop()
-		delete(jm.jobs, name)
-		return jm.db.RemoveJob(name)
-	} else {
+	if job == nil {
 		return xerror.Errorf(xerror.Normal, "job not exist: %s", name)
+	}
+
+	// stop job
+	job.Stop()
+	if err := jm.db.RemoveJob(name); err == nil {
+		delete(jm.jobs, name)
+		log.Infof("job [%s] has been successfully deleted, but it needs to wait until an isochronous point before it will completely STOP", name)
+		return nil
+	} else {
+		log.Errorf("remove job [%s] in db failed: %+v, but job is stopped", name, err)
+		return fmt.Errorf("remove job [%s] in db failed, but job is stopped, if can resume/delete, please do it manually", name)
 	}
 }
 
