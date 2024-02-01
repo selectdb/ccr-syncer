@@ -60,8 +60,8 @@ for table in $tables; do
         echo "table ${table} binlog is enable"
     else
         echo "enable table ${table} binlog"
-        ${mysql_client} -e "ALTER TABLE $db.$table SET (\"binlog.enable\" = \"true\");" || exit 1
+        ${mysql_client} -e "ALTER TABLE $db.$table SET (\"binlog.enable\" = \"true\", \"binlog.ttl_seconds\"=\"86400\");" || exit 1
     fi
 done
-${mysql_client} -e "ALTER DATABASE $db SET properties (\"binlog.enable\" = \"true\");" || exit 1
+${mysql_client} -e "ALTER DATABASE $db SET properties (\"binlog.enable\" = \"true\", \"binlog.ttl_seconds\"=\"86400\");" || exit 1
 # mysql -uroot -p123456 -e "use test;show tables;"
