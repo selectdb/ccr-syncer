@@ -934,7 +934,6 @@ func (m *Meta) GetTableNameById(tableId int64) (string, error) {
 		return "", err
 	}
 
-	var tableName string
 	sql := fmt.Sprintf("show table %d", tableId)
 	rows, err := db.Query(sql)
 	if err != nil {
@@ -942,11 +941,13 @@ func (m *Meta) GetTableNameById(tableId int64) (string, error) {
 	}
 	defer rows.Close()
 
+	var tableName string
 	for rows.Next() {
 		rowParser := utils.NewRowParser()
 		if err := rowParser.Parse(rows); err != nil {
 			return "", xerror.Wrapf(err, xerror.Normal, sql)
 		}
+
 		tableName, err = rowParser.GetString("TableName")
 		if err != nil {
 			return "", xerror.Wrap(err, xerror.Normal, sql)

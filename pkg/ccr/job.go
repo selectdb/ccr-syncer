@@ -86,10 +86,9 @@ type Job struct {
 
 	factory *Factory `json:"-"`
 
-	destSrcTableIdMap map[int64]int64 `json:"-"`
-	progress          *JobProgress    `json:"-"`
-	db                storage.DB      `json:"-"`
-	jobFactory        *JobFactory     `json:"-"`
+	progress   *JobProgress `json:"-"`
+	db         storage.DB   `json:"-"`
+	jobFactory *JobFactory  `json:"-"`
 
 	stop chan struct{} `json:"-"`
 
@@ -139,10 +138,9 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 
 		factory: factory,
 
-		destSrcTableIdMap: make(map[int64]int64),
-		progress:          nil,
-		db:                jobContext.db,
-		stop:              make(chan struct{}),
+		progress: nil,
+		db:       jobContext.db,
+		stop:     make(chan struct{}),
 	}
 
 	if err := job.valid(); err != nil {
@@ -173,7 +171,6 @@ func NewJobFromJson(jsonData string, db storage.DB, factory *Factory) (*Job, err
 	job.IDest = factory.NewSpecer(&job.Dest)
 	job.srcMeta = factory.NewMeta(&job.Src)
 	job.destMeta = factory.NewMeta(&job.Dest)
-	job.destSrcTableIdMap = make(map[int64]int64)
 	job.progress = nil
 	job.db = db
 	job.stop = make(chan struct{})
@@ -537,10 +534,15 @@ func (j *Job) newLabel(commitSeq int64) string {
 }
 
 // only called by DBSync, TableSync tableId is in Src/Dest Spec
-// TODO: [Performance] improve by cache
 func (j *Job) getDestTableIdBySrc(srcTableId int64) (int64, error) {
-	if destTableId, ok := j.destSrcTableIdMap[srcTableId]; ok {
-		return destTableId, nil
+	if j.progress.TableMapping != nil {
+		if destTableId, ok := j.progress.TableMapping[srcTableId]; ok {
+			return destTableId, nil
+		}
+		log.Warnf("table mapping not found, srcTableId: %d", srcTableId)
+	} else {
+		log.Warnf("table mapping not found, srcTableId: %d", srcTableId)
+		j.progress.TableMapping = make(map[int64]int64)
 	}
 
 	srcTableName, err := j.srcMeta.GetTableNameById(srcTableId)
@@ -551,7 +553,7 @@ func (j *Job) getDestTableIdBySrc(srcTableId int64) (int64, error) {
 	if destTableId, err := j.destMeta.GetTableId(srcTableName); err != nil {
 		return 0, err
 	} else {
-		j.destSrcTableIdMap[srcTableId] = destTableId
+		j.progress.TableMapping[srcTableId] = destTableId
 		return destTableId, nil
 	}
 }
@@ -875,9 +877,15 @@ func (j *Job) handleAddPartition(binlog *festruct.TBinlog) error {
 	if j.SyncType == TableSync {
 		destTableName = j.Dest.Table
 	} else if j.SyncType == DBSync {
-		destTableName, err = j.destMeta.GetTableNameById(addPartition.TableId)
+		destTableId, err := j.getDestTableIdBySrc(addPartition.TableId)
 		if err != nil {
 			return err
+		}
+
+		if destTableName, err = j.destMeta.GetTableNameById(destTableId); err != nil {
+			return err
+		} else if destTableName == "" {
+			return xerror.Errorf(xerror.Normal, "tableId %d not found in destMeta", destTableId)
 		}
 	}
 
@@ -902,9 +910,15 @@ func (j *Job) handleDropPartition(binlog *festruct.TBinlog) error {
 	if j.SyncType == TableSync {
 		destTableName = j.Dest.Table
 	} else if j.SyncType == DBSync {
-		destTableName, err = j.destMeta.GetTableNameById(dropPartition.TableId)
+		destTableId, err := j.getDestTableIdBySrc(dropPartition.TableId)
 		if err != nil {
 			return err
+		}
+
+		if destTableName, err = j.destMeta.GetTableNameById(destTableId); err != nil {
+			return err
+		} else if destTableName == "" {
+			return xerror.Errorf(xerror.Normal, "tableId %d not found in destMeta", destTableId)
 		}
 	}
 
@@ -934,24 +948,26 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 	if err := j.IDest.DbExec(sql); err != nil {
 		return err
 	}
+
 	j.srcMeta.GetTables()
 	j.destMeta.GetTables()
 	// TODO(Drogon): handle err recovery
 	var srcTableName string
 	srcTableName, err = j.srcMeta.GetTableNameById(createTable.TableId)
 	if err != nil {
-		return nil
+		return err
 	}
 	destTableId, err := j.destMeta.GetTableId(srcTableName)
 	if err != nil {
-		return nil
+		return err
 	}
+
 	if j.progress.TableMapping == nil {
 		j.progress.TableMapping = make(map[int64]int64)
 	}
 	j.progress.TableMapping[createTable.TableId] = destTableId
 	j.progress.Done()
-	return err
+	return nil
 }
 
 // handleDropTable
@@ -982,10 +998,17 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 
 	sql := fmt.Sprintf("DROP TABLE %s FORCE", tableName)
 	log.Infof("dropTableSql: %s", sql)
-	err = j.IDest.DbExec(sql)
+	if err = j.IDest.DbExec(sql); err != nil {
+		return err
+	}
+
 	j.srcMeta.GetTables()
 	j.destMeta.GetTables()
-	return err
+	if j.progress.TableMapping != nil {
+		delete(j.progress.TableMapping, dropTable.TableId)
+		j.progress.Done()
+	}
+	return nil
 }
 
 func (j *Job) handleDummy(binlog *festruct.TBinlog) error {

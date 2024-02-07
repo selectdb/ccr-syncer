@@ -7,6 +7,7 @@ import (
 )
 
 type AddPartition struct {
+	DbId    int64  `json:"dbId"`
 	TableId int64  `json:"tableId"`
 	Sql     string `json:"sql"`
 }
