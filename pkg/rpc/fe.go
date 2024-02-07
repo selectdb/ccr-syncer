@@ -24,8 +24,6 @@ import (
 
 const (
 	LOCAL_REPO_NAME = ""
-	CONNECT_TIMEOUT = 1 * time.Second
-	RPC_TIMEOUT     = 3 * time.Second
 
 	// streamload use 30s, we give 3s more
 	COMMIT_TXN_TIMEOUT = 33 * time.Second

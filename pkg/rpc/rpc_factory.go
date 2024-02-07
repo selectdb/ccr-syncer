@@ -63,8 +63,9 @@ func (rf *RpcFactory) NewBeRpc(be *base.Backend) (IBeRpc, error) {
 	}
 	rf.beRpcsLock.Unlock()
 
-	// create kitex FrontendService client
-	client, err := beservice.NewClient("FrontendService", client.WithHostPorts(fmt.Sprintf("%s:%d", be.Host, be.BePort)))
+	// create kitex BackendService client
+	addr := fmt.Sprintf("%s:%d", be.Host, be.BePort)
+	client, err := beservice.NewClient("BackendService", client.WithHostPorts(addr), client.WithConnectTimeout(CONNECT_TIMEOUT), client.WithRPCTimeout(RPC_TIMEOUT))
 	if err != nil {
 		return nil, xerror.Wrapf(err, xerror.Normal, "NewBeClient error: %v", err)
 	}
