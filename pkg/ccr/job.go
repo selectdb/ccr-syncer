@@ -376,8 +376,8 @@ func (j *Job) fullSync() error {
 			return err
 		}
 		log.Debugf("extraInfo: %v", extraInfo)
-
 		jobInfoMap["extra_info"] = extraInfo
+
 		jobInfoBytes, err := json.Marshal(jobInfoMap)
 		if err != nil {
 			return xerror.Errorf(xerror.Normal, "marshal jobInfo failed, jobInfo: %v", jobInfoMap)
@@ -603,6 +603,7 @@ func (j *Job) getReleatedTableRecords(upsert *record.Upsert) ([]*record.TableRec
 		if !ok {
 			return nil, xerror.Errorf(xerror.Normal, "table record not found, table: %s", j.Src.Table)
 		}
+
 		tableRecords = make([]*record.TableRecord, 0, 1)
 		tableRecords = append(tableRecords, tableRecord)
 	default:
@@ -614,7 +615,6 @@ func (j *Job) getReleatedTableRecords(upsert *record.Upsert) ([]*record.TableRec
 
 // Table ingestBinlog
 // TODO: add check success, check ingestBinlog commitInfo
-// TODO: rewrite by use tableId
 func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*ttypes.TTabletCommitInfo, error) {
 	log.Infof("ingestBinlog, txnId: %d", txnId)
 
@@ -635,7 +635,6 @@ func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*
 	return ingestBinlogJob.CommitInfos(), nil
 }
 
-// TODO: handle error by abort txn
 func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 	log.Infof("handle upsert binlog, sub sync state: %s", j.progress.SubSyncState)
 
@@ -704,9 +703,6 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			return err
 		}
 		log.Debugf("upsert: %v", upsert)
-
-		// TODO(Fix)
-		// commitSeq := upsert.CommitSeq
 
 		// Step 1: get related tableRecords
 		tableRecords, err := j.getReleatedTableRecords(upsert)
