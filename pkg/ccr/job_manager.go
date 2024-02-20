@@ -118,7 +118,7 @@ func (jm *JobManager) RemoveJob(name string) error {
 	}
 
 	// stop job
-	job.Stop()
+	job.Delete()
 	if err := jm.db.RemoveJob(name); err == nil {
 		delete(jm.jobs, name)
 		log.Infof("job [%s] has been successfully deleted, but it needs to wait until an isochronous point before it will completely STOP", name)

@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
@@ -90,7 +91,8 @@ type Job struct {
 	db         storage.DB   `json:"-"`
 	jobFactory *JobFactory  `json:"-"`
 
-	stop chan struct{} `json:"-"`
+	stop      chan struct{} `json:"-"`
+	isDeleted atomic.Bool   `json:"-"`
 
 	lock sync.Mutex `json:"-"`
 }
@@ -1370,17 +1372,23 @@ func (j *Job) run() {
 	var panicError error
 
 	for {
+		// do maybeDeleted first to avoid mark job deleted after job stopped & before job run & close stop chan gap in Delete, so job will not run
+		if j.maybeDeleted() {
+			return
+		}
+
 		select {
 		case <-j.stop:
 			gls.DeleteGls(gls.GoID())
 			log.Infof("job stopped, job: %s", j.Name)
 			return
+
 		case <-ticker.C:
+			// loop to print error, not panic, waiting for user to pause/stop/remove Job
 			if j.getJobState() != JobRunning {
 				break
 			}
 
-			// loop to print error, not panic, waiting for user to pause/stop/remove Job
 			// TODO(Drogon): Add user resume the job, so reset panicError for retry
 			if panicError != nil {
 				log.Errorf("job panic, job: %s, err: %+v", j.Name, panicError)
@@ -1526,6 +1534,25 @@ func (j *Job) UpdateSkipError(skipError bool) error {
 // stop job
 func (j *Job) Stop() {
 	close(j.stop)
+}
+
+// delete job
+func (j *Job) Delete() {
+	j.isDeleted.Store(true)
+	close(j.stop)
+}
+
+func (j *Job) maybeDeleted() bool {
+	if !j.isDeleted.Load() {
+		return false
+	}
+
+	// job had been deleted
+	log.Infof("job deleted, job: %s, remove in db", j.Name)
+	if err := j.db.RemoveJob(j.Name); err != nil {
+		log.Errorf("remove job failed, job: %s, err: %+v", j.Name, err)
+	}
+	return true
 }
 
 func (j *Job) updateFrontends() error {

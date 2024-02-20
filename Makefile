@@ -14,7 +14,7 @@ GOFLAGS=
 # Check formatter, if exist gofumpt, use it
 GOFUMPT := $(shell command -v gofumpt 2> /dev/null)
 ifdef GOFUMPT
-	GOFORMAT := gofumpt -s -w
+	GOFORMAT := gofumpt -w
 else
 	GOFORMAT := go fmt
 endif
