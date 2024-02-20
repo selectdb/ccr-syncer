@@ -10,16 +10,13 @@ import (
 	"github.com/tidwall/btree"
 )
 
-var (
-	DefaultThriftMetaFactory ThriftMetaFactory = &defaultThriftMetaFactory{}
-)
+var DefaultThriftMetaFactory ThriftMetaFactory = &defaultThriftMetaFactory{}
 
 type ThriftMetaFactory interface {
 	NewThriftMeta(spec *base.Spec, rpcFactory rpc.IRpcFactory, tableIds []int64) (*ThriftMeta, error)
 }
 
-type defaultThriftMetaFactory struct {
-}
+type defaultThriftMetaFactory struct{}
 
 func (dtmf *defaultThriftMetaFactory) NewThriftMeta(spec *base.Spec, rpcFactory rpc.IRpcFactory, tableIds []int64) (*ThriftMeta, error) {
 	return NewThriftMeta(spec, rpcFactory, tableIds)

@@ -11,9 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var (
-	errJobExist = xerror.NewWithoutStack(xerror.Normal, "job exist")
-)
+var errJobExist = xerror.NewWithoutStack(xerror.Normal, "job exist")
 
 // job manager is thread safety
 type JobManager struct {

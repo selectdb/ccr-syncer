@@ -29,9 +29,7 @@ const (
 	COMMIT_TXN_TIMEOUT = 33 * time.Second
 )
 
-var (
-	ErrFeNotMasterCompatible = xerror.NewWithoutStack(xerror.FE, "not master compatible")
-)
+var ErrFeNotMasterCompatible = xerror.NewWithoutStack(xerror.FE, "not master compatible")
 
 // canUseNextAddr means can try next addr, err is a connection error, not a method not found or other error
 func canUseNextAddr(err error) bool {
@@ -309,7 +307,8 @@ func (r *retryWithMasterRedirectAndCachedClientsRpc) call() (resultType, error) 
 }
 
 func (rpc *FeRpc) callWithMasterRedirect(caller callerType) (resultType, error) {
-	r := &retryWithMasterRedirectAndCachedClientsRpc{rpc: rpc,
+	r := &retryWithMasterRedirectAndCachedClientsRpc{
+		rpc:    rpc,
 		caller: caller,
 	}
 	return r.call()

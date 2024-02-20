@@ -8,8 +8,8 @@ var (
 )
 
 const (
-	InvalidCheckTimestamp int64 = -1
-	remoteDBName string = "ccr"
+	InvalidCheckTimestamp int64  = -1
+	remoteDBName          string = "ccr"
 )
 
 type DB interface {

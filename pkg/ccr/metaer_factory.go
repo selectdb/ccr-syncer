@@ -8,8 +8,7 @@ type MetaerFactory interface {
 	NewMeta(tableSpec *base.Spec) Metaer
 }
 
-type MetaFactory struct {
-}
+type MetaFactory struct{}
 
 func NewMetaFactory() MetaerFactory {
 	return &MetaFactory{}

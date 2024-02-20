@@ -18,9 +18,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var (
-	errNotFoundDestMappingTableId = xerror.NewWithoutStack(xerror.Meta, "not found dest mapping table id")
-)
+var errNotFoundDestMappingTableId = xerror.NewWithoutStack(xerror.Meta, "not found dest mapping table id")
 
 type commitInfosCollector struct {
 	commitInfos     []*ttypes.TTabletCommitInfo

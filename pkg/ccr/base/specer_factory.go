@@ -4,8 +4,7 @@ type SpecerFactory interface {
 	NewSpecer(tableSpec *Spec) Specer
 }
 
-type SpecFactory struct {
-}
+type SpecFactory struct{}
 
 func NewSpecerFactory() SpecerFactory {
 	return &SpecFactory{}

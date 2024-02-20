@@ -2,8 +2,7 @@ package ccr
 
 import "context"
 
-type JobFactory struct {
-}
+type JobFactory struct{}
 
 // create job factory
 func NewJobFactory() *JobFactory {

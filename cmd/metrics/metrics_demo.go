@@ -14,6 +14,7 @@ func promHttp() {
 	http.Handle("/metrics", promhttp.Handler())
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
+
 func main() {
 	go promHttp()
 	sink, _ := prometheussink.NewPrometheusSink()

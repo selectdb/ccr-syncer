@@ -11,6 +11,14 @@ git_tag_sha := $(tag):$(sha)
 LDFLAGS="-X 'github.com/selectdb/ccr_syncer/pkg/version.GitTagSha=$(git_tag_sha)'"
 GOFLAGS=
 
+# Check formatter, if exist gofumpt, use it
+GOFUMPT := $(shell command -v gofumpt 2> /dev/null)
+ifdef GOFUMPT
+	GOFORMAT := gofumpt -s -w
+else
+	GOFORMAT := go fmt
+endif
+
 # COVERAGE=ON make
 ifeq ($(COVERAGE),ON)
     GOFLAGS += -cover
@@ -41,7 +49,7 @@ lint:
 .PHONY: fmt
 ## fmt : Format all code
 fmt:
-	$(V)go fmt ./...
+	$(V)$(GOFORMAT) .
 
 .PHONY: test
 ## test : Run test
