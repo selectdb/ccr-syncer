@@ -870,7 +870,6 @@ func (j *Job) handleAddPartition(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	destDbName := j.Dest.Database
 	var destTableName string
 	if j.SyncType == TableSync {
 		destTableName = j.Dest.Table
@@ -887,10 +886,9 @@ func (j *Job) handleAddPartition(binlog *festruct.TBinlog) error {
 		}
 	}
 
-	// addPartitionSql = "ALTER TABLE " + sql
-	addPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s", destDbName, destTableName, addPartition.Sql)
+	addPartitionSql := addPartition.GetSql(destTableName)
 	log.Infof("addPartitionSql: %s", addPartitionSql)
-	return j.IDest.Exec(addPartitionSql)
+	return j.IDest.DbExec(addPartitionSql)
 }
 
 // handleDropPartition

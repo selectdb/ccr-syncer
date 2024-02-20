@@ -2,14 +2,27 @@ package record
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type AddPartition struct {
-	DbId    int64  `json:"dbId"`
-	TableId int64  `json:"tableId"`
-	Sql     string `json:"sql"`
+	DbId      int64  `json:"dbId"`
+	TableId   int64  `json:"tableId"`
+	Sql       string `json:"sql"`
+	Partition struct {
+		DistributionInfo struct {
+			BucketNum           int    `json:"bucketNum"`
+			Type                string `json:"type"`
+			DistributionColumns []struct {
+				Name string `json:"name"`
+			} `json:"distributionColumns"`
+		} `json:"distributionInfo"`
+	} `json:"partition"`
 }
 
 func NewAddPartitionFromJson(data string) (*AddPartition, error) {
@@ -28,4 +41,44 @@ func NewAddPartitionFromJson(data string) (*AddPartition, error) {
 	}
 
 	return &addPartition, nil
+}
+
+func (addPartition *AddPartition) getDistributionColumns() []string {
+	var distributionColumns []string
+	for _, column := range addPartition.Partition.DistributionInfo.DistributionColumns {
+		distributionColumns = append(distributionColumns, column.Name)
+	}
+	return distributionColumns
+}
+
+func (addPartition *AddPartition) GetSql(destTableName string) string {
+	// addPartitionSql = "ALTER TABLE " + sql
+	addPartitionSql := fmt.Sprintf("ALTER TABLE %s %s", destTableName, addPartition.Sql)
+	// check contains BUCKETS num, ignore case
+	if strings.Contains(strings.ToUpper(addPartitionSql), "BUCKETS") {
+		log.Infof("addPartitionSql contains BUCKETS declaration")
+		return addPartitionSql
+	}
+
+	// remove last ';' and add BUCKETS num
+	addPartitionSql = strings.TrimRight(addPartitionSql, ";")
+	// check contain DISTRIBUTED BY
+	// if not contain
+	// create like below sql
+	// ALTER TABLE my_table
+	// ADD PARTITION p1 VALUES LESS THAN ("2015-01-01")
+	// DISTRIBUTED BY HASH(k1) BUCKETS 20;
+	// or DISTRIBUTED BY RANDOM  BUCKETS 20;
+	if !strings.Contains(strings.ToUpper(addPartitionSql), "DISTRIBUTED BY") {
+		// addPartitionSql = fmt.Sprintf("%s DISTRIBUTED BY (%s)", addPartitionSql, strings.Join(addPartition.getDistributionColumns(), ","))
+		if addPartition.Partition.DistributionInfo.Type == "HASH" {
+			addPartitionSql = fmt.Sprintf("%s DISTRIBUTED BY HASH(%s)", addPartitionSql, strings.Join(addPartition.getDistributionColumns(), ","))
+		} else {
+			addPartitionSql = fmt.Sprintf("%s DISTRIBUTED BY RANDOM", addPartitionSql)
+		}
+	}
+	bucketNum := addPartition.Partition.DistributionInfo.BucketNum
+	addPartitionSql = fmt.Sprintf("%s BUCKETS %d", addPartitionSql, bucketNum)
+
+	return addPartitionSql
 }
