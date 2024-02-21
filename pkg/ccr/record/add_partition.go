@@ -54,14 +54,24 @@ func (addPartition *AddPartition) getDistributionColumns() []string {
 func (addPartition *AddPartition) GetSql(destTableName string) string {
 	// addPartitionSql = "ALTER TABLE " + sql
 	addPartitionSql := fmt.Sprintf("ALTER TABLE %s %s", destTableName, addPartition.Sql)
-	// check contains BUCKETS num, ignore case
-	if strings.Contains(strings.ToUpper(addPartitionSql), "BUCKETS") {
-		log.Infof("addPartitionSql contains BUCKETS declaration")
-		return addPartitionSql
-	}
-
 	// remove last ';' and add BUCKETS num
 	addPartitionSql = strings.TrimRight(addPartitionSql, ";")
+	// check contains BUCKETS num, ignore case
+	if strings.Contains(strings.ToUpper(addPartitionSql), "BUCKETS") {
+		// if not contains BUCKETS AUTO, return directly
+		if !strings.Contains(strings.ToUpper(addPartitionSql), "BUCKETS AUTO") {
+			log.Infof("addPartitionSql contains BUCKETS declaration, sql: %s", addPartitionSql)
+			return addPartitionSql
+		}
+
+		log.Info("addPartitionSql contains BUCKETS AUTO, remove it")
+		// BUCKETS AUTO is in the end of sql, remove it, so we not care about the string after BUCKETS AUTO
+		// Remove BUCKETS AUTO case, but not change other sql case
+		// find BUCKETS AUTO index, remove it from origin sql
+		bucketsAutoIndex := strings.LastIndex(strings.ToUpper(addPartitionSql), "BUCKETS AUTO")
+		addPartitionSql = addPartitionSql[:bucketsAutoIndex]
+	}
+
 	// check contain DISTRIBUTED BY
 	// if not contain
 	// create like below sql
