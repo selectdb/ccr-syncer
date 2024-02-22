@@ -265,7 +265,12 @@ func (j *Job) genExtraInfo() (*base.ExtraInfo, error) {
 }
 
 func (j *Job) isIncrementalSync() bool {
-	return j.progress.SyncState == DBIncrementalSync || j.progress.SyncState == TableIncrementalSync
+	switch j.progress.SyncState {
+	case TableIncrementalSync, DBIncrementalSync, DBTablesIncrementalSync:
+		return true
+	default:
+		return false
+	}
 }
 
 func (j *Job) fullSync() error {
@@ -1152,6 +1157,7 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 
 		// Step 3: check job state, if not incrementalSync, break
 		if !j.isIncrementalSync() {
+			log.Debugf("job state is not incremental sync, back to run loop, job state: %s", j.progress.SyncState)
 			return nil, true
 		}
 	}
