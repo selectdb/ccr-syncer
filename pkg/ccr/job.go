@@ -1119,6 +1119,8 @@ func (j *Job) handleTruncateTable(binlog *festruct.TBinlog) error {
 
 // return: error && bool backToRunLoop
 func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
+	log.Infof("handle binlogs, binlogs size: %d", len(binlogs))
+
 	for _, binlog := range binlogs {
 		// Step 1: dispatch handle binlog
 		if err := j.handleBinlog(binlog); err != nil {
@@ -1161,7 +1163,7 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		return xerror.Errorf(xerror.Normal, "invalid binlog: %v", binlog)
 	}
 
-	log.Debugf("binlog data: %s", binlog.GetData())
+	log.Debugf("binlog type: %s, binlog data: %s", binlog.GetType(), binlog.GetData())
 
 	// Step 2: update job progress
 	j.progress.StartHandle(binlog.GetCommitSeq())
@@ -1187,10 +1189,12 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		return j.handleDummy(binlog)
 	case festruct.TBinlogType_ALTER_DATABASE_PROPERTY:
 		// TODO(Drogon)
+		log.Info("handle alter database property binlog, ignore it")
 	case festruct.TBinlogType_MODIFY_TABLE_PROPERTY:
 		// TODO(Drogon)
+		log.Info("handle alter table property binlog, ignore it")
 	case festruct.TBinlogType_BARRIER:
-		log.Info("handle barrier binlog")
+		log.Info("handle barrier binlog, ignore it")
 	case festruct.TBinlogType_TRUNCATE_TABLE:
 		return j.handleTruncateTable(binlog)
 	default:
