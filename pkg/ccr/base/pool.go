@@ -46,5 +46,3 @@ func GetMysqlDB(dsn string) (*sql.DB, error) {
 		return db, nil
 	}
 }
-
-// TODO: 添加超时和Ping检测

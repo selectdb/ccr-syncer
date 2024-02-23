@@ -1,7 +1,5 @@
 package ccr
 
-// TODO: rewrite by state machine, such as first sync, full/incremental sync
-
 import (
 	"context"
 	"encoding/json"
@@ -72,7 +70,6 @@ func (j JobState) String() string {
 	}
 }
 
-// TODO: refactor merge Src && Isrc, Dest && IDest
 type Job struct {
 	SyncType  SyncType    `json:"sync_type"`
 	Name      string      `json:"name"`
@@ -210,13 +207,11 @@ func (j *Job) valid() error {
 }
 
 func (j *Job) RecoverDatabaseSync() error {
-	// TODO(Drogon): impl
 	return nil
 }
 
 // database old data sync
 func (j *Job) DatabaseOldDataSync() error {
-	// TODO(Drogon): impl
 	// Step 1: drop all tables
 	err := j.IDest.ClearDB()
 	if err != nil {
@@ -230,7 +225,6 @@ func (j *Job) DatabaseOldDataSync() error {
 
 // database sync
 func (j *Job) DatabaseSync() error {
-	// TODO(Drogon): impl
 	return nil
 }
 
@@ -280,8 +274,6 @@ func (j *Job) fullSync() error {
 		TableCommitSeqMap map[int64]int64               `json:"table_commit_seq_map"`
 	}
 
-	// TODO: snapshot machine, not need create snapshot each time
-	// TODO(Drogon): check last snapshot commitSeq > first commitSeq, maybe we can reuse this snapshot
 	switch j.progress.SubSyncState {
 	case Done:
 		log.Infof("fullsync status: done")
@@ -410,7 +402,6 @@ func (j *Job) fullSync() error {
 			persistData := j.progress.PersistData
 			inMemoryData := &inMemoryData{}
 			if err := json.Unmarshal([]byte(persistData), inMemoryData); err != nil {
-				// TODO: return to snapshot
 				return xerror.Errorf(xerror.Normal, "unmarshal persistData failed, persistData: %s", persistData)
 			}
 			j.progress.InMemoryData = inMemoryData
@@ -419,6 +410,7 @@ func (j *Job) fullSync() error {
 		// Step 4.1: start a new fullsync && persist
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
 		snapshotName := inMemoryData.SnapshotName
+		restoreSnapshotName := restoreSnapshotName(snapshotName)
 		snapshotResp := inMemoryData.SnapshotResp
 
 		// Step 4.2: restore snapshot to dest
@@ -427,7 +419,7 @@ func (j *Job) fullSync() error {
 		if err != nil {
 			return err
 		}
-		log.Debugf("begin restore snapshot %s", snapshotName)
+		log.Debugf("begin restore snapshot %s to %s", snapshotName, restoreSnapshotName)
 
 		var tableRefs []*festruct.TTableRef
 		if j.SyncType == TableSync && j.Src.Table != j.Dest.Table {
@@ -439,7 +431,7 @@ func (j *Job) fullSync() error {
 			}
 			tableRefs = append(tableRefs, tableRef)
 		}
-		restoreResp, err := destRpc.RestoreSnapshot(dest, tableRefs, snapshotName, snapshotResp)
+		restoreResp, err := destRpc.RestoreSnapshot(dest, tableRefs, restoreSnapshotName, snapshotResp)
 		if err != nil {
 			return err
 		}
@@ -449,13 +441,13 @@ func (j *Job) fullSync() error {
 		log.Infof("resp: %v", restoreResp)
 
 		for {
-			restoreFinished, err := j.IDest.CheckRestoreFinished(snapshotName)
+			restoreFinished, err := j.IDest.CheckRestoreFinished(restoreSnapshotName)
 			if err != nil {
 				return err
 			}
 
 			if restoreFinished {
-				j.progress.NextSubCheckpoint(PersistRestoreInfo, snapshotName)
+				j.progress.NextSubCheckpoint(PersistRestoreInfo, restoreSnapshotName)
 				break
 			}
 			// retry for  MAX_CHECK_RETRY_TIMES, timeout, continue
@@ -466,7 +458,6 @@ func (j *Job) fullSync() error {
 		// update job info, only for dest table id
 		log.Infof("fullsync status: persist restore info")
 
-		// TODO: retry && mark it for not start a new full sync
 		switch j.SyncType {
 		case DBSync:
 			tableMapping := make(map[int64]int64)
@@ -493,7 +484,6 @@ func (j *Job) fullSync() error {
 				j.Dest.TableId = destTable.Id
 			}
 
-			// TODO: reload check job table id
 			if err := j.persistJob(); err != nil {
 				return err
 			}
@@ -619,7 +609,6 @@ func (j *Job) getReleatedTableRecords(upsert *record.Upsert) ([]*record.TableRec
 }
 
 // Table ingestBinlog
-// TODO: add check success, check ingestBinlog commitInfo
 func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*ttypes.TTabletCommitInfo, error) {
 	log.Infof("ingestBinlog, txnId: %d", txnId)
 
@@ -644,7 +633,6 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 	log.Infof("handle upsert binlog, sub sync state: %s", j.progress.SubSyncState)
 
 	// inMemory will be update in state machine, but progress keep any, so progress.inMemory is also latest, well call NextSubCheckpoint don't need to upate inMemory in progress
-	// TODO(IMPROVE): some steps not need all data, so we can reset some data in progress, such as RollbackTransaction only need txnId
 	type inMemoryData struct {
 		CommitSeq    int64                       `json:"commit_seq"`
 		TxnId        int64                       `json:"txn_id"`
@@ -686,7 +674,6 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 				if tableCommitSeq < commitSeq {
 					j.progress.TableCommitSeqMap[tableId] = commitSeq
 				}
-				// TODO: [PERFORMANCE] remove old commit seq
 			}
 
 			j.progress.Persist()
@@ -775,7 +762,6 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		tableRecords := inMemoryData.TableRecords
 		txnId := inMemoryData.TxnId
 
-		// TODO: 反查现在的状况
 		// Step 3: ingest binlog
 		var commitInfos []*ttypes.TTabletCommitInfo
 		commitInfos, err := j.ingestBinlog(txnId, tableRecords)
@@ -952,7 +938,7 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 
 	j.srcMeta.GetTables()
 	j.destMeta.GetTables()
-	// TODO(Drogon): handle err recovery
+
 	var srcTableName string
 	srcTableName, err = j.srcMeta.GetTableNameById(createTable.TableId)
 	if err != nil {
@@ -1036,11 +1022,8 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	// HACK: busy loop for success
-	// TODO: Add to state machine
 	for {
 		// drop table dropTableSql
-		// TODO: [IMPROVEMENT] use rename table instead of drop table
 		var dropTableSql string
 		if j.SyncType == TableSync {
 			dropTableSql = fmt.Sprintf("DROP TABLE %s FORCE", j.Dest.Table)
@@ -1134,7 +1117,6 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 
 		commitSeq := binlog.GetCommitSeq()
 		if j.SyncType == DBSync && j.progress.TableCommitSeqMap != nil {
-			// TODO: [PERFORMANCE] use largest tableCommitSeq in memorydata to acc it
 			// when all table commit seq > commitSeq, it's true
 			reachSwitchToDBIncrementalSync := true
 			for _, tableCommitSeq := range j.progress.TableCommitSeqMap {
@@ -1175,7 +1157,6 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 	j.progress.StartHandle(binlog.GetCommitSeq())
 	xmetrics.HandlingBinlog(j.Name, binlog.GetCommitSeq())
 
-	// TODO: use table driven, keep this and driven, conert BinlogType to TBinlogType
 	switch binlog.GetType() {
 	case festruct.TBinlogType_UPSERT:
 		return j.handleUpsert(binlog)
@@ -1194,10 +1175,8 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 	case festruct.TBinlogType_DUMMY:
 		return j.handleDummy(binlog)
 	case festruct.TBinlogType_ALTER_DATABASE_PROPERTY:
-		// TODO(Drogon)
 		log.Info("handle alter database property binlog, ignore it")
 	case festruct.TBinlogType_MODIFY_TABLE_PROPERTY:
-		// TODO(Drogon)
 		log.Info("handle alter table property binlog, ignore it")
 	case festruct.TBinlogType_BARRIER:
 		log.Info("handle barrier binlog, ignore it")
@@ -1313,7 +1292,6 @@ func (j *Job) dbTablesIncrementalSync() error {
 	return j.incrementalSync()
 }
 
-// TODO(Drogon): impl DBSpecificTableFullSync
 func (j *Job) dbSpecificTableFullSync() error {
 	log.Debug("db specific table full sync")
 
@@ -1365,9 +1343,7 @@ func (j *Job) handleError(err error) error {
 		return err
 	}
 
-	// TODO(Drogon): do more things, not only snapshot
 	if xerr.Category() == xerror.Meta {
-		// TODO(Drogon): handle error
 		j.newSnapshot(j.progress.CommitSeq)
 	}
 	return nil
@@ -1397,7 +1373,6 @@ func (j *Job) run() {
 				break
 			}
 
-			// TODO(Drogon): Add user resume the job, so reset panicError for retry
 			if panicError != nil {
 				log.Errorf("job panic, job: %s, err: %+v", j.Name, panicError)
 				break
@@ -1672,7 +1647,6 @@ func (j *Job) FirstRun() error {
 	return nil
 }
 
-// HACK: temp impl
 func (j *Job) GetLag() (int64, error) {
 	j.lock.Lock()
 	defer j.lock.Unlock()
@@ -1781,4 +1755,13 @@ func isTxnAborted(status *tstatus.TStatus) bool {
 		}
 	}
 	return false
+}
+
+func restoreSnapshotName(snapshotName string) string {
+	if snapshotName == "" {
+		return ""
+	}
+
+	// use current seconds
+	return fmt.Sprintf("%s_r_%d", snapshotName, time.Now().Unix())
 }
