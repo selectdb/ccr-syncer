@@ -34,6 +34,7 @@ suite("test_bloomfilter_index") {
                 } else {
                     res = target_sql "${sqlString}"
                 }
+                logger.info("res: ${res}")
                 if (myClosure.call(res)) {
                     ret = true
                 }
