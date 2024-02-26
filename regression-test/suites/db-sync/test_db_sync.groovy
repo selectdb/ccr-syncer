@@ -20,7 +20,6 @@ suite("test_db_sync") {
     def syncerAddress = "127.0.0.1:9190"
     def test_num = 0
     def insert_num = 5
-    def date_num = "2021-01-02"
     def sync_gap_time = 5000
 
     def createUniqueTable = { tableName ->
@@ -28,18 +27,13 @@ suite("test_db_sync") {
             CREATE TABLE if NOT EXISTS ${tableName}
             (
                 `test` INT,
-                `id` INT,
-                `date_time` date NOT NULL
+                `id` INT
             )
             ENGINE=OLAP
-            UNIQUE KEY(`test`, `id`, `date_time`)
-            AUTO PARTITION BY RANGE date_trunc(`date_time`, 'day')
-            (
-            )
-            DISTRIBUTED BY HASH(id) BUCKETS AUTO
+            UNIQUE KEY(`test`, `id`)
+            DISTRIBUTED BY HASH(id) BUCKETS 1
             PROPERTIES (
                 "replication_allocation" = "tag.location.default: 1",
-                "estimate_partition_size" = "10G",
                 "binlog.enable" = "true"
             )
         """
@@ -49,43 +43,33 @@ suite("test_db_sync") {
             CREATE TABLE if NOT EXISTS ${tableName}
             (
                 `test` INT,
-                `date_time` date NOT NULL,
                 `last` INT REPLACE DEFAULT "0",
                 `cost` INT SUM DEFAULT "0",
                 `max` INT MAX DEFAULT "0",
                 `min` INT MIN DEFAULT "0"
             )
             ENGINE=OLAP
-            AGGREGATE KEY(`test`, `date_time`)
-            AUTO PARTITION BY RANGE date_trunc(`date_time`, 'day')
-            (
-            )
-            DISTRIBUTED BY HASH(`test`) BUCKETS AUTO
+            AGGREGATE KEY(`test`)
+            DISTRIBUTED BY HASH(`test`) BUCKETS 1
             PROPERTIES (
                 "replication_allocation" = "tag.location.default: 1",
-                "estimate_partition_size" = "10G",
                 "binlog.enable" = "true"
             )
         """
     }
 
     def createDuplicateTable = { tableName ->
-       sql """
+        sql """
             CREATE TABLE if NOT EXISTS ${tableName}
             (
                 `test` INT,
-                `id` INT,
-                `date_time` date NOT NULL
+                `id` INT
             )
             ENGINE=OLAP
-            DUPLICATE KEY(`test`, `id`, `date_time`)
-            AUTO PARTITION BY RANGE date_trunc(`date_time`, 'day')
-            (
-            )
-            DISTRIBUTED BY HASH(id) BUCKETS AUTO
+            DUPLICATE KEY(`test`, `id`)
+            DISTRIBUTED BY HASH(id) BUCKETS 1
             PROPERTIES (
                 "replication_allocation" = "tag.location.default: 1",
-                "estimate_partition_size" = "10G",
                 "binlog.enable" = "true"
             )
         """
@@ -163,25 +147,26 @@ suite("test_db_sync") {
     createUniqueTable(tableUnique0)
     for (int index = 0; index < insert_num; index++) {
         sql """
-            INSERT INTO ${tableUnique0} VALUES (${test_num}, ${index}, '${date_num}')
+            INSERT INTO ${tableUnique0} VALUES (${test_num}, ${index})
             """
     }
 
     createAggergateTable(tableAggregate0)
     for (int index = 0; index < insert_num; index++) {
         sql """
-            INSERT INTO ${tableAggregate0} VALUES (${test_num}, '${date_num}', ${index}, ${index}, ${index}, ${index})
+            INSERT INTO ${tableAggregate0} VALUES (${test_num}, ${index}, ${index}, ${index}, ${index})
             """
     }
 
     createDuplicateTable(tableDuplicate0)
     for (int index = 0; index < insert_num; index++) {
         sql """
-            INSERT INTO ${tableDuplicate0} VALUES (0, 99, '${date_num}')
+            INSERT INTO ${tableDuplicate0} VALUES (0, 99)
             """
     }
 
     sql "ALTER DATABASE ${context.dbName} SET properties (\"binlog.enable\" = \"true\")"
+    sql "sync"
 
     String respone
     httpTest {
@@ -209,20 +194,21 @@ suite("test_db_sync") {
     test_num = 1
     for (int index = 0; index < insert_num; index++) {
         sql """
-            INSERT INTO ${tableUnique0} VALUES (${test_num}, ${index}, '${date_num}')
+            INSERT INTO ${tableUnique0} VALUES (${test_num}, ${index})
             """
     }
     for (int index = 0; index < insert_num; index++) {
         sql """
-            INSERT INTO ${tableAggregate0} VALUES (${test_num}, '${date_num}', ${index}, ${index}, ${index}, ${index})
+            INSERT INTO ${tableAggregate0} VALUES (${test_num}, ${index}, ${index}, ${index}, ${index})
             """
     }
     for (int index = 0; index < insert_num; index++) {
         sql """
-            INSERT INTO ${tableDuplicate0} VALUES (0, 99, '${date_num}')
+            INSERT INTO ${tableDuplicate0} VALUES (0, 99)
             """
     }
 
+    sql "sync"
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
                                    insert_num, 30))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableAggregate0} WHERE test=${test_num}",
@@ -244,20 +230,21 @@ suite("test_db_sync") {
 
     for (int index = 0; index < insert_num; index++) {
         sql """
-            INSERT INTO ${tableUnique1} VALUES (${test_num}, ${index}, '${date_num}')
+            INSERT INTO ${tableUnique1} VALUES (${test_num}, ${index})
             """
     }
     for (int index = 0; index < insert_num; index++) {
         sql """
-            INSERT INTO ${tableAggregate1} VALUES (${test_num}, '${date_num}', ${index}, ${index}, ${index}, ${index})
+            INSERT INTO ${tableAggregate1} VALUES (${test_num}, ${index}, ${index}, ${index}, ${index})
             """
     }
     for (int index = 0; index < insert_num; index++) {
         sql """
-            INSERT INTO ${tableDuplicate1} VALUES (0, 99, '${date_num}')
+            INSERT INTO ${tableDuplicate1} VALUES (0, 99)
             """
     }
 
+    sql "sync"
     assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableUnique1}",
                                 exist, 30))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableUnique1} WHERE test=${test_num}",
@@ -278,6 +265,7 @@ suite("test_db_sync") {
     sql "DROP TABLE ${tableAggregate1}"
     sql "DROP TABLE ${tableDuplicate1}"
 
+    sql "sync"
     assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${tableUnique1}'", 
                                 notExist, 30, "target"))
     assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${tableAggregate1}'",
@@ -298,10 +286,11 @@ suite("test_db_sync") {
     test_num = 4
     for (int index = 0; index < insert_num; index++) {
         sql """
-            INSERT INTO ${tableUnique0} VALUES (${test_num}, ${index}, '${date_num}')
+            INSERT INTO ${tableUnique0} VALUES (${test_num}, ${index})
             """
     }
 
+    sql "sync"
     assertTrue(!checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
                                    insert_num, 3))
 
@@ -313,6 +302,7 @@ suite("test_db_sync") {
         op "post"
         result respone
     }
+    sql "sync"
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
                                    insert_num, 30))
 
@@ -342,6 +332,7 @@ suite("test_db_sync") {
         assertTrue(desynced)
     }
 
+    sql "sync"
     checkDesynced(tableUnique0)
     checkDesynced(tableAggregate0)
     checkDesynced(tableDuplicate0)
@@ -360,10 +351,11 @@ suite("test_db_sync") {
 
     for (int index = 0; index < insert_num; index++) {
         sql """
-            INSERT INTO ${tableUnique0} VALUES (${test_num}, ${index}, '${date_num}')
+            INSERT INTO ${tableUnique0} VALUES (${test_num}, ${index})
             """
     }
 
+    sql "sync"
     assertTrue(!checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
                                    insert_num, 5))
 }
