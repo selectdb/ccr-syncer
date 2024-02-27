@@ -146,13 +146,13 @@ suite("test_partition_ops") {
     sql """
         ALTER TABLE ${tableName}
         ADD PARTITION ${opBucketNumberPartitonName}
-        VALUES [('5'), ('6')) bucket 2
+        VALUES [(5), (6)) DISTRIBUTED BY HASH(id) BUCKETS 2;
     """
     opDifferentBucketNumberPartitonName = "different_bucket_number_partition"
     sql """
         ALTER TABLE ${tableName}
         ADD PARTITION ${opDifferentBucketNumberPartitonName}
-        VALUES [('5'), ('7')) bucket 3
+        VALUES [(6), (7)) DISTRIBUTED BY HASH(id) BUCKETS 3;
     """
 
 
