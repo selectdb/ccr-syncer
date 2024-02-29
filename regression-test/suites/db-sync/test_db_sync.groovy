@@ -183,14 +183,14 @@ suite("test_db_sync") {
 
     sql "ALTER DATABASE ${context.dbName} SET properties (\"binlog.enable\" = \"true\")"
 
-    String respone
+    String response
     httpTest {
         uri "/create_ccr"
         endpoint syncerAddress
         def bodyJson = get_ccr_body ""
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
 
     assertTrue(checkRestoreFinishTimesOf("${tableUnique0}", 130))
@@ -292,7 +292,7 @@ suite("test_db_sync") {
         def bodyJson = get_ccr_body ""
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
 
     test_num = 4
@@ -311,7 +311,7 @@ suite("test_db_sync") {
         def bodyJson = get_ccr_body ""
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
                                    insert_num, 30))
@@ -325,7 +325,7 @@ suite("test_db_sync") {
         def bodyJson = get_ccr_body ""
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
 
     sleep(sync_gap_time)
@@ -355,7 +355,7 @@ suite("test_db_sync") {
         def bodyJson = get_ccr_body ""
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
 
     for (int index = 0; index < insert_num; index++) {

@@ -151,7 +151,7 @@ func test_ingrest_binlog(src *base.Spec, dest *base.Spec) {
 	case "commit":
 		test_commit(dest)
 	case "abort":
-		panic("unkown abort action")
+		panic("unknown abort action")
 	case "ingest_be":
 		test_ingest_be()
 	default:

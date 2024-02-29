@@ -24,7 +24,7 @@ suite("test_common") {
     def test_num = 0
     def insert_num = 5
     def sync_gap_time = 5000
-    String respone
+    String response
 
     def checkSelectTimesOf = { sqlString, rowSize, times -> Boolean
         def tmpRes = target_sql "${sqlString}"
@@ -151,7 +151,7 @@ suite("test_common") {
         def bodyJson = get_ccr_body "${uniqueTable}"
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
     assertTrue(checkRestoreFinishTimesOf("${uniqueTable}", 30))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${uniqueTable} WHERE test=${test_num}",
@@ -163,7 +163,7 @@ suite("test_common") {
         def bodyJson = get_ccr_body "${aggregateTable}"
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
     assertTrue(checkRestoreFinishTimesOf("${aggregateTable}", 30))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${aggregateTable} WHERE test=${test_num}",
@@ -178,7 +178,7 @@ suite("test_common") {
         def bodyJson = get_ccr_body "${duplicateTable}"
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
     assertTrue(checkRestoreFinishTimesOf("${duplicateTable}", 30))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${duplicateTable} WHERE test=${test_num}",
@@ -225,7 +225,7 @@ suite("test_common") {
         def bodyJson = get_ccr_body "${uniqueTable}"
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
 
     test_num = 3
@@ -245,7 +245,7 @@ suite("test_common") {
         def bodyJson = get_ccr_body "${uniqueTable}"
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
     assertTrue(checkSelectTimesOf("SELECT * FROM ${uniqueTable} WHERE test=${test_num}",
                                    insert_num, 30))
@@ -259,7 +259,7 @@ suite("test_common") {
         def bodyJson = get_ccr_body "${uniqueTable}"
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
 
     sleep(sync_gap_time)
@@ -282,7 +282,7 @@ suite("test_common") {
         def bodyJson = get_ccr_body "${uniqueTable}"
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
 
     for (int index = 0; index < insert_num; index++) {

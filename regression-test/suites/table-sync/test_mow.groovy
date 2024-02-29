@@ -21,7 +21,7 @@ suite("test_mow") {
     def test_num = 0
     def insert_num = 5
     def sync_gap_time = 5000
-    String respone
+    String response
 
     def checkSelectTimesOf = { sqlString, rowSize, times, func = null -> Boolean
         def tmpRes = target_sql "${sqlString}"
@@ -87,7 +87,7 @@ suite("test_mow") {
         def bodyJson = get_ccr_body "${tableName}"
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
 
     assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))

@@ -98,7 +98,7 @@ func (m *Meta) GetDbId() (int64, error) {
 		}
 
 		// match parsedDbname == dbname, return dbId
-		// the defualt_cluster prefix of db name will be removed in Doris v2.1.
+		// the default_cluster prefix of db name will be removed in Doris v2.1.
 		// here we compare both db name and db full name to make it compatible.
 		if parsedDbName == dbName || parsedDbName == dbFullName {
 			m.DatabaseName2IdMap[dbFullName] = dbId
