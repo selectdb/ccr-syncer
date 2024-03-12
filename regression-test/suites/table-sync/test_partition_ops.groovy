@@ -141,10 +141,37 @@ suite("test_partition_ops") {
         VALUES [('0'), ('5'))
     """
 
+    // add partition use bucket number 
+    opBucketNumberPartitonName = "bucket_number_partition"
+    sql """
+        ALTER TABLE ${tableName}
+        ADD PARTITION ${opBucketNumberPartitonName}
+        VALUES [(5), (6)) DISTRIBUTED BY HASH(id) BUCKETS 2;
+    """
+    opDifferentBucketNumberPartitonName = "different_bucket_number_partition"
+    sql """
+        ALTER TABLE ${tableName}
+        ADD PARTITION ${opDifferentBucketNumberPartitonName}
+        VALUES [(6), (7)) DISTRIBUTED BY HASH(id) BUCKETS 3;
+    """
+
+
     assertTrue(checkShowTimesOf("""
                                 SHOW PARTITIONS
                                 FROM TEST_${context.dbName}.${tableName}
                                 WHERE PartitionName = \"${opPartitonName}\"
+                                """,
+                                exist, 30, "target"))
+    assertTrue(checkShowTimesOf("""
+                                SHOW PARTITIONS
+                                FROM TEST_${context.dbName}.${tableName}
+                                WHERE PartitionName = \"${opBucketNumberPartitonName}\"
+                                """,
+                                exist, 30, "target"))   
+    assertTrue(checkShowTimesOf("""
+                                SHOW PARTITIONS
+                                FROM TEST_${context.dbName}.${tableName}
+                                WHERE PartitionName = \"${opDifferentBucketNumberPartitonName}\"
                                 """,
                                 exist, 30, "target"))
 
