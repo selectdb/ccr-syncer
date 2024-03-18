@@ -1333,7 +1333,7 @@ func (j *Job) sync() error {
 func (j *Job) handleError(err error) error {
 	var xerr *xerror.XError
 	if !errors.As(err, &xerr) {
-		log.Warnf("convert error to xerror failed, err: %+v", err)
+		log.Errorf("convert error to xerror failed, err: %+v", err)
 		return nil
 	}
 

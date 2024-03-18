@@ -185,7 +185,7 @@ func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) 
 	}
 
 	// not found
-	return nil, xerror.Errorf(xerror.Normal, "tableId %v not found table", tableId)
+	return nil, xerror.Errorf(xerror.Meta, "tableId %v not found table", tableId)
 }
 
 func (m *Meta) GetTable(tableId int64) (*TableMeta, error) {
