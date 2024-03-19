@@ -49,8 +49,21 @@ fi
 echo "enable db ${db} binlog"
 # use mysql client list all tables in db
 tables=$(${mysql_client} -e "use ${db};show tables;" 2>/dev/null | sed '1d') 
+views=$(${mysql_client} -e "select table_name from information_schema.tables where table_schema=\"${db}\" and table_type = 'VIEW'" 2>/dev/null | sed '1d')
 for table in $tables; do
     echo "table: $table"
+
+    # skip view
+    isview="false"
+    for view in $views; do
+      if [ "$view" == "$table" ]; then
+        isview="true"
+        break
+      fi
+    done
+    if [ "$isview" == "true" ]; then
+      continue
+    fi
 
     # check table binlog is enable
     table_binlog_enable=$($mysql_client -e "show create table ${db}.${table}" 2>/dev/null | grep '"binlog.enable" = "true"')
