@@ -81,3 +81,31 @@ pid文件是stop_syncer.sh脚本用于关闭Syncer的凭据，里面保存了对
 bash bin/start_syncer.sh --pid_dir /path/to/pids
 ```
 默认值为`SYNCER_OUTPUT_DIR/bin`
+
+### --commit_txn_timeout
+用于指定提交事务超时时间
+```bash
+bash bin/start_syncer.sh --commit_txn_timeout 33s
+```
+默认值为33s
+
+### --connect_timeout duration
+用于指定连接超时时间
+```bash
+bash bin/start_syncer.sh --connect_timeout_syncer 1s
+```
+默认值为1s
+
+### --local_repo_name string
+用于指定本地仓库名称
+```bash
+bash bin/start_syncer.sh --local_repo_name "repo_name"
+```
+默认值为""
+
+### --rpc_timeout duration
+用于指定rpc超时时间
+```bash
+bash bin/start_syncer.sh --rpc_timeout_duration 3s
+```
+默认值为3s
