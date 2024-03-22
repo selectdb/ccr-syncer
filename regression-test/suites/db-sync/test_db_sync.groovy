@@ -246,17 +246,17 @@ suite("test_db_sync") {
 
     sql "sync"
     assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableUnique1}",
-                                exist, 30))
+                                exist, 30, "target"))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableUnique1} WHERE test=${test_num}",
                                    insert_num, 30))
 
     assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableAggregate1}",
-                                exist, 30))
+                                exist, 30, "target"))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableAggregate1} WHERE test=${test_num}",
                                    1, 30))
 
     assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableDuplicate1}",
-                                exist, 30))
+                                exist, 30, "target"))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableDuplicate1} WHERE test=0",
                                    insert_num, 30))
 
