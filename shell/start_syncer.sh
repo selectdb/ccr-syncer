@@ -16,7 +16,8 @@ PID_DIR="$(
 usage() {
     echo "
 Usage: $0 [--deamon] [--log_level [info|debug]] [--log_dir dir] [--db_dir dir]
-          [--host host] [--port port] [--pid_dir dir]
+          [--host host] [--port port] [--pid_dir dir] [--pprof [true|false]]
+          [--pprof_port p_port]
         "
     exit 1
 }
@@ -38,6 +39,8 @@ OPTS="$(getopt \
     -l 'host:' \
     -l 'port:' \
     -l 'pid_dir:' \
+    -l 'pprof:' \
+    -l 'pprof_port:' \
     -- "$@")"
 
 eval set -- "${OPTS}"
@@ -52,6 +55,8 @@ DB_HOST="127.0.0.1"
 DB_PORT="3306"
 DB_USER=""
 DB_PASSWORD=""
+PPROF="false"
+PPROF_PORT="6060"
 while true; do
     case "$1" in
     -h)
@@ -108,6 +113,14 @@ while true; do
         PID_DIR=$2
         shift 2
         ;;
+    --pprof)
+        PPROF=$2
+        shift 2
+        ;;
+    --pprof_port)
+        PPROF_PORT=$2
+        shift 2
+        ;;
     --)
         shift
         break
@@ -162,6 +175,8 @@ if [[ "${RUN_DAEMON}" -eq 1 ]]; then
           "-db_password=${DB_PASSWORD}" \
           "-host=${HOST}" \
           "-port=${PORT}" \
+          "-pprof=${PPROF}" \
+          "-pprof_port=${PPROF_PORT}" \
           "-log_level=${LOG_LEVEL}" \
           "-log_filename=${LOG_DIR}" \
           "$@" >>"${LOG_DIR}" 2>&1 </dev/null &
@@ -176,5 +191,7 @@ else
         "-db_password=${DB_PASSWORD}" \
         "-host=${HOST}" \
         "-port=${PORT}" \
+        "-pprof=${PPROF}" \
+        "-pprof_port=${PPROF_PORT}" \
         "-log_level=${LOG_LEVEL}" | tee -a "${LOG_DIR}"
 fi
