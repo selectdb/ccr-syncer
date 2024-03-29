@@ -436,12 +436,12 @@ func (s *Spec) CreateSnapshotAndWaitForDone(tables []string) (string, error) {
 		// snapshot name format "ccrs_${table}_${timestamp}"
 		// table refs = table
 		snapshotName = fmt.Sprintf("ccrs_%s_%s_%d", s.Database, s.Table, time.Now().Unix())
-		tableRefs = tables[0]
+		tableRefs = "`" + tables[0] + "`"
 	} else {
 		// snapshot name format "ccrs_${db}_${timestamp}"
 		// table refs = tables.join(", ")
 		snapshotName = fmt.Sprintf("ccrs_%s_%d", s.Database, time.Now().Unix())
-		tableRefs = strings.Join(tables, ", ")
+		tableRefs = "`" + strings.Join(tables, "`,`") + "`"
 	}
 
 	log.Infof("create snapshot %s.%s", s.Database, snapshotName)
