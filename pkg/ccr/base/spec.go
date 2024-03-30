@@ -234,7 +234,8 @@ func (s *Spec) IsTableEnableBinlog() (bool, error) {
 	}
 
 	var createTableString string
-	query := fmt.Sprintf("SHOW CREATE TABLE %s.%s", s.Database, s.Table)
+	var formatTableName string = "`" + s.Table + "`"
+	query := fmt.Sprintf("SHOW CREATE TABLE %s.%s", s.Database, formatTableName)
 	rows, err := db.Query(query)
 	if err != nil {
 		return false, xerror.Wrap(err, xerror.Normal, query)
