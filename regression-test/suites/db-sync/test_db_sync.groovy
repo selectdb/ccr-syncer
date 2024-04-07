@@ -223,10 +223,12 @@ suite("test_db_sync") {
     def tableUnique1 = "tbl_common_1_" + UUID.randomUUID().toString().replace("-", "")
     def tableAggregate1 = "tbl_aggregate_1_" + UUID.randomUUID().toString().replace("-", "")
     def tableDuplicate1 = "tbl_duplicate_1_" + UUID.randomUUID().toString().replace("-", "")
+    def keywordTableName = "roles"
 
     createUniqueTable(tableUnique1)
     createAggergateTable(tableAggregate1)
     createDuplicateTable(tableDuplicate1)
+    createUniqueTable(keywordTableName)
 
     for (int index = 0; index < insert_num; index++) {
         sql """
@@ -241,6 +243,11 @@ suite("test_db_sync") {
     for (int index = 0; index < insert_num; index++) {
         sql """
             INSERT INTO ${tableDuplicate1} VALUES (0, 99)
+            """
+    }
+    for (int index = 0; index < insert_num; index++) {
+        sql """
+            INSERT INTO ${keywordTableName} VALUES (${test_num}, ${index}, '${date_num}')
             """
     }
 
@@ -260,10 +267,16 @@ suite("test_db_sync") {
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableDuplicate1} WHERE test=0",
                                    insert_num, 30))
 
+    assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${keywordTableName}",
+                                exist, 30, "target"))
+    assertTrue(checkSelectTimesOf("SELECT * FROM ${keywordTableName} WHERE test=${test_num}",
+                                   insert_num, 30))
+
     logger.info("=== Test 3: drop table case ===")
     sql "DROP TABLE ${tableUnique1}"
     sql "DROP TABLE ${tableAggregate1}"
     sql "DROP TABLE ${tableDuplicate1}"
+    sql "DROP TABLE ${keywordTableName}"
 
     sql "sync"
     assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${tableUnique1}'", 
@@ -271,6 +284,8 @@ suite("test_db_sync") {
     assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${tableAggregate1}'",
                                 notExist, 30, "target"))
     assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${tableDuplicate1}'", 
+                                notExist, 30, "target"))
+    assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${keywordTableName}'", 
                                 notExist, 30, "target"))
     
     logger.info("=== Test 4: pause and resume ===")
