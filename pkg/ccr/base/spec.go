@@ -44,6 +44,11 @@ func (s BackupState) String() string {
 	}
 }
 
+func formatKeyWordName(name string) string {
+	return "`" + strings.TrimSpace(name) + "`"
+
+}
+
 func ParseBackupState(state string) BackupState {
 	switch state {
 	case "PENDING":
@@ -196,7 +201,7 @@ func (s *Spec) IsDatabaseEnableBinlog() (bool, error) {
 	}
 
 	var createDBString string
-	query := fmt.Sprintf("SHOW CREATE DATABASE %s", s.Database)
+	query := fmt.Sprintf("SHOW CREATE DATABASE %s", formatKeyWordName(s.Database))
 	rows, err := db.Query(query)
 	if err != nil {
 		return false, xerror.Wrap(err, xerror.Normal, query)
@@ -234,7 +239,7 @@ func (s *Spec) IsTableEnableBinlog() (bool, error) {
 	}
 
 	var createTableString string
-	query := fmt.Sprintf("SHOW CREATE TABLE %s.%s", s.Database, s.Table)
+	query := fmt.Sprintf("SHOW CREATE TABLE %s.%s", formatKeyWordName(s.Database), formatKeyWordName(s.Table))
 	rows, err := db.Query(query)
 	if err != nil {
 		return false, xerror.Wrap(err, xerror.Normal, query)
@@ -300,7 +305,7 @@ func (s *Spec) dropTable(table string) error {
 		return err
 	}
 
-	sql := fmt.Sprintf("DROP TABLE %s.%s", s.Database, table)
+	sql := fmt.Sprintf("DROP TABLE %s.%s", formatKeyWordName(s.Database), formatKeyWordName(table))
 	_, err = db.Exec(sql)
 	if err != nil {
 		return xerror.Wrapf(err, xerror.Normal, "drop table %s.%s failed, sql: %s", s.Database, table, sql)
@@ -316,13 +321,13 @@ func (s *Spec) ClearDB() error {
 		return err
 	}
 
-	sql := fmt.Sprintf("DROP DATABASE %s", s.Database)
+	sql := fmt.Sprintf("DROP DATABASE %s", formatKeyWordName(s.Database))
 	_, err = db.Exec(sql)
 	if err != nil {
 		return xerror.Wrapf(err, xerror.Normal, "drop database %s failed", s.Database)
 	}
 
-	if _, err = db.Exec("CREATE DATABASE " + s.Database); err != nil {
+	if _, err = db.Exec("CREATE DATABASE " + formatKeyWordName(s.Database)); err != nil {
 		return xerror.Wrapf(err, xerror.Normal, "create database %s failed", s.Database)
 	}
 	return nil
@@ -336,7 +341,7 @@ func (s *Spec) CreateDatabase() error {
 		return nil
 	}
 
-	if _, err = db.Exec("CREATE DATABASE IF NOT EXISTS " + s.Database); err != nil {
+	if _, err = db.Exec("CREATE DATABASE IF NOT EXISTS " + formatKeyWordName(s.Database)); err != nil {
 		return xerror.Wrapf(err, xerror.Normal, "create database %s failed", s.Database)
 	}
 	return nil
@@ -396,7 +401,7 @@ func (s *Spec) CheckTableExists() (bool, error) {
 		return false, err
 	}
 
-	sql := fmt.Sprintf("SHOW TABLES FROM %s LIKE '%s'", s.Database, s.Table)
+	sql := fmt.Sprintf("SHOW TABLES FROM %s LIKE '%s'", formatKeyWordName(s.Database), s.Table)
 	rows, err := db.Query(sql)
 	if err != nil {
 		return false, xerror.Wrapf(err, xerror.Normal, "show tables failed, sql: %s", sql)
@@ -436,12 +441,17 @@ func (s *Spec) CreateSnapshotAndWaitForDone(tables []string) (string, error) {
 		// snapshot name format "ccrs_${table}_${timestamp}"
 		// table refs = table
 		snapshotName = fmt.Sprintf("ccrs_%s_%s_%d", s.Database, s.Table, time.Now().Unix())
-		tableRefs = tables[0]
+		tableRefs = formatKeyWordName(tables[0])
 	} else {
 		// snapshot name format "ccrs_${db}_${timestamp}"
 		// table refs = tables.join(", ")
 		snapshotName = fmt.Sprintf("ccrs_%s_%d", s.Database, time.Now().Unix())
-		tableRefs = strings.Join(tables, ", ")
+		tableRefs = "`" + strings.Join(tables, "`,`") + "`"
+	}
+
+	// means source is a empty db, table numer is 0
+	if tableRefs == "``" {
+		return "", xerror.Errorf(xerror.Normal, "source db is empty! you should have at least one table")
 	}
 
 	log.Infof("create snapshot %s.%s", s.Database, snapshotName)
@@ -451,7 +461,7 @@ func (s *Spec) CreateSnapshotAndWaitForDone(tables []string) (string, error) {
 		return "", err
 	}
 
-	backupSnapshotSql := fmt.Sprintf("BACKUP SNAPSHOT %s.%s TO `__keep_on_local__` ON ( %s ) PROPERTIES (\"type\" = \"full\")", s.Database, snapshotName, tableRefs)
+	backupSnapshotSql := fmt.Sprintf("BACKUP SNAPSHOT %s.%s TO `__keep_on_local__` ON ( %s ) PROPERTIES (\"type\" = \"full\")", formatKeyWordName(s.Database), snapshotName, tableRefs)
 	log.Debugf("backup snapshot sql: %s", backupSnapshotSql)
 	_, err = db.Exec(backupSnapshotSql)
 	if err != nil {
@@ -479,7 +489,7 @@ func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, error) {
 		return BackupStateUnknown, err
 	}
 
-	sql := fmt.Sprintf("SHOW BACKUP FROM %s WHERE SnapshotName = \"%s\"", s.Database, snapshotName)
+	sql := fmt.Sprintf("SHOW BACKUP FROM %s WHERE SnapshotName = \"%s\"", formatKeyWordName(s.Database), snapshotName)
 	log.Debugf("check backup state sql: %s", sql)
 	rows, err := db.Query(sql)
 	if err != nil {
@@ -532,7 +542,7 @@ func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, error) {
 		return RestoreStateUnknown, err
 	}
 
-	query := fmt.Sprintf("SHOW RESTORE FROM %s WHERE Label = \"%s\"", s.Database, snapshotName)
+	query := fmt.Sprintf("SHOW RESTORE FROM %s WHERE Label = \"%s\"", formatKeyWordName(s.Database), snapshotName)
 
 	log.Debugf("check restore state sql: %s", query)
 	rows, err := db.Query(query)
@@ -590,7 +600,7 @@ func (s *Spec) waitTransactionDone(txnId int64) error {
 	// WHERE
 	// [id=transaction_id]
 	// [label = label_name];
-	query := fmt.Sprintf("SHOW TRANSACTION FROM %s WHERE id = %d", s.Database, txnId)
+	query := fmt.Sprintf("SHOW TRANSACTION FROM %s WHERE id = %d", formatKeyWordName(s.Database), txnId)
 
 	log.Debugf("wait transaction done sql: %s", query)
 	rows, err := db.Query(query)
