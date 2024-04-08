@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"sync"
 	"syscall"
@@ -31,6 +33,8 @@ type Syncer struct {
 	Db_port     int
 	Db_user     string
 	Db_password string
+	Pprof       bool
+	Ppof_port   int
 }
 
 var (
@@ -51,6 +55,8 @@ func init() {
 
 	flag.StringVar(&syncer.Host, "host", "127.0.0.1", "syncer host")
 	flag.IntVar(&syncer.Port, "port", 9190, "syncer port")
+	flag.IntVar(&syncer.Ppof_port, "pprof_port", 6060, "pprof port used for memory analyze")
+	flag.BoolVar(&syncer.Pprof, "pprof", false, "use pprof or not")
 	flag.Parse()
 
 	utils.InitLog()
@@ -151,6 +157,18 @@ func main() {
 		defer wg.Done()
 		signalMux.Serve()
 	}()
+
+	// Step 9: start pprof
+	if syncer.Pprof == true {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			var pprof_info string = fmt.Sprintf("%s:%d", syncer.Host, syncer.Ppof_port)
+			if err := http.ListenAndServe(pprof_info, nil); err != nil {
+				log.Infof("start pprof failed on: %s, error : %+v", pprof_info, err)
+			}
+		}()
+	}
 
 	// Step 9: wait for all task done
 	wg.Wait()
