@@ -37,7 +37,6 @@ func init() {
 	flag.DurationVar(&commitTxnTimeout, "commit_txn_timeout", 33*time.Second, "commmit_txn_timeout")
 	flag.DurationVar(&connectTimeout, "connect_timeout", 1*time.Second, "connect timeout")
 	flag.DurationVar(&rpcTimeout, "rpc_timeout", 3*time.Second, "rpc timeout")
-	flag.Parse()
 }
 
 // canUseNextAddr means can try next addr, err is a connection error, not a method not found or other error
