@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"strings"
 	"sync"
@@ -22,14 +23,21 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	LOCAL_REPO_NAME = ""
-
-	// streamload use 30s, we give 3s more
-	COMMIT_TXN_TIMEOUT = 33 * time.Second
+var (
+	localRepoName    string
+	commitTxnTimeout time.Duration
+	connectTimeout   time.Duration
+	rpcTimeout       time.Duration
 )
 
 var ErrFeNotMasterCompatible = xerror.NewWithoutStack(xerror.FE, "not master compatible")
+
+func init() {
+	flag.StringVar(&localRepoName, "local_repo_name", "", "local_repo_name")
+	flag.DurationVar(&commitTxnTimeout, "commit_txn_timeout", 33*time.Second, "commmit_txn_timeout")
+	flag.DurationVar(&connectTimeout, "connect_timeout", 1*time.Second, "connect timeout")
+	flag.DurationVar(&rpcTimeout, "rpc_timeout", 3*time.Second, "rpc timeout")
+}
 
 // canUseNextAddr means can try next addr, err is a connection error, not a method not found or other error
 func canUseNextAddr(err error) bool {
@@ -439,7 +447,7 @@ type singleFeClient struct {
 
 func newSingleFeClient(addr string) (*singleFeClient, error) {
 	// create kitex FrontendService client
-	if fe_client, err := feservice.NewClient("FrontendService", client.WithHostPorts(addr), client.WithConnectTimeout(CONNECT_TIMEOUT), client.WithRPCTimeout(RPC_TIMEOUT)); err != nil {
+	if fe_client, err := feservice.NewClient("FrontendService", client.WithHostPorts(addr), client.WithConnectTimeout(connectTimeout), client.WithRPCTimeout(rpcTimeout)); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "NewFeClient error: %v, addr: %s", err, addr)
 	} else {
 		return &singleFeClient{
@@ -510,7 +518,7 @@ func (rpc *singleFeClient) CommitTransaction(spec *base.Spec, txnId int64, commi
 	req.TxnId = &txnId
 	req.CommitInfos = commitInfos
 
-	if result, err := client.CommitTxn(context.Background(), req, callopt.WithRPCTimeout(COMMIT_TXN_TIMEOUT)); err != nil {
+	if result, err := client.CommitTxn(context.Background(), req, callopt.WithRPCTimeout(commitTxnTimeout)); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "CommitTransaction error: %v, req: %+v", err, req)
 	} else {
 		return result, nil
