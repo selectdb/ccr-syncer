@@ -145,6 +145,10 @@ suite("test_bloomfilter_index") {
         return false
     }
     assertTrue(checkShowTimesOf("""
+                                SHOW INDEXES FROM ${context.dbName}.${tableName}
+                                """, 
+                                checkNgramBf1, 30, "sql"))
+    assertTrue(checkShowTimesOf("""
                                 SHOW INDEXES FROM TEST_${context.dbName}.${tableName}
                                 """, 
                                 checkNgramBf1, 30, "target"))
