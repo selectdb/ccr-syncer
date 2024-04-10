@@ -120,7 +120,7 @@ suite("test_materialized_index") {
 
     assertTrue(checkShowTimesOf("""
                                 SHOW ALTER TABLE ROLLUP 
-                                FROM ${context.dbName}
+                                FROM TEST_${context.dbName}
                                 WHERE TableName = "${tableName}" AND State = "FINISHED"
                                 """, 
                                 materializedFinished, 30, "target"))
@@ -134,6 +134,12 @@ suite("test_materialized_index") {
     assertTrue(checkShowTimesOf("""
                                 SHOW ALTER TABLE ROLLUP 
                                 FROM ${context.dbName}
+                                WHERE TableName = "${tableName}" AND State = "FINISHED"
+                                """, 
+                                materializedFinished, 30, "sql"))
+    assertTrue(checkShowTimesOf("""
+                                SHOW ALTER TABLE ROLLUP 
+                                FROM TEST_${context.dbName}
                                 WHERE TableName = "${tableName}" AND State = "FINISHED"
                                 """, 
                                 materializedFinished, 30, "target"))
