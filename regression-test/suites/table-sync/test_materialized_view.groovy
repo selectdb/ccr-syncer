@@ -118,12 +118,19 @@ suite("test_materialized_index") {
 
     assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
 
+    def checkViewExists = { res -> Boolean
+        for (List<Object> row : res) {
+            if ((row[1] as String).contains("mtr_${tableName}_full")) {
+                return true
+            }
+        }
+        return false
+    }
     assertTrue(checkShowTimesOf("""
-                                SHOW ALTER TABLE ROLLUP 
-                                FROM TEST_${context.dbName}
-                                WHERE TableName = "${tableName}" AND State = "FINISHED"
-                                """, 
-                                materializedFinished, 30, "target"))
+                                SHOW CREATE MATERIALIZED VIEW mtr_${tableName}_full
+                                ON ${tableName}
+                                """,
+                                checkViewExists, 30, "target"))
 
 
     logger.info("=== Test 2: incremental update rollup ===")
@@ -131,17 +138,34 @@ suite("test_materialized_index") {
         CREATE MATERIALIZED VIEW ${tableName}_incr AS
         SELECT id, col2, col4 FROM ${tableName}
         """
+
+    def materializedFinished1 = { res -> Boolean
+        for (List<Object> row : res) {
+            if ((row[5] as String).contains("${tableName}_incr")) {
+                return true
+            }
+        }
+        return false
+    }
     assertTrue(checkShowTimesOf("""
-                                SHOW ALTER TABLE ROLLUP 
+                                SHOW ALTER TABLE ROLLUP
                                 FROM ${context.dbName}
                                 WHERE TableName = "${tableName}" AND State = "FINISHED"
-                                """, 
-                                materializedFinished, 30, "sql"))
+                                """,
+                                materializedFinished1, 30, "sql"))
+
+    def checkViewExists1 = { res -> Boolean
+        for (List<Object> row : res) {
+            if ((row[1] as String).contains("${tableName}_incr")) {
+                return true
+            }
+        }
+        return false
+    }
     assertTrue(checkShowTimesOf("""
-                                SHOW ALTER TABLE ROLLUP 
-                                FROM TEST_${context.dbName}
-                                WHERE TableName = "${tableName}" AND State = "FINISHED"
-                                """, 
-                                materializedFinished, 30, "target"))
-    
+                                SHOW CREATE MATERIALIZED VIEW ${tableName}_incr
+                                ON ${tableName}
+                                """,
+                                checkViewExists1, 30, "target"))
+
 }
