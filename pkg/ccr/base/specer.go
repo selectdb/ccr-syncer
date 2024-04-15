@@ -28,6 +28,7 @@ type Specer interface {
 	CheckTableExists() (bool, error)
 	CreateSnapshotAndWaitForDone(tables []string) (string, error)
 	CheckRestoreFinished(snapshotName string) (bool, error)
+	GetRestoreSignatureNotMatchedTable(snapshotName string) (string, error)
 	WaitTransactionDone(txnId int64) // busy wait
 
 	Exec(sql string) error
