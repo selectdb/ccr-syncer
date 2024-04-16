@@ -3,6 +3,7 @@ package base
 import (
 	"database/sql"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -14,10 +15,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var ErrRestoreSignatureNotMatched = xerror.NewWithoutStack(xerror.Normal, "The signature is not matched, the table already exist but with different schema")
+
 const (
 	BACKUP_CHECK_DURATION  = time.Second * 3
 	RESTORE_CHECK_DURATION = time.Second * 3
 	MAX_CHECK_RETRY_TIMES  = 86400 // 3 day
+	SIGNATURE_NOT_MATCHED  = "already exist but with different schema"
 )
 
 type BackupState int
@@ -46,7 +50,6 @@ func (s BackupState) String() string {
 
 func formatKeyWordName(name string) string {
 	return "`" + strings.TrimSpace(name) + "`"
-
 }
 
 func ParseBackupState(state string) BackupState {
@@ -534,12 +537,12 @@ func (s *Spec) CheckBackupFinished(snapshotName string) (bool, error) {
 }
 
 // TODO: Add TaskErrMsg
-func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, error) {
+func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, string, error) {
 	log.Debugf("check restore state %s", snapshotName)
 
 	db, err := s.Connect()
 	if err != nil {
-		return RestoreStateUnknown, err
+		return RestoreStateUnknown, "", err
 	}
 
 	query := fmt.Sprintf("SHOW RESTORE FROM %s WHERE Label = \"%s\"", formatKeyWordName(s.Database), snapshotName)
@@ -547,38 +550,46 @@ func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, error) {
 	log.Debugf("check restore state sql: %s", query)
 	rows, err := db.Query(query)
 	if err != nil {
-		return RestoreStateUnknown, xerror.Wrap(err, xerror.Normal, "query restore state failed")
+		return RestoreStateUnknown, "", xerror.Wrap(err, xerror.Normal, "query restore state failed")
 	}
 	defer rows.Close()
 
 	var restoreStateStr string
+	var restoreStatusStr string
 	if rows.Next() {
 		rowParser := utils.NewRowParser()
 		if err := rowParser.Parse(rows); err != nil {
-			return RestoreStateUnknown, xerror.Wrap(err, xerror.Normal, "scan restore state failed")
+			return RestoreStateUnknown, "", xerror.Wrap(err, xerror.Normal, "scan restore state failed")
 		}
 		restoreStateStr, err = rowParser.GetString("State")
 		if err != nil {
-			return RestoreStateUnknown, xerror.Wrap(err, xerror.Normal, "scan restore state failed")
+			return RestoreStateUnknown, "", xerror.Wrap(err, xerror.Normal, "scan restore state failed")
+		}
+		restoreStatusStr, err = rowParser.GetString("Status")
+		if err != nil {
+			return RestoreStateUnknown, "", xerror.Wrap(err, xerror.Normal, "scan restore status failed")
 		}
 
-		log.Infof("check snapshot %s restore state: [%v]", snapshotName, restoreStateStr)
+		log.Infof("check snapshot %s restore state: [%v], restore status: %s",
+			snapshotName, restoreStateStr, restoreStatusStr)
 
-		return _parseRestoreState(restoreStateStr), nil
+		return _parseRestoreState(restoreStateStr), restoreStatusStr, nil
 	}
-	return RestoreStateUnknown, xerror.Errorf(xerror.Normal, "no restore state found")
+	return RestoreStateUnknown, "", xerror.Errorf(xerror.Normal, "no restore state found")
 }
 
 func (s *Spec) CheckRestoreFinished(snapshotName string) (bool, error) {
 	log.Debugf("check restore state is finished, spec: %s, datebase: %s, snapshot: %s", s.String(), s.Database, snapshotName)
 
 	for i := 0; i < MAX_CHECK_RETRY_TIMES; i++ {
-		if backupState, err := s.checkRestoreFinished(snapshotName); err != nil {
+		if restoreState, status, err := s.checkRestoreFinished(snapshotName); err != nil {
 			return false, err
-		} else if backupState == RestoreStateFinished {
+		} else if restoreState == RestoreStateFinished {
 			return true, nil
-		} else if backupState == RestoreStateCancelled {
-			return false, xerror.Errorf(xerror.Normal, "backup failed or canceled, spec: %s, snapshot: %s", s.String(), snapshotName)
+		} else if restoreState == RestoreStateCancelled && strings.Contains(status, SIGNATURE_NOT_MATCHED) {
+			return false, xerror.XWrapf(ErrRestoreSignatureNotMatched, "restore failed, spec: %s, snapshot: %s, status: %s", s.String(), snapshotName, status)
+		} else if restoreState == RestoreStateCancelled {
+			return false, xerror.Errorf(xerror.Normal, "restore failed or canceled, spec: %s, snapshot: %s, status: %s", s.String(), snapshotName, status)
 		} else {
 			// RestoreStatePending, RestoreStateUnknown
 			time.Sleep(RESTORE_CHECK_DURATION)
@@ -587,6 +598,34 @@ func (s *Spec) CheckRestoreFinished(snapshotName string) (bool, error) {
 
 	log.Warnf("check restore state timeout, max try times: %d, spec: %s, snapshot: %s", MAX_CHECK_RETRY_TIMES, s, snapshotName)
 	return false, nil
+}
+
+func (s *Spec) GetRestoreSignatureNotMatchedTable(snapshotName string) (string, error) {
+	log.Debugf("get restore signature not matched table, spec: %s, datebase: %s, snapshot: %s", s.String(), s.Database, snapshotName)
+
+	for i := 0; i < MAX_CHECK_RETRY_TIMES; i++ {
+		if restoreState, status, err := s.checkRestoreFinished(snapshotName); err != nil {
+			return "", err
+		} else if restoreState == RestoreStateFinished {
+			return "", nil
+		} else if restoreState == RestoreStateCancelled && strings.Contains(status, SIGNATURE_NOT_MATCHED) {
+			pattern := regexp.MustCompile("Table (?P<tableName>.*) already exist but with different schema")
+			matches := pattern.FindStringSubmatch(status)
+			index := pattern.SubexpIndex("tableName")
+			if len(matches) < index && len(matches[index]) == 0 {
+				return "", xerror.Errorf(xerror.Normal, "match table name from restore status failed, spec: %s, snapshot: %s, status: %s", s.String(), snapshotName, status)
+			}
+			return matches[index], nil
+		} else if restoreState == RestoreStateCancelled {
+			return "", xerror.Errorf(xerror.Normal, "restore failed or canceled, spec: %s, snapshot: %s, status: %s", s.String(), snapshotName, status)
+		} else {
+			// RestoreStatePending, RestoreStateUnknown
+			time.Sleep(RESTORE_CHECK_DURATION)
+		}
+	}
+
+	log.Warnf("get restore signature not matched timeout, max try times: %d, spec: %s, snapshot: %s", MAX_CHECK_RETRY_TIMES, s, snapshotName)
+	return "", nil
 }
 
 func (s *Spec) waitTransactionDone(txnId int64) error {

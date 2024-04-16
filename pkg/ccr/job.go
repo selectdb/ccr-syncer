@@ -442,7 +442,28 @@ func (j *Job) fullSync() error {
 
 		for {
 			restoreFinished, err := j.IDest.CheckRestoreFinished(restoreSnapshotName)
-			if err != nil {
+			if err != nil && errors.Is(err, base.ErrRestoreSignatureNotMatched) {
+				// We need rebuild the exists table.
+				var tableName string
+				if j.SyncType == TableSync {
+					tableName = j.Dest.Table
+				} else {
+					tableName, err = j.IDest.GetRestoreSignatureNotMatchedTable(restoreSnapshotName)
+					if err != nil || len(tableName) == 0 {
+						continue
+					}
+				}
+				log.Infof("the signature of table %s is not matched with the target table in snapshot", tableName)
+				for {
+					dropSql := fmt.Sprintf("DROP TABLE %s FORCE", tableName)
+					log.Infof("drop table sql: %s", dropSql)
+					if err := j.destMeta.DbExec(dropSql); err == nil {
+						break
+					}
+				}
+				log.Infof("the restore is cancelled, the unmatched table %s is dropped, restore snapshot again", tableName)
+				break
+			} else if err != nil {
 				return err
 			}
 
