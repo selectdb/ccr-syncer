@@ -1,5 +1,19 @@
 # 更新日志
 
+## latest
+
+### Feature
+
+- 添加选项以启动 pprof server
+- 允许配置 rpc 合 connection 超时
+
+### Fix
+
+- restore 每次重试时使用不同的 label 名
+- update table 失败时（目标表不存在）会触发快照同步
+- 修复同步 sql 中包含关键字的问题
+- 如果恢复时碰到表 schema 发生变化，会先删表再重试恢复
+
 ## v 0.5
 
 ### 支持高可用
