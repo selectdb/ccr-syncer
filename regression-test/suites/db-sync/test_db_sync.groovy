@@ -223,7 +223,7 @@ suite("test_db_sync") {
     def tableUnique1 = "tbl_common_1_" + UUID.randomUUID().toString().replace("-", "")
     def tableAggregate1 = "tbl_aggregate_1_" + UUID.randomUUID().toString().replace("-", "")
     def tableDuplicate1 = "tbl_duplicate_1_" + UUID.randomUUID().toString().replace("-", "")
-    def keywordTableName = "roles"
+    def keywordTableName = "`roles`"
 
     createUniqueTable(tableUnique1)
     createAggergateTable(tableAggregate1)
