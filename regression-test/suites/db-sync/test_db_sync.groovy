@@ -247,7 +247,7 @@ suite("test_db_sync") {
     }
     for (int index = 0; index < insert_num; index++) {
         sql """
-            INSERT INTO ${keywordTableName} VALUES (${test_num}, ${index}, '${date_num}')
+            INSERT INTO ${keywordTableName} VALUES (${test_num}, ${index})
             """
     }
 
