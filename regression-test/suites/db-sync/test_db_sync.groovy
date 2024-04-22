@@ -33,7 +33,7 @@ suite("test_db_sync") {
             )
             ENGINE=OLAP
             UNIQUE KEY(`test`, `id`, `date_time`)
-            AUTO PARTITION BY RANGE date_trunc(`date_time`, 'day')
+            AUTO PARTITION BY RANGE (date_trunc(`date_time`, 'day'))
             (
             )
             DISTRIBUTED BY HASH(id) BUCKETS AUTO
@@ -57,7 +57,7 @@ suite("test_db_sync") {
             )
             ENGINE=OLAP
             AGGREGATE KEY(`test`, `date_time`)
-            AUTO PARTITION BY RANGE date_trunc(`date_time`, 'day')
+            AUTO PARTITION BY RANGE (date_trunc(`date_time`, 'day'))
             (
             )
             DISTRIBUTED BY HASH(`test`) BUCKETS AUTO
@@ -79,7 +79,7 @@ suite("test_db_sync") {
             )
             ENGINE=OLAP
             DUPLICATE KEY(`test`, `id`, `date_time`)
-            AUTO PARTITION BY RANGE date_trunc(`date_time`, 'day')
+            AUTO PARTITION BY RANGE (date_trunc(`date_time`, 'day'))
             (
             )
             DISTRIBUTED BY HASH(id) BUCKETS AUTO
