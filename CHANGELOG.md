@@ -2,6 +2,10 @@
 
 ## dev
 
+## v 2.0.3.9
+
+配合 doris 2.0.9 版本
+
 ### Feature
 
 - 添加选项以启动 pprof server
