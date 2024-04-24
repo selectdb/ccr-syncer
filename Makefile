@@ -152,7 +152,7 @@ todos:
 ## tarball : Archive files and release ccr-syncer-$(version).tar.xz
 tarball: default
 	$(V)mkdir -p tarball/ccr-syncer-$(tag)/{bin,db,doc,log}
-	$(V)cp CHANGELOG.md README.md tarball/ccr-syncer-$(tag)/
+	$(V)cp CHANGELOG.md README.md LICENSE tarball/ccr-syncer-$(tag)/
 	$(V)cp bin/ccr_syncer tarball/ccr-syncer-$(tag)/bin/
 	$(V)cp shell/{enable_db_binlog.sh,start_syncer.sh,stop_syncer.sh} tarball/ccr-syncer-$(tag)/bin/
 	$(V)cp -r doc/* tarball/ccr-syncer-$(tag)/doc/
