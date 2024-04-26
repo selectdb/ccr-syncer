@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_keyword_nema") {
+suite("test_keyword_name") {
 
     def tableName = "roles"
     def syncerAddress = "127.0.0.1:9190"
@@ -90,6 +90,8 @@ suite("test_keyword_nema") {
         return res.size() == 0
     }
 
+    sql "DROP TABLE IF EXISTS `${tableName}` FORCE"
+    target_sql "DROP TABLE IF EXISTS `${tableName}` FORCE"
     sql """
         CREATE TABLE `${tableName}` (
             role_id       INT,
@@ -98,6 +100,10 @@ suite("test_keyword_nema") {
             register_time DATE
         )
         UNIQUE KEY(role_id)
+        PARTITION BY RANGE (role_id)
+        (
+            PARTITION p1 VALUES LESS THAN ("10")
+        )
         DISTRIBUTED BY HASH(role_id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
@@ -130,8 +136,6 @@ suite("test_keyword_nema") {
 
     assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
 
-
-
     logger.info("=== Test 1: Check keyword name table ===")
     // def checkShowTimesOf = { sqlString, myClosure, times, func = "sql" -> Boolean
     assertTrue(checkShowTimesOf("""
@@ -139,4 +143,28 @@ suite("test_keyword_nema") {
                                 """,
                                 exist, 30, "target"))
 
+    logger.info("=== Test 2: Add new partition ===")
+    sql """
+    ALTER TABLE `${tableName}` ADD PARTITION p2
+    VALUES LESS THAN ("20")
+    """
+
+    sql """
+        INSERT INTO `${tableName}` VALUES
+        (11, 'who am I', NULL, NULL),
+        (12, 'mage', 'alliance', '2018-12-03 16:11:28');
+     """
+
+    def checkNewPartition = { inputRes -> Boolean
+        for (List<Object> row : inputRes) {
+            if ((row[1] as String).contains("PARTITION p2")) {
+                return true
+            }
+        }
+        return false
+    }
+    assertTrue(checkShowTimesOf("""
+                                SHOW CREATE TABLE `TEST_${context.dbName}`.`${tableName}`
+                                """,
+                                checkNewPartition, 30, "target"))
 }
