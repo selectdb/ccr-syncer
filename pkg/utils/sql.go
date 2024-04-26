@@ -3,6 +3,7 @@ package utils
 import (
 	"database/sql"
 	"strconv"
+	"strings"
 
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 )
@@ -82,4 +83,8 @@ func (r *RowParser) GetString(columnName string) (string, error) {
 	}
 
 	return string(*resBytes), nil
+}
+
+func FormatKeywordName(name string) string {
+	return "`" + strings.TrimSpace(name) + "`"
 }

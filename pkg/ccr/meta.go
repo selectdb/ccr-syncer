@@ -143,6 +143,7 @@ func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) 
 	}
 
 	query := fmt.Sprintf("show proc '/dbs/%d/'", dbId)
+	log.Infof("UpdateTable Sql: %s", query)
 	rows, err := db.Query(query)
 	if err != nil {
 		return nil, xerror.Wrap(err, xerror.Normal, query)
@@ -185,7 +186,7 @@ func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) 
 	}
 
 	// not found
-	return nil, xerror.Errorf(xerror.Normal, "tableId %v not found table", tableId)
+	return nil, xerror.Errorf(xerror.Meta, "tableName %s tableId %v not found table", tableName, tableId)
 }
 
 func (m *Meta) GetTable(tableId int64) (*TableMeta, error) {

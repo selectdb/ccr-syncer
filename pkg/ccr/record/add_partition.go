@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
 	log "github.com/sirupsen/logrus"
@@ -53,7 +54,7 @@ func (addPartition *AddPartition) getDistributionColumns() []string {
 
 func (addPartition *AddPartition) GetSql(destTableName string) string {
 	// addPartitionSql = "ALTER TABLE " + sql
-	addPartitionSql := fmt.Sprintf("ALTER TABLE %s %s", destTableName, addPartition.Sql)
+	addPartitionSql := fmt.Sprintf("ALTER TABLE %s %s", utils.FormatKeywordName(destTableName), addPartition.Sql)
 	// remove last ';' and add BUCKETS num
 	addPartitionSql = strings.TrimRight(addPartitionSql, ";")
 	// check contains BUCKETS num, ignore case
