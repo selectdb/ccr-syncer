@@ -931,7 +931,7 @@ func (j *Job) handleDropPartition(binlog *festruct.TBinlog) error {
 	}
 
 	// dropPartitionSql = "ALTER TABLE " + sql
-	dropPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s", destDbName, destTableName, dropPartition.Sql)
+	dropPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s", utils.FormatKeywordName(destDbName), utils.FormatKeywordName(destTableName), dropPartition.Sql)
 	log.Infof("dropPartitionSql: %s", dropPartitionSql)
 	return j.IDest.Exec(dropPartitionSql)
 }
@@ -1047,9 +1047,9 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 		// drop table dropTableSql
 		var dropTableSql string
 		if j.SyncType == TableSync {
-			dropTableSql = fmt.Sprintf("DROP TABLE %s FORCE", j.Dest.Table)
+			dropTableSql = fmt.Sprintf("DROP TABLE %s FORCE", utils.FormatKeywordName(j.Dest.Table))
 		} else {
-			dropTableSql = fmt.Sprintf("DROP TABLE %s FORCE", alterJob.TableName)
+			dropTableSql = fmt.Sprintf("DROP TABLE %s FORCE", utils.FormatKeywordName(alterJob.TableName))
 		}
 		log.Infof("dropTableSql: %s", dropTableSql)
 
@@ -1107,9 +1107,9 @@ func (j *Job) handleTruncateTable(binlog *festruct.TBinlog) error {
 
 	var sql string
 	if truncateTable.RawSql == "" {
-		sql = fmt.Sprintf("TRUNCATE TABLE %s", destTableName)
+		sql = fmt.Sprintf("TRUNCATE TABLE %s", utils.FormatKeywordName(destTableName))
 	} else {
-		sql = fmt.Sprintf("TRUNCATE TABLE %s %s", destTableName, truncateTable.RawSql)
+		sql = fmt.Sprintf("TRUNCATE TABLE %s %s", utils.FormatKeywordName(destTableName), truncateTable.RawSql)
 	}
 
 	log.Infof("truncateTableSql: %s", sql)

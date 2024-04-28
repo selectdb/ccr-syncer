@@ -168,11 +168,11 @@ suite("test_keyword_name") {
                                 """,
                                 checkNewPartition, 30, "target"))
 
-    logger.info("=== Test 3: Drop table ===")
-    sql "DROP TABLE `${tableName}`"
+    logger.info("=== Test 3: Truncate table ===")
+    sql "TRUNCATE TABLE `${tableName}`"
 
     assertTrue(checkShowTimesOf("""
-                                SHOW CREATE TABLE `TEST_${context.dbName}`.`${tableName}`
+                                SELECT * FROM `TEST_${context.dbName}`.`${tableName}`
                                 """,
                                 notExist, 30, "target"))
 }
