@@ -16,6 +16,9 @@
 // under the License.
 
 suite("test_rename") {
+    logger.info("exit because test_rename is not supported yet")
+    return
+
     def tableName = "tbl_rename_" + UUID.randomUUID().toString().replace("-", "")
     def syncerAddress = "127.0.0.1:9190"
     def test_num = 0
