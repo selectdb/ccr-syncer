@@ -167,4 +167,16 @@ suite("test_keyword_name") {
                                 SHOW CREATE TABLE `TEST_${context.dbName}`.`${tableName}`
                                 """,
                                 checkNewPartition, 30, "target"))
+
+    logger.info("=== Test 3: Drop table ===")
+    sql "DROP TABLE `${tableName}`"
+
+    def notExist = { res -> Boolean
+        return res.size() == 0
+    }
+
+    assertTrue(checkShowTimesOf("""
+                                SHOW CREATE TABLE `TEST_${context.dbName}`.`${tableName}`
+                                """,
+                                notExist, 30, "target"))
 }
