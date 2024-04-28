@@ -455,7 +455,7 @@ func (j *Job) fullSync() error {
 				}
 				log.Infof("the signature of table %s is not matched with the target table in snapshot", tableName)
 				for {
-					dropSql := fmt.Sprintf("DROP TABLE %s FORCE", tableName)
+					dropSql := fmt.Sprintf("DROP TABLE %s FORCE", utils.FormatKeywordName(tableName))
 					log.Infof("drop table sql: %s", dropSql)
 					if err := j.destMeta.DbExec(dropSql); err == nil {
 						break
