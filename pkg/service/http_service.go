@@ -527,6 +527,7 @@ func (s *HttpService) jobDetailHandler(w http.ResponseWriter, r *http.Request) {
 		jobResult = &result{
 			defaultResult: newErrorResult("name is empty"),
 		}
+		return
 	}
 
 	if s.redirect(request.Name, w, r) {
