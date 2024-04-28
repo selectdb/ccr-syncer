@@ -497,6 +497,57 @@ func (s *HttpService) listJobsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// get job details
+func (s *HttpService) jobDetailHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("get job detail")
+
+	type result struct {
+		*defaultResult
+		JobDetail string `json:"job_detail"`
+	}
+
+	var jobResult *result
+	defer func() { writeJson(w, jobResult) }()
+
+	// Parse the JSON request body
+	var request CcrCommonRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Warnf("get job detail failed: %+v", err)
+
+		jobResult = &result{
+			defaultResult: newErrorResult(err.Error()),
+		}
+		return
+	}
+
+	if request.Name == "" {
+		log.Warnf("get job detail failed: name is empty")
+
+		jobResult = &result{
+			defaultResult: newErrorResult("name is empty"),
+		}
+		return
+	}
+
+	if s.redirect(request.Name, w, r) {
+		return
+	}
+
+	if jobDetail, err := s.db.GetJobInfo(request.Name); err != nil {
+		log.Warnf("get job info failed: %+v", err)
+
+		jobResult = &result{
+			defaultResult: newErrorResult(err.Error()),
+		}
+	} else {
+		jobResult = &result{
+			defaultResult: newSuccessResult(),
+			JobDetail:     jobDetail,
+		}
+	}
+}
+
 func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/version", s.versionHandler)
 	s.mux.HandleFunc("/create_ccr", s.createHandler)
@@ -508,6 +559,7 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/desync", s.desyncHandler)
 	s.mux.HandleFunc("/update_job", s.updateJobHandler)
 	s.mux.HandleFunc("/list_jobs", s.listJobsHandler)
+	s.mux.HandleFunc("/job_detail", s.jobDetailHandler)
 	s.mux.Handle("/metrics", promhttp.Handler())
 }
 
