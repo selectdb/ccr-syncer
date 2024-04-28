@@ -24,7 +24,7 @@
 -- !sql --
 2	bason	bason hate pear	98
 
--- !sql --
+-- !target_sql --
 1	andy	andy love apple	100
 1	bason	bason hate pear	100
 2	andy	andy love apple	100
@@ -34,54 +34,20 @@
 4	andy	andy love apple	100
 4	bason	bason hate pear	99
 
--- !sql --
+-- !target_sql --
 1	andy	andy love apple	100
 2	andy	andy love apple	100
 3	andy	andy love apple	100
 4	andy	andy love apple	100
 
--- !sql --
+-- !target_sql --
 1	bason	bason hate pear	100
 2	bason	bason hate pear	98
 3	bason	bason hate pear	99
 4	bason	bason hate pear	99
 
--- !sql --
+-- !target_sql --
 2	bason	bason hate pear	98
-
--- !sql --
-1	andy	andy love apple	100
-1	bason	bason hate pear	100
-2	andy	andy love apple	100
-2	bason	bason hate pear	98
-3	andy	andy love apple	100
-3	bason	bason hate pear	99
-4	andy	andy love apple	100
-4	bason	bason hate pear	99
-5	andy	andy love apple	100
-5	bason	bason hate pear	99
-6	andy	andy love apple	98
-6	bason	bason hate pear	99
-
--- !sql --
-1	andy	andy love apple	100
-2	andy	andy love apple	100
-3	andy	andy love apple	100
-4	andy	andy love apple	100
-5	andy	andy love apple	100
-6	andy	andy love apple	98
-
--- !sql --
-1	bason	bason hate pear	100
-2	bason	bason hate pear	98
-3	bason	bason hate pear	99
-4	bason	bason hate pear	99
-5	bason	bason hate pear	99
-6	bason	bason hate pear	99
-
--- !sql --
-2	bason	bason hate pear	98
-6	andy	andy love apple	98
 
 -- !sql --
 1	andy	andy love apple	100
@@ -117,6 +83,40 @@
 2	bason	bason hate pear	98
 6	andy	andy love apple	98
 
+-- !target_sql --
+1	andy	andy love apple	100
+1	bason	bason hate pear	100
+2	andy	andy love apple	100
+2	bason	bason hate pear	98
+3	andy	andy love apple	100
+3	bason	bason hate pear	99
+4	andy	andy love apple	100
+4	bason	bason hate pear	99
+5	andy	andy love apple	100
+5	bason	bason hate pear	99
+6	andy	andy love apple	98
+6	bason	bason hate pear	99
+
+-- !target_sql --
+1	andy	andy love apple	100
+2	andy	andy love apple	100
+3	andy	andy love apple	100
+4	andy	andy love apple	100
+5	andy	andy love apple	100
+6	andy	andy love apple	98
+
+-- !target_sql --
+1	bason	bason hate pear	100
+2	bason	bason hate pear	98
+3	bason	bason hate pear	99
+4	bason	bason hate pear	99
+5	bason	bason hate pear	99
+6	bason	bason hate pear	99
+
+-- !target_sql --
+2	bason	bason hate pear	98
+6	andy	andy love apple	98
+
 -- !sql --
 1	bason	bason hate pear	100
 2	bason	bason hate pear	98
@@ -134,21 +134,21 @@
 -- !sql --
 2	bason	bason hate pear	98
 
--- !sql --
+-- !target_sql --
 1	bason	bason hate pear	100
 2	bason	bason hate pear	98
 3	bason	bason hate pear	99
 4	andy	andy love apple	100
 
--- !sql --
+-- !target_sql --
 4	andy	andy love apple	100
 
--- !sql --
+-- !target_sql --
 1	bason	bason hate pear	100
 2	bason	bason hate pear	98
 3	bason	bason hate pear	99
 
--- !sql --
+-- !target_sql --
 2	bason	bason hate pear	98
 
 -- !sql --
@@ -173,6 +173,62 @@
 2	bason	bason hate pear	98
 6	andy	andy love apple	98
 
+-- !target_sql --
+1	bason	bason hate pear	100
+2	bason	bason hate pear	98
+3	bason	bason hate pear	99
+4	andy	andy love apple	100
+5	andy	andy love apple	100
+6	andy	andy love apple	98
+
+-- !target_sql --
+4	andy	andy love apple	100
+5	andy	andy love apple	100
+6	andy	andy love apple	98
+
+-- !target_sql --
+1	bason	bason hate pear	100
+2	bason	bason hate pear	98
+3	bason	bason hate pear	99
+
+-- !target_sql --
+2	bason	bason hate pear	98
+6	andy	andy love apple	98
+
+-- !sql --
+1	bason	bason hate pear	100
+2	bason	bason hate pear	98
+3	bason	bason hate pear	99
+4	andy	andy love apple	100
+
+-- !sql --
+4	andy	andy love apple	100
+
+-- !sql --
+1	bason	bason hate pear	100
+2	bason	bason hate pear	98
+3	bason	bason hate pear	99
+
+-- !sql --
+2	bason	bason hate pear	98
+
+-- !target_sql --
+1	bason	bason hate pear	100
+2	bason	bason hate pear	98
+3	bason	bason hate pear	99
+4	andy	andy love apple	100
+
+-- !target_sql --
+4	andy	andy love apple	100
+
+-- !target_sql --
+1	bason	bason hate pear	100
+2	bason	bason hate pear	98
+3	bason	bason hate pear	99
+
+-- !target_sql --
+2	bason	bason hate pear	98
+
 -- !sql --
 1	bason	bason hate pear	100
 2	bason	bason hate pear	98
@@ -195,41 +251,7 @@
 2	bason	bason hate pear	98
 6	andy	andy love apple	98
 
--- !sql --
-1	bason	bason hate pear	100
-2	bason	bason hate pear	98
-3	bason	bason hate pear	99
-4	andy	andy love apple	100
-
--- !sql --
-4	andy	andy love apple	100
-
--- !sql --
-1	bason	bason hate pear	100
-2	bason	bason hate pear	98
-3	bason	bason hate pear	99
-
--- !sql --
-2	bason	bason hate pear	98
-
--- !sql --
-1	bason	bason hate pear	100
-2	bason	bason hate pear	98
-3	bason	bason hate pear	99
-4	andy	andy love apple	100
-
--- !sql --
-4	andy	andy love apple	100
-
--- !sql --
-1	bason	bason hate pear	100
-2	bason	bason hate pear	98
-3	bason	bason hate pear	99
-
--- !sql --
-2	bason	bason hate pear	98
-
--- !sql --
+-- !target_sql --
 1	bason	bason hate pear	100
 2	bason	bason hate pear	98
 3	bason	bason hate pear	99
@@ -237,39 +259,17 @@
 5	andy	andy love apple	100
 6	andy	andy love apple	98
 
--- !sql --
+-- !target_sql --
 4	andy	andy love apple	100
 5	andy	andy love apple	100
 6	andy	andy love apple	98
 
--- !sql --
+-- !target_sql --
 1	bason	bason hate pear	100
 2	bason	bason hate pear	98
 3	bason	bason hate pear	99
 
--- !sql --
-2	bason	bason hate pear	98
-6	andy	andy love apple	98
-
--- !sql --
-1	bason	bason hate pear	100
-2	bason	bason hate pear	98
-3	bason	bason hate pear	99
-4	andy	andy love apple	100
-5	andy	andy love apple	100
-6	andy	andy love apple	98
-
--- !sql --
-4	andy	andy love apple	100
-5	andy	andy love apple	100
-6	andy	andy love apple	98
-
--- !sql --
-1	bason	bason hate pear	100
-2	bason	bason hate pear	98
-3	bason	bason hate pear	99
-
--- !sql --
+-- !target_sql --
 2	bason	bason hate pear	98
 6	andy	andy love apple	98
 
