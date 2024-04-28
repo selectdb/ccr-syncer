@@ -1004,7 +1004,7 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 		tableName = srcTable.Name
 	}
 
-	sql := fmt.Sprintf("DROP TABLE %s FORCE", tableName)
+	sql := fmt.Sprintf("DROP TABLE %s FORCE", utils.FormatKeywordName(tableName))
 	log.Infof("dropTableSql: %s", sql)
 	if err = j.IDest.DbExec(sql); err != nil {
 		return err
