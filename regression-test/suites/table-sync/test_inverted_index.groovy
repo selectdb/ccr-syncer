@@ -77,16 +77,23 @@ suite("test_inverted_index") {
         sql """ INSERT INTO ${tableName} VALUES (6, "andy", "andy love apple", 98); """
     }
 
-    def run_sql = { String db -> 
-        qt_sql """ select * from ${db}.${tableName} order by id, name, hobbies, score """
-        qt_sql """ select * from ${db}.${tableName} where name match "andy" order by id, name, hobbies, score """
-        qt_sql """ select * from ${db}.${tableName} where hobbies match "pear" order by id, name, hobbies, score """
-        qt_sql """ select * from ${db}.${tableName} where score < 99 order by id, name, hobbies, score """
+    def run_sql = { String db ->
+        if (db.startsWith('TEST_')) {
+            qt_target_sql """ select * from ${db}.${tableName} order by id, name, hobbies, score """
+            qt_target_sql """ select * from ${db}.${tableName} where name match "andy" order by id, name, hobbies, score """
+            qt_target_sql """ select * from ${db}.${tableName} where hobbies match "pear" order by id, name, hobbies, score """
+            qt_target_sql """ select * from ${db}.${tableName} where score < 99 order by id, name, hobbies, score """
+        } else {
+            qt_sql """ select * from ${db}.${tableName} order by id, name, hobbies, score """
+            qt_sql """ select * from ${db}.${tableName} where name match "andy" order by id, name, hobbies, score """
+            qt_sql """ select * from ${db}.${tableName} where hobbies match "pear" order by id, name, hobbies, score """
+            qt_sql """ select * from ${db}.${tableName} where score < 99 order by id, name, hobbies, score """
+        }
     }
 
     def run_test = { ->
         insert_data.call()
-        
+
         sql """ALTER TABLE ${tableName} set ("binlog.enable" = "true")"""
         sql "sync"
 
