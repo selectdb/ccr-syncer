@@ -503,7 +503,7 @@ func (s *HttpService) jobDetailHandler(w http.ResponseWriter, r *http.Request) {
 
 	type result struct {
 		*defaultResult
-		JobDetail string `json:"job detail"`
+		JobDetail string `json:"job_detail"`
 	}
 
 	var jobResult *result
@@ -518,13 +518,14 @@ func (s *HttpService) jobDetailHandler(w http.ResponseWriter, r *http.Request) {
 		jobResult = &result{
 			defaultResult: newErrorResult(err.Error()),
 		}
+		return
 	}
 
 	if request.Name == "" {
 		log.Warnf("get job detail failed: name is empty")
 
 		jobResult = &result{
-			defaultResult: newErrorResult(err.Error()),
+			defaultResult: newErrorResult("name is empty"),
 		}
 	}
 
