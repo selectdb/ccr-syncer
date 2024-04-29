@@ -160,6 +160,27 @@ func (s *MysqlDB) UpdateProgress(jobName string, progress string) error {
 	return nil
 }
 
+func (s *MysqlDB) GetJobsInfo() (map[string]string, error) {
+	jobRows, err := s.db.Query("SELECT job_info,job_name FROM jobs")
+	if err != nil {
+		return nil, xerror.Wrap(err, xerror.DB, "mysql: get jobs detail data failed.")
+	}
+
+	jobDataMap := make(map[string]string)
+	for jobRows.Next() {
+		var jobInfo string
+		var jobName string
+
+		if err := jobRows.Scan(&jobInfo, &jobName); err != nil {
+			return nil, xerror.Wrap(err, xerror.DB, "mysql: scan jobs row failed.")
+		}
+
+		jobDataMap[jobName] = jobInfo
+	}
+
+	return jobDataMap, nil
+}
+
 func (s *MysqlDB) IsProgressExist(jobName string) (bool, error) {
 	var count int
 	if err := s.db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM progresses WHERE job_name = '%s'", jobName)).Scan(&count); err != nil {

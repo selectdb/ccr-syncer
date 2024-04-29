@@ -599,6 +599,31 @@ func (s *HttpService) jobDetailHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// get jobs details
+func (s *HttpService) jobsDetailHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("list jobs")
+
+	type result struct {
+		*defaultResult
+		Jobs map[string]string `json:"jobs,omitempty"`
+	}
+
+	var jobResult *result
+	defer func() { writeJson(w, jobResult) }()
+	if jobInfoMap, err := s.db.GetJobsInfo(); err != nil {
+		log.Warnf("get jobs' detail failed: %+v", err)
+
+		jobResult = &result{
+			defaultResult: newErrorResult(err.Error()),
+		}
+	} else {
+		jobResult = &result{
+			defaultResult: newSuccessResult(),
+			Jobs:          jobInfoMap,
+		}
+	}
+}
+
 func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/version", s.versionHandler)
 	s.mux.HandleFunc("/create_ccr", s.createHandler)
@@ -612,6 +637,7 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/list_jobs", s.listJobsHandler)
 	s.mux.HandleFunc("/job_detail", s.jobDetailHandler)
 	s.mux.HandleFunc("/job_progress", s.jobProgressHandler)
+	s.mux.HandleFunc("/all_jobs_detail", s.jobsDetailHandler)
 	s.mux.Handle("/metrics", promhttp.Handler())
 }
 

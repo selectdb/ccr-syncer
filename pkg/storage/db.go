@@ -25,6 +25,8 @@ type DB interface {
 	GetJobInfo(jobName string) (string, error)
 	// Get job_belong
 	GetJobBelong(jobName string) (string, error)
+	// Get jobs detail info
+	GetJobsInfo() (map[string]string, error)
 
 	// Update ccr sync progress
 	UpdateProgress(jobName string, progress string) error
