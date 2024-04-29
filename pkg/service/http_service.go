@@ -497,6 +497,57 @@ func (s *HttpService) listJobsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// get job progress
+func (s *HttpService) jobProgressHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("get job progress")
+
+	type result struct {
+		*defaultResult
+		JobProgress string `json:"job_progress"`
+	}
+
+	var jobResult *result
+	defer func() { writeJson(w, jobResult) }()
+
+	// Parse the JSON request body
+	var request CcrCommonRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Warnf("get job progress failed: %+v", err)
+
+		jobResult = &result{
+			defaultResult: newErrorResult(err.Error()),
+		}
+		return
+	}
+
+	if request.Name == "" {
+		log.Warnf("get job progress failed: name is empty")
+
+		jobResult = &result{
+			defaultResult: newErrorResult("name is empty"),
+		}
+		return
+	}
+
+	if s.redirect(request.Name, w, r) {
+		return
+	}
+
+	if jobProgress, err := s.db.GetProgress(request.Name); err != nil {
+		log.Warnf("get job progress failed: %+v", err)
+		jobResult = &result{
+			defaultResult: newErrorResult(err.Error()),
+		}
+	} else {
+		jobResult = &result{
+			defaultResult: newSuccessResult(),
+			JobProgress:   jobProgress,
+		}
+	}
+
+}
+
 // get job details
 func (s *HttpService) jobDetailHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("get job detail")
@@ -560,6 +611,7 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/update_job", s.updateJobHandler)
 	s.mux.HandleFunc("/list_jobs", s.listJobsHandler)
 	s.mux.HandleFunc("/job_detail", s.jobDetailHandler)
+	s.mux.HandleFunc("/job_progress", s.jobProgressHandler)
 	s.mux.Handle("/metrics", promhttp.Handler())
 }
 
