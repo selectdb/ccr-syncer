@@ -71,16 +71,17 @@ func (j JobState) String() string {
 }
 
 type Job struct {
-	SyncType  SyncType    `json:"sync_type"`
-	Name      string      `json:"name"`
-	Src       base.Spec   `json:"src"`
-	ISrc      base.Specer `json:"-"`
-	srcMeta   Metaer      `json:"-"`
-	Dest      base.Spec   `json:"dest"`
-	IDest     base.Specer `json:"-"`
-	destMeta  Metaer      `json:"-"`
-	SkipError bool        `json:"skip_error"`
-	State     JobState    `json:"state"`
+	SyncType    SyncType    `json:"sync_type"`
+	Name        string      `json:"name"`
+	Src         base.Spec   `json:"src"`
+	ISrc        base.Specer `json:"-"`
+	srcMeta     Metaer      `json:"-"`
+	Dest        base.Spec   `json:"dest"`
+	IDest       base.Specer `json:"-"`
+	destMeta    Metaer      `json:"-"`
+	SkipError   bool        `json:"skip_error"`
+	ExceptTable string      `json:"except_table"`
+	State       JobState    `json:"state"`
 
 	factory *Factory `json:"-"`
 
@@ -96,21 +97,23 @@ type Job struct {
 
 type jobContext struct {
 	context.Context
-	src       base.Spec
-	dest      base.Spec
-	db        storage.DB
-	skipError bool
-	factory   *Factory
+	src         base.Spec
+	dest        base.Spec
+	db          storage.DB
+	skipError   bool
+	exceptTable string
+	factory     *Factory
 }
 
-func NewJobContext(src, dest base.Spec, skipError bool, db storage.DB, factory *Factory) *jobContext {
+func NewJobContext(src, dest base.Spec, skipError bool, exceptTable string, db storage.DB, factory *Factory) *jobContext {
 	return &jobContext{
-		Context:   context.Background(),
-		src:       src,
-		dest:      dest,
-		skipError: skipError,
-		db:        db,
-		factory:   factory,
+		Context:     context.Background(),
+		src:         src,
+		dest:        dest,
+		skipError:   skipError,
+		exceptTable: exceptTable,
+		db:          db,
+		factory:     factory,
 	}
 }
 
@@ -125,15 +128,16 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 	src := jobContext.src
 	dest := jobContext.dest
 	job := &Job{
-		Name:      name,
-		Src:       src,
-		ISrc:      factory.NewSpecer(&src),
-		srcMeta:   factory.NewMeta(&jobContext.src),
-		Dest:      dest,
-		IDest:     factory.NewSpecer(&dest),
-		destMeta:  factory.NewMeta(&jobContext.dest),
-		SkipError: jobContext.skipError,
-		State:     JobRunning,
+		Name:        name,
+		Src:         src,
+		ISrc:        factory.NewSpecer(&src),
+		srcMeta:     factory.NewMeta(&jobContext.src),
+		Dest:        dest,
+		IDest:       factory.NewSpecer(&dest),
+		destMeta:    factory.NewMeta(&jobContext.dest),
+		SkipError:   jobContext.skipError,
+		State:       JobRunning,
+		ExceptTable: jobContext.exceptTable,
 
 		factory: factory,
 
@@ -203,6 +207,9 @@ func (j *Job) valid() error {
 		return xerror.New(xerror.Normal, "src/dest are not both db or table sync")
 	}
 
+	if j.Src.Table != "" && j.ExceptTable != "" {
+		return xerror.New(xerror.Normal, "source table and except table caonnot exist at the same time")
+	}
 	return nil
 }
 
@@ -292,7 +299,23 @@ func (j *Job) fullSync() error {
 			if err != nil {
 				return err
 			}
+
+			// skip if table is except
+			log.Infof("fullsync except table: %s", j.ExceptTable)
+			exceptTableList := strings.Split(j.ExceptTable, ",")
+			isExceptTable := false
 			for _, table := range tables {
+				for _, exceptTable := range exceptTableList {
+					if table.Name == strings.TrimSpace(exceptTable) {
+						isExceptTable = true
+						break
+					}
+				}
+				if isExceptTable {
+					isExceptTable = false
+					continue
+				}
+
 				backupTableList = append(backupTableList, table.Name)
 			}
 		case TableSync:

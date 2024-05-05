@@ -73,15 +73,16 @@ func NewHttpServer(host string, port int, db storage.DB, jobManager *ccr.JobMana
 
 type CreateCcrRequest struct {
 	// must need all fields required
-	Name      string    `json:"name,required"`
-	Src       base.Spec `json:"src,required"`
-	Dest      base.Spec `json:"dest,required"`
-	SkipError bool      `json:"skip_error"`
+	Name        string    `json:"name,required"`
+	Src         base.Spec `json:"src,required"`
+	Dest        base.Spec `json:"dest,required"`
+	SkipError   bool      `json:"skip_error"`
+	ExceptTable string    `json:"except_table"`
 }
 
 // Stringer
 func (r *CreateCcrRequest) String() string {
-	return fmt.Sprintf("name: %s, src: %v, dest: %v", r.Name, r.Src, r.Dest)
+	return fmt.Sprintf("name: %s, src: %v, dest: %v, except_table: %s", r.Name, r.Src, r.Dest, r.ExceptTable)
 }
 
 // version Handler
@@ -106,7 +107,7 @@ func (s *HttpService) versionHandler(w http.ResponseWriter, r *http.Request) {
 func createCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobManager) error {
 	log.Infof("create ccr %s", request)
 
-	ctx := ccr.NewJobContext(request.Src, request.Dest, request.SkipError, db, jobManager.GetFactory())
+	ctx := ccr.NewJobContext(request.Src, request.Dest, request.SkipError, request.ExceptTable, db, jobManager.GetFactory())
 	job, err := ccr.NewJobFromService(request.Name, ctx)
 	if err != nil {
 		return err
