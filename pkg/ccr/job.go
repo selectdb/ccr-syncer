@@ -117,6 +117,17 @@ func NewJobContext(src, dest base.Spec, skipError bool, exceptTable string, db s
 	}
 }
 
+func IsExceptTable(exceptTables string, targetTable string) bool {
+	exceptTableList := strings.Split(exceptTables, ",")
+	for _, exceptTable := range exceptTableList {
+		if targetTable == strings.TrimSpace(exceptTable) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // new job
 func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 	jobContext, ok := ctx.(*jobContext)
@@ -302,22 +313,14 @@ func (j *Job) fullSync() error {
 
 			// skip if table is except
 			log.Infof("fullsync except table: %s", j.ExceptTable)
-			exceptTableList := strings.Split(j.ExceptTable, ",")
-			isExceptTable := false
 			for _, table := range tables {
-				for _, exceptTable := range exceptTableList {
-					if table.Name == strings.TrimSpace(exceptTable) {
-						isExceptTable = true
-						break
-					}
-				}
-				if isExceptTable {
-					isExceptTable = false
+				if IsExceptTable(j.ExceptTable, table.Name) {
 					continue
 				}
 
 				backupTableList = append(backupTableList, table.Name)
 			}
+			log.Infof("fullsync table is : %s", backupTableList)
 		case TableSync:
 			backupTableList = append(backupTableList, j.Src.Table)
 		default:
@@ -753,7 +756,14 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		log.Debugf("tableRecords: %v", tableRecords)
 		destTableIds := make([]int64, 0, len(tableRecords))
 		if j.SyncType == DBSync {
+			var sourceTableName string
 			for _, tableRecord := range tableRecords {
+				sourceTableName, err = j.srcMeta.GetTableNameById(tableRecord.Id)
+				if IsExceptTable(j.ExceptTable, sourceTableName) {
+					log.Infof("db sync upsert, but table is except, just return")
+					return nil
+				}
+
 				if destTableId, err := j.getDestTableIdBySrc(tableRecord.Id); err != nil {
 					return err
 				} else {
@@ -909,6 +919,14 @@ func (j *Job) handleAddPartition(binlog *festruct.TBinlog) error {
 	if j.SyncType == TableSync {
 		destTableName = j.Dest.Table
 	} else if j.SyncType == DBSync {
+		// use sourceTableName to judge if table is except
+		var sourceTableName string
+		sourceTableName, err = j.srcMeta.GetTableNameById(addPartition.TableId)
+		if IsExceptTable(j.ExceptTable, sourceTableName) {
+			log.Infof("db sync add partition, but table is except, just return")
+			return nil
+		}
+
 		destTableId, err := j.getDestTableIdBySrc(addPartition.TableId)
 		if err != nil {
 			return err
@@ -941,6 +959,14 @@ func (j *Job) handleDropPartition(binlog *festruct.TBinlog) error {
 	if j.SyncType == TableSync {
 		destTableName = j.Dest.Table
 	} else if j.SyncType == DBSync {
+		// use sourceTableName to judge if table is except
+		var sourceTableName string
+		sourceTableName, err = j.srcMeta.GetTableNameById(dropPartition.TableId)
+		if IsExceptTable(j.ExceptTable, sourceTableName) {
+			log.Infof("db sync drop partition, but table is except, just return")
+			return nil
+		}
+
 		destTableId, err := j.getDestTableIdBySrc(dropPartition.TableId)
 		if err != nil {
 			return err
@@ -1027,6 +1053,11 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 		tableName = srcTable.Name
 	}
 
+	if IsExceptTable(j.ExceptTable, tableName) {
+		log.Infof("db sync drop table, but table is except, just return")
+		return nil
+	}
+
 	sql := fmt.Sprintf("DROP TABLE %s FORCE", utils.FormatKeywordName(tableName))
 	log.Infof("dropTableSql: %s", sql)
 	if err = j.IDest.DbExec(sql); err != nil {
@@ -1072,6 +1103,12 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 		if j.SyncType == TableSync {
 			dropTableSql = fmt.Sprintf("DROP TABLE %s FORCE", utils.FormatKeywordName(j.Dest.Table))
 		} else {
+			// if table is except, just break
+			if IsExceptTable(j.ExceptTable, alterJob.TableName) {
+				log.Infof("db sync alter job, but table is except, just break")
+				break
+			}
+
 			dropTableSql = fmt.Sprintf("DROP TABLE %s FORCE", utils.FormatKeywordName(alterJob.TableName))
 		}
 		log.Infof("dropTableSql: %s", dropTableSql)
@@ -1097,6 +1134,13 @@ func (j *Job) handleLightningSchemaChange(binlog *festruct.TBinlog) error {
 	log.Debugf("lightningSchemaChange %v", lightningSchemaChange)
 
 	rawSql := lightningSchemaChange.RawSql
+	var sourceTableName string
+	sourceTableName, err = j.srcMeta.GetTableNameById(lightningSchemaChange.TableId)
+	if IsExceptTable(j.ExceptTable, sourceTableName) {
+		log.Infof("db sync lightning schema change, but table is except, just return")
+		return nil
+	}
+
 	//   "rawSql": "ALTER TABLE `default_cluster:ccr`.`test_ddl` ADD COLUMN `nid1` int(11) NULL COMMENT \"\""
 	// replace `default_cluster:${Src.Database}`.`test_ddl` to `test_ddl`
 	var sql string
@@ -1121,6 +1165,11 @@ func (j *Job) handleTruncateTable(binlog *festruct.TBinlog) error {
 	var destTableName string
 	switch j.SyncType {
 	case DBSync:
+		if IsExceptTable(j.ExceptTable, truncateTable.TableName) {
+			log.Infof("db sync truncate table, but table is except, just return")
+			return nil
+		}
+
 		destTableName = truncateTable.TableName
 	case TableSync:
 		destTableName = j.Dest.Table
