@@ -8,6 +8,15 @@ endif
 tag := $(shell git describe --abbrev=0 --always --dirty --tags)
 sha := $(shell git rev-parse --short HEAD)
 git_tag_sha := $(tag):$(sha)
+
+ifeq ($(shell uname -i),x86_64)
+	# Make them happy
+	platform := x64
+else
+	platform := arm64
+endif
+tarball_suffix := $(tag)-$(platform)
+
 LDFLAGS="-X 'github.com/selectdb/ccr_syncer/pkg/version.GitTagSha=$(git_tag_sha)'"
 GOFLAGS=
 
@@ -149,12 +158,13 @@ todos:
 	$(V)grep -rnw . -e "TODO" | grep -v '^./pkg/rpc/thrift' | grep -v '^./.git'
 
 .PHONY: tarball
-## tarball : Archive files and release ccr-syncer-$(version).tar.xz
+## tarball : Archive files and release ccr-syncer-$(version)-$(platform).tar.xz
 tarball: default
-	$(V)mkdir -p tarball/ccr-syncer-$(tag)/{bin,db,doc,log}
-	$(V)cp CHANGELOG.md README.md LICENSE tarball/ccr-syncer-$(tag)/
-	$(V)cp bin/ccr_syncer tarball/ccr-syncer-$(tag)/bin/
-	$(V)cp shell/{enable_db_binlog.sh,start_syncer.sh,stop_syncer.sh} tarball/ccr-syncer-$(tag)/bin/
-	$(V)cp -r doc/* tarball/ccr-syncer-$(tag)/doc/
-	$(V)cd tarball/ && tar cfJ ccr-syncer-$(tag).tar.xz ccr-syncer-$(tag)
-	$(V)echo archive: tarball/ccr-syncer-$(tag).tar.xz
+	$(V)mkdir -p tarball/ccr-syncer-$(tarball_suffix)/{bin,db,doc,log}
+	$(V)cp CHANGELOG.md README.md LICENSE tarball/ccr-syncer-$(tarball_suffix)/
+	$(V)cp bin/ccr_syncer tarball/ccr-syncer-$(tarball_suffix)/bin/
+	$(V)cp shell/{enable_db_binlog.sh,start_syncer.sh,stop_syncer.sh} tarball/ccr-syncer-$(tarball_suffix)/bin/
+	$(V)cp -r doc/* tarball/ccr-syncer-$(tarball_suffix)/doc/
+	$(V)cd tarball/ && tar cfJ ccr-syncer-$(tarball_suffix).tar.xz ccr-syncer-$(tarball_suffix)
+	$(V)echo archive: tarball/ccr-syncer-$(tarball_suffix).tar.xz
+
