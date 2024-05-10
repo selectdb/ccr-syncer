@@ -2,6 +2,22 @@
 
 ## dev
 
+### Fix
+
+- 修复因与上下游 FE 网络中断而触发 full sync 的问题
+
+## v 2.1.3/2.0.3.10
+
+### Feature
+
+- 增加 `/job_progress` 接口用于获取 JOB 进度
+- 增加 `/job_details` 接口用于获取 JOB 信息
+- 保留 job 状态变更的各个时间点，并在 `/job_progress` 接口中展示
+
+### Fix
+
+- 修复若干 keywords 没有 escape 的问题
+
 ## v 2.0.3.9
 
 配合 doris 2.0.9 版本
