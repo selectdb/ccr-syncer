@@ -720,10 +720,10 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		// Step 1: get related tableRecords
 		tableRecords, err := j.getReleatedTableRecords(upsert)
 		if err != nil {
-			log.Errorf("get releated table records failed, err: %+v", err)
+			log.Errorf("get related table records failed, err: %+v", err)
 		}
 		if len(tableRecords) == 0 {
-			log.Debug("no releated table records")
+			log.Debug("no related table records")
 			return nil
 		}
 
