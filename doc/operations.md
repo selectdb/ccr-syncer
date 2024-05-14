@@ -37,3 +37,27 @@ operator：对应Syncer的不同操作
         "name": "job_name"
     }' http://ccr_syncer_host:ccr_syncer_port/delete
     ```
+- list_jobs
+    列出所有job名称
+    ```bash
+    curl -X POST -H "Content-Type: application/json" -d '{}' http://ccr_syncer_host:ccr_syncer_port/list_jobs
+    ```
+- job_detail
+    展示job的详细信息
+    ```bash
+    curl -X POST -H "Content-Type: application/json" -d '{
+        "name": "job_name"
+    }' http://ccr_syncer_host:ccr_syncer_port/job_detail
+    ```
+- job_progress
+    展示job的详细进度信息
+    ```bash
+    curl -X POST -H "Content-Type: application/json" -d '{
+        "name": "job_name"
+    }' http://ccr_syncer_host:ccr_syncer_port/job_progress
+    ```
+- metrics
+    获取golang以及ccr job的metrics信息
+    ```bash
+    curl http://ccr_syncer_host:ccr_syncer_port/metrics 
+    ```
