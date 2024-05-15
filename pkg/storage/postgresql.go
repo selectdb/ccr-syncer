@@ -16,12 +16,8 @@ type PostgresqlDB struct {
 }
 
 func NewPostgresqlDB(host string, port int, user string, password string) (DB, error) {
-
 	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", user, password, host, port, "postgres")
-
-	// dsn := fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=disable", user, password, host, port, "postgres")
 	db, err := sql.Open("postgres", url)
-
 	if err != nil {
 		return nil, xerror.Wrapf(err, xerror.DB, "postgresql: open %s:%s failed", host, port)
 	}
