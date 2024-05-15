@@ -23,12 +23,12 @@ bash bin/start_syncer.sh --daemon
 ```
 
 ### --db_type  
-Syncer目前能够使用两种数据库来保存自身的元数据，分别为`sqlite3`（对应本地存储）和`mysql`（本地或远端存储）  
+Syncer目前能够使用两种数据库来保存自身的元数据，分别为`sqlite3`（对应本地存储）和`mysql` 或者`postgresql`（本地或远端存储）
 ```bash
 bash bin/start_syncer.sh --db_type mysql
 ```
 默认值为sqlite3  
-在使用mysql存储元数据时，Syncer会使用`CREATE IF NOT EXISTS`来创建一个名为`ccr`的库，ccr相关的元数据表都会保存在其中
+在使用mysql或者postgresql存储元数据时，Syncer会使用`CREATE IF NOT EXISTS`来创建一个名为`ccr`的库，ccr相关的元数据表都会保存在其中
 
 ### --db_dir  
 **这个选项仅在db使用`sqlite3`时生效**  
@@ -38,7 +38,7 @@ bash bin/start_syncer.sh --db_dir /path/to/ccr.db
 ```
 默认路径为`SYNCER_OUTPUT_DIR/db`，文件名为`ccr.db`
 ### --db_host & db_port & db_user & db_password
-**这个选项仅在db使用`mysql`时生效**  
+**这个选项仅在db使用`mysql`或者`postgresql`时生效**  
 ```bash
 bash bin/start_syncer.sh --db_host 127.0.0.1 --db_port 3306 --db_user root --db_password "qwe123456"
 ```
