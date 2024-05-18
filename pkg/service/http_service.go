@@ -214,9 +214,7 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if exit := s.redirect(request.Name, w, r); exit {
-		return
-	}
+	s.redirect(request.Name, w, r)
 
 	if lag, err := s.jobManager.GetLag(request.Name); err != nil {
 		log.Warnf("get lag failed: %+v", err)
@@ -256,9 +254,7 @@ func (s *HttpService) pauseHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.redirect(request.Name, w, r) {
-		return
-	}
+	s.redirect(request.Name, w, r)
 
 	if err = s.jobManager.Pause(request.Name); err != nil {
 		log.Warnf("pause job failed: %+v", err)
@@ -294,9 +290,7 @@ func (s *HttpService) resumeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.redirect(request.Name, w, r) {
-		return
-	}
+	s.redirect(request.Name, w, r)
 
 	if err = s.jobManager.Resume(request.Name); err != nil {
 		log.Warnf("resume job failed: %+v", err)
@@ -331,9 +325,7 @@ func (s *HttpService) deleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.redirect(request.Name, w, r) {
-		return
-	}
+	s.redirect(request.Name, w, r)
 
 	if err = s.jobManager.RemoveJob(request.Name); err != nil {
 		log.Warnf("delete job failed: %+v", err)
@@ -376,9 +368,7 @@ func (s *HttpService) statusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.redirect(request.Name, w, r) {
-		return
-	}
+	s.redirect(request.Name, w, r)
 
 	if jobStatus, err := s.jobManager.GetJobStatus(request.Name); err != nil {
 		log.Warnf("get job status failed: %+v", err)
@@ -417,9 +407,7 @@ func (s *HttpService) desyncHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.redirect(request.Name, w, r) {
-		return
-	}
+	s.redirect(request.Name, w, r)
 
 	if err := s.jobManager.Desync(request.Name); err != nil {
 		log.Warnf("desync job failed: %+v", err)
@@ -458,9 +446,7 @@ func (s *HttpService) updateJobHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.redirect(request.Name, w, r) {
-		return
-	}
+	s.redirect(request.Name, w, r)
 
 	if err := s.jobManager.UpdateJobSkipError(request.Name, request.SkipError); err != nil {
 		log.Warnf("desync job failed: %+v", err)
@@ -530,9 +516,7 @@ func (s *HttpService) jobProgressHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if s.redirect(request.Name, w, r) {
-		return
-	}
+	s.redirect(request.Name, w, r)
 
 	if jobProgress, err := s.db.GetProgress(request.Name); err != nil {
 		log.Warnf("get job progress failed: %+v", err)
@@ -581,9 +565,7 @@ func (s *HttpService) jobDetailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.redirect(request.Name, w, r) {
-		return
-	}
+	s.redirect(request.Name, w, r)
 
 	if jobDetail, err := s.db.GetJobInfo(request.Name); err != nil {
 		log.Warnf("get job info failed: %+v", err)
