@@ -150,7 +150,7 @@ func (s *HttpService) redirect(jobName string, w http.ResponseWriter, r *http.Re
 	log.Infof("%s is located in syncer %s, please redirect to %s", jobName, belongHost, belongHost)
 	redirectUrl := fmt.Sprintf("http://%s", belongHost+r.RequestURI)
 	http.Redirect(w, r, redirectUrl, http.StatusSeeOther)
-	log.Infof("redirect finished, the redirect url is %s", redirectUrl)
+	log.Infof("the redirect url is %s", redirectUrl)
 	return true
 }
 
