@@ -124,12 +124,12 @@ func createCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobMana
 // return exit(bool)
 func (s *HttpService) redirect(jobName string, w http.ResponseWriter, r *http.Request) bool {
 	if jobExist, err := s.db.IsJobExist(jobName); err != nil {
-		log.Warnf("get job %s exist failed: %+v", jobName, err)
+		log.Warnf("get job %s exist failed: %+v, uri is %s", jobName, err, r.RequestURI)
 		result := newErrorResult(err.Error())
 		writeJson(w, result)
 		return true
 	} else if !jobExist {
-		log.Warnf("job %s not exist", jobName)
+		log.Warnf("job %s not exist, uri is %s", jobName, r.RequestURI)
 		result := newErrorResult(fmt.Sprintf("job %s not exist", jobName))
 		writeJson(w, result)
 		return true
@@ -137,7 +137,7 @@ func (s *HttpService) redirect(jobName string, w http.ResponseWriter, r *http.Re
 
 	belongHost, err := s.db.GetJobBelong(jobName)
 	if err != nil {
-		log.Warnf("get job %s belong failed: %+v", jobName, err)
+		log.Warnf("get job %s belong failed: %+v, uri is %s", jobName, err, r.RequestURI)
 		result := newErrorResult(err.Error())
 		writeJson(w, result)
 		return true
@@ -148,7 +148,9 @@ func (s *HttpService) redirect(jobName string, w http.ResponseWriter, r *http.Re
 	}
 
 	log.Infof("%s is located in syncer %s, please redirect to %s", jobName, belongHost, belongHost)
-	http.Redirect(w, r, fmt.Sprintf("http://%s/job_status", belongHost), http.StatusSeeOther)
+	redirectUrl := fmt.Sprintf("http://%s", belongHost+r.RequestURI)
+	http.Redirect(w, r, redirectUrl, http.StatusSeeOther)
+	log.Infof("the redirect url is %s", redirectUrl)
 	return true
 }
 
