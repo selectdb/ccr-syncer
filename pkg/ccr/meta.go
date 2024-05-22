@@ -112,6 +112,7 @@ func (m *Meta) GetDbId() (int64, error) {
 	}
 
 	// not found
+	// ATTN: we don't treat db not found as xerror.Meta category.
 	return 0, xerror.Errorf(xerror.Normal, "%s not found dbId", dbFullName)
 }
 
@@ -121,6 +122,7 @@ func (m *Meta) GetFullTableName(tableName string) string {
 	return fullTableName
 }
 
+// Update table meta, return xerror.Meta category if no such table exists.
 func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) {
 	log.Infof("UpdateTable tableName: %s, tableId: %d", tableName, tableId)
 
@@ -305,7 +307,7 @@ func (m *Meta) getPartitionsWithUpdate(tableId int64, depth int64) (map[int64]*P
 
 func (m *Meta) getPartitions(tableId int64, depth int64) (map[int64]*PartitionMeta, error) {
 	if depth >= 3 {
-		return nil, fmt.Errorf("getPartitions depth >= 3")
+		return nil, xerror.Errorf(xerror.Normal, "getPartitions depth >= 3")
 	}
 
 	tableMeta, err := m.GetTable(tableId)
@@ -319,10 +321,12 @@ func (m *Meta) getPartitions(tableId int64, depth int64) (map[int64]*PartitionMe
 	return tableMeta.PartitionIdMap, nil
 }
 
+// Get partition id map, return xerror.Meta category if no such table exists.
 func (m *Meta) GetPartitionIdMap(tableId int64) (map[int64]*PartitionMeta, error) {
 	return m.getPartitions(tableId, 0)
 }
 
+// Get partition range map, return xerror.Meta category if no such table exists.
 func (m *Meta) GetPartitionRangeMap(tableId int64) (map[string]*PartitionMeta, error) {
 	if _, err := m.GetPartitionIdMap(tableId); err != nil {
 		return nil, err
@@ -358,6 +362,7 @@ func (m *Meta) GetPartitionIds(tableName string) ([]int64, error) {
 	return partitionIds, nil
 }
 
+// Get partition range by name, return xerror.Meta category if no such table or partition exists.
 func (m *Meta) GetPartitionName(tableId int64, partitionId int64) (string, error) {
 	partitions, err := m.GetPartitionIdMap(tableId)
 	if err != nil {
@@ -370,13 +375,14 @@ func (m *Meta) GetPartitionName(tableId int64, partitionId int64) (string, error
 			return "", err
 		}
 		if partition, ok = partitions[partitionId]; !ok {
-			return "", xerror.Errorf(xerror.Normal, "partitionId %d not found", partitionId)
+			return "", xerror.Errorf(xerror.Meta, "partitionId %d not found", partitionId)
 		}
 	}
 
 	return partition.Name, nil
 }
 
+// Get partition range by id, return xerror.Meta category if no such table or partition exists.
 func (m *Meta) GetPartitionRange(tableId int64, partitionId int64) (string, error) {
 	partitions, err := m.GetPartitionIdMap(tableId)
 	if err != nil {
@@ -389,13 +395,14 @@ func (m *Meta) GetPartitionRange(tableId int64, partitionId int64) (string, erro
 			return "", err
 		}
 		if partition, ok = partitions[partitionId]; !ok {
-			return "", xerror.Errorf(xerror.Normal, "partitionId %d not found", partitionId)
+			return "", xerror.Errorf(xerror.Meta, "partitionId %d not found", partitionId)
 		}
 	}
 
 	return partition.Range, nil
 }
 
+// Get partition id by name, return xerror.Meta category if no such partition exists.
 func (m *Meta) GetPartitionIdByName(tableId int64, partitionName string) (int64, error) {
 	// TODO: optimize performance
 	partitions, err := m.GetPartitionIdMap(tableId)
@@ -418,9 +425,10 @@ func (m *Meta) GetPartitionIdByName(tableId int64, partitionName string) (int64,
 		}
 	}
 
-	return 0, xerror.Errorf(xerror.Normal, "partition name %s not found", partitionName)
+	return 0, xerror.Errorf(xerror.Meta, "partition name %s not found", partitionName)
 }
 
+// Get partition id by range, return xerror.Meta category if no such partition exists.
 func (m *Meta) GetPartitionIdByRange(tableId int64, partitionRange string) (int64, error) {
 	// TODO: optimize performance
 	partitions, err := m.GetPartitionIdMap(tableId)
@@ -443,7 +451,7 @@ func (m *Meta) GetPartitionIdByRange(tableId int64, partitionRange string) (int6
 		}
 	}
 
-	return 0, xerror.Errorf(xerror.Normal, "partition range %s not found", partitionRange)
+	return 0, xerror.Errorf(xerror.Meta, "partition range %s not found", partitionRange)
 }
 
 func (m *Meta) UpdateBackends() error {
@@ -609,6 +617,7 @@ func (m *Meta) GetBackendId(host string, portStr string) (int64, error) {
 	return 0, xerror.Errorf(xerror.Normal, "hostPort: %s not found", hostPort)
 }
 
+// Update indexes by table and partition, return xerror.Meta category if no such table or partition exists.
 func (m *Meta) UpdateIndexes(tableId int64, partitionId int64) error {
 	// TODO: Optimize performance
 	// Step 1: get dbId
@@ -631,7 +640,7 @@ func (m *Meta) UpdateIndexes(tableId int64, partitionId int64) error {
 
 	partition, ok := partitions[partitionId]
 	if !ok {
-		return xerror.Errorf(xerror.Normal, "partitionId: %d not found", partitionId)
+		return xerror.Errorf(xerror.Meta, "partitionId: %d not found", partitionId)
 	}
 
 	// mysql> show proc '/dbs/10116/10118/partitions/10117';
@@ -693,6 +702,7 @@ func (m *Meta) UpdateIndexes(tableId int64, partitionId int64) error {
 	return nil
 }
 
+// Get indexes by table and partition, return xerror.Meta if no such table or partition exists.
 func (m *Meta) getIndexes(tableId int64, partitionId int64, hasUpdate bool) (map[int64]*IndexMeta, error) {
 	partitions, err := m.GetPartitionIdMap(tableId)
 	if err != nil {
@@ -702,7 +712,7 @@ func (m *Meta) getIndexes(tableId int64, partitionId int64, hasUpdate bool) (map
 	partition, ok := partitions[partitionId]
 	if !ok || len(partition.IndexIdMap) == 0 {
 		if hasUpdate {
-			return nil, xerror.Errorf(xerror.Normal, "partitionId: %d not found", partitionId)
+			return nil, xerror.Errorf(xerror.Meta, "partitionId: %d not found", partitionId)
 		}
 
 		err = m.UpdateIndexes(tableId, partitionId)
@@ -715,10 +725,12 @@ func (m *Meta) getIndexes(tableId int64, partitionId int64, hasUpdate bool) (map
 	return partition.IndexIdMap, nil
 }
 
+// Get indexes id map by table and partition, return xerror.Meta if no such table or partition exists.
 func (m *Meta) GetIndexIdMap(tableId int64, partitionId int64) (map[int64]*IndexMeta, error) {
 	return m.getIndexes(tableId, partitionId, false)
 }
 
+// Get indexes name map by table and partition, return xerror.Meta if no such table or partition exists.
 func (m *Meta) GetIndexNameMap(tableId int64, partitionId int64) (map[string]*IndexMeta, error) {
 	if _, err := m.getIndexes(tableId, partitionId, false); err != nil {
 		return nil, err
@@ -729,8 +741,11 @@ func (m *Meta) GetIndexNameMap(tableId int64, partitionId int64) (map[string]*In
 		return nil, err
 	}
 
-	partition := partitions[partitionId]
-	return partition.IndexNameMap, nil
+	if partition, ok := partitions[partitionId]; !ok {
+		return nil, xerror.Errorf(xerror.Meta, "partition %d is not found", partitionId)
+	} else {
+		return partition.IndexNameMap, nil
+	}
 }
 
 func (m *Meta) updateReplica(index *IndexMeta) error {
@@ -810,6 +825,7 @@ func (m *Meta) updateReplica(index *IndexMeta) error {
 	return nil
 }
 
+// Update replicas by table and partition, return xerror.Meta category if no such table or partition exists.
 func (m *Meta) UpdateReplicas(tableId int64, partitionId int64) error {
 	indexes, err := m.GetIndexIdMap(tableId, partitionId)
 	if err != nil {
@@ -817,7 +833,7 @@ func (m *Meta) UpdateReplicas(tableId int64, partitionId int64) error {
 	}
 
 	if len(indexes) == 0 {
-		return xerror.Errorf(xerror.Normal, "indexes is empty")
+		return xerror.Errorf(xerror.Meta, "indexes is empty")
 	}
 
 	// TODO: Update index as much as possible, record error
@@ -830,6 +846,7 @@ func (m *Meta) UpdateReplicas(tableId int64, partitionId int64) error {
 	return nil
 }
 
+// Get replicas by table and partition, return xerror.Meta category if no such table or partition exists.
 func (m *Meta) GetReplicas(tableId int64, partitionId int64) (*btree.Map[int64, *ReplicaMeta], error) {
 	indexes, err := m.GetIndexIdMap(tableId, partitionId)
 	if err != nil {
@@ -837,7 +854,7 @@ func (m *Meta) GetReplicas(tableId int64, partitionId int64) (*btree.Map[int64, 
 	}
 
 	if len(indexes) == 0 {
-		return nil, xerror.Errorf(xerror.Normal, "indexes is empty")
+		return nil, xerror.Errorf(xerror.Meta, "indexes is empty")
 	}
 
 	// fast path, no rollup
@@ -874,6 +891,7 @@ func (m *Meta) GetReplicas(tableId int64, partitionId int64) (*btree.Map[int64, 
 	return replicas, nil
 }
 
+// Get tablets by table, partition and index, return xerror.Meta category if no such table, partition or index exists.
 func (m *Meta) GetTablets(tableId, partitionId, indexId int64) (*btree.Map[int64, *TabletMeta], error) {
 	_, err := m.GetReplicas(tableId, partitionId)
 	if err != nil {
@@ -888,7 +906,7 @@ func (m *Meta) GetTablets(tableId, partitionId, indexId int64) (*btree.Map[int64
 	if tablets, ok := indexes[indexId]; ok {
 		return tablets.TabletMetas, nil
 	} else {
-		return nil, xerror.Errorf(xerror.Normal, "index %d not found", indexId)
+		return nil, xerror.Errorf(xerror.Meta, "index %d not found", indexId)
 	}
 }
 
