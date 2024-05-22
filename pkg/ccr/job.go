@@ -788,6 +788,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		commitInfos, err := j.ingestBinlog(txnId, tableRecords)
 		if err != nil {
 			rollback(err, inMemoryData)
+			return err
 		} else {
 			log.Debugf("commitInfos: %v", commitInfos)
 			inMemoryData.CommitInfos = commitInfos
@@ -1365,6 +1366,7 @@ func (j *Job) handleError(err error) error {
 	}
 
 	if xerr.Category() == xerror.Meta {
+		log.Warnf("receive meta category error, make new snapshot, job: %s, err: %v", j.Name, err)
 		j.newSnapshot(j.progress.CommitSeq)
 	}
 	return nil
