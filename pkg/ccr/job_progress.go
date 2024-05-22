@@ -270,7 +270,7 @@ func (j *JobProgress) NextWithPersist(commitSeq int64, syncState SyncState, subS
 		j.FullSyncStartAt = time.Now().Unix()
 		j.IncrementalSyncStartAt = 0
 		j.IngestBinlogAt = 0
-	} else if subSyncState == Done && (syncState == TableIncrementalSync || syncState == TableIncrementalSync) {
+	} else if subSyncState == Done && (syncState == TableIncrementalSync || syncState == DBIncrementalSync) {
 		j.IncrementalSyncStartAt = time.Now().Unix()
 		j.IngestBinlogAt = 0
 	}
