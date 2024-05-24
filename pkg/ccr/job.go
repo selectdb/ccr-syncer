@@ -1186,7 +1186,8 @@ func (j *Job) recoverIncrementalSync() error {
 
 func (j *Job) incrementalSync() error {
 	if !j.progress.IsDone() {
-		log.Infof("job progress is not done, state is (%s), need recover", j.progress.SubSyncState)
+		log.Infof("job progress is not done, need recover. state: %s, prevCommitSeq: %d, commitSeq: %d",
+			j.progress.SubSyncState, j.progress.PrevCommitSeq, j.progress.CommitSeq)
 
 		return j.recoverIncrementalSync()
 	}
@@ -1202,6 +1203,7 @@ func (j *Job) incrementalSync() error {
 
 	// Step 2: handle all binlog
 	for {
+		// The CommitSeq is equals to PrevCommitSeq in here.
 		commitSeq := j.progress.CommitSeq
 		log.Debugf("src: %s, commitSeq: %v", src, commitSeq)
 
