@@ -249,11 +249,15 @@ suite("test_db_sync") {
     def tableAggregate1 = "tbl_aggregate_1_" + UUID.randomUUID().toString().replace("-", "")
     def tableDuplicate1 = "tbl_duplicate_1_" + UUID.randomUUID().toString().replace("-", "")
     def keywordTableName = "`roles`"
+    def acidTableName = "acid_name_" + UUID.randomUUID().toString().replace("-", "")
+    def acidTableName1 = "acid_name_1_" + UUID.randomUUID().toString().replace("-", "")
 
     createUniqueTable(tableUnique1)
     createAggergateTable(tableAggregate1)
     createDuplicateTable(tableDuplicate1)
     createUniqueTable(keywordTableName)
+    createUniqueTable(acidTableName)
+    createUniqueTable(acidTableName1)
 
     for (int index = 0; index < insert_num; index++) {
         sql """
@@ -276,6 +280,25 @@ suite("test_db_sync") {
             """
     }
 
+    logger.info("=== Test : acid insert/update/delete ===")
+    sql """
+        BEGIN;
+        INSERT INTO ${acidTableName} VALUES (1, 2, "2021-01-02");
+        COMMIT;
+        """
+
+    sql """
+        BEGIN;
+        INSERT INTO ${acidTableName} VALUES (2, 3, "2021-01-02"), (3, 4, "2021-01-02");
+        INSERT INTO ${acidTableName1} VALUES (1, 2, "2021-01-02"), (5, ,6 "2021-01-02");
+        UPDATE ${acidTableName} set id = 4 where test = 2;
+        UPDATE ${acidTableName} set id = 5 where test = 3;
+        DELETE FROM ${acidTableName} WHERE test = 2;
+        DELETE FROM ${acidTableName1} WHERE test = 5;
+        COMMIT;
+        """
+
+
     assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableUnique1}",
                                 exist, 30, "target"))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableUnique1} WHERE test=${test_num}",
@@ -295,12 +318,16 @@ suite("test_db_sync") {
                                 exist, 30, "target"))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${keywordTableName} WHERE test=${test_num}",
                                    insert_num, 30))
+    assertTrue(checkSelectTimesOf("SELECT * FROM ${acidTableName}", 2, 30))     
+    assertTrue(checkSelectTimesOf("SELECT * FROM ${acidTableName1}", 1, 30))                                  
 
     logger.info("=== Test 3: drop table case ===")
     sql "DROP TABLE ${tableUnique1}"
     sql "DROP TABLE ${tableAggregate1}"
     sql "DROP TABLE ${tableDuplicate1}"
     sql "DROP TABLE ${keywordTableName}"
+    sql "DROP TABLE ${acidTableName}"
+    sql "DROP TABLE ${acidTableName1}"
 
     assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${tableUnique1}'", 
                                 notExist, 30, "target"))
