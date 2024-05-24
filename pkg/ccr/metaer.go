@@ -112,8 +112,5 @@ type Metaer interface {
 
 	IngestBinlogMetaer
 
-	// from Spec
-	DbExec(sql string) error
-
 	MetaCleaner
 }

@@ -341,7 +341,7 @@ func (j *Job) fullSync() error {
 
 		if j.SyncType == TableSync {
 			if _, ok := tableCommitSeqMap[j.Src.TableId]; !ok {
-				return xerror.Errorf(xerror.Normal, "tableid %d, commit seq not found", j.Src.TableId)
+				return xerror.Errorf(xerror.Normal, "table id %d, commit seq not found", j.Src.TableId)
 			}
 		}
 
@@ -458,9 +458,7 @@ func (j *Job) fullSync() error {
 				}
 				log.Infof("the signature of table %s is not matched with the target table in snapshot", tableName)
 				for {
-					dropSql := fmt.Sprintf("DROP TABLE %s FORCE", utils.FormatKeywordName(tableName))
-					log.Infof("drop table sql: %s", dropSql)
-					if err := j.destMeta.DbExec(dropSql); err == nil {
+					if err := j.IDest.DropTable(tableName); err == nil {
 						break
 					}
 				}
@@ -901,10 +899,7 @@ func (j *Job) handleAddPartition(binlog *festruct.TBinlog) error {
 			return xerror.Errorf(xerror.Normal, "tableId %d not found in destMeta", destTableId)
 		}
 	}
-
-	addPartitionSql := addPartition.GetSql(destTableName)
-	log.Infof("addPartitionSql: %s", addPartitionSql)
-	return j.IDest.DbExec(addPartitionSql)
+	return j.IDest.AddPartition(destTableName, addPartition)
 }
 
 // handleDropPartition
@@ -917,7 +912,6 @@ func (j *Job) handleDropPartition(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	destDbName := j.Dest.Database
 	var destTableName string
 	if j.SyncType == TableSync {
 		destTableName = j.Dest.Table
@@ -933,11 +927,7 @@ func (j *Job) handleDropPartition(binlog *festruct.TBinlog) error {
 			return xerror.Errorf(xerror.Normal, "tableId %d not found in destMeta", destTableId)
 		}
 	}
-
-	// dropPartitionSql = "ALTER TABLE " + sql
-	dropPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s", utils.FormatKeywordName(destDbName), utils.FormatKeywordName(destTableName), dropPartition.Sql)
-	log.Infof("dropPartitionSql: %s", dropPartitionSql)
-	return j.IDest.Exec(dropPartitionSql)
+	return j.IDest.DropPartition(destTableName, dropPartition)
 }
 
 // handleCreateTable
@@ -954,11 +944,8 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	sql := createTable.Sql
-	log.Infof("createTableSql: %s", sql)
-	// HACK: for drop table
-	if err := j.IDest.DbExec(sql); err != nil {
-		return err
+	if err := j.IDest.CreateTable(createTable); err != nil {
+		return xerror.Wrapf(err, xerror.Normal, "create table %d", createTable.TableId)
 	}
 
 	j.srcMeta.GetTables()
@@ -997,7 +984,7 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 	}
 
 	tableName := dropTable.TableName
-	// depreated
+	// deprecated
 	if tableName == "" {
 		dirtySrcTables := j.srcMeta.DirtyGetTables()
 		srcTable, ok := dirtySrcTables[dropTable.TableId]
@@ -1008,10 +995,8 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 		tableName = srcTable.Name
 	}
 
-	sql := fmt.Sprintf("DROP TABLE %s FORCE", utils.FormatKeywordName(tableName))
-	log.Infof("dropTableSql: %s", sql)
-	if err = j.IDest.DbExec(sql); err != nil {
-		return err
+	if err = j.IDest.DropTable(tableName); err != nil {
+		return xerror.Wrapf(err, xerror.Normal, "drop table %s", tableName)
 	}
 
 	j.srcMeta.GetTables()
@@ -1049,15 +1034,13 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 
 	for {
 		// drop table dropTableSql
-		var dropTableSql string
+		var destTableName string
 		if j.SyncType == TableSync {
-			dropTableSql = fmt.Sprintf("DROP TABLE %s FORCE", utils.FormatKeywordName(j.Dest.Table))
+			destTableName = j.Dest.Table
 		} else {
-			dropTableSql = fmt.Sprintf("DROP TABLE %s FORCE", utils.FormatKeywordName(alterJob.TableName))
+			destTableName = alterJob.TableName
 		}
-		log.Infof("dropTableSql: %s", dropTableSql)
-
-		if err := j.destMeta.DbExec(dropTableSql); err == nil {
+		if err := j.IDest.DropTable(destTableName); err == nil {
 			break
 		}
 	}
@@ -1075,19 +1058,7 @@ func (j *Job) handleLightningSchemaChange(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	log.Debugf("lightningSchemaChange %v", lightningSchemaChange)
-
-	rawSql := lightningSchemaChange.RawSql
-	//   "rawSql": "ALTER TABLE `default_cluster:ccr`.`test_ddl` ADD COLUMN `nid1` int(11) NULL COMMENT \"\""
-	// replace `default_cluster:${Src.Database}`.`test_ddl` to `test_ddl`
-	var sql string
-	if strings.Contains(rawSql, fmt.Sprintf("`default_cluster:%s`.", j.Src.Database)) {
-		sql = strings.Replace(rawSql, fmt.Sprintf("`default_cluster:%s`.", j.Src.Database), "", 1)
-	} else {
-		sql = strings.Replace(rawSql, fmt.Sprintf("`%s`.", j.Src.Database), "", 1)
-	}
-	log.Infof("lightningSchemaChangeSql, rawSql: %s, sql: %s", rawSql, sql)
-	return j.IDest.DbExec(sql)
+	return j.IDest.LightningSchemaChange(j.Src.Database, lightningSchemaChange)
 }
 
 func (j *Job) handleTruncateTable(binlog *festruct.TBinlog) error {
@@ -1109,16 +1080,7 @@ func (j *Job) handleTruncateTable(binlog *festruct.TBinlog) error {
 		return xerror.Panicf(xerror.Normal, "invalid sync type: %v", j.SyncType)
 	}
 
-	var sql string
-	if truncateTable.RawSql == "" {
-		sql = fmt.Sprintf("TRUNCATE TABLE %s", utils.FormatKeywordName(destTableName))
-	} else {
-		sql = fmt.Sprintf("TRUNCATE TABLE %s %s", utils.FormatKeywordName(destTableName), truncateTable.RawSql)
-	}
-
-	log.Infof("truncateTableSql: %s", sql)
-
-	err = j.IDest.DbExec(sql)
+	err = j.IDest.TruncateTable(destTableName, truncateTable)
 	if err == nil {
 		if srcTableName, err := j.srcMeta.GetTableNameById(truncateTable.TableId); err == nil {
 			// if err != nil, maybe truncate table had been dropped
@@ -1483,37 +1445,23 @@ func (j *Job) desyncTable() error {
 	if err != nil {
 		return err
 	}
-
-	desyncSql := fmt.Sprintf("ALTER TABLE %s SET (\"is_being_synced\"=\"false\")", tableName)
-	log.Debugf("db exec: %s", desyncSql)
-	if err := j.IDest.DbExec(desyncSql); err != nil {
-		return xerror.Wrapf(err, xerror.FE, "failed tables: %s", tableName)
-	}
-	return nil
+	return j.IDest.DesyncTables(tableName)
 }
 
 func (j *Job) desyncDB() error {
 	log.Debugf("desync db")
 
-	var failedTable string = ""
 	tables, err := j.destMeta.GetTables()
 	if err != nil {
 		return err
 	}
 
+	tableNames := []string{}
 	for _, tableMeta := range tables {
-		desyncSql := fmt.Sprintf("ALTER TABLE %s SET (\"is_being_synced\"=\"false\")", tableMeta.Name)
-		log.Debugf("db exec: %s", desyncSql)
-		if err := j.IDest.DbExec(desyncSql); err != nil {
-			failedTable += tableMeta.Name + " "
-		}
+		tableNames = append(tableNames, tableMeta.Name)
 	}
 
-	if failedTable != "" {
-		return xerror.Errorf(xerror.FE, "failed tables: %s", failedTable)
-	}
-
-	return nil
+	return j.IDest.DesyncTables(tableNames...)
 }
 
 func (j *Job) Desync() error {
