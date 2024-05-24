@@ -210,7 +210,6 @@ func NewJobProgressFromJson(jobName string, db storage.DB) (*JobProgress, error)
 }
 
 func (j *JobProgress) StartHandle(commitSeq int64) {
-	j.PrevCommitSeq = j.CommitSeq
 	j.CommitSeq = commitSeq
 
 	j.Persist()
@@ -284,7 +283,7 @@ func (j *JobProgress) NextWithPersist(commitSeq int64, syncState SyncState, subS
 	j.Persist()
 }
 
-func (j *JobProgress) IsDone() bool { return j.SubSyncState == Done }
+func (j *JobProgress) IsDone() bool { return j.SubSyncState == Done && j.PrevCommitSeq == j.CommitSeq }
 
 // TODO(Drogon): check reset some fields
 func (j *JobProgress) Done() {
@@ -338,5 +337,6 @@ func (j *JobProgress) Persist() {
 		break
 	}
 
-	log.Trace("update job progress done")
+	log.Tracef("update job progress done, state: %s, subState: %s, commitSeq: %d, prevCommitSeq: %d",
+		j.SyncState, j.SubSyncState, j.CommitSeq, j.PrevCommitSeq)
 }
