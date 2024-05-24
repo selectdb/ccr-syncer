@@ -9,6 +9,7 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/selectdb/ccr_syncer/pkg/ccr/record"
 	"github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
@@ -346,16 +347,11 @@ func (s *Spec) CreateDatabase() error {
 	return nil
 }
 
-func (s *Spec) CreateTable(stmt string) error {
-	db, err := s.Connect()
-	if err != nil {
-		return nil
-	}
-
-	if _, err = db.Exec(stmt); err != nil {
-		return xerror.Wrapf(err, xerror.Normal, "create table %s.%s failed", s.Database, s.Table)
-	}
-	return nil
+func (s *Spec) CreateTable(createTable *record.CreateTable) error {
+	sql := createTable.Sql
+	log.Infof("createTableSql: %s", sql)
+	// HACK: for drop table
+	return s.DbExec(sql)
 }
 
 func (s *Spec) CheckDatabaseExists() (bool, error) {
@@ -746,4 +742,85 @@ func (s *Spec) Update(event SpecEvent) {
 	default:
 		break
 	}
+}
+
+func (s *Spec) LightningSchemaChange(srcDatabase string, lightningSchemaChange *record.ModifyTableAddOrDropColumns) error {
+	log.Debugf("lightningSchemaChange %v", lightningSchemaChange)
+
+	rawSql := lightningSchemaChange.RawSql
+	//   "rawSql": "ALTER TABLE `default_cluster:ccr`.`test_ddl` ADD COLUMN `nid1` int(11) NULL COMMENT \"\""
+	// replace `default_cluster:${Src.Database}`.`test_ddl` to `test_ddl`
+	var sql string
+	if strings.Contains(rawSql, fmt.Sprintf("`default_cluster:%s`.", srcDatabase)) {
+		sql = strings.Replace(rawSql, fmt.Sprintf("`default_cluster:%s`.", srcDatabase), "", 1)
+	} else {
+		sql = strings.Replace(rawSql, fmt.Sprintf("`%s`.", srcDatabase), "", 1)
+	}
+	log.Infof("lightningSchemaChangeSql, rawSql: %s, sql: %s", rawSql, sql)
+	return s.DbExec(sql)
+}
+
+func (s *Spec) TruncateTable(destTableName string, truncateTable *record.TruncateTable) error {
+	var sql string
+	if truncateTable.RawSql == "" {
+		sql = fmt.Sprintf("TRUNCATE TABLE %s", utils.FormatKeywordName(destTableName))
+	} else {
+		sql = fmt.Sprintf("TRUNCATE TABLE %s %s", utils.FormatKeywordName(destTableName), truncateTable.RawSql)
+	}
+
+	log.Infof("truncateTableSql: %s", sql)
+
+	return s.DbExec(sql)
+}
+
+func (s *Spec) DropTable(tableName string) error {
+	dropSql := fmt.Sprintf("DROP TABLE %s FORCE", utils.FormatKeywordName(tableName))
+	log.Infof("drop table sql: %s", dropSql)
+	return s.DbExec(dropSql)
+}
+
+func (s *Spec) AddPartition(destTableName string, addPartition *record.AddPartition) error {
+	addPartitionSql := addPartition.GetSql(destTableName)
+	log.Infof("addPartitionSql: %s", addPartitionSql)
+	return s.DbExec(addPartitionSql)
+}
+
+func (s *Spec) DropPartition(destTableName string, dropPartition *record.DropPartition) error {
+	destDbName := utils.FormatKeywordName(s.Database)
+	destTableName = utils.FormatKeywordName(destTableName)
+	dropPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s", destDbName, destTableName, dropPartition.Sql)
+	log.Infof("dropPartitionSql: %s", dropPartitionSql)
+	return s.Exec(dropPartitionSql)
+}
+
+func (s *Spec) DesyncTables(tables ...string) error {
+	var err error
+
+	failedTables := []string{}
+	for _, table := range tables {
+		desyncSql := fmt.Sprintf("ALTER TABLE %s SET (\"is_being_synced\"=\"false\")", utils.FormatKeywordName(table))
+		log.Debugf("db exec sql: %s", desyncSql)
+		if err = s.DbExec(desyncSql); err != nil {
+			failedTables = append(failedTables, table)
+		}
+	}
+
+	if len(failedTables) > 0 {
+		return xerror.Wrapf(err, xerror.FE, "failed tables: %s", strings.Join(failedTables, ","))
+	}
+
+	return nil
+}
+
+// Determine whether the error are network related, eg connection refused, connection reset, exposed from net packages.
+func isNetworkRelated(err error) bool {
+	msg := err.Error()
+
+	// The below errors are exposed from net packages.
+	// See https://github.com/golang/go/issues/23827 for details.
+	return strings.Contains(msg, "timeout awaiting response headers") ||
+		strings.Contains(msg, "connection refused") ||
+		strings.Contains(msg, "connection reset by peer") ||
+		strings.Contains(msg, "connection timeouted") ||
+		strings.Contains(msg, "i/o timeout")
 }
