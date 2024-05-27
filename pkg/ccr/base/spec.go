@@ -789,6 +789,7 @@ func (s *Spec) DropTable(tableName string) error {
 
 func (s *Spec) AddPartition(destTableName string, addPartition *record.AddPartition) error {
 	addPartitionSql := addPartition.GetSql(destTableName)
+	addPartitionSql = correctAddPartitionSql(addPartitionSql, addPartition)
 	log.Infof("addPartitionSql: %s", addPartitionSql)
 	return s.DbExec(addPartitionSql)
 }
@@ -831,4 +832,22 @@ func isNetworkRelated(err error) bool {
 		strings.Contains(msg, "connection reset by peer") ||
 		strings.Contains(msg, "connection timeouted") ||
 		strings.Contains(msg, "i/o timeout")
+}
+
+func correctAddPartitionSql(addPartitionSql string, addPartition *record.AddPartition) string {
+	// HACK:
+	//
+	// The doris version before 2.1.3 and 2.0.10 did not handle unpartitioned and temporary
+	// partitions correctly, see https://github.com/apache/doris/pull/35461 for details.
+	//
+	// 1. fix unpartitioned add partition sql
+	// 2. support add temporary partition
+	if strings.Contains(addPartitionSql, "VALUES [(), ())") {
+		re := regexp.MustCompile(`VALUES \[\(\), \(\)\) \(.*\)`)
+		addPartitionSql = re.ReplaceAllString(addPartitionSql, "")
+	}
+	if addPartition.IsTemp && !strings.Contains(addPartitionSql, "ADD TEMPORARY PARTITION") {
+		addPartitionSql = strings.ReplaceAll(addPartitionSql, "ADD PARTITION", "ADD TEMPORARY PARTITION")
+	}
+	return addPartitionSql
 }
