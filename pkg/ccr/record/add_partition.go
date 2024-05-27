@@ -15,6 +15,7 @@ type AddPartition struct {
 	DbId      int64  `json:"dbId"`
 	TableId   int64  `json:"tableId"`
 	Sql       string `json:"sql"`
+	IsTemp    bool   `json:"isTempPartition"`
 	Partition struct {
 		DistributionInfo struct {
 			BucketNum           int    `json:"bucketNum"`
