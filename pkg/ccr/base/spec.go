@@ -846,6 +846,14 @@ func correctAddPartitionSql(addPartitionSql string, addPartition *record.AddPart
 		re := regexp.MustCompile(`VALUES \[\(\), \(\)\) \(.*\)`)
 		addPartitionSql = re.ReplaceAllString(addPartitionSql, "")
 	}
+	if strings.Contains(addPartitionSql, "VALUES IN (((") {
+		re := regexp.MustCompile(`VALUES IN \(\(\((.*)\)\)\)`)
+		matches := re.FindStringSubmatch(addPartitionSql)
+		if len(matches) > 1 {
+			replace := fmt.Sprintf("VALUES IN ((%s))", matches[1])
+			addPartitionSql = re.ReplaceAllString(addPartitionSql, replace)
+		}
+	}
 	if addPartition.IsTemp && !strings.Contains(addPartitionSql, "ADD TEMPORARY PARTITION") {
 		addPartitionSql = strings.ReplaceAll(addPartitionSql, "ADD PARTITION", "ADD TEMPORARY PARTITION")
 	}
