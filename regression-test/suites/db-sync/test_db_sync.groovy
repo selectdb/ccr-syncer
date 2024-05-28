@@ -44,6 +44,23 @@ suite("test_db_sync") {
             )
         """
     }
+    def createUniqueKVTable = { tableName ->
+        sql """
+            CREATE TABLE if NOT EXISTS ${tableName}
+            (
+                `id` INT,
+                `name` varchar(20)
+            )
+            ENGINE=OLAP
+            UNIQUE KEY(`id`)
+            DISTRIBUTED BY HASH(id) BUCKETS AUTO
+            PROPERTIES (
+                "replication_allocation" = "tag.location.default: 1",
+                "estimate_partition_size" = "10G",
+                "binlog.enable" = "true"
+            )
+        """
+    }
     def createAggergateTable = { tableName ->
         sql """
             CREATE TABLE if NOT EXISTS ${tableName}
@@ -238,11 +255,17 @@ suite("test_db_sync") {
     def tableAggregate1 = "tbl_aggregate_1_" + UUID.randomUUID().toString().replace("-", "")
     def tableDuplicate1 = "tbl_duplicate_1_" + UUID.randomUUID().toString().replace("-", "")
     def keywordTableName = "`roles`"
+    def acidTableName = "acid_name_" + UUID.randomUUID().toString().replace("-", "")
+    def acidTableName1 = "acid_name_1_" + UUID.randomUUID().toString().replace("-", "")
+    def acidTableName2 = "acid_name_2_" + UUID.randomUUID().toString().replace("-", "")
 
     createUniqueTable(tableUnique1)
     createAggergateTable(tableAggregate1)
     createDuplicateTable(tableDuplicate1)
     createUniqueTable(keywordTableName)
+    createUniqueKVTable(acidTableName)
+    createUniqueKVTable(acidTableName1)
+    createUniqueKVTable(acidTableName2)
 
     for (int index = 0; index < insert_num; index++) {
         sql """
@@ -265,6 +288,31 @@ suite("test_db_sync") {
             """
     }
 
+    logger.info("=== Test : acid insert/update/delete ===")
+    sql """
+        INSERT INTO ${acidTableName} VALUES (1, "a"), (2, "b");
+        """
+    sql """
+        INSERT INTO ${acidTableName1} VALUES (4, "x"), (5, "y");
+        """    
+    sql """
+        BEGIN;
+        INSERT INTO ${acidTableName} VALUES (3, "c");
+        COMMIT;
+        """
+
+    sql """
+        BEGIN;
+        INSERT INTO ${acidTableName2} select id, name from ${acidTableName};
+        INSERT INTO ${acidTableName2} SELECT id, name FROM ${acidTableName1};
+        UPDATE ${acidTableName} set name = "bb" where id = 2;
+        UPDATE ${acidTableName1} set name = "yy" where id = 5;
+        DELETE FROM ${acidTableName} WHERE id = 3;
+        DELETE FROM ${acidTableName1} WHERE id = 4;
+        COMMIT;
+        """
+
+
     assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableUnique1}",
                                 exist, 30, "target"))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableUnique1} WHERE test=${test_num}",
@@ -284,12 +332,18 @@ suite("test_db_sync") {
                                 exist, 30, "target"))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${keywordTableName} WHERE test=${test_num}",
                                    insert_num, 30))
+    assertTrue(checkSelectTimesOf("SELECT * FROM ${acidTableName}", 2, 30))     
+    assertTrue(checkSelectTimesOf("SELECT * FROM ${acidTableName1}", 1, 30))      
+    assertTrue(checkSelectTimesOf("SELECT * FROM ${acidTableName2}", 5, 30))                             
 
     logger.info("=== Test 3: drop table case ===")
     sql "DROP TABLE ${tableUnique1}"
     sql "DROP TABLE ${tableAggregate1}"
     sql "DROP TABLE ${tableDuplicate1}"
     sql "DROP TABLE ${keywordTableName}"
+    sql "DROP TABLE ${acidTableName}"
+    sql "DROP TABLE ${acidTableName1}"
+    sql "DROP TABLE ${acidTableName2}"
 
     assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${tableUnique1}'", 
                                 notExist, 30, "target"))
