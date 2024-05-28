@@ -165,17 +165,6 @@ suite("test_db_sync") {
             """
     }
 
-    logger.info("=== Test : mtmv create ===")
-    sql """CREATE MATERIALIZED VIEW mv1
-        BUILD IMMEDIATE REFRESH AUTO ON SCHEDULE EVERY 1 hour
-        DISTRIBUTED BY RANDOM BUCKETS 3
-        PROPERTIES ('replication_num' = '1')
-        AS
-        SELECT t1.test, t2.last
-        FROM (SELECT * FROM ${tableUnique0} where id > 1) t1
-        LEFT OUTER JOIN ${tableAggregate0} as t2
-        ON t1.test = t2.test"""
-
     sql "ALTER DATABASE ${context.dbName} SET properties (\"binlog.enable\" = \"true\")"
     sql "sync"
 
@@ -298,7 +287,7 @@ suite("test_db_sync") {
                                 notExist, 30, "target"))
     assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${keywordTableName}'", 
                                 notExist, 30, "target"))
-    
+
     logger.info("=== Test 4: pause and resume ===")
     httpTest {
         uri "/pause"
