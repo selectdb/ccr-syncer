@@ -136,6 +136,7 @@ type JobProgress struct {
 	// Sub sync state machine states
 	SubSyncState SubSyncState `json:"sub_sync_state"`
 
+	// The commit seq where the target cluster has synced.
 	PrevCommitSeq     int64           `json:"prev_commit_seq"`
 	CommitSeq         int64           `json:"commit_seq"`
 	TableMapping      map[int64]int64 `json:"table_mapping"`
@@ -264,6 +265,9 @@ func (j *JobProgress) CommitNextSubWithPersist(commitSeq int64, subSyncState Sub
 	j.Persist()
 }
 
+// Switch to new sync state.
+//
+// The PrevCommitSeq is set to commitSeq, if the sub sync state is done.
 func (j *JobProgress) NextWithPersist(commitSeq int64, syncState SyncState, subSyncState SubSyncState, persistData string) {
 	if subSyncState == BeginCreateSnapshot && (syncState == TableFullSync || syncState == DBFullSync) {
 		j.FullSyncStartAt = time.Now().Unix()
@@ -275,6 +279,10 @@ func (j *JobProgress) NextWithPersist(commitSeq int64, syncState SyncState, subS
 	}
 
 	j.CommitSeq = commitSeq
+	if subSyncState == Done {
+		j.PrevCommitSeq = commitSeq
+	}
+
 	j.SyncState = syncState
 	j.SubSyncState = subSyncState
 	j.PersistData = persistData
