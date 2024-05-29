@@ -294,23 +294,19 @@ suite("test_db_sync") {
         """
     sql """
         INSERT INTO ${acidTableName1} VALUES (4, "x"), (5, "y");
-        """    
-    sql """
-        BEGIN;
-        INSERT INTO ${acidTableName} VALUES (3, "c");
-        COMMIT;
         """
+    sql """BEGIN;"""
+    sql """INSERT INTO ${acidTableName} VALUES (3, "c");"""
+    sql """COMMIT;"""
 
-    sql """
-        BEGIN;
-        INSERT INTO ${acidTableName2} select id, name from ${acidTableName};
-        INSERT INTO ${acidTableName2} SELECT id, name FROM ${acidTableName1};
-        UPDATE ${acidTableName} set name = "bb" where id = 2;
-        UPDATE ${acidTableName1} set name = "yy" where id = 5;
-        DELETE FROM ${acidTableName} WHERE id = 3;
-        DELETE FROM ${acidTableName1} WHERE id = 4;
-        COMMIT;
-        """
+    sql """ BEGIN; """
+    sql """ INSERT INTO ${acidTableName2} select id, name from ${acidTableName}; """
+    sql """ INSERT INTO ${acidTableName2} SELECT id, name FROM ${acidTableName1}; """
+    sql """ UPDATE ${acidTableName} set name = "bb" where id = 2; """
+    sql """ UPDATE ${acidTableName1} set name = "yy" where id = 5; """
+    sql """ DELETE FROM ${acidTableName} WHERE id = 3; """
+    sql """ DELETE FROM ${acidTableName1} WHERE id = 4; """
+    sql """ COMMIT; """
 
 
     assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableUnique1}",
