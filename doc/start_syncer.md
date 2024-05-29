@@ -92,7 +92,7 @@ bash bin/start_syncer.sh --commit_txn_timeout 33s
 ### --connect_timeout duration
 用于指定连接超时时间
 ```bash
-bash bin/start_syncer.sh --connect_timeout_syncer 1s
+bash bin/start_syncer.sh --connect_timeout 10s
 ```
 默认值为1s
 
@@ -106,6 +106,6 @@ bash bin/start_syncer.sh --local_repo_name "repo_name"
 ### --rpc_timeout duration
 用于指定rpc超时时间
 ```bash
-bash bin/start_syncer.sh --rpc_timeout_duration 3s
+bash bin/start_syncer.sh --rpc_timeout 30s
 ```
 默认值为3s
