@@ -17,7 +17,7 @@ usage() {
     echo "
 Usage: $0 [--deamon] [--log_level [info|debug]] [--log_dir dir] [--db_dir dir]
           [--host host] [--port port] [--pid_dir dir] [--pprof [true|false]]
-          [--pprof_port p_port]
+          [--pprof_port p_port] [--connect_timeout s] [--rpc_timeout s]
         "
     exit 1
 }
@@ -41,6 +41,8 @@ OPTS="$(getopt \
     -l 'pid_dir:' \
     -l 'pprof:' \
     -l 'pprof_port:' \
+    -l 'connect_timeout:' \
+    -l 'rpc_timeout:' \
     -- "$@")"
 
 eval set -- "${OPTS}"
@@ -57,6 +59,8 @@ DB_USER=""
 DB_PASSWORD=""
 PPROF="false"
 PPROF_PORT="6060"
+CONNECT_TIMEOUT="10s"
+RPC_TIMEOUT="30s"
 while true; do
     case "$1" in
     -h)
@@ -121,6 +125,14 @@ while true; do
         PPROF_PORT=$2
         shift 2
         ;;
+    --connect_timeout)
+        CONNECT_TIMEOUT=$2
+        shift 2
+        ;;
+    --rpc_timeout)
+        RPC_TIMEOUT=$2
+        shift 2
+        ;;
     --)
         shift
         break
@@ -179,6 +191,8 @@ if [[ "${RUN_DAEMON}" -eq 1 ]]; then
           "-pprof_port=${PPROF_PORT}" \
           "-log_level=${LOG_LEVEL}" \
           "-log_filename=${LOG_DIR}" \
+          "-connect_timeout=${CONNECT_TIMEOUT}" \
+          "-rpc_timeout=${RPC_TIMEOUT}" \
           "$@" >>"${LOG_DIR}" 2>&1 </dev/null &
     echo $! > ${pidfile}
 else
@@ -193,5 +207,7 @@ else
         "-port=${PORT}" \
         "-pprof=${PPROF}" \
         "-pprof_port=${PPROF_PORT}" \
+        "-connect_timeout=${CONNECT_TIMEOUT}" \
+        "-rpc_timeout=${RPC_TIMEOUT}" \
         "-log_level=${LOG_LEVEL}" | tee -a "${LOG_DIR}"
 fi
