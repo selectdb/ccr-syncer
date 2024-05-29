@@ -35,8 +35,8 @@ var ErrFeNotMasterCompatible = xerror.NewWithoutStack(xerror.FE, "not master com
 func init() {
 	flag.StringVar(&localRepoName, "local_repo_name", "", "local_repo_name")
 	flag.DurationVar(&commitTxnTimeout, "commit_txn_timeout", 33*time.Second, "commmit_txn_timeout")
-	flag.DurationVar(&connectTimeout, "connect_timeout", 1*time.Second, "connect timeout")
-	flag.DurationVar(&rpcTimeout, "rpc_timeout", 3*time.Second, "rpc timeout")
+	flag.DurationVar(&connectTimeout, "connect_timeout", 10*time.Second, "connect timeout")
+	flag.DurationVar(&rpcTimeout, "rpc_timeout", 30*time.Second, "rpc timeout")
 }
 
 // canUseNextAddr means can try next addr, err is a connection error, not a method not found or other error
