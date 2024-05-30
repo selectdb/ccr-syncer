@@ -11,6 +11,7 @@ type PartitionRecord struct {
 	Id      int64  `json:"partitionId"`
 	Range   string `json:"range"`
 	Version int64  `json:"version"`
+	IsTemp  bool   `json:"isTempPartition"`
 }
 
 func (p PartitionRecord) String() string {

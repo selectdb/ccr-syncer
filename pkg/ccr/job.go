@@ -881,6 +881,11 @@ func (j *Job) handleAddPartition(binlog *festruct.TBinlog) error {
 		return err
 	}
 
+	if addPartition.IsTemp {
+		log.Infof("skip add temporary partition because backup/restore table with temporary partitions is not supported yet")
+		return nil
+	}
+
 	var destTableName string
 	if j.SyncType == TableSync {
 		destTableName = j.Dest.Table
@@ -1089,6 +1094,14 @@ func (j *Job) handleTruncateTable(binlog *festruct.TBinlog) error {
 	return err
 }
 
+func (j *Job) handleReplacePartitions(binlog *festruct.TBinlog) error {
+	log.Infof("handle replace partitions binlog, commit seq: %d", *binlog.CommitSeq)
+
+	// TODO(walter) replace partitions once backuping/restoring with temporary partitions is supportted.
+
+	return j.newSnapshot(j.progress.CommitSeq)
+}
+
 // return: error && bool backToRunLoop
 func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 	log.Infof("handle binlogs, binlogs size: %d", len(binlogs))
@@ -1166,6 +1179,8 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		log.Info("handle barrier binlog, ignore it")
 	case festruct.TBinlogType_TRUNCATE_TABLE:
 		return j.handleTruncateTable(binlog)
+	case festruct.TBinlogType_REPLACE_PARTITIONS:
+		return j.handleReplacePartitions(binlog)
 	default:
 		return xerror.Errorf(xerror.Normal, "unknown binlog type: %v", binlog.GetType())
 	}

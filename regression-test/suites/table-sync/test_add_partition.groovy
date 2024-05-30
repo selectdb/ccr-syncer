@@ -178,59 +178,60 @@ suite("test_add_partition") {
                                 """,
                                 exist, 60, "target"))
 
-    logger.info("=== Test 3: Add temp partition ===")
-    tableName = "${baseTableName}_temp_range"
-    sql """
-        CREATE TABLE if NOT EXISTS ${tableName}
-        (
-            `test` INT,
-            `id` INT
-        )
-        ENGINE=OLAP
-        UNIQUE KEY(`test`, `id`)
-        PARTITION BY RANGE(`id`)
-        (
-            PARTITION `p1` VALUES LESS THAN ("0"),
-            PARTITION `p2` VALUES LESS THAN ("100")
-        )
-        DISTRIBUTED BY HASH(id) BUCKETS AUTO
-        PROPERTIES (
-            "replication_allocation" = "tag.location.default: 1",
-            "binlog.enable" = "true"
-        )
-    """
+    // NOTE: ccr synder does not support syncing temp partition now.
+    // logger.info("=== Test 3: Add temp partition ===")
+    // tableName = "${baseTableName}_temp_range"
+    // sql """
+    //     CREATE TABLE if NOT EXISTS ${tableName}
+    //     (
+    //         `test` INT,
+    //         `id` INT
+    //     )
+    //     ENGINE=OLAP
+    //     UNIQUE KEY(`test`, `id`)
+    //     PARTITION BY RANGE(`id`)
+    //     (
+    //         PARTITION `p1` VALUES LESS THAN ("0"),
+    //         PARTITION `p2` VALUES LESS THAN ("100")
+    //     )
+    //     DISTRIBUTED BY HASH(id) BUCKETS AUTO
+    //     PROPERTIES (
+    //         "replication_allocation" = "tag.location.default: 1",
+    //         "binlog.enable" = "true"
+    //     )
+    // """
 
-    httpTest {
-        uri "/create_ccr"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body "${tableName}"
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
+    // httpTest {
+    //     uri "/create_ccr"
+    //     endpoint syncerAddress
+    //     def bodyJson = get_ccr_body "${tableName}"
+    //     body "${bodyJson}"
+    //     op "post"
+    //     result response
+    // }
 
-    assertTrue(checkRestoreFinishTimesOf("${tableName}", 60))
+    // assertTrue(checkRestoreFinishTimesOf("${tableName}", 60))
 
-    sql """
-        ALTER TABLE ${tableName} ADD TEMPORARY PARTITION p3 VALUES LESS THAN ("200")
-        """
+    // sql """
+    //     ALTER TABLE ${tableName} ADD TEMPORARY PARTITION p3 VALUES LESS THAN ("200")
+    //     """
 
-    assertTrue(checkShowTimesOf("""
-                                SHOW TEMPORARY PARTITIONS
-                                FROM ${tableName}
-                                WHERE PartitionName = "p3"
-                                """,
-                                exist, 60, "target"))
+    // assertTrue(checkShowTimesOf("""
+    //                             SHOW TEMPORARY PARTITIONS
+    //                             FROM ${tableName}
+    //                             WHERE PartitionName = "p3"
+    //                             """,
+    //                             exist, 60, "target"))
 
-    sql "INSERT INTO ${tableName} TEMPORARY PARTITION (p3) VALUES (1, 150)"
+    // sql "INSERT INTO ${tableName} TEMPORARY PARTITION (p3) VALUES (1, 150)"
 
-    assertTrue(checkShowTimesOf("""
-                                SELECT *
-                                FROM ${tableName}
-                                TEMPORARY PARTITION (p3)
-                                WHERE id = 150
-                                """,
-                                exist, 60, "target"))
+    // assertTrue(checkShowTimesOf("""
+    //                             SELECT *
+    //                             FROM ${tableName}
+    //                             TEMPORARY PARTITION (p3)
+    //                             WHERE id = 150
+    //                             """,
+    //                             exist, 60, "target"))
 
     logger.info("=== Test 4: Add unpartitioned partition ===")
     tableName = "${baseTableName}_unpart"
@@ -260,15 +261,13 @@ suite("test_add_partition") {
 
     assertTrue(checkRestoreFinishTimesOf("${tableName}", 60))
 
-    // FIXME(walter) support insert overwrite.
-    //
-    // sql """
-    //     INSERT OVEWRITE ${tableName} VALUES (1, 100);
-    //    """
-    //
-    // assertTrue(checkShowTimesOf("""
-    //                             SELECT * FROM ${tableName}
-    //                             WHERE id = 100
-    //                             """,
-    //                             exist, 60, "target"))
+    sql """
+        INSERT OVERWRITE ${tableName} VALUES (1, 100);
+       """
+
+    assertTrue(checkShowTimesOf("""
+                                SELECT * FROM ${tableName}
+                                WHERE id = 100
+                                """,
+                                exist, 60, "target"))
 }
