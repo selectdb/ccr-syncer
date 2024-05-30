@@ -453,8 +453,11 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 		return
 	}
 	for _, partitionRecord := range tableRecord.PartitionRecords {
+		if partitionRecord.IsTemp {
+			continue
+		}
 		rangeKey := partitionRecord.Range
-		// TODO(Improvment, Fix): this may happen after drop partition, can seek partition for more time, check from recycle bin
+		// TODO(Improvement, Fix): this may happen after drop partition, can seek partition for more time, check from recycle bin
 		if _, ok := srcPartitionMap[rangeKey]; !ok {
 			err = xerror.Errorf(xerror.Meta, "partition range: %v not in src cluster", rangeKey)
 			j.setError(err)
@@ -469,6 +472,11 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 
 	// Step 2: prepare partitions
 	for _, partitionRecord := range tableRecord.PartitionRecords {
+		if partitionRecord.IsTemp {
+			log.Debugf("skip ingest binlog to an temp partition, id: %d range: %s, version: %d",
+				partitionRecord.Id, partitionRecord.Range, partitionRecord.Version)
+			continue
+		}
 		j.preparePartition(srcTableId, destTableId, partitionRecord, tableRecord.IndexIds)
 	}
 }
