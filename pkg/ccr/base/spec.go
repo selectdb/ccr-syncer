@@ -835,7 +835,7 @@ func correctAddPartitionSql(addPartitionSql string, addPartition *record.AddPart
 	// 1. fix unpartitioned add partition sql
 	// 2. support add temporary partition
 	if strings.Contains(addPartitionSql, "VALUES [(), ())") {
-		re := regexp.MustCompile(`VALUES \[\(\), \(\)\) \(.*\)`)
+		re := regexp.MustCompile(`VALUES \[\(\), \(\)\) \(.*^\)\)`)
 		addPartitionSql = re.ReplaceAllString(addPartitionSql, "")
 	}
 	if strings.Contains(addPartitionSql, "VALUES IN (((") {
