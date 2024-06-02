@@ -18,6 +18,7 @@ type Specer interface {
 	IsDatabaseEnableBinlog() (bool, error)
 	IsTableEnableBinlog() (bool, error)
 	GetAllTables() ([]string, error)
+	GetAllViewsFromTable(tableName string) ([]string, error)
 	ClearDB() error
 	CreateDatabase() error
 	CreateTable(createTable *record.CreateTable) error
@@ -31,6 +32,7 @@ type Specer interface {
 	LightningSchemaChange(srcDatabase string, changes *record.ModifyTableAddOrDropColumns) error
 	TruncateTable(destTableName string, truncateTable *record.TruncateTable) error
 	DropTable(tableName string) error
+	DropView(viewName string) error
 
 	AddPartition(destTableName string, addPartition *record.AddPartition) error
 	DropPartition(destTableName string, dropPartition *record.DropPartition) error

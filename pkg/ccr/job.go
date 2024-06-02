@@ -946,6 +946,24 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
+	/*
+		Creating table will only occur when sync db.
+		When create view, the db name of sql is source db name, we should use dest db name to create view
+	*/
+	createSql := createTable.Sql
+	viewRegex := regexp.MustCompile("(?i)^CREATE(\\s+)VIEW")
+	isCreateView := viewRegex.MatchString(createSql)
+	if isCreateView {
+		log.Debugf("create view, use dest db name to replace source db name")
+
+		// replace `internal`.`source_db_name`. to `internal`.`dest_db_name`.
+		originalName := "`internal`.`" + strings.TrimSpace(j.Src.Database) + "`."
+		dbNameRegex := regexp.MustCompile(originalName)
+		replaceName := "`internal`.`" + strings.TrimSpace(j.Dest.Database) + "`."
+		createTable.Sql = dbNameRegex.ReplaceAllString(createSql, replaceName)
+		log.Debugf("original create view sql is %s, after repalce, now sql is %s", createSql, createTable.Sql)
+	}
+
 	if err := j.IDest.CreateTable(createTable); err != nil {
 		return xerror.Wrapf(err, xerror.Normal, "create table %d", createTable.TableId)
 	}
@@ -1034,14 +1052,31 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
+	// drop table dropTableSql
+	var destTableName string
+	if j.SyncType == TableSync {
+		destTableName = j.Dest.Table
+	} else {
+		destTableName = alterJob.TableName
+	}
+
+	var allViewDeleted bool = false
 	for {
-		// drop table dropTableSql
-		var destTableName string
-		if j.SyncType == TableSync {
-			destTableName = j.Dest.Table
-		} else {
-			destTableName = alterJob.TableName
+		// before drop table, drop related view firstly
+		if !allViewDeleted {
+			views, err := j.IDest.GetAllViewsFromTable(destTableName)
+			if err != nil {
+				return err
+			}
+
+			for _, view := range views {
+				if err := j.IDest.DropView(view); err != nil {
+					return err
+				}
+			}
+			allViewDeleted = true
 		}
+
 		if err := j.IDest.DropTable(destTableName); err == nil {
 			break
 		}
