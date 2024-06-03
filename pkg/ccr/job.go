@@ -949,7 +949,7 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	if err := j.IDest.CreateTable(createTable); err != nil {
+	if err := j.IDest.CreateTableOrView(createTable, j.Src.Database); err != nil {
 		return xerror.Wrapf(err, xerror.Normal, "create table %d", createTable.TableId)
 	}
 
@@ -1037,14 +1037,38 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
+	// drop table dropTableSql
+	var destTableName string
+	if j.SyncType == TableSync {
+		destTableName = j.Dest.Table
+	} else {
+		destTableName = alterJob.TableName
+	}
+
+	var allViewDeleted bool = false
 	for {
-		// drop table dropTableSql
-		var destTableName string
-		if j.SyncType == TableSync {
-			destTableName = j.Dest.Table
-		} else {
-			destTableName = alterJob.TableName
+		// before drop table, drop related view firstly
+		if !allViewDeleted {
+			views, err := j.IDest.GetAllViewsFromTable(destTableName)
+			if err != nil {
+				log.Errorf("when alter job, get view from table failed, err : %v", err)
+				continue
+			}
+
+			var dropViewFailed bool = false
+			for _, view := range views {
+				if err := j.IDest.DropView(view); err != nil {
+					log.Errorf("when alter job, drop view %s failed, err : %v", view, err)
+					dropViewFailed = true
+				}
+			}
+			if dropViewFailed {
+				continue
+			}
+
+			allViewDeleted = true
 		}
+
 		if err := j.IDest.DropTable(destTableName); err == nil {
 			break
 		}
