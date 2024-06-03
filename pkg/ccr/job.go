@@ -1046,17 +1046,27 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 	for {
 		// before drop table, drop related view firstly
 		if !allViewDeleted {
+			var retryTimes int = 0
 			views, err := j.IDest.GetAllViewsFromTable(destTableName)
 			if err != nil {
 				log.Errorf("when alter job, get view from table failed, err : %v", err)
-				break
+				if retryTimes < 3 {
+					retryTimes++
+					continue
+				}
 			}
 
+			var dropViewFailed bool = false
 			for _, view := range views {
 				if err := j.IDest.DropView(view); err != nil {
 					log.Errorf("when alter job, drop view %s failed, err : %v", view, err)
+					dropViewFailed = true
 				}
 			}
+			if dropViewFailed {
+				break
+			}
+
 			allViewDeleted = true
 		}
 
