@@ -297,6 +297,67 @@ func (s *Spec) GetAllTables() ([]string, error) {
 	return tables, nil
 }
 
+func (s *Spec) queryResult(querySQL string, queryColumn string, errMsg string) ([]string, error) {
+	db, err := s.ConnectDB()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := db.Query(querySQL)
+	if err != nil {
+		return nil, xerror.Wrap(err, xerror.Normal, querySQL+" failed")
+	}
+	defer rows.Close()
+
+	var results []string
+	for rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return nil, xerror.Wrap(err, xerror.Normal, errMsg)
+		}
+		result, err := rowParser.GetString(queryColumn)
+		if err != nil {
+			return nil, xerror.Wrap(err, xerror.Normal, errMsg)
+		}
+		results = append(results, result)
+	}
+
+	return results, nil
+}
+
+func (s *Spec) GetAllViewsFromTable(tableName string) ([]string, error) {
+	log.Debugf("get all view from table %s", tableName)
+
+	var results []string
+	// first, query information_schema.tables with table_schema and table_type, get all views' name
+	querySql := fmt.Sprintf("SELECT table_name FROM information_schema.tables WHERE table_schema = '%s' AND  table_type = 'VIEW'", s.Database)
+	viewsFromQuery, err := s.queryResult(querySql, "table_name", "QUERY VIEWS")
+	if err != nil {
+		return nil, xerror.Wrap(err, xerror.Normal, "query views from information schema failed")
+	}
+
+	// then query view's create sql, if create sql contains tableName, this view is wanted
+	viewRegex := regexp.MustCompile("`internal`.`(\\w+)`.`" + strings.TrimSpace(tableName) + "`")
+	for _, eachViewName := range viewsFromQuery {
+		showCreateViewSql := fmt.Sprintf("SHOW CREATE VIEW %s", eachViewName)
+		createViewSqlList, err := s.queryResult(showCreateViewSql, "Create View", "SHOW CREATE VIEW")
+		if err != nil {
+			return nil, xerror.Wrap(err, xerror.Normal, "show create view failed")
+		}
+
+		// a view has only one create sql, so use createViewSqlList[0] as the only sql
+		if len(createViewSqlList) > 0 {
+			found := viewRegex.MatchString(createViewSqlList[0])
+			if found {
+				results = append(results, eachViewName)
+			}
+		}
+	}
+
+	log.Debugf("get view result is %s", results)
+	return results, nil
+}
+
 func (s *Spec) dropTable(table string) error {
 	log.Infof("drop table %s.%s", s.Database, table)
 
@@ -348,6 +409,28 @@ func (s *Spec) CreateDatabase() error {
 }
 
 func (s *Spec) CreateTable(createTable *record.CreateTable) error {
+	sql := createTable.Sql
+	log.Infof("createTableSql: %s", sql)
+	// HACK: for drop table
+	return s.DbExec(sql)
+}
+
+func (s *Spec) CreateTableOrView(createTable *record.CreateTable, srcDatabase string) error {
+	//	Creating table will only occur when sync db.
+	//	When create view, the db name of sql is source db name, we should use dest db name to create view
+	createSql := createTable.Sql
+	viewRegex := regexp.MustCompile("(?i)^CREATE(\\s+)VIEW")
+	isCreateView := viewRegex.MatchString(createSql)
+	if isCreateView {
+		log.Debugf("create view, use dest db name to replace source db name")
+
+		// replace `internal`.`source_db_name`. to `internal`.`dest_db_name`.
+		originalName := "`internal`.`" + strings.TrimSpace(srcDatabase) + "`."
+		replaceName := "`internal`.`" + strings.TrimSpace(s.Database) + "`."
+		createTable.Sql = strings.ReplaceAll(createTable.Sql, originalName, replaceName)
+		log.Debugf("original create view sql is %s, after repalce, now sql is %s", createSql, createTable.Sql)
+	}
+
 	sql := createTable.Sql
 	log.Infof("createTableSql: %s", sql)
 	// HACK: for drop table
@@ -777,6 +860,12 @@ func (s *Spec) DropTable(tableName string) error {
 	dropSql := fmt.Sprintf("DROP TABLE %s FORCE", utils.FormatKeywordName(tableName))
 	log.Infof("drop table sql: %s", dropSql)
 	return s.DbExec(dropSql)
+}
+
+func (s *Spec) DropView(viewName string) error {
+	dropView := fmt.Sprintf("DROP VIEW IF EXISTS %s ", utils.FormatKeywordName(viewName))
+	log.Infof("drop view sql: %s", dropView)
+	return s.DbExec(dropView)
 }
 
 func (s *Spec) AddPartition(destTableName string, addPartition *record.AddPartition) error {
