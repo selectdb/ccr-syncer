@@ -415,6 +415,28 @@ func (s *Spec) CreateTable(createTable *record.CreateTable) error {
 	return s.DbExec(sql)
 }
 
+func (s *Spec) CreateTableOrView(createTable *record.CreateTable, srcDatabase string) error {
+	//	Creating table will only occur when sync db.
+	//	When create view, the db name of sql is source db name, we should use dest db name to create view
+	createSql := createTable.Sql
+	viewRegex := regexp.MustCompile("(?i)^CREATE(\\s+)VIEW")
+	isCreateView := viewRegex.MatchString(createSql)
+	if isCreateView {
+		log.Debugf("create view, use dest db name to replace source db name")
+
+		// replace `internal`.`source_db_name`. to `internal`.`dest_db_name`.
+		originalName := "`internal`.`" + strings.TrimSpace(srcDatabase) + "`."
+		replaceName := "`internal`.`" + strings.TrimSpace(s.Database) + "`."
+		createTable.Sql = strings.Replace(createTable.Sql, originalName, replaceName)
+		log.Debugf("original create view sql is %s, after repalce, now sql is %s", createSql, createTable.Sql)
+	}
+
+	sql := createTable.Sql
+	log.Infof("createTableSql: %s", sql)
+	// HACK: for drop table
+	return s.DbExec(sql)
+}
+
 func (s *Spec) CheckDatabaseExists() (bool, error) {
 	log.Debugf("check database exist by spec: %s", s.String())
 	db, err := s.Connect()
