@@ -946,25 +946,7 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	/*
-		Creating table will only occur when sync db.
-		When create view, the db name of sql is source db name, we should use dest db name to create view
-	*/
-	createSql := createTable.Sql
-	viewRegex := regexp.MustCompile("(?i)^CREATE(\\s+)VIEW")
-	isCreateView := viewRegex.MatchString(createSql)
-	if isCreateView {
-		log.Debugf("create view, use dest db name to replace source db name")
-
-		// replace `internal`.`source_db_name`. to `internal`.`dest_db_name`.
-		originalName := "`internal`.`" + strings.TrimSpace(j.Src.Database) + "`."
-		dbNameRegex := regexp.MustCompile(originalName)
-		replaceName := "`internal`.`" + strings.TrimSpace(j.Dest.Database) + "`."
-		createTable.Sql = dbNameRegex.ReplaceAllString(createSql, replaceName)
-		log.Debugf("original create view sql is %s, after repalce, now sql is %s", createSql, createTable.Sql)
-	}
-
-	if err := j.IDest.CreateTable(createTable); err != nil {
+	if err := j.IDest.CreateTableOrView(createTable, j.Src.Database); err != nil {
 		return xerror.Wrapf(err, xerror.Normal, "create table %d", createTable.TableId)
 	}
 
@@ -1066,12 +1048,13 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 		if !allViewDeleted {
 			views, err := j.IDest.GetAllViewsFromTable(destTableName)
 			if err != nil {
-				return err
+				log.Errorf("when alter job, get view from table failed, err : %v", err)
+				break
 			}
 
 			for _, view := range views {
 				if err := j.IDest.DropView(view); err != nil {
-					return err
+					log.Errorf("when alter job, drop view %s failed, err : %v", view, err)
 				}
 			}
 			allViewDeleted = true

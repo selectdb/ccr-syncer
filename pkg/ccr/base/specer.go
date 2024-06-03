@@ -22,6 +22,7 @@ type Specer interface {
 	ClearDB() error
 	CreateDatabase() error
 	CreateTable(createTable *record.CreateTable) error
+	CreateTableOrView(createTable *record.CreateTable, srcDatabase string) error
 	CheckDatabaseExists() (bool, error)
 	CheckTableExists() (bool, error)
 	CreateSnapshotAndWaitForDone(tables []string) (string, error)
