@@ -152,8 +152,10 @@ suite("test_insert_overwrite") {
     """
     sql "sync"
 
+    sleep(10000)
+    assertTrue(checkRestoreFinishTimesOf("${uniqueTable}", 60))
+
     assertTrue(checkSelectTimesOf("SELECT * FROM ${uniqueTable} WHERE test=3", 5, 60))
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${uniqueTable} WHERE test=2", 0, 60))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${uniqueTable}", 5, 60))
 
     qt_sql "SELECT * FROM ${uniqueTable} ORDER BY test, id"
