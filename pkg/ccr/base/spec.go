@@ -427,7 +427,7 @@ func (s *Spec) CreateTableOrView(createTable *record.CreateTable, srcDatabase st
 		// replace `internal`.`source_db_name`. to `internal`.`dest_db_name`.
 		originalName := "`internal`.`" + strings.TrimSpace(srcDatabase) + "`."
 		replaceName := "`internal`.`" + strings.TrimSpace(s.Database) + "`."
-		createTable.Sql = strings.Replace(createTable.Sql, originalName, replaceName)
+		createTable.Sql = strings.ReplaceAll(createTable.Sql, originalName, replaceName)
 		log.Debugf("original create view sql is %s, after repalce, now sql is %s", createSql, createTable.Sql)
 	}
 
