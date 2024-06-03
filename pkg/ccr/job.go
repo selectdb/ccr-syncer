@@ -1064,7 +1064,7 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 				}
 			}
 			if dropViewFailed {
-				break
+				continue
 			}
 
 			allViewDeleted = true
