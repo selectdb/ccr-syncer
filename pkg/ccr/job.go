@@ -361,6 +361,9 @@ func (j *Job) fullSync() error {
 		jobInfo := snapshotResp.GetJobInfo()
 		tableCommitSeqMap := inMemoryData.TableCommitSeqMap
 
+		log.Infof("snapshot response meta size: %d, job info size: %d",
+			len(snapshotResp.Meta), len(snapshotResp.JobInfo))
+
 		var jobInfoMap map[string]interface{}
 		err := json.Unmarshal(jobInfo, &jobInfoMap)
 		if err != nil {
@@ -379,7 +382,7 @@ func (j *Job) fullSync() error {
 		if err != nil {
 			return xerror.Errorf(xerror.Normal, "marshal jobInfo failed, jobInfo: %v", jobInfoMap)
 		}
-		log.Debugf("jobInfoBytes: %s", string(jobInfoBytes))
+		log.Debugf("job info size: %d, bytes: %s", len(jobInfoBytes), string(jobInfoBytes))
 		snapshotResp.SetJobInfo(jobInfoBytes)
 
 		var commitSeq int64 = math.MaxInt64
