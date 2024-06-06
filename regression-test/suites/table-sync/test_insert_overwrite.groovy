@@ -65,6 +65,26 @@ suite("test_insert_overwrite") {
         return ret
     }
 
+    def checkBackupFinishTimesOf = { checkTable, times -> Boolean
+        Boolean ret = false
+        while (times > 0) {
+            def sqlInfo = sql "SHOW BACKUP FROM ${context.dbName}"
+            for (List<Object> row : sqlInfo) {
+                if ((row[4] as String).contains(checkTable)) {
+                    ret = row[3] == "FINISHED"
+                }
+            }
+
+            if (ret) {
+                break
+            } else if (--times > 0) {
+                sleep(sync_gap_time)
+            }
+        }
+
+        return ret
+    }
+
     def checkData = { data, beginCol, value -> Boolean
         if (data.size() < beginCol + value.size()) {
             return false
@@ -152,6 +172,8 @@ suite("test_insert_overwrite") {
     """
     sql "sync"
 
+    sleep(10000)
+    assertTrue(checkBackupFinishTimesOf("${uniqueTable}", 60))
     sleep(10000)
     assertTrue(checkRestoreFinishTimesOf("${uniqueTable}", 60))
 
