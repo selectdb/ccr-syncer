@@ -15,10 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_mow") {
-    def tableName = "tbl_mow_" + UUID.randomUUID().toString().replace("-", "")
+suite("test_variant_ccr") {
+    def tableName = "test_variant_" + UUID.randomUUID().toString().replace("-", "")
     def syncerAddress = "127.0.0.1:9190"
-    def test_num = 0
     def insert_num = 5
     def sync_gap_time = 5000
     String response
@@ -58,29 +57,21 @@ suite("test_mow") {
 
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
-        (
-            `test` INT,
-            `id` INT,
-            `commit_seq` INT
-        )
-        ENGINE=OLAP
-        UNIQUE KEY(`test`)
-        DISTRIBUTED BY HASH(test) BUCKETS 1
-        PROPERTIES (
-            "replication_allocation" = "tag.location.default: 1",
-            "function_column.sequence_col" = 'commit_seq',
-            "enable_unique_key_merge_on_write" = "true"
-        )
+               (
+                    k bigint,
+                    var variant
+                )
+                UNIQUE KEY(`k`)
+                DISTRIBUTED BY HASH(k) BUCKETS 1
+                properties("replication_num" = "1", "disable_auto_compaction" = "false");
     """
     for (int index = 0; index < insert_num; ++index) {
         sql """
-            INSERT INTO ${tableName} VALUES (${test_num}, ${index}, ${index})
+            INSERT INTO ${tableName} VALUES (${index}, '{"key_${index}":"value_${index}"}')
             """
     }
     sql """ALTER TABLE ${tableName} set ("binlog.enable" = "true")"""
     sql "sync"
-
-    logger.info("=== Test 1: full update mow ===")
     httpTest {
         uri "/create_ccr"
         endpoint syncerAddress
@@ -91,54 +82,28 @@ suite("test_mow") {
     }
 
     assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
-
-    // show create table regression_test_p0.tbl_mow_sync;
     def res = target_sql "SHOW CREATE TABLE ${tableName}"
-    def enabledMOW = false
+    def createSuccess = false
     for (List<Object> row : res) {
-        if ((row[0] as String) == "${tableName}") {
-            enabledMOW = (row[1] as String).contains("\"enable_unique_key_merge_on_write\" = \"true\"")
+        def get_table_name = row[0] as String
+        logger.info("get_table_name is ${get_table_name}")
+        def compare_table_name = "${tableName}"
+        logger.info("compare_table_name is ${compare_table_name}")
+        if (get_table_name == compare_table_name) {
+            createSuccess = true
             break
         }
     }
-    assertTrue(enabledMOW)
+    assertTrue(createSuccess)
+    def count_res = target_sql " select count(*) from ${tableName}"
+    def count = count_res[0][0] as Integer
+    assertTrue(count.equals(insert_num))
 
-    logger.info("=== Test 2: incremental value ===")
-    test_num = 2
-    for (int index = 0; index < insert_num; ++index) {
-        sql """
-            INSERT INTO ${tableName} VALUES (${test_num}, ${index}, ${index})
-            """
-    }
-    sql "sync"
-    def checkSeq1 = { inputRes -> Boolean
-        for (List<Object> row : inputRes) {
-            if ((row[2] as Integer) != 4) {
-                return false
-            }
-        }
-        return true
-    }
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
-                                   1, 30, checkSeq1))
-    
+    (0..count-1).each {Integer i ->
+        def var_reult =  target_sql " select CAST(var[\"key_${i}\"] AS TEXT) from ${tableName} where k = ${i}"
+        assertTrue((var_reult[0][0] as String) == ("value_${i}" as String))
 
-    logger.info("=== Test 3: sequence value ===")
-    test_num = 3
-    for (int index = 0; index < insert_num; ++index) {
-        sql """
-            INSERT INTO ${tableName} VALUES (${test_num}, ${test_num}, 5 - ${index})
-            """
     }
-    sql "sync"
-    def checkSeq2 = { inputRes -> Boolean
-        for (List<Object> row : inputRes) {
-            if ((row[2] as Integer) != 5) {
-                return false
-            }
-        }
-        return true
-    }
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
-                                   1, 30, checkSeq2))
+
 }
+

@@ -21,7 +21,7 @@ suite("test_delete") {
     def test_num = 0
     def insert_num = 29
     def sync_gap_time = 5000
-    String respone
+    String response
 
     def checkSelectTimesOf = { sqlString, rowSize, times -> Boolean
         def tmpRes = target_sql "${sqlString}"
@@ -87,7 +87,7 @@ suite("test_delete") {
         def bodyJson = get_ccr_body "${tableName}"
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
 
     assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
