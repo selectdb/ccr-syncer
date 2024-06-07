@@ -15,7 +15,7 @@ PID_DIR="$(
 
 usage() {
     echo "
-Usage: $0 [--deamon] [--log_level [info|debug]] [--log_dir dir] [--db_dir dir]
+Usage: $0 [--daemon] [--log_level [info|debug|trace]] [--log_dir dir] [--db_dir dir]
           [--host host] [--port port] [--pid_dir dir] [--pprof [true|false]]
           [--pprof_port p_port] [--connect_timeout s] [--rpc_timeout s]
         "

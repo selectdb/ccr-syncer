@@ -23,7 +23,7 @@ suite("test_partition_ops") {
     def insert_num = 5
     def sync_gap_time = 5000
     def opPartitonName = "less0"
-    String respone
+    String response
 
     def checkSelectTimesOf = { sqlString, rowSize, times -> Boolean
         def tmpRes = target_sql "${sqlString}"
@@ -117,7 +117,7 @@ suite("test_partition_ops") {
         def bodyJson = get_ccr_body "${tableName}"
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
 
     assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
@@ -141,10 +141,37 @@ suite("test_partition_ops") {
         VALUES [('0'), ('5'))
     """
 
+    // add partition use bucket number 
+    opBucketNumberPartitonName = "bucket_number_partition"
+    sql """
+        ALTER TABLE ${tableName}
+        ADD PARTITION ${opBucketNumberPartitonName}
+        VALUES [(5), (6)) DISTRIBUTED BY HASH(id) BUCKETS 2;
+    """
+    opDifferentBucketNumberPartitonName = "different_bucket_number_partition"
+    sql """
+        ALTER TABLE ${tableName}
+        ADD PARTITION ${opDifferentBucketNumberPartitonName}
+        VALUES [(6), (7)) DISTRIBUTED BY HASH(id) BUCKETS 3;
+    """
+
+
     assertTrue(checkShowTimesOf("""
                                 SHOW PARTITIONS
                                 FROM TEST_${context.dbName}.${tableName}
                                 WHERE PartitionName = \"${opPartitonName}\"
+                                """,
+                                exist, 30, "target"))
+    assertTrue(checkShowTimesOf("""
+                                SHOW PARTITIONS
+                                FROM TEST_${context.dbName}.${tableName}
+                                WHERE PartitionName = \"${opBucketNumberPartitonName}\"
+                                """,
+                                exist, 30, "target"))   
+    assertTrue(checkShowTimesOf("""
+                                SHOW PARTITIONS
+                                FROM TEST_${context.dbName}.${tableName}
+                                WHERE PartitionName = \"${opDifferentBucketNumberPartitonName}\"
                                 """,
                                 exist, 30, "target"))
 

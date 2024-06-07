@@ -21,7 +21,7 @@ suite("test_column_ops") {
     def test_num = 0
     def insert_num = 5
     def sync_gap_time = 5000
-    String respone
+    String response
 
     def checkShowTimesOf = { sqlString, myClosure, times, func = "sql" -> Boolean
         Boolean ret = false
@@ -141,7 +141,7 @@ suite("test_column_ops") {
         def bodyJson = get_ccr_body "${tableName}"
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
 
     assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))

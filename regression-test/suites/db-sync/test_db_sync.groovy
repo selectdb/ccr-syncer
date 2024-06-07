@@ -175,7 +175,7 @@ suite("test_db_sync") {
         def bodyJson = get_ccr_body ""
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
 
     assertTrue(checkRestoreFinishTimesOf("${tableUnique0}", 130))
@@ -250,6 +250,11 @@ suite("test_db_sync") {
             INSERT INTO ${keywordTableName} VALUES (${test_num}, ${index})
             """
     }
+    for (int index = 0; index < insert_num; index++) {
+        sql """
+            INSERT INTO ${keywordTableName} VALUES (${test_num}, ${index}, '${date_num}')
+            """
+    }
 
     sql "sync"
     assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableUnique1}",
@@ -295,7 +300,7 @@ suite("test_db_sync") {
         def bodyJson = get_ccr_body ""
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
 
     test_num = 4
@@ -315,7 +320,7 @@ suite("test_db_sync") {
         def bodyJson = get_ccr_body ""
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
     sql "sync"
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
@@ -330,7 +335,7 @@ suite("test_db_sync") {
         def bodyJson = get_ccr_body ""
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
 
     sleep(sync_gap_time)
@@ -361,7 +366,7 @@ suite("test_db_sync") {
         def bodyJson = get_ccr_body ""
         body "${bodyJson}"
         op "post"
-        result respone
+        result response
     }
 
     for (int index = 0; index < insert_num; index++) {
