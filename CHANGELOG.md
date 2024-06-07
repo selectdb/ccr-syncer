@@ -2,11 +2,30 @@
 
 ## dev
 
+WIP
+
+## v 2.0.11
+
+### Feature
+
+- 支持以 postgresql 作为 ccr-syncer 的元数据库
+- 支持 add partoition 相关操作
+- 支持 insert overwrite 相关操作
+
+### Fix
+
+- 修复 drop partition 的问题
+- 修复高可用模式下接口无法 redirect 的问题
+- 修复 binlog 丢失的问题
+- 修改 connect 和 rpc 超时时间默认值
+- 修复 view 和 materialized view 使用造成空指针问题
+
+
+## v 2.1.3/2.0.3.10
+
 ### Fix
 
 - 修复因与上下游 FE 网络中断而触发 full sync 的问题
-
-## v 2.1.3/2.0.3.10
 
 ### Feature
 
