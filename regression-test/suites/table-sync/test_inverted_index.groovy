@@ -200,7 +200,8 @@ suite("test_inverted_index") {
         COMMENT 'OLAP'
         DISTRIBUTED BY HASH(`id`) BUCKETS 1
         PROPERTIES ( 
-            "replication_num" = "1"
+            "replication_num" = "1",
+            "enable_unique_key_merge_on_write" = "true"
         );
     """
 
