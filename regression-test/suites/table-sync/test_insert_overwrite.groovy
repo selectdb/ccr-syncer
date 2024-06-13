@@ -26,6 +26,7 @@ suite("test_insert_overwrite") {
     //  3. replace overlap partitions
 
     
+	// INSERT OVERWRITE is not supported by branch-2.0 table sync.
     // def tableName = "tbl_insert_overwrite_" + UUID.randomUUID().toString().replace("-", "")
     // def uniqueTable = "${tableName}_unique"
     // def syncerAddress = "127.0.0.1:9190"
