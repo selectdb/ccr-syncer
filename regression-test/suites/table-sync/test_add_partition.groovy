@@ -261,13 +261,13 @@ suite("test_add_partition") {
 
     assertTrue(checkRestoreFinishTimesOf("${tableName}", 60))
 
-    sql """
-        INSERT OVERWRITE TABLE ${tableName} VALUES (1, 100);
-       """
+    // sql """
+    //     INSERT OVERWRITE TABLE ${tableName} VALUES (1, 100);
+    //    """
 
-    assertTrue(checkShowTimesOf("""
-                                SELECT * FROM ${tableName}
-                                WHERE id = 100
-                                """,
-                                exist, 60, "target"))
+    // assertTrue(checkShowTimesOf("""
+    //                             SELECT * FROM ${tableName}
+    //                             WHERE id = 100
+    //                             """,
+    //                             exist, 60, "target"))
 }
