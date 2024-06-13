@@ -139,8 +139,8 @@ suite("test_add_partition") {
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (
-            `test` INT,
-            `id` INT
+            `test` INT NOT NULL,
+            `id` INT NOT NULL
         )
         ENGINE=OLAP
         UNIQUE KEY(`test`, `id`)
@@ -261,13 +261,14 @@ suite("test_add_partition") {
 
     assertTrue(checkRestoreFinishTimesOf("${tableName}", 60))
 
-    sql """
-        INSERT OVERWRITE TABLE ${tableName} VALUES (1, 100);
-       """
+    // INSERT OVERWRITE is not supported by branch-2.0 table sync.
+    // sql """
+    //     INSERT OVERWRITE TABLE ${tableName} VALUES (1, 100);
+    //    """
 
-    assertTrue(checkShowTimesOf("""
-                                SELECT * FROM ${tableName}
-                                WHERE id = 100
-                                """,
-                                exist, 60, "target"))
+    // assertTrue(checkShowTimesOf("""
+    //                             SELECT * FROM ${tableName}
+    //                             WHERE id = 100
+    //                             """,
+    //                             exist, 60, "target"))
 }
