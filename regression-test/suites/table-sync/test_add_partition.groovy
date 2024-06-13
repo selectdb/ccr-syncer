@@ -261,6 +261,7 @@ suite("test_add_partition") {
 
     assertTrue(checkRestoreFinishTimesOf("${tableName}", 60))
 
+    // INSERT OVERWRITE is not supported by branch-2.0 table sync.
     // sql """
     //     INSERT OVERWRITE TABLE ${tableName} VALUES (1, 100);
     //    """
