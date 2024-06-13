@@ -139,8 +139,8 @@ suite("test_add_partition") {
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (
-            `test` INT,
-            `id` INT
+            `test` INT NOT NULL,
+            `id` INT NOT NULL
         )
         ENGINE=OLAP
         UNIQUE KEY(`test`, `id`)
