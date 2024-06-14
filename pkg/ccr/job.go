@@ -490,8 +490,9 @@ func (j *Job) fullSync() error {
 				}
 
 				// If srcTableName is empty, it may be deleted.
-				// No need to mapping it to dest table
+				// No need to map it to dest table
 				if srcTableName == "" {
+					log.Warnf("source table : %s is empty, no need to map it to dest table", srcTableName)
 					continue
 				}
 
