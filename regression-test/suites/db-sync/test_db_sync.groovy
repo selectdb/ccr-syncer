@@ -20,7 +20,6 @@ suite("test_db_sync") {
     def syncerAddress = "127.0.0.1:9190"
     def test_num = 0
     def insert_num = 5
-    def date_num = "2021-01-02"
     def sync_gap_time = 5000
 
     def createUniqueTable = { tableName ->
@@ -249,11 +248,6 @@ suite("test_db_sync") {
     for (int index = 0; index < insert_num; index++) {
         sql """
             INSERT INTO ${keywordTableName} VALUES (${test_num}, ${index})
-            """
-    }
-    for (int index = 0; index < insert_num; index++) {
-        sql """
-            INSERT INTO ${keywordTableName} VALUES (${test_num}, ${index}, '${date_num}')
             """
     }
 
