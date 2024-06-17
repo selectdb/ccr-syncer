@@ -123,7 +123,8 @@ suite("test_bitmap_index") {
     assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
     def checkBitmap = { inputRes -> Boolean
         for (List<Object> row : inputRes) {
-            if (row[2] == "idx_test" && row[10] == "BITMAP") {
+            // ATTN: The implementation of BITMAP index has already changed to INVERTED index in doris 2.0.11.
+            if (row[2] == "idx_test" && (row[10] == "BITMAP" || row[10] == "INVERTED")) {
                 return true
             }
         }
@@ -140,7 +141,8 @@ suite("test_bitmap_index") {
     sql """CREATE INDEX idx_id ON ${tableName} (`id`) USING BITMAP"""
     def checkBitmap2 = { inputRes -> Boolean
         for (List<Object> row : inputRes) {
-            if (row[2] == "idx_id" && row[10] == "BITMAP") {
+            // ATTN: The implementation of BITMAP index has already changed to INVERTED index in doris 2.0.11.
+            if (row[2] == "idx_id" && (row[10] == "BITMAP" || row[10] == "INVERTED")) {
                 return true
             }
         }
