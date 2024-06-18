@@ -96,6 +96,26 @@ suite("test_view_and_mv") {
         return ret
     }
 
+    def checkBackupFinishTimesOf = { checkTable, times -> Boolean
+        Boolean ret = false
+        while (times > 0) {
+            def sqlInfo = sql "SHOW BACKUP FROM ${context.dbName}"
+            for (List<Object> row : sqlInfo) {
+                if ((row[4] as String).contains(checkTable)) {
+                    ret = row[3] == "FINISHED"
+                }
+            }
+
+            if (ret) {
+                break
+            } else if (--times > 0) {
+                sleep(sync_gap_time)
+            }
+        }
+
+        return ret
+    }
+
     def checkRestoreAllFinishTimesOf = { checkTable, times -> Boolean
         Boolean ret = true
         while (times > 0) {
@@ -180,7 +200,14 @@ suite("test_view_and_mv") {
         select user_id, name from ${tableDuplicate0};
         """
     // when create materialized view, source cluster will backup again firstly.
-    // so we check the restore rows
+    // so we check the backup and restore status
+
+    // first, check backup
+    sleep(15000)
+    assertTrue(checkBackupFinishTimesOf("${tableDuplicate0}", 60))
+
+    // then, check retore
+    sleep(15000)
     assertTrue(checkRestoreRowsTimesOf(2, 30))
     assertTrue(checkRestoreFinishTimesOf("${tableDuplicate0}", 30))
 
