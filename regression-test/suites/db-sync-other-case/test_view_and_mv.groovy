@@ -174,7 +174,6 @@ suite("test_view_and_mv") {
 
     sql "ALTER DATABASE ${context.dbName} SET properties (\"binlog.enable\" = \"true\")"
 
-    logger.info("=== Test111111111111111")
     String response
     httpTest {
         uri "/create_ccr"
@@ -184,7 +183,6 @@ suite("test_view_and_mv") {
         op "post"
         result response
     }
-    logger.info("=== Test22222222222222222")
 
     assertTrue(checkRestoreFinishTimesOf("${tableDuplicate0}", 30))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${tableDuplicate0}", 5, 30))
@@ -205,11 +203,11 @@ suite("test_view_and_mv") {
     // so we check the backup and restore status
 
     // first, check backup
-    sleep(10000)
+    sleep(15000)
     assertTrue(checkBackupFinishTimesOf("${tableDuplicate0}", 60))
 
     // then, check retore
-    sleep(10000)
+    sleep(15000)
     assertTrue(checkRestoreRowsTimesOf(2, 30))
     assertTrue(checkRestoreFinishTimesOf("${tableDuplicate0}", 30))
 
