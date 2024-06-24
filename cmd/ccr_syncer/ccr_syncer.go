@@ -82,6 +82,8 @@ func main() {
 		db, err = storage.NewSQLiteDB(dbPath)
 	case "mysql":
 		db, err = storage.NewMysqlDB(syncer.Db_host, syncer.Db_port, syncer.Db_user, syncer.Db_password)
+	case "postgresql":
+		db, err = storage.NewPostgresqlDB(syncer.Db_host, syncer.Db_port, syncer.Db_user, syncer.Db_password)
 	default:
 		err = xerror.Wrap(err, xerror.Normal, "new meta db failed.")
 	}

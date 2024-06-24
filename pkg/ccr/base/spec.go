@@ -9,6 +9,7 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/selectdb/ccr_syncer/pkg/ccr/record"
 	"github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
@@ -296,6 +297,67 @@ func (s *Spec) GetAllTables() ([]string, error) {
 	return tables, nil
 }
 
+func (s *Spec) queryResult(querySQL string, queryColumn string, errMsg string) ([]string, error) {
+	db, err := s.ConnectDB()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := db.Query(querySQL)
+	if err != nil {
+		return nil, xerror.Wrap(err, xerror.Normal, querySQL+" failed")
+	}
+	defer rows.Close()
+
+	var results []string
+	for rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return nil, xerror.Wrap(err, xerror.Normal, errMsg)
+		}
+		result, err := rowParser.GetString(queryColumn)
+		if err != nil {
+			return nil, xerror.Wrap(err, xerror.Normal, errMsg)
+		}
+		results = append(results, result)
+	}
+
+	return results, nil
+}
+
+func (s *Spec) GetAllViewsFromTable(tableName string) ([]string, error) {
+	log.Debugf("get all view from table %s", tableName)
+
+	var results []string
+	// first, query information_schema.tables with table_schema and table_type, get all views' name
+	querySql := fmt.Sprintf("SELECT table_name FROM information_schema.tables WHERE table_schema = '%s' AND  table_type = 'VIEW'", s.Database)
+	viewsFromQuery, err := s.queryResult(querySql, "table_name", "QUERY VIEWS")
+	if err != nil {
+		return nil, xerror.Wrap(err, xerror.Normal, "query views from information schema failed")
+	}
+
+	// then query view's create sql, if create sql contains tableName, this view is wanted
+	viewRegex := regexp.MustCompile("`internal`.`(\\w+)`.`" + strings.TrimSpace(tableName) + "`")
+	for _, eachViewName := range viewsFromQuery {
+		showCreateViewSql := fmt.Sprintf("SHOW CREATE VIEW %s", eachViewName)
+		createViewSqlList, err := s.queryResult(showCreateViewSql, "Create View", "SHOW CREATE VIEW")
+		if err != nil {
+			return nil, xerror.Wrap(err, xerror.Normal, "show create view failed")
+		}
+
+		// a view has only one create sql, so use createViewSqlList[0] as the only sql
+		if len(createViewSqlList) > 0 {
+			found := viewRegex.MatchString(createViewSqlList[0])
+			if found {
+				results = append(results, eachViewName)
+			}
+		}
+	}
+
+	log.Debugf("get view result is %s", results)
+	return results, nil
+}
+
 func (s *Spec) dropTable(table string) error {
 	log.Infof("drop table %s.%s", s.Database, table)
 
@@ -346,16 +408,26 @@ func (s *Spec) CreateDatabase() error {
 	return nil
 }
 
-func (s *Spec) CreateTable(stmt string) error {
-	db, err := s.Connect()
-	if err != nil {
-		return nil
+func (s *Spec) CreateTableOrView(createTable *record.CreateTable, srcDatabase string) error {
+	//	Creating table will only occur when sync db.
+	//	When create view, the db name of sql is source db name, we should use dest db name to create view
+	createSql := createTable.Sql
+	viewRegex := regexp.MustCompile(`(?i)^CREATE(\s+)VIEW`)
+	isCreateView := viewRegex.MatchString(createSql)
+	if isCreateView {
+		log.Debugf("create view, use dest db name to replace source db name")
+
+		// replace `internal`.`source_db_name`. to `internal`.`dest_db_name`.
+		originalName := "`internal`.`" + strings.TrimSpace(srcDatabase) + "`."
+		replaceName := "`internal`.`" + strings.TrimSpace(s.Database) + "`."
+		createTable.Sql = strings.ReplaceAll(createTable.Sql, originalName, replaceName)
+		log.Debugf("original create view sql is %s, after replace, now sql is %s", createSql, createTable.Sql)
 	}
 
-	if _, err = db.Exec(stmt); err != nil {
-		return xerror.Wrapf(err, xerror.Normal, "create table %s.%s failed", s.Database, s.Table)
-	}
-	return nil
+	sql := createTable.Sql
+	log.Infof("createTableSql: %s", sql)
+	// HACK: for drop table
+	return s.DbExec(sql)
 }
 
 func (s *Spec) CheckDatabaseExists() (bool, error) {
@@ -448,7 +520,7 @@ func (s *Spec) CreateSnapshotAndWaitForDone(tables []string) (string, error) {
 		tableRefs = "`" + strings.Join(tables, "`,`") + "`"
 	}
 
-	// means source is a empty db, table numer is 0
+	// means source is a empty db, table number is 0
 	if tableRefs == "``" {
 		return "", xerror.Errorf(xerror.Normal, "source db is empty! you should have at least one table")
 	}
@@ -514,17 +586,21 @@ func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, error) {
 }
 
 func (s *Spec) CheckBackupFinished(snapshotName string) (bool, error) {
-	log.Debugf("check backup state, datebase: %s, snapshot: %s", s.Database, snapshotName)
+	log.Debugf("check backup state, spec: %s, snapshot: %s", s.String(), snapshotName)
 
 	for i := 0; i < MAX_CHECK_RETRY_TIMES; i++ {
-		if backupState, err := s.checkBackupFinished(snapshotName); err != nil {
+		// Retry network related error to avoid full sync when the target network is interrupted, process is restarted.
+		if backupState, err := s.checkBackupFinished(snapshotName); err != nil && !isNetworkRelated(err) {
 			return false, err
-		} else if backupState == BackupStateFinished {
+		} else if err == nil && backupState == BackupStateFinished {
 			return true, nil
-		} else if backupState == BackupStateCancelled {
+		} else if err == nil && backupState == BackupStateCancelled {
 			return false, xerror.Errorf(xerror.Normal, "backup failed or canceled")
 		} else {
-			// BackupStatePending, BackupStateUnknown
+			// BackupStatePending, BackupStateUnknown or network related errors.
+			if err != nil {
+				log.Warnf("check backup state is failed, spec: %s, snapshot: %s, err: %v", s.String(), snapshotName, err)
+			}
 			time.Sleep(BACKUP_CHECK_DURATION)
 		}
 	}
@@ -575,19 +651,23 @@ func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, string, 
 }
 
 func (s *Spec) CheckRestoreFinished(snapshotName string) (bool, error) {
-	log.Debugf("check restore state is finished, spec: %s, datebase: %s, snapshot: %s", s.String(), s.Database, snapshotName)
+	log.Debugf("check restore state is finished, spec: %s, snapshot: %s", s.String(), snapshotName)
 
 	for i := 0; i < MAX_CHECK_RETRY_TIMES; i++ {
-		if restoreState, status, err := s.checkRestoreFinished(snapshotName); err != nil {
+		// Retry network related error to avoid full sync when the target network is interrupted, process is restarted.
+		if restoreState, status, err := s.checkRestoreFinished(snapshotName); err != nil && !isNetworkRelated(err) {
 			return false, err
-		} else if restoreState == RestoreStateFinished {
+		} else if err == nil && restoreState == RestoreStateFinished {
 			return true, nil
-		} else if restoreState == RestoreStateCancelled && strings.Contains(status, SIGNATURE_NOT_MATCHED) {
+		} else if err == nil && restoreState == RestoreStateCancelled && strings.Contains(status, SIGNATURE_NOT_MATCHED) {
 			return false, xerror.XWrapf(ErrRestoreSignatureNotMatched, "restore failed, spec: %s, snapshot: %s, status: %s", s.String(), snapshotName, status)
-		} else if restoreState == RestoreStateCancelled {
+		} else if err == nil && restoreState == RestoreStateCancelled {
 			return false, xerror.Errorf(xerror.Normal, "restore failed or canceled, spec: %s, snapshot: %s, status: %s", s.String(), snapshotName, status)
 		} else {
-			// RestoreStatePending, RestoreStateUnknown
+			// RestoreStatePending, RestoreStateUnknown or network error.
+			if err != nil {
+				log.Warnf("check restore state is failed, spec: %s, snapshot: %s, err: %v", s.String(), snapshotName, err)
+			}
 			time.Sleep(RESTORE_CHECK_DURATION)
 		}
 	}
@@ -597,7 +677,7 @@ func (s *Spec) CheckRestoreFinished(snapshotName string) (bool, error) {
 }
 
 func (s *Spec) GetRestoreSignatureNotMatchedTable(snapshotName string) (string, error) {
-	log.Debugf("get restore signature not matched table, spec: %s, datebase: %s, snapshot: %s", s.String(), s.Database, snapshotName)
+	log.Debugf("get restore signature not matched table, spec: %s, snapshot: %s", s.String(), snapshotName)
 
 	for i := 0; i < MAX_CHECK_RETRY_TIMES; i++ {
 		if restoreState, status, err := s.checkRestoreFinished(snapshotName); err != nil {
@@ -746,4 +826,118 @@ func (s *Spec) Update(event SpecEvent) {
 	default:
 		break
 	}
+}
+
+func (s *Spec) LightningSchemaChange(srcDatabase string, lightningSchemaChange *record.ModifyTableAddOrDropColumns) error {
+	log.Debugf("lightningSchemaChange %v", lightningSchemaChange)
+
+	rawSql := lightningSchemaChange.RawSql
+	//   "rawSql": "ALTER TABLE `default_cluster:ccr`.`test_ddl` ADD COLUMN `nid1` int(11) NULL COMMENT \"\""
+	// replace `default_cluster:${Src.Database}`.`test_ddl` to `test_ddl`
+	var sql string
+	if strings.Contains(rawSql, fmt.Sprintf("`default_cluster:%s`.", srcDatabase)) {
+		sql = strings.Replace(rawSql, fmt.Sprintf("`default_cluster:%s`.", srcDatabase), "", 1)
+	} else {
+		sql = strings.Replace(rawSql, fmt.Sprintf("`%s`.", srcDatabase), "", 1)
+	}
+	log.Infof("lightningSchemaChangeSql, rawSql: %s, sql: %s", rawSql, sql)
+	return s.DbExec(sql)
+}
+
+func (s *Spec) TruncateTable(destTableName string, truncateTable *record.TruncateTable) error {
+	var sql string
+	if truncateTable.RawSql == "" {
+		sql = fmt.Sprintf("TRUNCATE TABLE %s", utils.FormatKeywordName(destTableName))
+	} else {
+		sql = fmt.Sprintf("TRUNCATE TABLE %s %s", utils.FormatKeywordName(destTableName), truncateTable.RawSql)
+	}
+
+	log.Infof("truncateTableSql: %s", sql)
+
+	return s.DbExec(sql)
+}
+
+func (s *Spec) DropTable(tableName string) error {
+	dropSql := fmt.Sprintf("DROP TABLE %s FORCE", utils.FormatKeywordName(tableName))
+	log.Infof("drop table sql: %s", dropSql)
+	return s.DbExec(dropSql)
+}
+
+func (s *Spec) DropView(viewName string) error {
+	dropView := fmt.Sprintf("DROP VIEW IF EXISTS %s ", utils.FormatKeywordName(viewName))
+	log.Infof("drop view sql: %s", dropView)
+	return s.DbExec(dropView)
+}
+
+func (s *Spec) AddPartition(destTableName string, addPartition *record.AddPartition) error {
+	addPartitionSql := addPartition.GetSql(destTableName)
+	addPartitionSql = correctAddPartitionSql(addPartitionSql, addPartition)
+	log.Infof("addPartitionSql: %s", addPartitionSql)
+	return s.DbExec(addPartitionSql)
+}
+
+func (s *Spec) DropPartition(destTableName string, dropPartition *record.DropPartition) error {
+	destDbName := utils.FormatKeywordName(s.Database)
+	destTableName = utils.FormatKeywordName(destTableName)
+	dropPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s", destDbName, destTableName, dropPartition.Sql)
+	log.Infof("dropPartitionSql: %s", dropPartitionSql)
+	return s.Exec(dropPartitionSql)
+}
+
+func (s *Spec) DesyncTables(tables ...string) error {
+	var err error
+
+	failedTables := []string{}
+	for _, table := range tables {
+		desyncSql := fmt.Sprintf("ALTER TABLE %s SET (\"is_being_synced\"=\"false\")", utils.FormatKeywordName(table))
+		log.Debugf("db exec sql: %s", desyncSql)
+		if err = s.DbExec(desyncSql); err != nil {
+			failedTables = append(failedTables, table)
+		}
+	}
+
+	if len(failedTables) > 0 {
+		return xerror.Wrapf(err, xerror.FE, "failed tables: %s", strings.Join(failedTables, ","))
+	}
+
+	return nil
+}
+
+// Determine whether the error are network related, eg connection refused, connection reset, exposed from net packages.
+func isNetworkRelated(err error) bool {
+	msg := err.Error()
+
+	// The below errors are exposed from net packages.
+	// See https://github.com/golang/go/issues/23827 for details.
+	return strings.Contains(msg, "timeout awaiting response headers") ||
+		strings.Contains(msg, "connection refused") ||
+		strings.Contains(msg, "connection reset by peer") ||
+		strings.Contains(msg, "connection timeouted") ||
+		strings.Contains(msg, "i/o timeout")
+}
+
+func correctAddPartitionSql(addPartitionSql string, addPartition *record.AddPartition) string {
+	// HACK:
+	//
+	// The doris version before 2.1.3 and 2.0.10 did not handle unpartitioned and temporary
+	// partitions correctly, see https://github.com/apache/doris/pull/35461 for details.
+	//
+	// 1. fix unpartitioned add partition sql
+	// 2. support add temporary partition
+	if strings.Contains(addPartitionSql, "VALUES [(), ())") {
+		re := regexp.MustCompile(`VALUES \[\(\), \(\)\) \([^\)]+\)`)
+		addPartitionSql = re.ReplaceAllString(addPartitionSql, "")
+	}
+	if strings.Contains(addPartitionSql, "VALUES IN (((") {
+		re := regexp.MustCompile(`VALUES IN \(\(\((.*)\)\)\)`)
+		matches := re.FindStringSubmatch(addPartitionSql)
+		if len(matches) > 1 {
+			replace := fmt.Sprintf("VALUES IN ((%s))", matches[1])
+			addPartitionSql = re.ReplaceAllString(addPartitionSql, replace)
+		}
+	}
+	if addPartition.IsTemp && !strings.Contains(addPartitionSql, "ADD TEMPORARY PARTITION") {
+		addPartitionSql = strings.ReplaceAll(addPartitionSql, "ADD PARTITION", "ADD TEMPORARY PARTITION")
+	}
+	return addPartitionSql
 }

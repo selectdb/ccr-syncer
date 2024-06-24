@@ -1,8 +1,7 @@
 package base
 
 import (
-	"database/sql"
-
+	"github.com/selectdb/ccr_syncer/pkg/ccr/record"
 	"github.com/selectdb/ccr_syncer/pkg/utils"
 )
 
@@ -16,14 +15,13 @@ const (
 // this interface is used to for spec operation, treat it as a mysql dao
 type Specer interface {
 	Valid() error
-	Connect() (*sql.DB, error)
-	ConnectDB() (*sql.DB, error)
 	IsDatabaseEnableBinlog() (bool, error)
 	IsTableEnableBinlog() (bool, error)
 	GetAllTables() ([]string, error)
+	GetAllViewsFromTable(tableName string) ([]string, error)
 	ClearDB() error
 	CreateDatabase() error
-	CreateTable(stmt string) error
+	CreateTableOrView(createTable *record.CreateTable, srcDatabase string) error
 	CheckDatabaseExists() (bool, error)
 	CheckTableExists() (bool, error)
 	CreateSnapshotAndWaitForDone(tables []string) (string, error)
@@ -31,8 +29,15 @@ type Specer interface {
 	GetRestoreSignatureNotMatchedTable(snapshotName string) (string, error)
 	WaitTransactionDone(txnId int64) // busy wait
 
-	Exec(sql string) error
-	DbExec(sql string) error
+	LightningSchemaChange(srcDatabase string, changes *record.ModifyTableAddOrDropColumns) error
+	TruncateTable(destTableName string, truncateTable *record.TruncateTable) error
+	DropTable(tableName string) error
+	DropView(viewName string) error
+
+	AddPartition(destTableName string, addPartition *record.AddPartition) error
+	DropPartition(destTableName string, dropPartition *record.DropPartition) error
+
+	DesyncTables(tables ...string) error
 
 	utils.Subject[SpecEvent]
 }

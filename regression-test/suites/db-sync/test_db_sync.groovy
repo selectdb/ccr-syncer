@@ -299,7 +299,7 @@ suite("test_db_sync") {
                                 notExist, 30, "target"))
     assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${keywordTableName}'", 
                                 notExist, 30, "target"))
-    
+
     logger.info("=== Test 4: pause and resume ===")
     httpTest {
         uri "/pause"

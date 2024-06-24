@@ -12,6 +12,43 @@
 
 - 修复若干 keywords 没有 escape 的问题
 
+WIP
+
+## v 2.0.11
+
+对应 doris 2.0.11。
+
+### Feature
+
+- 支持以 postgresql 作为 ccr-syncer 的元数据库 (#77)
+- 支持 insert overwrite 相关操作 (#97,#99)
+
+### Fix
+
+- 修复 drop partition 后因找不到 partition id 而无法继续同步的问题 (#82)
+- 修复高可用模式下接口无法 redirect 的问题 (#81)
+- 修复 binlog 可能因同步失败而丢失的问题 (#86,#91)
+- 修改 connect 和 rpc 超时时间默认值，connect 默认 10s，rpc 默认 30s (#94,#95)
+- 修复 view 和 materialized view 使用造成空指针问题 (#100)
+- 修复 add partition sql 错误的问题 (#99)
+
+
+## v 2.1.3/2.0.3.10
+
+### Fix
+
+- 修复因与上下游 FE 网络中断而触发 full sync 的问题
+
+### Feature
+
+- 增加 `/job_progress` 接口用于获取 JOB 进度
+- 增加 `/job_details` 接口用于获取 JOB 信息
+- 保留 job 状态变更的各个时间点，并在 `/job_progress` 接口中展示
+
+### Fix
+
+- 修复若干 keywords 没有 escape 的问题
+
 ## v 2.0.3.9
 
 配合 doris 2.0.9 版本
