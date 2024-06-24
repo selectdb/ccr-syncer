@@ -1,22 +1,8 @@
 # 更新日志
 
-## v 2.1.3
+## v 2.1.4/2.0.11
 
-### Feature
-
-- 增加 `/job_progress` 接口用于获取 JOB 进度
-- 增加 `/job_details` 接口用于获取 JOB 信息
-- 保留 job 状态变更的各个时间点，并在 `/job_progress` 接口中展示
-
-### Fix
-
-- 修复若干 keywords 没有 escape 的问题
-
-WIP
-
-## v 2.0.11
-
-对应 doris 2.0.11。
+对应 doris 2.0.11/2.1.4。
 
 ### Feature
 
