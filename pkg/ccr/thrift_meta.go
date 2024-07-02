@@ -68,7 +68,8 @@ func NewThriftMeta(spec *base.Spec, rpcFactory rpc.IRpcFactory, tableIds []int64
 		return nil, xerror.New(xerror.Meta, "get table meta failed, db meta not set")
 	}
 
-	for _, table := range tableMetaResp.GetDbMeta().GetTables() {
+	dbMeta := tableMetaResp.GetDbMeta()
+	for _, table := range dbMeta.GetTables() {
 		tableMeta := &TableMeta{
 			DatabaseMeta:      &meta.DatabaseMeta,
 			Id:                table.GetId(),
@@ -127,13 +128,20 @@ func NewThriftMeta(spec *base.Spec, rpcFactory rpc.IRpcFactory, tableIds []int64
 		}
 	}
 
+	droppedPartitions := make(map[int64]struct{})
+	for _, partition := range dbMeta.GetDroppedPartitions() {
+		droppedPartitions[partition] = struct{}{}
+	}
+
 	return &ThriftMeta{
-		meta: meta,
+		meta:              meta,
+		droppedPartitions: droppedPartitions,
 	}, nil
 }
 
 type ThriftMeta struct {
-	meta *Meta
+	meta              *Meta
+	droppedPartitions map[int64]struct{}
 }
 
 func (tm *ThriftMeta) GetTablets(tableId, partitionId, indexId int64) (*btree.Map[int64, *TabletMeta], error) {
@@ -218,4 +226,10 @@ func (tm *ThriftMeta) GetIndexNameMap(tableId, partitionId int64) (map[string]*I
 
 func (tm *ThriftMeta) GetBackendMap() (map[int64]*base.Backend, error) {
 	return tm.meta.Backends, nil
+}
+
+// Whether the target partition are dropped
+func (tm *ThriftMeta) IsPartitionDropped(partitionId int64) bool {
+	_, ok := tm.droppedPartitions[partitionId]
+	return ok
 }
