@@ -134,6 +134,12 @@ suite("test_add_partition") {
                                 """,
                                 exist, 60, "target"))
 
+    def show_result = target_sql """SHOW PARTITIONS FROM ${tableName} WHERE PartitionName = "p3" """
+    logger.info("show partition: ${show_result}")
+    // columns Range
+    assertTrue(show_result[0][6].contains("100"))
+    assertTrue(show_result[0][6].contains("200"))
+
     logger.info("=== Test 2: Add list partition ===")
     tableName = "${baseTableName}_list"
     sql """
@@ -177,6 +183,12 @@ suite("test_add_partition") {
                                 WHERE PartitionName = "p3"
                                 """,
                                 exist, 60, "target"))
+    show_result = target_sql """SHOW PARTITIONS FROM ${tableName} WHERE PartitionName = "p3" """
+    logger.info("show partition: ${show_result}")
+    // columns Range
+    assertTrue(show_result[0][6].contains("500"))
+    assertTrue(show_result[0][6].contains("600"))
+    assertTrue(show_result[0][6].contains("700"))
 
     // NOTE: ccr synder does not support syncing temp partition now.
     // logger.info("=== Test 3: Add temp partition ===")
