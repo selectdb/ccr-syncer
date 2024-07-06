@@ -857,6 +857,36 @@ func (s *Spec) TruncateTable(destTableName string, truncateTable *record.Truncat
 	return s.DbExec(sql)
 }
 
+func (s *Spec) RenameTable(destTableName string, renameTable *record.RenameTable) error {
+	// rename table may be 'rename table', 'rename rollup', 'rename partition' and 'rename column'
+	var sql string
+	// ALTER TABLE table1 RENAME table2;
+	if renameTable.NewTableName != "" && renameTable.OldTableName != "" {
+		sql = fmt.Sprintf("ALTER TABLE %s RENAME %s", renameTable.OldTableName, renameTable.NewTableName)
+	}
+
+	// ALTER TABLE example_table RENAME ROLLUP rollup1 rollup2;
+	// if rename rollup, table name is unchanged
+	if renameTable.NewRollupName != "" && renameTable.OldRollupName != "" {
+		sql = fmt.Sprintf("ALTER TABLE %s RENAME ROLLUP %s %s", destTableName, renameTable.OldRollupName, renameTable.NewRollupName)
+	}
+
+	// ALTER TABLE example_table RENAME PARTITION p1 p2;
+	// if rename partition, table name is unchanged
+	if renameTable.NewParitionName != "" && renameTable.OldParitionName != "" {
+		sql = fmt.Sprintf("ALTER TABLE %s RENAME PARTITION %s %s;", destTableName, renameTable.OldParitionName, renameTable.NewParitionName)
+	}
+
+	// todo rename column
+
+	if sql == "" {
+		return xerror.Errorf(xerror.Normal, "rename sql is empty")
+	}
+
+	log.Infof("renam table sql: %s", sql)
+	return s.DbExec(sql)
+}
+
 func (s *Spec) DropTable(tableName string) error {
 	dropSql := fmt.Sprintf("DROP TABLE %s FORCE", utils.FormatKeywordName(tableName))
 	log.Infof("drop table sql: %s", dropSql)

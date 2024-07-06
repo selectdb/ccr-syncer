@@ -607,6 +607,7 @@ const (
 	TBinlogType_MODIFY_PARTITIONS                TBinlogType = 11
 	TBinlogType_REPLACE_PARTITIONS               TBinlogType = 12
 	TBinlogType_TRUNCATE_TABLE                   TBinlogType = 13
+	TBinlogType_RENAME_TABLE                     TBinlogType = 14
 )
 
 func (p TBinlogType) String() string {
@@ -639,6 +640,8 @@ func (p TBinlogType) String() string {
 		return "REPLACE_PARTITIONS"
 	case TBinlogType_TRUNCATE_TABLE:
 		return "TRUNCATE_TABLE"
+	case TBinlogType_RENAME_TABLE:
+		return "RENAME_TABLE"
 	}
 	return "<UNSET>"
 }
@@ -673,6 +676,8 @@ func TBinlogTypeFromString(s string) (TBinlogType, error) {
 		return TBinlogType_REPLACE_PARTITIONS, nil
 	case "TRUNCATE_TABLE":
 		return TBinlogType_TRUNCATE_TABLE, nil
+	case "RENAME_TABLE":
+		return TBinlogType_RENAME_TABLE, nil
 	}
 	return TBinlogType(0), fmt.Errorf("not a valid TBinlogType string")
 }
@@ -15583,6 +15588,8 @@ type TReportExecStatusParams struct {
 	HivePartitionUpdates        []*datasinks.THivePartitionUpdate   `thrift:"hive_partition_updates,26,optional" frugal:"26,optional,list<datasinks.THivePartitionUpdate>" json:"hive_partition_updates,omitempty"`
 	QueryProfile                *TQueryProfile                      `thrift:"query_profile,27,optional" frugal:"27,optional,TQueryProfile" json:"query_profile,omitempty"`
 	IcebergCommitDatas          []*datasinks.TIcebergCommitData     `thrift:"iceberg_commit_datas,28,optional" frugal:"28,optional,list<datasinks.TIcebergCommitData>" json:"iceberg_commit_datas,omitempty"`
+	TxnId                       *int64                              `thrift:"txn_id,29,optional" frugal:"29,optional,i64" json:"txn_id,omitempty"`
+	Label                       *string                             `thrift:"label,30,optional" frugal:"30,optional,string" json:"label,omitempty"`
 }
 
 func NewTReportExecStatusParams() *TReportExecStatusParams {
@@ -15829,6 +15836,24 @@ func (p *TReportExecStatusParams) GetIcebergCommitDatas() (v []*datasinks.TIcebe
 	}
 	return p.IcebergCommitDatas
 }
+
+var TReportExecStatusParams_TxnId_DEFAULT int64
+
+func (p *TReportExecStatusParams) GetTxnId() (v int64) {
+	if !p.IsSetTxnId() {
+		return TReportExecStatusParams_TxnId_DEFAULT
+	}
+	return *p.TxnId
+}
+
+var TReportExecStatusParams_Label_DEFAULT string
+
+func (p *TReportExecStatusParams) GetLabel() (v string) {
+	if !p.IsSetLabel() {
+		return TReportExecStatusParams_Label_DEFAULT
+	}
+	return *p.Label
+}
 func (p *TReportExecStatusParams) SetProtocolVersion(val FrontendServiceVersion) {
 	p.ProtocolVersion = val
 }
@@ -15910,6 +15935,12 @@ func (p *TReportExecStatusParams) SetQueryProfile(val *TQueryProfile) {
 func (p *TReportExecStatusParams) SetIcebergCommitDatas(val []*datasinks.TIcebergCommitData) {
 	p.IcebergCommitDatas = val
 }
+func (p *TReportExecStatusParams) SetTxnId(val *int64) {
+	p.TxnId = val
+}
+func (p *TReportExecStatusParams) SetLabel(val *string) {
+	p.Label = val
+}
 
 var fieldIDToName_TReportExecStatusParams = map[int16]string{
 	1:  "protocol_version",
@@ -15939,6 +15970,8 @@ var fieldIDToName_TReportExecStatusParams = map[int16]string{
 	26: "hive_partition_updates",
 	27: "query_profile",
 	28: "iceberg_commit_datas",
+	29: "txn_id",
+	30: "label",
 }
 
 func (p *TReportExecStatusParams) IsSetQueryId() bool {
@@ -16043,6 +16076,14 @@ func (p *TReportExecStatusParams) IsSetQueryProfile() bool {
 
 func (p *TReportExecStatusParams) IsSetIcebergCommitDatas() bool {
 	return p.IcebergCommitDatas != nil
+}
+
+func (p *TReportExecStatusParams) IsSetTxnId() bool {
+	return p.TxnId != nil
+}
+
+func (p *TReportExecStatusParams) IsSetLabel() bool {
+	return p.Label != nil
 }
 
 func (p *TReportExecStatusParams) Read(iprot thrift.TProtocol) (err error) {
@@ -16277,6 +16318,22 @@ func (p *TReportExecStatusParams) Read(iprot thrift.TProtocol) (err error) {
 		case 28:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField28(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 29:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField29(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 30:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField30(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -16705,6 +16762,28 @@ func (p *TReportExecStatusParams) ReadField28(iprot thrift.TProtocol) error {
 	p.IcebergCommitDatas = _field
 	return nil
 }
+func (p *TReportExecStatusParams) ReadField29(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TxnId = _field
+	return nil
+}
+func (p *TReportExecStatusParams) ReadField30(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Label = _field
+	return nil
+}
 
 func (p *TReportExecStatusParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -16818,6 +16897,14 @@ func (p *TReportExecStatusParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField28(oprot); err != nil {
 			fieldId = 28
+			goto WriteFieldError
+		}
+		if err = p.writeField29(oprot); err != nil {
+			fieldId = 29
+			goto WriteFieldError
+		}
+		if err = p.writeField30(oprot); err != nil {
+			fieldId = 30
 			goto WriteFieldError
 		}
 	}
@@ -17424,6 +17511,44 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 28 end error: ", p), err)
 }
 
+func (p *TReportExecStatusParams) writeField29(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTxnId() {
+		if err = oprot.WriteFieldBegin("txn_id", thrift.I64, 29); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TxnId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 29 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 29 end error: ", p), err)
+}
+
+func (p *TReportExecStatusParams) writeField30(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLabel() {
+		if err = oprot.WriteFieldBegin("label", thrift.STRING, 30); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Label); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 30 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 30 end error: ", p), err)
+}
+
 func (p *TReportExecStatusParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -17517,6 +17642,12 @@ func (p *TReportExecStatusParams) DeepEqual(ano *TReportExecStatusParams) bool {
 		return false
 	}
 	if !p.Field28DeepEqual(ano.IcebergCommitDatas) {
+		return false
+	}
+	if !p.Field29DeepEqual(ano.TxnId) {
+		return false
+	}
+	if !p.Field30DeepEqual(ano.Label) {
 		return false
 	}
 	return true
@@ -17807,6 +17938,30 @@ func (p *TReportExecStatusParams) Field28DeepEqual(src []*datasinks.TIcebergComm
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *TReportExecStatusParams) Field29DeepEqual(src *int64) bool {
+
+	if p.TxnId == src {
+		return true
+	} else if p.TxnId == nil || src == nil {
+		return false
+	}
+	if *p.TxnId != *src {
+		return false
+	}
+	return true
+}
+func (p *TReportExecStatusParams) Field30DeepEqual(src *string) bool {
+
+	if p.Label == src {
+		return true
+	} else if p.Label == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Label, *src) != 0 {
+		return false
 	}
 	return true
 }

@@ -1136,6 +1136,37 @@ func (j *Job) handleReplacePartitions(binlog *festruct.TBinlog) error {
 	return j.newSnapshot(j.progress.CommitSeq)
 }
 
+// handle rename table
+func (j *Job) handleRenameTable(binlog *festruct.TBinlog) error {
+	log.Infof("handle rename table binlog")
+
+	data := binlog.GetData()
+	renameTable, err := record.NewRenameTableFromJson(data)
+	if err != nil {
+		return err
+	}
+
+	// don't support rename table when table sync
+	var destTableName string
+	if j.SyncType == TableSync {
+		return xerror.Errorf(xerror.Normal, "rename table is not supported when table sync")
+	} else if j.SyncType == DBSync {
+		destTableId, err := j.getDestTableIdBySrc(renameTable.TableId)
+		if err != nil {
+			return err
+		}
+
+		if destTableName, err = j.destMeta.GetTableNameById(destTableId); err != nil {
+			return err
+		} else if destTableName == "" {
+			return xerror.Errorf(xerror.Normal, "tableId %d not found in destMeta", destTableId)
+		}
+	}
+
+	err = j.IDest.RenameTable(destTableName, renameTable)
+	return err
+}
+
 // return: error && bool backToRunLoop
 func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 	log.Infof("handle binlogs, binlogs size: %d", len(binlogs))
@@ -1213,6 +1244,8 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		log.Info("handle barrier binlog, ignore it")
 	case festruct.TBinlogType_TRUNCATE_TABLE:
 		return j.handleTruncateTable(binlog)
+	case festruct.TBinlogType_RENAME_TABLE:
+		return j.handleRenameTable(binlog)
 	case festruct.TBinlogType_REPLACE_PARTITIONS:
 		return j.handleReplacePartitions(binlog)
 	default:
