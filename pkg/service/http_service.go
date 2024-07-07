@@ -494,9 +494,10 @@ func (s *HttpService) listJobsHandler(w http.ResponseWriter, r *http.Request) {
 			defaultResult: newErrorResult(err.Error()),
 		}
 	} else {
-		jobData := ans["jobs"]
+		var jobData []string
+		jobData = ans["jobs"]
 		allJobs := make([]string, 0)
-		for eachJob := range jobData {
+		for _, eachJob := range jobData {
 			allJobs = append(allJobs, strings.Trim(strings.Split(eachJob, ",")[0], " "))
 		}
 
