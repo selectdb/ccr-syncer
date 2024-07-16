@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/selectdb/ccr_syncer/pkg/ccr"
@@ -485,16 +486,24 @@ func (s *HttpService) listJobsHandler(w http.ResponseWriter, r *http.Request) {
 	var jobResult *result
 	defer func() { writeJson(w, jobResult) }()
 
-	if _, jobs, err := s.db.GetStampAndJobs(s.hostInfo); err != nil {
-		log.Warnf("get jobs failed: %+v", err)
+	// use GetAllData to get all jobs
+	if ans, err := s.db.GetAllData(); err != nil {
+		log.Warnf("when list jobs, get all data failed: %+v", err)
 
 		jobResult = &result{
 			defaultResult: newErrorResult(err.Error()),
 		}
 	} else {
+		var jobData []string
+		jobData = ans["jobs"]
+		allJobs := make([]string, 0)
+		for _, eachJob := range jobData {
+			allJobs = append(allJobs, strings.Trim(strings.Split(eachJob, ",")[0], " "))
+		}
+
 		jobResult = &result{
 			defaultResult: newSuccessResult(),
-			Jobs:          jobs,
+			Jobs:          allJobs,
 		}
 	}
 }
