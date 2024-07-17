@@ -1168,3 +1168,7 @@ func (m *Meta) ClearTable(dbName string, tableName string) {
 func (m *Meta) IsPartitionDropped(partitionId int64) bool {
 	panic("IsPartitionDropped is not supported, please use ThriftMeta instead")
 }
+
+func (m *Meta) IsTableDropped(partitionId int64) bool {
+	panic("IsTableDropped is not supported, please use ThriftMeta instead")
+}

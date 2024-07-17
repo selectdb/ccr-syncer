@@ -953,6 +953,53 @@ func (p *TAggregationOp) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+type TSortAlgorithm int64
+
+const (
+	TSortAlgorithm_HEAP_SORT TSortAlgorithm = 0
+	TSortAlgorithm_TOPN_SORT TSortAlgorithm = 1
+	TSortAlgorithm_FULL_SORT TSortAlgorithm = 2
+)
+
+func (p TSortAlgorithm) String() string {
+	switch p {
+	case TSortAlgorithm_HEAP_SORT:
+		return "HEAP_SORT"
+	case TSortAlgorithm_TOPN_SORT:
+		return "TOPN_SORT"
+	case TSortAlgorithm_FULL_SORT:
+		return "FULL_SORT"
+	}
+	return "<UNSET>"
+}
+
+func TSortAlgorithmFromString(s string) (TSortAlgorithm, error) {
+	switch s {
+	case "HEAP_SORT":
+		return TSortAlgorithm_HEAP_SORT, nil
+	case "TOPN_SORT":
+		return TSortAlgorithm_TOPN_SORT, nil
+	case "FULL_SORT":
+		return TSortAlgorithm_FULL_SORT, nil
+	}
+	return TSortAlgorithm(0), fmt.Errorf("not a valid TSortAlgorithm string")
+}
+
+func TSortAlgorithmPtr(v TSortAlgorithm) *TSortAlgorithm { return &v }
+func (p *TSortAlgorithm) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = TSortAlgorithm(result.Int64)
+	return
+}
+
+func (p *TSortAlgorithm) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
 type TopNAlgorithm int64
 
 const (
@@ -35353,14 +35400,15 @@ func (p *TPreAggregationNode) Field2DeepEqual(src []*exprs.TExpr) bool {
 }
 
 type TSortNode struct {
-	SortInfo        *TSortInfo `thrift:"sort_info,1,required" frugal:"1,required,TSortInfo" json:"sort_info"`
-	UseTopN         bool       `thrift:"use_top_n,2,required" frugal:"2,required,bool" json:"use_top_n"`
-	Offset          *int64     `thrift:"offset,3,optional" frugal:"3,optional,i64" json:"offset,omitempty"`
-	IsDefaultLimit  *bool      `thrift:"is_default_limit,6,optional" frugal:"6,optional,bool" json:"is_default_limit,omitempty"`
-	UseTopnOpt      *bool      `thrift:"use_topn_opt,7,optional" frugal:"7,optional,bool" json:"use_topn_opt,omitempty"`
-	MergeByExchange *bool      `thrift:"merge_by_exchange,8,optional" frugal:"8,optional,bool" json:"merge_by_exchange,omitempty"`
-	IsAnalyticSort  *bool      `thrift:"is_analytic_sort,9,optional" frugal:"9,optional,bool" json:"is_analytic_sort,omitempty"`
-	IsColocate      *bool      `thrift:"is_colocate,10,optional" frugal:"10,optional,bool" json:"is_colocate,omitempty"`
+	SortInfo        *TSortInfo      `thrift:"sort_info,1,required" frugal:"1,required,TSortInfo" json:"sort_info"`
+	UseTopN         bool            `thrift:"use_top_n,2,required" frugal:"2,required,bool" json:"use_top_n"`
+	Offset          *int64          `thrift:"offset,3,optional" frugal:"3,optional,i64" json:"offset,omitempty"`
+	IsDefaultLimit  *bool           `thrift:"is_default_limit,6,optional" frugal:"6,optional,bool" json:"is_default_limit,omitempty"`
+	UseTopnOpt      *bool           `thrift:"use_topn_opt,7,optional" frugal:"7,optional,bool" json:"use_topn_opt,omitempty"`
+	MergeByExchange *bool           `thrift:"merge_by_exchange,8,optional" frugal:"8,optional,bool" json:"merge_by_exchange,omitempty"`
+	IsAnalyticSort  *bool           `thrift:"is_analytic_sort,9,optional" frugal:"9,optional,bool" json:"is_analytic_sort,omitempty"`
+	IsColocate      *bool           `thrift:"is_colocate,10,optional" frugal:"10,optional,bool" json:"is_colocate,omitempty"`
+	Algorithm       *TSortAlgorithm `thrift:"algorithm,11,optional" frugal:"11,optional,TSortAlgorithm" json:"algorithm,omitempty"`
 }
 
 func NewTSortNode() *TSortNode {
@@ -35436,6 +35484,15 @@ func (p *TSortNode) GetIsColocate() (v bool) {
 	}
 	return *p.IsColocate
 }
+
+var TSortNode_Algorithm_DEFAULT TSortAlgorithm
+
+func (p *TSortNode) GetAlgorithm() (v TSortAlgorithm) {
+	if !p.IsSetAlgorithm() {
+		return TSortNode_Algorithm_DEFAULT
+	}
+	return *p.Algorithm
+}
 func (p *TSortNode) SetSortInfo(val *TSortInfo) {
 	p.SortInfo = val
 }
@@ -35460,6 +35517,9 @@ func (p *TSortNode) SetIsAnalyticSort(val *bool) {
 func (p *TSortNode) SetIsColocate(val *bool) {
 	p.IsColocate = val
 }
+func (p *TSortNode) SetAlgorithm(val *TSortAlgorithm) {
+	p.Algorithm = val
+}
 
 var fieldIDToName_TSortNode = map[int16]string{
 	1:  "sort_info",
@@ -35470,6 +35530,7 @@ var fieldIDToName_TSortNode = map[int16]string{
 	8:  "merge_by_exchange",
 	9:  "is_analytic_sort",
 	10: "is_colocate",
+	11: "algorithm",
 }
 
 func (p *TSortNode) IsSetSortInfo() bool {
@@ -35498,6 +35559,10 @@ func (p *TSortNode) IsSetIsAnalyticSort() bool {
 
 func (p *TSortNode) IsSetIsColocate() bool {
 	return p.IsColocate != nil
+}
+
+func (p *TSortNode) IsSetAlgorithm() bool {
+	return p.Algorithm != nil
 }
 
 func (p *TSortNode) Read(iprot thrift.TProtocol) (err error) {
@@ -35582,6 +35647,14 @@ func (p *TSortNode) Read(iprot thrift.TProtocol) (err error) {
 		case 10:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -35712,6 +35785,18 @@ func (p *TSortNode) ReadField10(iprot thrift.TProtocol) error {
 	p.IsColocate = _field
 	return nil
 }
+func (p *TSortNode) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field *TSortAlgorithm
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := TSortAlgorithm(v)
+		_field = &tmp
+	}
+	p.Algorithm = _field
+	return nil
+}
 
 func (p *TSortNode) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -35749,6 +35834,10 @@ func (p *TSortNode) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 	}
@@ -35917,6 +36006,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
 
+func (p *TSortNode) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAlgorithm() {
+		if err = oprot.WriteFieldBegin("algorithm", thrift.I32, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.Algorithm)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+
 func (p *TSortNode) String() string {
 	if p == nil {
 		return "<nil>"
@@ -35953,6 +36061,9 @@ func (p *TSortNode) DeepEqual(ano *TSortNode) bool {
 		return false
 	}
 	if !p.Field10DeepEqual(ano.IsColocate) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.Algorithm) {
 		return false
 	}
 	return true
@@ -36040,6 +36151,18 @@ func (p *TSortNode) Field10DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.IsColocate != *src {
+		return false
+	}
+	return true
+}
+func (p *TSortNode) Field11DeepEqual(src *TSortAlgorithm) bool {
+
+	if p.Algorithm == src {
+		return true
+	} else if p.Algorithm == nil || src == nil {
+		return false
+	}
+	if *p.Algorithm != *src {
 		return false
 	}
 	return true

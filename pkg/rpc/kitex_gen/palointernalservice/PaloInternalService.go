@@ -164,6 +164,48 @@ func (p *TPrefetchMode) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+type TSerdeDialect int64
+
+const (
+	TSerdeDialect_DORIS  TSerdeDialect = 0
+	TSerdeDialect_PRESTO TSerdeDialect = 1
+)
+
+func (p TSerdeDialect) String() string {
+	switch p {
+	case TSerdeDialect_DORIS:
+		return "DORIS"
+	case TSerdeDialect_PRESTO:
+		return "PRESTO"
+	}
+	return "<UNSET>"
+}
+
+func TSerdeDialectFromString(s string) (TSerdeDialect, error) {
+	switch s {
+	case "DORIS":
+		return TSerdeDialect_DORIS, nil
+	case "PRESTO":
+		return TSerdeDialect_PRESTO, nil
+	}
+	return TSerdeDialect(0), fmt.Errorf("not a valid TSerdeDialect string")
+}
+
+func TSerdeDialectPtr(v TSerdeDialect) *TSerdeDialect { return &v }
+func (p *TSerdeDialect) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = TSerdeDialect(result.Int64)
+	return
+}
+
+func (p *TSerdeDialect) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
 type PaloInternalServiceVersion int64
 
 const (
@@ -1697,6 +1739,7 @@ type TQueryOptions struct {
 	EnableShortCircuitQueryAccessColumnStore bool            `thrift:"enable_short_circuit_query_access_column_store,115,optional" frugal:"115,optional,bool" json:"enable_short_circuit_query_access_column_store,omitempty"`
 	EnableNoNeedReadDataOpt                  bool            `thrift:"enable_no_need_read_data_opt,116,optional" frugal:"116,optional,bool" json:"enable_no_need_read_data_opt,omitempty"`
 	ReadCsvEmptyLineAsNull                   bool            `thrift:"read_csv_empty_line_as_null,117,optional" frugal:"117,optional,bool" json:"read_csv_empty_line_as_null,omitempty"`
+	SerdeDialect                             TSerdeDialect   `thrift:"serde_dialect,118,optional" frugal:"118,optional,TSerdeDialect" json:"serde_dialect,omitempty"`
 	DisableFileCache                         bool            `thrift:"disable_file_cache,1000,optional" frugal:"1000,optional,bool" json:"disable_file_cache,omitempty"`
 }
 
@@ -1800,6 +1843,7 @@ func NewTQueryOptions() *TQueryOptions {
 		EnableShortCircuitQueryAccessColumnStore: false,
 		EnableNoNeedReadDataOpt:                  true,
 		ReadCsvEmptyLineAsNull:                   false,
+		SerdeDialect:                             TSerdeDialect_DORIS,
 		DisableFileCache:                         false,
 	}
 }
@@ -1902,6 +1946,7 @@ func (p *TQueryOptions) InitDefault() {
 	p.EnableShortCircuitQueryAccessColumnStore = false
 	p.EnableNoNeedReadDataOpt = true
 	p.ReadCsvEmptyLineAsNull = false
+	p.SerdeDialect = TSerdeDialect_DORIS
 	p.DisableFileCache = false
 }
 
@@ -2877,6 +2922,15 @@ func (p *TQueryOptions) GetReadCsvEmptyLineAsNull() (v bool) {
 	return p.ReadCsvEmptyLineAsNull
 }
 
+var TQueryOptions_SerdeDialect_DEFAULT TSerdeDialect = TSerdeDialect_DORIS
+
+func (p *TQueryOptions) GetSerdeDialect() (v TSerdeDialect) {
+	if !p.IsSetSerdeDialect() {
+		return TQueryOptions_SerdeDialect_DEFAULT
+	}
+	return p.SerdeDialect
+}
+
 var TQueryOptions_DisableFileCache_DEFAULT bool = false
 
 func (p *TQueryOptions) GetDisableFileCache() (v bool) {
@@ -3209,6 +3263,9 @@ func (p *TQueryOptions) SetEnableNoNeedReadDataOpt(val bool) {
 func (p *TQueryOptions) SetReadCsvEmptyLineAsNull(val bool) {
 	p.ReadCsvEmptyLineAsNull = val
 }
+func (p *TQueryOptions) SetSerdeDialect(val TSerdeDialect) {
+	p.SerdeDialect = val
+}
 func (p *TQueryOptions) SetDisableFileCache(val bool) {
 	p.DisableFileCache = val
 }
@@ -3322,6 +3379,7 @@ var fieldIDToName_TQueryOptions = map[int16]string{
 	115:  "enable_short_circuit_query_access_column_store",
 	116:  "enable_no_need_read_data_opt",
 	117:  "read_csv_empty_line_as_null",
+	118:  "serde_dialect",
 	1000: "disable_file_cache",
 }
 
@@ -3755,6 +3813,10 @@ func (p *TQueryOptions) IsSetEnableNoNeedReadDataOpt() bool {
 
 func (p *TQueryOptions) IsSetReadCsvEmptyLineAsNull() bool {
 	return p.ReadCsvEmptyLineAsNull != TQueryOptions_ReadCsvEmptyLineAsNull_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetSerdeDialect() bool {
+	return p.SerdeDialect != TQueryOptions_SerdeDialect_DEFAULT
 }
 
 func (p *TQueryOptions) IsSetDisableFileCache() bool {
@@ -4639,6 +4701,14 @@ func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
 		case 117:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField117(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 118:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField118(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5866,6 +5936,17 @@ func (p *TQueryOptions) ReadField117(iprot thrift.TProtocol) error {
 	p.ReadCsvEmptyLineAsNull = _field
 	return nil
 }
+func (p *TQueryOptions) ReadField118(iprot thrift.TProtocol) error {
+
+	var _field TSerdeDialect
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = TSerdeDialect(v)
+	}
+	p.SerdeDialect = _field
+	return nil
+}
 func (p *TQueryOptions) ReadField1000(iprot thrift.TProtocol) error {
 
 	var _field bool
@@ -6314,6 +6395,10 @@ func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField117(oprot); err != nil {
 			fieldId = 117
+			goto WriteFieldError
+		}
+		if err = p.writeField118(oprot); err != nil {
+			fieldId = 118
 			goto WriteFieldError
 		}
 		if err = p.writeField1000(oprot); err != nil {
@@ -8390,6 +8475,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 117 end error: ", p), err)
 }
 
+func (p *TQueryOptions) writeField118(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSerdeDialect() {
+		if err = oprot.WriteFieldBegin("serde_dialect", thrift.I32, 118); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(p.SerdeDialect)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 118 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 118 end error: ", p), err)
+}
+
 func (p *TQueryOptions) writeField1000(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDisableFileCache() {
 		if err = oprot.WriteFieldBegin("disable_file_cache", thrift.BOOL, 1000); err != nil {
@@ -8745,6 +8849,9 @@ func (p *TQueryOptions) DeepEqual(ano *TQueryOptions) bool {
 		return false
 	}
 	if !p.Field117DeepEqual(ano.ReadCsvEmptyLineAsNull) {
+		return false
+	}
+	if !p.Field118DeepEqual(ano.SerdeDialect) {
 		return false
 	}
 	if !p.Field1000DeepEqual(ano.DisableFileCache) {
@@ -9555,6 +9662,13 @@ func (p *TQueryOptions) Field116DeepEqual(src bool) bool {
 func (p *TQueryOptions) Field117DeepEqual(src bool) bool {
 
 	if p.ReadCsvEmptyLineAsNull != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field118DeepEqual(src TSerdeDialect) bool {
+
+	if p.SerdeDialect != src {
 		return false
 	}
 	return true

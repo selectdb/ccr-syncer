@@ -15,12 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_drop_partition_without_fullsync") {
+suite("test_db_sync_add_drop_table") {
 
-    def tableName = "tbl_partition_ops_" + UUID.randomUUID().toString().replace("-", "")
+    def tableName = "tbl_db_sync_add_drop_table_" + UUID.randomUUID().toString().replace("-", "")
     def syncerAddress = "127.0.0.1:9190"
     def test_num = 0
-    def insert_num = 90  // insert into last partition
+    def insert_num = 10
     def sync_gap_time = 5000
     def opPartitonName = "less"
     String response
@@ -51,7 +51,7 @@ suite("test_drop_partition_without_fullsync") {
                 if (myClosure.call(res)) {
                     ret = true
                 }
-            } catch (Exception e) {}
+            } catch (Exception e) { }
 
             if (ret) {
                 break
@@ -93,7 +93,7 @@ suite("test_drop_partition_without_fullsync") {
     sql "ALTER DATABASE ${context.dbName} SET properties (\"binlog.enable\" = \"true\")"
 
     sql """
-        CREATE TABLE if NOT EXISTS ${tableName}
+        CREATE TABLE if NOT EXISTS ${tableName}_1
         (
             `test` INT,
             `id` INT
@@ -103,15 +103,7 @@ suite("test_drop_partition_without_fullsync") {
         PARTITION BY RANGE(`id`)
         (
             PARTITION `${opPartitonName}_0` VALUES LESS THAN ("0"),
-            PARTITION `${opPartitonName}_1` VALUES LESS THAN ("10"),
-            PARTITION `${opPartitonName}_2` VALUES LESS THAN ("20"),
-            PARTITION `${opPartitonName}_3` VALUES LESS THAN ("30"),
-            PARTITION `${opPartitonName}_4` VALUES LESS THAN ("40"),
-            PARTITION `${opPartitonName}_5` VALUES LESS THAN ("50"),
-            PARTITION `${opPartitonName}_6` VALUES LESS THAN ("60"),
-            PARTITION `${opPartitonName}_7` VALUES LESS THAN ("70"),
-            PARTITION `${opPartitonName}_8` VALUES LESS THAN ("80"),
-            PARTITION `${opPartitonName}_9` VALUES LESS THAN ("90")
+            PARTITION `${opPartitonName}_1` VALUES LESS THAN ("1000")
         )
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
@@ -129,38 +121,22 @@ suite("test_drop_partition_without_fullsync") {
         result response
     }
 
-    assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
+    assertTrue(checkRestoreFinishTimesOf("${tableName}_1", 60))
 
 
-    logger.info("=== Test 1: Check partitions in src before sync case ===")
+    logger.info("=== Test 1: Check table and backup size ===")
+    sql "sync"
     assertTrue(checkShowTimesOf("""
-                                SHOW PARTITIONS
-                                FROM TEST_${context.dbName}.${tableName}
-                                WHERE PartitionName = \"${opPartitonName}_9\"
+                                SHOW TABLES LIKE "${tableName}_1"
                                 """,
-                                exist, 30, "target"))
-    assertTrue(checkShowTimesOf("""
-                                SHOW PARTITIONS
-                                FROM TEST_${context.dbName}.${tableName}
-                                WHERE PartitionName = \"${opPartitonName}_8\"
-                                """,
-                                exist, 30, "target"))
+                                exist, 60, "target"))
 
     // save the backup num of source cluster
     def show_backup_result = sql "SHOW BACKUP"
     def backup_num = show_backup_result.size()
     logger.info("backups before drop partition: ${show_backup_result}")
 
-    logger.info("=== Test 2: Insert data in valid partitions case ===")
-    test_num = 3
-    for (int index = 0; index < insert_num; index++) {
-        sql """
-            INSERT INTO ${tableName} VALUES (${test_num}, ${index})
-            """
-    }
-    sql "sync"
-
-    logger.info("=== Test 3: pause ===")
+    logger.info("=== Test 2: Pause and create new table ===")
 
     httpTest {
         uri "/pause"
@@ -171,28 +147,29 @@ suite("test_drop_partition_without_fullsync") {
         result response
     }
 
-    test_num = 4
-    for (int index = 0; index < insert_num; index++) {
-        sql """
-            INSERT INTO ${tableName} VALUES (${test_num}, ${index})
-            """
-    }
+    sql """
+        CREATE TABLE if NOT EXISTS ${tableName}_2
+        (
+            `test` INT,
+            `id` INT
+        )
+        ENGINE=OLAP
+        UNIQUE KEY(`test`, `id`)
+        PARTITION BY RANGE(`id`)
+        (
+            PARTITION `${opPartitonName}_0` VALUES LESS THAN ("0"),
+            PARTITION `${opPartitonName}_1` VALUES LESS THAN ("1000")
+        )
+        DISTRIBUTED BY HASH(id) BUCKETS 1
+        PROPERTIES (
+            "replication_allocation" = "tag.location.default: 1",
+            "binlog.enable" = "true"
+        )
+    """
 
     sql "sync"
 
-    logger.info("=== Test 4: Drop partitions case ===")
-    sql """
-        ALTER TABLE ${tableName}
-        DROP PARTITION IF EXISTS ${opPartitonName}_9
-    """
-
-    sql """
-        ALTER TABLE ${tableName}
-        DROP PARTITION IF EXISTS ${opPartitonName}_8
-    """
-    sql "sync"
-
-    logger.info("=== Test 5: pause and verify ===")
+    logger.info("=== Test 3: Resume and check new table ===")
 
     httpTest {
         uri "/resume"
@@ -203,21 +180,55 @@ suite("test_drop_partition_without_fullsync") {
         result response
     }
 
+    sql "sync"
     assertTrue(checkShowTimesOf("""
-                                SHOW PARTITIONS
-                                FROM TEST_${context.dbName}.${tableName}
-                                WHERE PartitionName = \"${opPartitonName}_9\"
+                                SHOW TABLES LIKE "${tableName}_2"
                                 """,
-                                notExist, 30, "target"))
+                                exist, 60, "target"))
+
+    logger.info("=== Test 4: Pause and drop old table ===")
+
+    httpTest {
+        uri "/pause"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body ""
+        body "${bodyJson}"
+        op "post"
+        result response
+    }
+
+    for (int index = 0; index < insert_num; index++) {
+        sql """
+            INSERT INTO ${tableName}_1 VALUES (${test_num}, ${index})
+            """
+    }
+
+    sql """
+    DROP TABLE ${tableName}_1 FORCE
+    """
+
     assertTrue(checkShowTimesOf("""
-                                SHOW PARTITIONS
-                                FROM TEST_${context.dbName}.${tableName}
-                                WHERE PartitionName = \"${opPartitonName}_8\"
+                                SHOW TABLES LIKE "${tableName}_1"
                                 """,
-                                notExist, 30, "target"))
+                                notExist, 60, "sql"))
+
+    logger.info("=== Test 5: Resume and verify no new backups are triggered ===")
+    httpTest {
+        uri "/resume"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body ""
+        body "${bodyJson}"
+        op "post"
+        result response
+    }
+
+    assertTrue(checkShowTimesOf("""
+                                SHOW TABLES LIKE "${tableName}_1"
+                                """,
+                                notExist, 60, "target"))
 
     show_backup_result = sql "SHOW BACKUP"
-    logger.info("backups after drop partition: ${show_backup_result}")
+    logger.info("backups after drop old table: ${show_backup_result}")
     assertTrue(show_backup_result.size() == backup_num)
 }
 
