@@ -348,6 +348,20 @@ func (p *TTabletSchema) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 21:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField21(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -744,6 +758,20 @@ func (p *TTabletSchema) FastReadField20(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TTabletSchema) FastReadField21(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.RowStorePageSize = v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TTabletSchema) FastWrite(buf []byte) int {
 	return 0
@@ -766,6 +794,7 @@ func (p *TTabletSchema) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryW
 		offset += p.fastWriteField16(buf[offset:], binaryWriter)
 		offset += p.fastWriteField17(buf[offset:], binaryWriter)
 		offset += p.fastWriteField18(buf[offset:], binaryWriter)
+		offset += p.fastWriteField21(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
@@ -803,6 +832,7 @@ func (p *TTabletSchema) BLength() int {
 		l += p.field18Length()
 		l += p.field19Length()
 		l += p.field20Length()
+		l += p.field21Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -1049,6 +1079,17 @@ func (p *TTabletSchema) fastWriteField20(buf []byte, binaryWriter bthrift.Binary
 	return offset
 }
 
+func (p *TTabletSchema) fastWriteField21(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetRowStorePageSize() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "row_store_page_size", thrift.I64, 21)
+		offset += bthrift.Binary.WriteI64(buf[offset:], p.RowStorePageSize)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TTabletSchema) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("short_key_column_count", thrift.I16, 1)
@@ -1264,6 +1305,17 @@ func (p *TTabletSchema) field20Length() int {
 		var tmpV int32
 		l += bthrift.Binary.I32Length(int32(tmpV)) * len(p.RowStoreColCids)
 		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TTabletSchema) field21Length() int {
+	l := 0
+	if p.IsSetRowStorePageSize() {
+		l += bthrift.Binary.FieldBeginLength("row_store_page_size", thrift.I64, 21)
+		l += bthrift.Binary.I64Length(p.RowStorePageSize)
+
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l
@@ -9528,6 +9580,20 @@ func (p *TCloneReq) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 13:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField13(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -9754,6 +9820,20 @@ func (p *TCloneReq) FastReadField12(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TCloneReq) FastReadField13(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.TableId = v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TCloneReq) FastWrite(buf []byte) int {
 	return 0
@@ -9773,6 +9853,7 @@ func (p *TCloneReq) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWrite
 		offset += p.fastWriteField10(buf[offset:], binaryWriter)
 		offset += p.fastWriteField11(buf[offset:], binaryWriter)
 		offset += p.fastWriteField12(buf[offset:], binaryWriter)
+		offset += p.fastWriteField13(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 	}
@@ -9797,6 +9878,7 @@ func (p *TCloneReq) BLength() int {
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field12Length()
+		l += p.field13Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -9936,6 +10018,17 @@ func (p *TCloneReq) fastWriteField12(buf []byte, binaryWriter bthrift.BinaryWrit
 	return offset
 }
 
+func (p *TCloneReq) fastWriteField13(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTableId() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "table_id", thrift.I64, 13)
+		offset += bthrift.Binary.WriteI64(buf[offset:], p.TableId)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TCloneReq) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("tablet_id", thrift.I64, 1)
@@ -10059,6 +10152,17 @@ func (p *TCloneReq) field12Length() int {
 	if p.IsSetPartitionId() {
 		l += bthrift.Binary.FieldBeginLength("partition_id", thrift.I64, 12)
 		l += bthrift.Binary.I64Length(*p.PartitionId)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TCloneReq) field13Length() int {
+	l := 0
+	if p.IsSetTableId() {
+		l += bthrift.Binary.FieldBeginLength("table_id", thrift.I64, 13)
+		l += bthrift.Binary.I64Length(p.TableId)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -15076,6 +15180,48 @@ func (p *TCalcDeleteBitmapPartitionInfo) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -15185,6 +15331,96 @@ func (p *TCalcDeleteBitmapPartitionInfo) FastReadField3(buf []byte) (int, error)
 	return offset, nil
 }
 
+func (p *TCalcDeleteBitmapPartitionInfo) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := bthrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.BaseCompactionCnts = make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem int64
+		if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_elem = v
+
+		}
+
+		p.BaseCompactionCnts = append(p.BaseCompactionCnts, _elem)
+	}
+	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
+func (p *TCalcDeleteBitmapPartitionInfo) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := bthrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.CumulativeCompactionCnts = make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem int64
+		if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_elem = v
+
+		}
+
+		p.CumulativeCompactionCnts = append(p.CumulativeCompactionCnts, _elem)
+	}
+	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
+func (p *TCalcDeleteBitmapPartitionInfo) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := bthrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.CumulativePoints = make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem int64
+		if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_elem = v
+
+		}
+
+		p.CumulativePoints = append(p.CumulativePoints, _elem)
+	}
+	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TCalcDeleteBitmapPartitionInfo) FastWrite(buf []byte) int {
 	return 0
@@ -15197,6 +15433,9 @@ func (p *TCalcDeleteBitmapPartitionInfo) FastWriteNocopy(buf []byte, binaryWrite
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
+		offset += p.fastWriteField4(buf[offset:], binaryWriter)
+		offset += p.fastWriteField5(buf[offset:], binaryWriter)
+		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -15210,6 +15449,9 @@ func (p *TCalcDeleteBitmapPartitionInfo) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
+		l += p.field5Length()
+		l += p.field6Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -15251,6 +15493,63 @@ func (p *TCalcDeleteBitmapPartitionInfo) fastWriteField3(buf []byte, binaryWrite
 	return offset
 }
 
+func (p *TCalcDeleteBitmapPartitionInfo) fastWriteField4(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetBaseCompactionCnts() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "base_compaction_cnts", thrift.LIST, 4)
+		listBeginOffset := offset
+		offset += bthrift.Binary.ListBeginLength(thrift.I64, 0)
+		var length int
+		for _, v := range p.BaseCompactionCnts {
+			length++
+			offset += bthrift.Binary.WriteI64(buf[offset:], v)
+
+		}
+		bthrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I64, length)
+		offset += bthrift.Binary.WriteListEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TCalcDeleteBitmapPartitionInfo) fastWriteField5(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetCumulativeCompactionCnts() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "cumulative_compaction_cnts", thrift.LIST, 5)
+		listBeginOffset := offset
+		offset += bthrift.Binary.ListBeginLength(thrift.I64, 0)
+		var length int
+		for _, v := range p.CumulativeCompactionCnts {
+			length++
+			offset += bthrift.Binary.WriteI64(buf[offset:], v)
+
+		}
+		bthrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I64, length)
+		offset += bthrift.Binary.WriteListEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TCalcDeleteBitmapPartitionInfo) fastWriteField6(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetCumulativePoints() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "cumulative_points", thrift.LIST, 6)
+		listBeginOffset := offset
+		offset += bthrift.Binary.ListBeginLength(thrift.I64, 0)
+		var length int
+		for _, v := range p.CumulativePoints {
+			length++
+			offset += bthrift.Binary.WriteI64(buf[offset:], v)
+
+		}
+		bthrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I64, length)
+		offset += bthrift.Binary.WriteListEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TCalcDeleteBitmapPartitionInfo) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("partition_id", thrift.I64, 1)
@@ -15277,6 +15576,45 @@ func (p *TCalcDeleteBitmapPartitionInfo) field3Length() int {
 	l += bthrift.Binary.I64Length(int64(tmpV)) * len(p.TabletIds)
 	l += bthrift.Binary.ListEndLength()
 	l += bthrift.Binary.FieldEndLength()
+	return l
+}
+
+func (p *TCalcDeleteBitmapPartitionInfo) field4Length() int {
+	l := 0
+	if p.IsSetBaseCompactionCnts() {
+		l += bthrift.Binary.FieldBeginLength("base_compaction_cnts", thrift.LIST, 4)
+		l += bthrift.Binary.ListBeginLength(thrift.I64, len(p.BaseCompactionCnts))
+		var tmpV int64
+		l += bthrift.Binary.I64Length(int64(tmpV)) * len(p.BaseCompactionCnts)
+		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TCalcDeleteBitmapPartitionInfo) field5Length() int {
+	l := 0
+	if p.IsSetCumulativeCompactionCnts() {
+		l += bthrift.Binary.FieldBeginLength("cumulative_compaction_cnts", thrift.LIST, 5)
+		l += bthrift.Binary.ListBeginLength(thrift.I64, len(p.CumulativeCompactionCnts))
+		var tmpV int64
+		l += bthrift.Binary.I64Length(int64(tmpV)) * len(p.CumulativeCompactionCnts)
+		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TCalcDeleteBitmapPartitionInfo) field6Length() int {
+	l := 0
+	if p.IsSetCumulativePoints() {
+		l += bthrift.Binary.FieldBeginLength("cumulative_points", thrift.LIST, 6)
+		l += bthrift.Binary.ListBeginLength(thrift.I64, len(p.CumulativePoints))
+		var tmpV int64
+		l += bthrift.Binary.I64Length(int64(tmpV)) * len(p.CumulativePoints)
+		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
 	return l
 }
 

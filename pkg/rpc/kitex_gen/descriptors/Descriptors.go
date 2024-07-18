@@ -7414,31 +7414,34 @@ func (p *TOlapTableIndexSchema) Field6DeepEqual(src *exprs.TExpr) bool {
 }
 
 type TOlapTableSchemaParam struct {
-	DbId                        int64                    `thrift:"db_id,1,required" frugal:"1,required,i64" json:"db_id"`
-	TableId                     int64                    `thrift:"table_id,2,required" frugal:"2,required,i64" json:"table_id"`
-	Version                     int64                    `thrift:"version,3,required" frugal:"3,required,i64" json:"version"`
-	SlotDescs                   []*TSlotDescriptor       `thrift:"slot_descs,4,required" frugal:"4,required,list<TSlotDescriptor>" json:"slot_descs"`
-	TupleDesc                   *TTupleDescriptor        `thrift:"tuple_desc,5,required" frugal:"5,required,TTupleDescriptor" json:"tuple_desc"`
-	Indexes                     []*TOlapTableIndexSchema `thrift:"indexes,6,required" frugal:"6,required,list<TOlapTableIndexSchema>" json:"indexes"`
-	IsDynamicSchema             *bool                    `thrift:"is_dynamic_schema,7,optional" frugal:"7,optional,bool" json:"is_dynamic_schema,omitempty"`
-	IsPartialUpdate             *bool                    `thrift:"is_partial_update,8,optional" frugal:"8,optional,bool" json:"is_partial_update,omitempty"`
-	PartialUpdateInputColumns   []string                 `thrift:"partial_update_input_columns,9,optional" frugal:"9,optional,list<string>" json:"partial_update_input_columns,omitempty"`
-	IsStrictMode                bool                     `thrift:"is_strict_mode,10,optional" frugal:"10,optional,bool" json:"is_strict_mode,omitempty"`
-	AutoIncrementColumn         *string                  `thrift:"auto_increment_column,11,optional" frugal:"11,optional,string" json:"auto_increment_column,omitempty"`
-	AutoIncrementColumnUniqueId int32                    `thrift:"auto_increment_column_unique_id,12,optional" frugal:"12,optional,i32" json:"auto_increment_column_unique_id,omitempty"`
+	DbId                           int64                                 `thrift:"db_id,1,required" frugal:"1,required,i64" json:"db_id"`
+	TableId                        int64                                 `thrift:"table_id,2,required" frugal:"2,required,i64" json:"table_id"`
+	Version                        int64                                 `thrift:"version,3,required" frugal:"3,required,i64" json:"version"`
+	SlotDescs                      []*TSlotDescriptor                    `thrift:"slot_descs,4,required" frugal:"4,required,list<TSlotDescriptor>" json:"slot_descs"`
+	TupleDesc                      *TTupleDescriptor                     `thrift:"tuple_desc,5,required" frugal:"5,required,TTupleDescriptor" json:"tuple_desc"`
+	Indexes                        []*TOlapTableIndexSchema              `thrift:"indexes,6,required" frugal:"6,required,list<TOlapTableIndexSchema>" json:"indexes"`
+	IsDynamicSchema                *bool                                 `thrift:"is_dynamic_schema,7,optional" frugal:"7,optional,bool" json:"is_dynamic_schema,omitempty"`
+	IsPartialUpdate                *bool                                 `thrift:"is_partial_update,8,optional" frugal:"8,optional,bool" json:"is_partial_update,omitempty"`
+	PartialUpdateInputColumns      []string                              `thrift:"partial_update_input_columns,9,optional" frugal:"9,optional,list<string>" json:"partial_update_input_columns,omitempty"`
+	IsStrictMode                   bool                                  `thrift:"is_strict_mode,10,optional" frugal:"10,optional,bool" json:"is_strict_mode,omitempty"`
+	AutoIncrementColumn            *string                               `thrift:"auto_increment_column,11,optional" frugal:"11,optional,string" json:"auto_increment_column,omitempty"`
+	AutoIncrementColumnUniqueId    int32                                 `thrift:"auto_increment_column_unique_id,12,optional" frugal:"12,optional,i32" json:"auto_increment_column_unique_id,omitempty"`
+	InvertedIndexFileStorageFormat types.TInvertedIndexFileStorageFormat `thrift:"inverted_index_file_storage_format,13,optional" frugal:"13,optional,TInvertedIndexFileStorageFormat" json:"inverted_index_file_storage_format,omitempty"`
 }
 
 func NewTOlapTableSchemaParam() *TOlapTableSchemaParam {
 	return &TOlapTableSchemaParam{
 
-		IsStrictMode:                false,
-		AutoIncrementColumnUniqueId: -1,
+		IsStrictMode:                   false,
+		AutoIncrementColumnUniqueId:    -1,
+		InvertedIndexFileStorageFormat: types.TInvertedIndexFileStorageFormat_V1,
 	}
 }
 
 func (p *TOlapTableSchemaParam) InitDefault() {
 	p.IsStrictMode = false
 	p.AutoIncrementColumnUniqueId = -1
+	p.InvertedIndexFileStorageFormat = types.TInvertedIndexFileStorageFormat_V1
 }
 
 func (p *TOlapTableSchemaParam) GetDbId() (v int64) {
@@ -7523,6 +7526,15 @@ func (p *TOlapTableSchemaParam) GetAutoIncrementColumnUniqueId() (v int32) {
 	}
 	return p.AutoIncrementColumnUniqueId
 }
+
+var TOlapTableSchemaParam_InvertedIndexFileStorageFormat_DEFAULT types.TInvertedIndexFileStorageFormat = types.TInvertedIndexFileStorageFormat_V1
+
+func (p *TOlapTableSchemaParam) GetInvertedIndexFileStorageFormat() (v types.TInvertedIndexFileStorageFormat) {
+	if !p.IsSetInvertedIndexFileStorageFormat() {
+		return TOlapTableSchemaParam_InvertedIndexFileStorageFormat_DEFAULT
+	}
+	return p.InvertedIndexFileStorageFormat
+}
 func (p *TOlapTableSchemaParam) SetDbId(val int64) {
 	p.DbId = val
 }
@@ -7559,6 +7571,9 @@ func (p *TOlapTableSchemaParam) SetAutoIncrementColumn(val *string) {
 func (p *TOlapTableSchemaParam) SetAutoIncrementColumnUniqueId(val int32) {
 	p.AutoIncrementColumnUniqueId = val
 }
+func (p *TOlapTableSchemaParam) SetInvertedIndexFileStorageFormat(val types.TInvertedIndexFileStorageFormat) {
+	p.InvertedIndexFileStorageFormat = val
+}
 
 var fieldIDToName_TOlapTableSchemaParam = map[int16]string{
 	1:  "db_id",
@@ -7573,6 +7588,7 @@ var fieldIDToName_TOlapTableSchemaParam = map[int16]string{
 	10: "is_strict_mode",
 	11: "auto_increment_column",
 	12: "auto_increment_column_unique_id",
+	13: "inverted_index_file_storage_format",
 }
 
 func (p *TOlapTableSchemaParam) IsSetTupleDesc() bool {
@@ -7601,6 +7617,10 @@ func (p *TOlapTableSchemaParam) IsSetAutoIncrementColumn() bool {
 
 func (p *TOlapTableSchemaParam) IsSetAutoIncrementColumnUniqueId() bool {
 	return p.AutoIncrementColumnUniqueId != TOlapTableSchemaParam_AutoIncrementColumnUniqueId_DEFAULT
+}
+
+func (p *TOlapTableSchemaParam) IsSetInvertedIndexFileStorageFormat() bool {
+	return p.InvertedIndexFileStorageFormat != TOlapTableSchemaParam_InvertedIndexFileStorageFormat_DEFAULT
 }
 
 func (p *TOlapTableSchemaParam) Read(iprot thrift.TProtocol) (err error) {
@@ -7725,6 +7745,14 @@ func (p *TOlapTableSchemaParam) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7955,6 +7983,17 @@ func (p *TOlapTableSchemaParam) ReadField12(iprot thrift.TProtocol) error {
 	p.AutoIncrementColumnUniqueId = _field
 	return nil
 }
+func (p *TOlapTableSchemaParam) ReadField13(iprot thrift.TProtocol) error {
+
+	var _field types.TInvertedIndexFileStorageFormat
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = types.TInvertedIndexFileStorageFormat(v)
+	}
+	p.InvertedIndexFileStorageFormat = _field
+	return nil
+}
 
 func (p *TOlapTableSchemaParam) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -8008,6 +8047,10 @@ func (p *TOlapTableSchemaParam) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 	}
@@ -8268,6 +8311,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
 
+func (p *TOlapTableSchemaParam) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInvertedIndexFileStorageFormat() {
+		if err = oprot.WriteFieldBegin("inverted_index_file_storage_format", thrift.I32, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(p.InvertedIndexFileStorageFormat)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
+
 func (p *TOlapTableSchemaParam) String() string {
 	if p == nil {
 		return "<nil>"
@@ -8316,6 +8378,9 @@ func (p *TOlapTableSchemaParam) DeepEqual(ano *TOlapTableSchemaParam) bool {
 		return false
 	}
 	if !p.Field12DeepEqual(ano.AutoIncrementColumnUniqueId) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.InvertedIndexFileStorageFormat) {
 		return false
 	}
 	return true
@@ -8434,6 +8499,13 @@ func (p *TOlapTableSchemaParam) Field11DeepEqual(src *string) bool {
 func (p *TOlapTableSchemaParam) Field12DeepEqual(src int32) bool {
 
 	if p.AutoIncrementColumnUniqueId != src {
+		return false
+	}
+	return true
+}
+func (p *TOlapTableSchemaParam) Field13DeepEqual(src types.TInvertedIndexFileStorageFormat) bool {
+
+	if p.InvertedIndexFileStorageFormat != src {
 		return false
 	}
 	return true
