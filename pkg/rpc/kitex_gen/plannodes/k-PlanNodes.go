@@ -26013,6 +26013,20 @@ func (p *TSortNode) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 11:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField11(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -26164,6 +26178,21 @@ func (p *TSortNode) FastReadField10(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TSortNode) FastReadField11(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := TSortAlgorithm(v)
+		p.Algorithm = &tmp
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TSortNode) FastWrite(buf []byte) int {
 	return 0
@@ -26181,6 +26210,7 @@ func (p *TSortNode) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWrite
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
 		offset += p.fastWriteField10(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
+		offset += p.fastWriteField11(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -26199,6 +26229,7 @@ func (p *TSortNode) BLength() int {
 		l += p.field8Length()
 		l += p.field9Length()
 		l += p.field10Length()
+		l += p.field11Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -26288,6 +26319,17 @@ func (p *TSortNode) fastWriteField10(buf []byte, binaryWriter bthrift.BinaryWrit
 	return offset
 }
 
+func (p *TSortNode) fastWriteField11(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetAlgorithm() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "algorithm", thrift.I32, 11)
+		offset += bthrift.Binary.WriteI32(buf[offset:], int32(*p.Algorithm))
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TSortNode) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("sort_info", thrift.STRUCT, 1)
@@ -26365,6 +26407,17 @@ func (p *TSortNode) field10Length() int {
 	if p.IsSetIsColocate() {
 		l += bthrift.Binary.FieldBeginLength("is_colocate", thrift.BOOL, 10)
 		l += bthrift.Binary.BoolLength(*p.IsColocate)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TSortNode) field11Length() int {
+	l := 0
+	if p.IsSetAlgorithm() {
+		l += bthrift.Binary.FieldBeginLength("algorithm", thrift.I32, 11)
+		l += bthrift.Binary.I32Length(int32(*p.Algorithm))
 
 		l += bthrift.Binary.FieldEndLength()
 	}

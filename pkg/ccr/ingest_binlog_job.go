@@ -410,6 +410,10 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 
 func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 	log.Debugf("tableRecord: %v", tableRecord)
+	if j.srcMeta.IsTableDropped(tableRecord.Id) {
+		log.Infof("skip the dropped table %d", tableRecord.Id)
+		return
+	}
 
 	if len(tableRecord.PartitionRecords) == 0 {
 		j.setError(xerror.Errorf(xerror.Meta, "partition records is empty"))

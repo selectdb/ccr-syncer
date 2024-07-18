@@ -2649,6 +2649,20 @@ func (p *TQueryOptions) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 118:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField118(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 1000:
 			if fieldTypeId == thrift.BOOL {
 				l, err = p.FastReadField1000(buf[offset:])
@@ -4199,6 +4213,20 @@ func (p *TQueryOptions) FastReadField117(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TQueryOptions) FastReadField118(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.SerdeDialect = TSerdeDialect(v)
+
+	}
+	return offset, nil
+}
+
 func (p *TQueryOptions) FastReadField1000(buf []byte) (int, error) {
 	offset := 0
 
@@ -4331,6 +4359,7 @@ func (p *TQueryOptions) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryW
 		offset += p.fastWriteField42(buf[offset:], binaryWriter)
 		offset += p.fastWriteField46(buf[offset:], binaryWriter)
 		offset += p.fastWriteField70(buf[offset:], binaryWriter)
+		offset += p.fastWriteField118(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -4449,6 +4478,7 @@ func (p *TQueryOptions) BLength() int {
 		l += p.field115Length()
 		l += p.field116Length()
 		l += p.field117Length()
+		l += p.field118Length()
 		l += p.field1000Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
@@ -5637,6 +5667,17 @@ func (p *TQueryOptions) fastWriteField117(buf []byte, binaryWriter bthrift.Binar
 	if p.IsSetReadCsvEmptyLineAsNull() {
 		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "read_csv_empty_line_as_null", thrift.BOOL, 117)
 		offset += bthrift.Binary.WriteBool(buf[offset:], p.ReadCsvEmptyLineAsNull)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField118(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetSerdeDialect() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "serde_dialect", thrift.I32, 118)
+		offset += bthrift.Binary.WriteI32(buf[offset:], int32(p.SerdeDialect))
 
 		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
 	}
@@ -6835,6 +6876,17 @@ func (p *TQueryOptions) field117Length() int {
 	if p.IsSetReadCsvEmptyLineAsNull() {
 		l += bthrift.Binary.FieldBeginLength("read_csv_empty_line_as_null", thrift.BOOL, 117)
 		l += bthrift.Binary.BoolLength(p.ReadCsvEmptyLineAsNull)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field118Length() int {
+	l := 0
+	if p.IsSetSerdeDialect() {
+		l += bthrift.Binary.FieldBeginLength("serde_dialect", thrift.I32, 118)
+		l += bthrift.Binary.I32Length(int32(p.SerdeDialect))
 
 		l += bthrift.Binary.FieldEndLength()
 	}

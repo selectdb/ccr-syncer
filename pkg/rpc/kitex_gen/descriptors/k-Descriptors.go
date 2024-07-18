@@ -5545,6 +5545,20 @@ func (p *TOlapTableSchemaParam) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 13:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField13(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -5817,6 +5831,20 @@ func (p *TOlapTableSchemaParam) FastReadField12(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TOlapTableSchemaParam) FastReadField13(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.InvertedIndexFileStorageFormat = types.TInvertedIndexFileStorageFormat(v)
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TOlapTableSchemaParam) FastWrite(buf []byte) int {
 	return 0
@@ -5838,6 +5866,7 @@ func (p *TOlapTableSchemaParam) FastWriteNocopy(buf []byte, binaryWriter bthrift
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
 		offset += p.fastWriteField11(buf[offset:], binaryWriter)
+		offset += p.fastWriteField13(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -5860,6 +5889,7 @@ func (p *TOlapTableSchemaParam) BLength() int {
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field12Length()
+		l += p.field13Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -6007,6 +6037,17 @@ func (p *TOlapTableSchemaParam) fastWriteField12(buf []byte, binaryWriter bthrif
 	return offset
 }
 
+func (p *TOlapTableSchemaParam) fastWriteField13(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetInvertedIndexFileStorageFormat() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "inverted_index_file_storage_format", thrift.I32, 13)
+		offset += bthrift.Binary.WriteI32(buf[offset:], int32(p.InvertedIndexFileStorageFormat))
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TOlapTableSchemaParam) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("db_id", thrift.I64, 1)
@@ -6130,6 +6171,17 @@ func (p *TOlapTableSchemaParam) field12Length() int {
 	if p.IsSetAutoIncrementColumnUniqueId() {
 		l += bthrift.Binary.FieldBeginLength("auto_increment_column_unique_id", thrift.I32, 12)
 		l += bthrift.Binary.I32Length(p.AutoIncrementColumnUniqueId)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TOlapTableSchemaParam) field13Length() int {
+	l := 0
+	if p.IsSetInvertedIndexFileStorageFormat() {
+		l += bthrift.Binary.FieldBeginLength("inverted_index_file_storage_format", thrift.I32, 13)
+		l += bthrift.Binary.I32Length(int32(p.InvertedIndexFileStorageFormat))
 
 		l += bthrift.Binary.FieldEndLength()
 	}
