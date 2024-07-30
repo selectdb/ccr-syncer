@@ -410,6 +410,10 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 
 func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 	log.Debugf("tableRecord: %v", tableRecord)
+	if j.srcMeta.IsTableDropped(tableRecord.Id) {
+		log.Infof("skip the dropped table %d", tableRecord.Id)
+		return
+	}
 
 	if len(tableRecord.PartitionRecords) == 0 {
 		j.setError(xerror.Errorf(xerror.Meta, "partition records is empty"))
@@ -453,11 +457,10 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 		return
 	}
 	for _, partitionRecord := range tableRecord.PartitionRecords {
-		if partitionRecord.IsTemp {
+		if partitionRecord.IsTemp || j.srcMeta.IsPartitionDropped(partitionRecord.Id) {
 			continue
 		}
 		rangeKey := partitionRecord.Range
-		// TODO(Improvement, Fix): this may happen after drop partition, can seek partition for more time, check from recycle bin
 		if _, ok := srcPartitionMap[rangeKey]; !ok {
 			err = xerror.Errorf(xerror.Meta, "partition range: %v not in src cluster", rangeKey)
 			j.setError(err)
@@ -474,6 +477,11 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 	for _, partitionRecord := range tableRecord.PartitionRecords {
 		if partitionRecord.IsTemp {
 			log.Debugf("skip ingest binlog to an temp partition, id: %d range: %s, version: %d",
+				partitionRecord.Id, partitionRecord.Range, partitionRecord.Version)
+			continue
+		}
+		if j.srcMeta.IsPartitionDropped(partitionRecord.Id) {
+			log.Infof("skip the dropped partition %d, range: %s, version: %d",
 				partitionRecord.Id, partitionRecord.Range, partitionRecord.Version)
 			continue
 		}

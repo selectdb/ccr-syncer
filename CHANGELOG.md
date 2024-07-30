@@ -1,5 +1,14 @@
 # 更新日志
 
+## v 2.1.6
+
+### Fix
+
+- 过滤已经删除的 partitions，避免 full sync，需要 doris 2.0.14/2.1.5 (#117)
+- 过滤已经删除的 tables，避免 full sync (#123)
+- 兼容 doris 3.0 alternative json name，doris 3.0 必须使用该版本的 CCR syncer (#121)
+- 修复 list jobs 接口在高可用环境下不可用的问题 (#120)
+
 ## v 2.1.4/2.0.11
 
 对应 doris 2.0.11/2.1.4。
