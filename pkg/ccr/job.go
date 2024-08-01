@@ -1146,6 +1146,13 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 			return err, false
 		}
 
+		// Step 2: check job state, if not incrementalSync, such as DBPartialSync, break
+		if !j.isIncrementalSync() {
+			log.Debugf("job state is not incremental sync, back to run loop, job state: %s", j.progress.SyncState)
+			return nil, true
+		}
+
+		// Step 3: update progress
 		commitSeq := binlog.GetCommitSeq()
 		if j.SyncType == DBSync && j.progress.TableCommitSeqMap != nil {
 			// when all table commit seq > commitSeq, it's true
@@ -1163,15 +1170,9 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 			}
 		}
 
-		// Step 2: update progress to db
+		// Step 4: update progress to db
 		if !j.progress.IsDone() {
 			j.progress.Done()
-		}
-
-		// Step 3: check job state, if not incrementalSync, break
-		if !j.isIncrementalSync() {
-			log.Debugf("job state is not incremental sync, back to run loop, job state: %s", j.progress.SyncState)
-			return nil, true
 		}
 	}
 	return nil, false
