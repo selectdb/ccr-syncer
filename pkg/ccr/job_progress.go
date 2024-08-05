@@ -26,10 +26,12 @@ const (
 	DBTablesIncrementalSync SyncState = 1
 	DBSpecificTableFullSync SyncState = 2
 	DBIncrementalSync       SyncState = 3
+	DBPartialSync           SyncState = 4 // sync partitions
 
 	// Table sync state machine states
 	TableFullSync        SyncState = 500
 	TableIncrementalSync SyncState = 501
+	TablePartialSync     SyncState = 502
 
 	// TODO: add timeout state for restart full sync
 )
@@ -45,10 +47,14 @@ func (s SyncState) String() string {
 		return "DBSpecificTableFullSync"
 	case DBIncrementalSync:
 		return "DBIncrementalSync"
+	case DBPartialSync:
+		return "DBPartialSync"
 	case TableFullSync:
 		return "TableFullSync"
 	case TableIncrementalSync:
 		return "TableIncrementalSync"
+	case TablePartialSync:
+		return "TablePartialSync"
 	default:
 		return fmt.Sprintf("Unknown SyncState: %d", s)
 	}
@@ -127,6 +133,13 @@ func (s SubSyncState) String() string {
 	}
 }
 
+type JobPartialSyncData struct {
+	TableId      int64    `json:"table_id"`
+	Table        string   `json:"table"`
+	PartitionIds []int64  `json:"partition_ids"`
+	Partitions   []string `json:"partitions"`
+}
+
 type JobProgress struct {
 	JobName string     `json:"job_name"`
 	db      storage.DB `json:"-"`
@@ -137,12 +150,13 @@ type JobProgress struct {
 	SubSyncState SubSyncState `json:"sub_sync_state"`
 
 	// The commit seq where the target cluster has synced.
-	PrevCommitSeq     int64           `json:"prev_commit_seq"`
-	CommitSeq         int64           `json:"commit_seq"`
-	TableMapping      map[int64]int64 `json:"table_mapping"`
-	TableCommitSeqMap map[int64]int64 `json:"table_commit_seq_map"` // only for DBTablesIncrementalSync
-	InMemoryData      any             `json:"-"`
-	PersistData       string          `json:"data"` // this often for binlog or snapshot info
+	PrevCommitSeq     int64               `json:"prev_commit_seq"`
+	CommitSeq         int64               `json:"commit_seq"`
+	TableMapping      map[int64]int64     `json:"table_mapping"`
+	TableCommitSeqMap map[int64]int64     `json:"table_commit_seq_map"` // only for DBTablesIncrementalSync
+	InMemoryData      any                 `json:"-"`
+	PersistData       string              `json:"data"` // this often for binlog or snapshot info
+	PartialSyncData   *JobPartialSyncData `json:"partial_sync_data,omitempty"`
 
 	// Some fields to save the unix epoch time of the key timepoint.
 	CreatedAt              int64 `json:"created_at,omitempty"`

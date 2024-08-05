@@ -22,7 +22,7 @@ suite("test_insert_overwrite") {
     //  3. replace table
     // The second will
     //  1. create temp partitions
-    //  2. insert int temp partitions
+    //  2. insert into temp partitions
     //  3. replace overlap partitions
 
     

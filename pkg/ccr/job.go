@@ -268,6 +268,194 @@ func (j *Job) isIncrementalSync() bool {
 	}
 }
 
+func (j *Job) addExtraInfo(jobInfo []byte) ([]byte, error) {
+	var jobInfoMap map[string]interface{}
+	err := json.Unmarshal(jobInfo, &jobInfoMap)
+	if err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "unmarshal jobInfo failed, jobInfo: %s", string(jobInfo))
+	}
+
+	extraInfo, err := j.genExtraInfo()
+	if err != nil {
+		return nil, err
+	}
+	log.Debugf("extraInfo: %v", extraInfo)
+	jobInfoMap["extra_info"] = extraInfo
+
+	jobInfoBytes, err := json.Marshal(jobInfoMap)
+	if err != nil {
+		return nil, xerror.Errorf(xerror.Normal, "marshal jobInfo failed, jobInfo: %v", jobInfoMap)
+	}
+
+	return jobInfoBytes, nil
+}
+
+// Like fullSync, but only backup and restore partial of the partitions of a table.
+func (j *Job) partialSync() error {
+	type inMemoryData struct {
+		SnapshotName string                        `json:"snapshot_name"`
+		SnapshotResp *festruct.TGetSnapshotResult_ `json:"snapshot_resp"`
+	}
+
+	if j.progress.PartialSyncData == nil {
+		return xerror.Errorf(xerror.Normal, "run partial sync but data is nil")
+	}
+
+	table := j.progress.PartialSyncData.Table
+	partitions := j.progress.PartialSyncData.Partitions
+	switch j.progress.SubSyncState {
+	case Done:
+		log.Infof("partial sync status: done")
+		if err := j.newPartialSnapshot(table, partitions); err != nil {
+			return err
+		}
+
+	case BeginCreateSnapshot:
+		// Step 1: Create snapshot
+		log.Infof("partial sync status: create snapshot")
+		snapshotName, err := j.ISrc.CreatePartialSnapshotAndWaitForDone(table, partitions)
+		if err != nil {
+			return err
+		}
+
+		j.progress.NextSubCheckpoint(GetSnapshotInfo, snapshotName)
+
+	case GetSnapshotInfo:
+		// Step 2: Get snapshot info
+		log.Infof("partial sync status: get snapshot info")
+
+		snapshotName := j.progress.PersistData
+		src := &j.Src
+		srcRpc, err := j.factory.NewFeRpc(src)
+		if err != nil {
+			return err
+		}
+
+		log.Debugf("partial sync begin get snapshot %s", snapshotName)
+		snapshotResp, err := srcRpc.GetSnapshot(src, snapshotName)
+		if err != nil {
+			return err
+		}
+
+		if snapshotResp.Status.GetStatusCode() != tstatus.TStatusCode_OK {
+			err = xerror.Errorf(xerror.FE, "get snapshot failed, status: %v", snapshotResp.Status)
+			return err
+		}
+
+		if !snapshotResp.IsSetJobInfo() {
+			return xerror.New(xerror.Normal, "jobInfo is not set")
+		}
+
+		log.Tracef("job: %.128s", snapshotResp.GetJobInfo())
+		inMemoryData := &inMemoryData{
+			SnapshotName: snapshotName,
+			SnapshotResp: snapshotResp,
+		}
+		j.progress.NextSubVolatile(AddExtraInfo, inMemoryData)
+
+	case AddExtraInfo:
+		// Step 3: Add extra info
+		log.Infof("partial sync status: add extra info")
+
+		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
+		snapshotResp := inMemoryData.SnapshotResp
+		jobInfo := snapshotResp.GetJobInfo()
+
+		log.Infof("partial sync snapshot response meta size: %d, job info size: %d",
+			len(snapshotResp.Meta), len(snapshotResp.JobInfo))
+
+		jobInfoBytes, err := j.addExtraInfo(jobInfo)
+		if err != nil {
+			return err
+		}
+
+		log.Debugf("partial sync job info size: %d, bytes: %.128s", len(jobInfoBytes), string(jobInfoBytes))
+		snapshotResp.SetJobInfo(jobInfoBytes)
+
+		j.progress.NextSubCheckpoint(RestoreSnapshot, inMemoryData)
+
+	case RestoreSnapshot:
+		// Step 4: Restore snapshot
+		log.Infof("partial sync status: restore snapshot")
+
+		if j.progress.InMemoryData == nil {
+			persistData := j.progress.PersistData
+			inMemoryData := &inMemoryData{}
+			if err := json.Unmarshal([]byte(persistData), inMemoryData); err != nil {
+				return xerror.Errorf(xerror.Normal, "unmarshal persistData failed, persistData: %s", persistData)
+			}
+			j.progress.InMemoryData = inMemoryData
+		}
+
+		// Step 4.1: start a new fullsync && persist
+		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
+		snapshotName := inMemoryData.SnapshotName
+		restoreSnapshotName := restoreSnapshotName(snapshotName)
+		snapshotResp := inMemoryData.SnapshotResp
+
+		// Step 4.2: restore snapshot to dest
+		dest := &j.Dest
+		destRpc, err := j.factory.NewFeRpc(dest)
+		if err != nil {
+			return err
+		}
+		log.Debugf("partial sync begin restore snapshot %s to %s", snapshotName, restoreSnapshotName)
+
+		var tableRefs []*festruct.TTableRef
+		if j.SyncType == TableSync && j.Src.Table != j.Dest.Table {
+			log.Debugf("table sync snapshot not same name, table: %s, dest table: %s", j.Src.Table, j.Dest.Table)
+			tableRefs = make([]*festruct.TTableRef, 0)
+			tableRef := &festruct.TTableRef{
+				Table:     &j.Src.Table,
+				AliasName: &j.Dest.Table,
+			}
+			tableRefs = append(tableRefs, tableRef)
+		}
+		restoreResp, err := destRpc.RestoreSnapshot(dest, tableRefs, restoreSnapshotName, snapshotResp)
+		if err != nil {
+			return err
+		}
+		if restoreResp.Status.GetStatusCode() != tstatus.TStatusCode_OK {
+			return xerror.Errorf(xerror.Normal, "restore snapshot failed, status: %v", restoreResp.Status)
+		}
+		log.Infof("partial sync restore snapshot resp: %v", restoreResp)
+
+		for {
+			restoreFinished, err := j.IDest.CheckRestoreFinished(restoreSnapshotName)
+			if err != nil {
+				return err
+			}
+
+			if restoreFinished {
+				j.progress.NextSubCheckpoint(PersistRestoreInfo, restoreSnapshotName)
+				break
+			}
+			// retry for  MAX_CHECK_RETRY_TIMES, timeout, continue
+		}
+
+	case PersistRestoreInfo:
+		// Step 5: Update job progress && dest table id
+		// update job info, only for dest table id
+		log.Infof("fullsync status: persist restore info")
+
+		switch j.SyncType {
+		case DBSync:
+			j.progress.NextWithPersist(j.progress.CommitSeq, DBTablesIncrementalSync, Done, "")
+		case TableSync:
+			j.progress.NextWithPersist(j.progress.CommitSeq, TableIncrementalSync, Done, "")
+		default:
+			return xerror.Errorf(xerror.Normal, "invalid sync type %d", j.SyncType)
+		}
+
+		return nil
+
+	default:
+		return xerror.Errorf(xerror.Normal, "invalid job sub sync state %d", j.progress.SubSyncState)
+	}
+
+	return j.partialSync()
+}
+
 func (j *Job) fullSync() error {
 	type inMemoryData struct {
 		SnapshotName      string                        `json:"snapshot_name"`
@@ -319,7 +507,7 @@ func (j *Job) fullSync() error {
 			return err
 		}
 
-		log.Debugf("begin get snapshot %s", snapshotName)
+		log.Debugf("fullsync begin get snapshot %s", snapshotName)
 		snapshotResp, err := srcRpc.GetSnapshot(src, snapshotName)
 		if err != nil {
 			return err
@@ -330,7 +518,7 @@ func (j *Job) fullSync() error {
 			return err
 		}
 
-		log.Tracef("job: %.128s", snapshotResp.GetJobInfo())
+		log.Tracef("fullsync snapshot job: %.128s", snapshotResp.GetJobInfo())
 		if !snapshotResp.IsSetJobInfo() {
 			return xerror.New(xerror.Normal, "jobInfo is not set")
 		}
@@ -365,23 +553,9 @@ func (j *Job) fullSync() error {
 		log.Infof("snapshot response meta size: %d, job info size: %d",
 			len(snapshotResp.Meta), len(snapshotResp.JobInfo))
 
-		var jobInfoMap map[string]interface{}
-		err := json.Unmarshal(jobInfo, &jobInfoMap)
-		if err != nil {
-			return xerror.Wrapf(err, xerror.Normal, "unmarshal jobInfo failed, jobInfo: %s", string(jobInfo))
-		}
-		log.Debugf("jobInfoMap: %v", jobInfoMap)
-
-		extraInfo, err := j.genExtraInfo()
+		jobInfoBytes, err := j.addExtraInfo(jobInfo)
 		if err != nil {
 			return err
-		}
-		log.Debugf("extraInfo: %v", extraInfo)
-		jobInfoMap["extra_info"] = extraInfo
-
-		jobInfoBytes, err := json.Marshal(jobInfoMap)
-		if err != nil {
-			return xerror.Errorf(xerror.Normal, "marshal jobInfo failed, jobInfo: %v", jobInfoMap)
 		}
 		log.Debugf("job info size: %d, bytes: %s", len(jobInfoBytes), string(jobInfoBytes))
 		snapshotResp.SetJobInfo(jobInfoBytes)
@@ -1145,9 +1319,33 @@ func (j *Job) handleReplacePartitions(binlog *festruct.TBinlog) error {
 	log.Infof("handle replace partitions binlog, prevCommitSeq: %d, commitSeq: %d",
 		j.progress.PrevCommitSeq, j.progress.CommitSeq)
 
-	// TODO(walter) replace partitions once backuping/restoring with temporary partitions is supportted.
+	data := binlog.GetData()
+	replacePartition, err := record.NewReplacePartitionFromJson(data)
+	if err != nil {
+		return err
+	}
 
-	return j.newSnapshot(j.progress.CommitSeq)
+	if !replacePartition.StrictRange {
+		log.Warnf("replacing partitions with non strict range is not supported yet, replace partition record: %s", string(data))
+		return j.newSnapshot(j.progress.CommitSeq)
+	}
+
+	if replacePartition.UseTempName {
+		log.Warnf("replacing partitions with use tmp name is not supported yet, replace partition record: %s", string(data))
+		return j.newSnapshot(j.progress.CommitSeq)
+	}
+
+	oldPartitions := strings.Join(replacePartition.Partitions, ",")
+	newPartitions := strings.Join(replacePartition.TempPartitions, ",")
+	log.Infof("table %s replace partitions %s with temp partitions %s",
+		replacePartition.TableName, oldPartitions, newPartitions)
+
+	partitions := replacePartition.Partitions
+	if replacePartition.UseTempName {
+		partitions = replacePartition.TempPartitions
+	}
+
+	return j.newPartialSnapshot(replacePartition.TableName, partitions)
 }
 
 // return: error && bool backToRunLoop
@@ -1333,6 +1531,9 @@ func (j *Job) tableSync() error {
 	case TableIncrementalSync:
 		log.Debug("table incremental sync")
 		return j.incrementalSync()
+	case TablePartialSync:
+		log.Debug("table partial sync")
+		return j.partialSync()
 	default:
 		return xerror.Errorf(xerror.Normal, "unknown sync state: %v", j.progress.SyncState)
 	}
@@ -1362,6 +1563,9 @@ func (j *Job) dbSync() error {
 	case DBIncrementalSync:
 		log.Debug("db incremental sync")
 		return j.incrementalSync()
+	case DBPartialSync:
+		log.Debug("db partial sync")
+		return j.partialSync()
 	default:
 		return xerror.Errorf(xerror.Normal, "unknown db sync state: %v", j.progress.SyncState)
 	}
@@ -1451,6 +1655,29 @@ func (j *Job) newSnapshot(commitSeq int64) error {
 		return nil
 	case DBSync:
 		j.progress.NextWithPersist(commitSeq, DBFullSync, BeginCreateSnapshot, "")
+		return nil
+	default:
+		err := xerror.Panicf(xerror.Normal, "unknown table sync type: %v", j.SyncType)
+		log.Fatalf("run %+v", err)
+		return err
+	}
+}
+
+func (j *Job) newPartialSnapshot(table string, partitions []string) error {
+	// The binlog of commitSeq will be skipped once the partial snapshot finished.
+	commitSeq := j.progress.CommitSeq
+	log.Infof("new partial snapshot, commitSeq: %d, table: %s, partitions: %v", commitSeq, table, partitions)
+
+	j.progress.PartialSyncData = &JobPartialSyncData{
+		Table:      table,
+		Partitions: partitions,
+	}
+	switch j.SyncType {
+	case TableSync:
+		j.progress.NextWithPersist(commitSeq, TablePartialSync, BeginCreateSnapshot, "")
+		return nil
+	case DBSync:
+		j.progress.NextWithPersist(commitSeq, DBPartialSync, BeginCreateSnapshot, "")
 		return nil
 	default:
 		err := xerror.Panicf(xerror.Normal, "unknown table sync type: %v", j.SyncType)
