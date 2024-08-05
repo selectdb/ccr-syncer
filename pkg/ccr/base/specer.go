@@ -24,6 +24,7 @@ type Specer interface {
 	CreateTableOrView(createTable *record.CreateTable, srcDatabase string) error
 	CheckDatabaseExists() (bool, error)
 	CheckTableExists() (bool, error)
+	CreatePartialSnapshotAndWaitForDone(table string, partitions []string) (string, error)
 	CreateSnapshotAndWaitForDone(tables []string) (string, error)
 	CheckRestoreFinished(snapshotName string) (bool, error)
 	GetRestoreSignatureNotMatchedTable(snapshotName string) (string, error)

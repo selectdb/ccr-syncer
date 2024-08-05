@@ -551,6 +551,48 @@ func (s *Spec) CreateSnapshotAndWaitForDone(tables []string) (string, error) {
 	return snapshotName, nil
 }
 
+// mysql> BACKUP SNAPSHOT ccr.snapshot_20230605 TO `__keep_on_local__` ON (src_1 PARTITION (`p1`)) PROPERTIES ("type" = "full");
+func (s *Spec) CreatePartialSnapshotAndWaitForDone(table string, partitions []string) (string, error) {
+	if len(table) == 0 {
+		return "", xerror.Errorf(xerror.Normal, "source db is empty! you should have at least one table")
+	}
+
+	if len(partitions) == 0 {
+		return "", xerror.Errorf(xerror.Normal, "partition is empty! you should have at least one partition")
+	}
+
+	// snapshot name format "ccrp_${table}_${timestamp}"
+	// table refs = table
+	snapshotName := fmt.Sprintf("ccrp_%s_%s_%d", s.Database, s.Table, time.Now().Unix())
+	tableRef := utils.FormatKeywordName(table)
+	partitionRefs := "`" + strings.Join(partitions, "`,`") + "`"
+
+	log.Infof("create partial snapshot %s.%s", s.Database, snapshotName)
+
+	db, err := s.Connect()
+	if err != nil {
+		return "", err
+	}
+
+	backupSnapshotSql := fmt.Sprintf("BACKUP SNAPSHOT %s.%s TO `__keep_on_local__` ON ( %s PARTITION (%s) ) PROPERTIES (\"type\" = \"full\")", utils.FormatKeywordName(s.Database), snapshotName, tableRef, partitionRefs)
+	log.Debugf("backup partial snapshot sql: %s", backupSnapshotSql)
+	_, err = db.Exec(backupSnapshotSql)
+	if err != nil {
+		return "", xerror.Wrapf(err, xerror.Normal, "backup partial snapshot %s failed, sql: %s", snapshotName, backupSnapshotSql)
+	}
+
+	backupFinished, err := s.CheckBackupFinished(snapshotName)
+	if err != nil {
+		return "", err
+	}
+	if !backupFinished {
+		err = xerror.Errorf(xerror.Normal, "check backup state timeout, max try times: %d, sql: %s", MAX_CHECK_RETRY_TIMES, backupSnapshotSql)
+		return "", err
+	}
+
+	return snapshotName, nil
+}
+
 // TODO: Add TaskErrMsg
 func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, error) {
 	log.Debugf("check backup state of snapshot %s", snapshotName)
