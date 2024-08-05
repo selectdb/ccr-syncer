@@ -14,7 +14,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_insert_overwrite") {
+suite("test_db_insert_overwrite") {
     // The doris has two kind of insert overwrite handle logic: leagcy and nereids.
     // The first will
     //  1. create temp table
@@ -43,6 +43,31 @@ suite("test_insert_overwrite") {
             }
         }
         return tmpRes.size() == rowSize
+    }
+
+    def checkShowTimesOf = { sqlString, myClosure, times, func = "sql" -> Boolean
+        Boolean ret = false
+        List<List<Object>> res
+        while (times > 0) {
+            try {
+                if (func == "sql") {
+                    res = sql "${sqlString}"
+                } else {
+                    res = target_sql "${sqlString}"
+                }
+                if (myClosure.call(res)) {
+                    ret = true
+                }
+            } catch (Exception e) {}
+
+            if (ret) {
+                break
+            } else if (--times > 0) {
+                sleep(sync_gap_time)
+            }
+        }
+
+        return ret
     }
 
     def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
@@ -99,6 +124,15 @@ suite("test_insert_overwrite") {
         return true
     }
 
+    def exist = { res -> Boolean
+        return res.size() != 0
+    }
+    def notExist = { res -> Boolean
+        return res.size() == 0
+    }
+
+    sql "ALTER DATABASE ${context.dbName} SET properties (\"binlog.enable\" = \"true\")"
+
     sql """
         CREATE TABLE if NOT EXISTS ${uniqueTable}
         (
@@ -135,15 +169,15 @@ suite("test_insert_overwrite") {
     httpTest {
         uri "/create_ccr"
         endpoint syncerAddress
-        def bodyJson = get_ccr_body "${uniqueTable}"
+        def bodyJson = get_ccr_body ""
         body "${bodyJson}"
         op "post"
         result response
     }
     assertTrue(checkRestoreFinishTimesOf("${uniqueTable}", 60))
+    assertTrue(checkShowTimesOf("SELECT * FROM ${uniqueTable} WHERE test = 1", exist, 60, "sql"))
+    assertTrue(checkShowTimesOf("SELECT * FROM ${uniqueTable} WHERE test = 1", exist, 60, "target"))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${uniqueTable} WHERE test = 1 ORDER BY id", 5, 60))
-    qt_sql "SELECT * FROM ${uniqueTable} WHERE test = 1 ORDER BY id"
-    qt_target_sql "SELECT * FROM ${uniqueTable} WHERE test = 1 ORDER BY id"
 
     logger.info("=== Test 2: dest cluster follow source cluster case ===")
 
@@ -156,9 +190,10 @@ suite("test_insert_overwrite") {
         (2, 4)
     """
     sql "sync"
+
+    assertTrue(checkShowTimesOf("SELECT * FROM ${uniqueTable} WHERE test=2", exist, 60, "sql"))
+    assertTrue(checkShowTimesOf("SELECT * FROM ${uniqueTable} WHERE test=2", exist, 60, "target"))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${uniqueTable} WHERE test=2", 5, 60))
-    qt_sql "SELECT * FROM ${uniqueTable} WHERE test=2 ORDER BY id"
-    qt_target_sql "SELECT * FROM ${uniqueTable} WHERE test=2 ORDER BY id"
 
     logger.info("=== Test 3: insert overwrite source table ===")
 
@@ -172,14 +207,12 @@ suite("test_insert_overwrite") {
     """
     sql "sync"
 
-    sleep(10000)
-    assertTrue(checkBackupFinishTimesOf("${uniqueTable}", 60))
-    sleep(10000)
-    assertTrue(checkRestoreFinishTimesOf("${uniqueTable}", 60))
+    assertTrue(checkShowTimesOf("SELECT * FROM ${uniqueTable} WHERE test=3", exist, 60, "sql"))
+    assertTrue(checkShowTimesOf("SELECT * FROM ${uniqueTable} WHERE test=2", notExist, 60, "sql"))
+    assertTrue(checkShowTimesOf("SELECT * FROM ${uniqueTable} WHERE test=3", exist, 60, "target"))
+    assertTrue(checkShowTimesOf("SELECT * FROM ${uniqueTable} WHERE test=2", notExist, 60, "target"))
 
     assertTrue(checkSelectTimesOf("SELECT * FROM ${uniqueTable} WHERE test=3", 5, 60))
     assertTrue(checkSelectTimesOf("SELECT * FROM ${uniqueTable}", 5, 60))
-
-    qt_sql "SELECT * FROM ${uniqueTable} ORDER BY test, id"
-    qt_target_sql "SELECT * FROM ${uniqueTable} ORDER BY test, id"
 }
+
