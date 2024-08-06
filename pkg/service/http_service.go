@@ -191,7 +191,7 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 
 	type result struct {
 		*defaultResult
-		Lag int64 `json:"lag,omitempty"`
+		Lag int64 `json:"lag"`
 	}
 	var lagResult *result
 	defer func() { writeJson(w, lagResult) }()
