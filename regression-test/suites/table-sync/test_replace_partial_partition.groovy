@@ -203,7 +203,27 @@ suite("test_replace_partial_partition") {
     def restore_objects = last_restore_result[10]   // RestoreObjs
     logger.info("The restore result: ${last_restore_result}")
     logger.info("The restore objects: ${restore_objects}")
-    assertTrue(restore_objects.contains("""partition_names":["p2"]"""))
+
+    // {
+    //  "name": "ccrp_regression_test_table_sync_test_replace_partial_p_02f747eda70e4f768afd613e074e790d_1722983645",
+    //  "database": "regression_test_table_sync",
+    //  "backup_time": 1722983645667,
+    //  "content": "ALL",
+    //  "olap_table_list": [
+    //    {
+    //      "name": "test_replace_partial_p_02f747eda70e4f768afd613e074e790d",
+    //      "partition_names": [
+    //        "p2"
+    //      ]
+    //    }
+    //  ],
+    //  "view_list": [],
+    //  "odbc_table_list": [],
+    //  "odbc_resource_list": []
+    // }
+    def jsonSlurper = new groovy.json.JsonSlurper()
+    def object = jsonSlurper.parseText "${restore_objects}"
+    assertTrue(object.olap_table_list[0].partition_names[0], "p2");
 }
 
 
