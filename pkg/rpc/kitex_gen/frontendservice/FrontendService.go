@@ -310,12 +310,13 @@ func (p *TFrontendPingFrontendStatusCode) Value() (driver.Value, error) {
 type TSchemaTableName int64
 
 const (
-	TSchemaTableName_METADATA_TABLE           TSchemaTableName = 1
-	TSchemaTableName_ACTIVE_QUERIES           TSchemaTableName = 2
-	TSchemaTableName_WORKLOAD_GROUPS          TSchemaTableName = 3
-	TSchemaTableName_ROUTINES_INFO            TSchemaTableName = 4
-	TSchemaTableName_WORKLOAD_SCHEDULE_POLICY TSchemaTableName = 5
-	TSchemaTableName_TABLE_OPTIONS            TSchemaTableName = 6
+	TSchemaTableName_METADATA_TABLE            TSchemaTableName = 1
+	TSchemaTableName_ACTIVE_QUERIES            TSchemaTableName = 2
+	TSchemaTableName_WORKLOAD_GROUPS           TSchemaTableName = 3
+	TSchemaTableName_ROUTINES_INFO             TSchemaTableName = 4
+	TSchemaTableName_WORKLOAD_SCHEDULE_POLICY  TSchemaTableName = 5
+	TSchemaTableName_TABLE_OPTIONS             TSchemaTableName = 6
+	TSchemaTableName_WORKLOAD_GROUP_PRIVILEGES TSchemaTableName = 7
 )
 
 func (p TSchemaTableName) String() string {
@@ -332,6 +333,8 @@ func (p TSchemaTableName) String() string {
 		return "WORKLOAD_SCHEDULE_POLICY"
 	case TSchemaTableName_TABLE_OPTIONS:
 		return "TABLE_OPTIONS"
+	case TSchemaTableName_WORKLOAD_GROUP_PRIVILEGES:
+		return "WORKLOAD_GROUP_PRIVILEGES"
 	}
 	return "<UNSET>"
 }
@@ -350,6 +353,8 @@ func TSchemaTableNameFromString(s string) (TSchemaTableName, error) {
 		return TSchemaTableName_WORKLOAD_SCHEDULE_POLICY, nil
 	case "TABLE_OPTIONS":
 		return TSchemaTableName_TABLE_OPTIONS, nil
+	case "WORKLOAD_GROUP_PRIVILEGES":
+		return TSchemaTableName_WORKLOAD_GROUP_PRIVILEGES, nil
 	}
 	return TSchemaTableName(0), fmt.Errorf("not a valid TSchemaTableName string")
 }
@@ -4087,7 +4092,7 @@ func (p *TShowVariableRequest) Field2DeepEqual(src types.TVarType) bool {
 }
 
 type TShowVariableResult_ struct {
-	Variables map[string]string `thrift:"variables,1,required" frugal:"1,required,map<string:string>" json:"variables"`
+	Variables [][]string `thrift:"variables,1,required" frugal:"1,required,list<list<string>>" json:"variables"`
 }
 
 func NewTShowVariableResult_() *TShowVariableResult_ {
@@ -4097,10 +4102,10 @@ func NewTShowVariableResult_() *TShowVariableResult_ {
 func (p *TShowVariableResult_) InitDefault() {
 }
 
-func (p *TShowVariableResult_) GetVariables() (v map[string]string) {
+func (p *TShowVariableResult_) GetVariables() (v [][]string) {
 	return p.Variables
 }
-func (p *TShowVariableResult_) SetVariables(val map[string]string) {
+func (p *TShowVariableResult_) SetVariables(val [][]string) {
 	p.Variables = val
 }
 
@@ -4129,7 +4134,7 @@ func (p *TShowVariableResult_) Read(iprot thrift.TProtocol) (err error) {
 
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.MAP {
+			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -4173,29 +4178,35 @@ RequiredFieldNotSetError:
 }
 
 func (p *TShowVariableResult_) ReadField1(iprot thrift.TProtocol) error {
-	_, _, size, err := iprot.ReadMapBegin()
+	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
 	}
-	_field := make(map[string]string, size)
+	_field := make([][]string, 0, size)
 	for i := 0; i < size; i++ {
-		var _key string
-		if v, err := iprot.ReadString(); err != nil {
+		_, size, err := iprot.ReadListBegin()
+		if err != nil {
 			return err
-		} else {
-			_key = v
+		}
+		_elem := make([]string, 0, size)
+		for i := 0; i < size; i++ {
+
+			var _elem1 string
+			if v, err := iprot.ReadString(); err != nil {
+				return err
+			} else {
+				_elem1 = v
+			}
+
+			_elem = append(_elem, _elem1)
+		}
+		if err := iprot.ReadListEnd(); err != nil {
+			return err
 		}
 
-		var _val string
-		if v, err := iprot.ReadString(); err != nil {
-			return err
-		} else {
-			_val = v
-		}
-
-		_field[_key] = _val
+		_field = append(_field, _elem)
 	}
-	if err := iprot.ReadMapEnd(); err != nil {
+	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
 	p.Variables = _field
@@ -4231,21 +4242,26 @@ WriteStructEndError:
 }
 
 func (p *TShowVariableResult_) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("variables", thrift.MAP, 1); err != nil {
+	if err = oprot.WriteFieldBegin("variables", thrift.LIST, 1); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.Variables)); err != nil {
+	if err := oprot.WriteListBegin(thrift.LIST, len(p.Variables)); err != nil {
 		return err
 	}
-	for k, v := range p.Variables {
-		if err := oprot.WriteString(k); err != nil {
+	for _, v := range p.Variables {
+		if err := oprot.WriteListBegin(thrift.STRING, len(v)); err != nil {
 			return err
 		}
-		if err := oprot.WriteString(v); err != nil {
+		for _, v := range v {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
 			return err
 		}
 	}
-	if err := oprot.WriteMapEnd(); err != nil {
+	if err := oprot.WriteListEnd(); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -4278,15 +4294,21 @@ func (p *TShowVariableResult_) DeepEqual(ano *TShowVariableResult_) bool {
 	return true
 }
 
-func (p *TShowVariableResult_) Field1DeepEqual(src map[string]string) bool {
+func (p *TShowVariableResult_) Field1DeepEqual(src [][]string) bool {
 
 	if len(p.Variables) != len(src) {
 		return false
 	}
-	for k, v := range p.Variables {
-		_src := src[k]
-		if strings.Compare(v, _src) != 0 {
+	for i, v := range p.Variables {
+		_src := src[i]
+		if len(v) != len(_src) {
 			return false
+		}
+		for i, v := range v {
+			_src1 := _src[i]
+			if strings.Compare(v, _src1) != 0 {
+				return false
+			}
 		}
 	}
 	return true
@@ -19360,6 +19382,635 @@ func (p *TTxnLoadInfo) Field6DeepEqual(src []*TSubTxnInfo) bool {
 	return true
 }
 
+type TGroupCommitInfo struct {
+	GetGroupCommitLoadBeId *bool   `thrift:"getGroupCommitLoadBeId,1,optional" frugal:"1,optional,bool" json:"getGroupCommitLoadBeId,omitempty"`
+	GroupCommitLoadTableId *int64  `thrift:"groupCommitLoadTableId,2,optional" frugal:"2,optional,i64" json:"groupCommitLoadTableId,omitempty"`
+	Cluster                *string `thrift:"cluster,3,optional" frugal:"3,optional,string" json:"cluster,omitempty"`
+	IsCloud                *bool   `thrift:"isCloud,4,optional" frugal:"4,optional,bool" json:"isCloud,omitempty"`
+	UpdateLoadData         *bool   `thrift:"updateLoadData,5,optional" frugal:"5,optional,bool" json:"updateLoadData,omitempty"`
+	TableId                *int64  `thrift:"tableId,6,optional" frugal:"6,optional,i64" json:"tableId,omitempty"`
+	ReceiveData            *int64  `thrift:"receiveData,7,optional" frugal:"7,optional,i64" json:"receiveData,omitempty"`
+}
+
+func NewTGroupCommitInfo() *TGroupCommitInfo {
+	return &TGroupCommitInfo{}
+}
+
+func (p *TGroupCommitInfo) InitDefault() {
+}
+
+var TGroupCommitInfo_GetGroupCommitLoadBeId_DEFAULT bool
+
+func (p *TGroupCommitInfo) GetGetGroupCommitLoadBeId() (v bool) {
+	if !p.IsSetGetGroupCommitLoadBeId() {
+		return TGroupCommitInfo_GetGroupCommitLoadBeId_DEFAULT
+	}
+	return *p.GetGroupCommitLoadBeId
+}
+
+var TGroupCommitInfo_GroupCommitLoadTableId_DEFAULT int64
+
+func (p *TGroupCommitInfo) GetGroupCommitLoadTableId() (v int64) {
+	if !p.IsSetGroupCommitLoadTableId() {
+		return TGroupCommitInfo_GroupCommitLoadTableId_DEFAULT
+	}
+	return *p.GroupCommitLoadTableId
+}
+
+var TGroupCommitInfo_Cluster_DEFAULT string
+
+func (p *TGroupCommitInfo) GetCluster() (v string) {
+	if !p.IsSetCluster() {
+		return TGroupCommitInfo_Cluster_DEFAULT
+	}
+	return *p.Cluster
+}
+
+var TGroupCommitInfo_IsCloud_DEFAULT bool
+
+func (p *TGroupCommitInfo) GetIsCloud() (v bool) {
+	if !p.IsSetIsCloud() {
+		return TGroupCommitInfo_IsCloud_DEFAULT
+	}
+	return *p.IsCloud
+}
+
+var TGroupCommitInfo_UpdateLoadData_DEFAULT bool
+
+func (p *TGroupCommitInfo) GetUpdateLoadData() (v bool) {
+	if !p.IsSetUpdateLoadData() {
+		return TGroupCommitInfo_UpdateLoadData_DEFAULT
+	}
+	return *p.UpdateLoadData
+}
+
+var TGroupCommitInfo_TableId_DEFAULT int64
+
+func (p *TGroupCommitInfo) GetTableId() (v int64) {
+	if !p.IsSetTableId() {
+		return TGroupCommitInfo_TableId_DEFAULT
+	}
+	return *p.TableId
+}
+
+var TGroupCommitInfo_ReceiveData_DEFAULT int64
+
+func (p *TGroupCommitInfo) GetReceiveData() (v int64) {
+	if !p.IsSetReceiveData() {
+		return TGroupCommitInfo_ReceiveData_DEFAULT
+	}
+	return *p.ReceiveData
+}
+func (p *TGroupCommitInfo) SetGetGroupCommitLoadBeId(val *bool) {
+	p.GetGroupCommitLoadBeId = val
+}
+func (p *TGroupCommitInfo) SetGroupCommitLoadTableId(val *int64) {
+	p.GroupCommitLoadTableId = val
+}
+func (p *TGroupCommitInfo) SetCluster(val *string) {
+	p.Cluster = val
+}
+func (p *TGroupCommitInfo) SetIsCloud(val *bool) {
+	p.IsCloud = val
+}
+func (p *TGroupCommitInfo) SetUpdateLoadData(val *bool) {
+	p.UpdateLoadData = val
+}
+func (p *TGroupCommitInfo) SetTableId(val *int64) {
+	p.TableId = val
+}
+func (p *TGroupCommitInfo) SetReceiveData(val *int64) {
+	p.ReceiveData = val
+}
+
+var fieldIDToName_TGroupCommitInfo = map[int16]string{
+	1: "getGroupCommitLoadBeId",
+	2: "groupCommitLoadTableId",
+	3: "cluster",
+	4: "isCloud",
+	5: "updateLoadData",
+	6: "tableId",
+	7: "receiveData",
+}
+
+func (p *TGroupCommitInfo) IsSetGetGroupCommitLoadBeId() bool {
+	return p.GetGroupCommitLoadBeId != nil
+}
+
+func (p *TGroupCommitInfo) IsSetGroupCommitLoadTableId() bool {
+	return p.GroupCommitLoadTableId != nil
+}
+
+func (p *TGroupCommitInfo) IsSetCluster() bool {
+	return p.Cluster != nil
+}
+
+func (p *TGroupCommitInfo) IsSetIsCloud() bool {
+	return p.IsCloud != nil
+}
+
+func (p *TGroupCommitInfo) IsSetUpdateLoadData() bool {
+	return p.UpdateLoadData != nil
+}
+
+func (p *TGroupCommitInfo) IsSetTableId() bool {
+	return p.TableId != nil
+}
+
+func (p *TGroupCommitInfo) IsSetReceiveData() bool {
+	return p.ReceiveData != nil
+}
+
+func (p *TGroupCommitInfo) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TGroupCommitInfo[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TGroupCommitInfo) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.GetGroupCommitLoadBeId = _field
+	return nil
+}
+func (p *TGroupCommitInfo) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.GroupCommitLoadTableId = _field
+	return nil
+}
+func (p *TGroupCommitInfo) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Cluster = _field
+	return nil
+}
+func (p *TGroupCommitInfo) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsCloud = _field
+	return nil
+}
+func (p *TGroupCommitInfo) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.UpdateLoadData = _field
+	return nil
+}
+func (p *TGroupCommitInfo) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TableId = _field
+	return nil
+}
+func (p *TGroupCommitInfo) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ReceiveData = _field
+	return nil
+}
+
+func (p *TGroupCommitInfo) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TGroupCommitInfo"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TGroupCommitInfo) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetGetGroupCommitLoadBeId() {
+		if err = oprot.WriteFieldBegin("getGroupCommitLoadBeId", thrift.BOOL, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.GetGroupCommitLoadBeId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TGroupCommitInfo) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetGroupCommitLoadTableId() {
+		if err = oprot.WriteFieldBegin("groupCommitLoadTableId", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.GroupCommitLoadTableId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TGroupCommitInfo) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCluster() {
+		if err = oprot.WriteFieldBegin("cluster", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Cluster); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *TGroupCommitInfo) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsCloud() {
+		if err = oprot.WriteFieldBegin("isCloud", thrift.BOOL, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsCloud); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *TGroupCommitInfo) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetUpdateLoadData() {
+		if err = oprot.WriteFieldBegin("updateLoadData", thrift.BOOL, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.UpdateLoadData); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *TGroupCommitInfo) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTableId() {
+		if err = oprot.WriteFieldBegin("tableId", thrift.I64, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TableId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *TGroupCommitInfo) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetReceiveData() {
+		if err = oprot.WriteFieldBegin("receiveData", thrift.I64, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ReceiveData); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
+func (p *TGroupCommitInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TGroupCommitInfo(%+v)", *p)
+
+}
+
+func (p *TGroupCommitInfo) DeepEqual(ano *TGroupCommitInfo) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.GetGroupCommitLoadBeId) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.GroupCommitLoadTableId) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Cluster) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.IsCloud) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.UpdateLoadData) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.TableId) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.ReceiveData) {
+		return false
+	}
+	return true
+}
+
+func (p *TGroupCommitInfo) Field1DeepEqual(src *bool) bool {
+
+	if p.GetGroupCommitLoadBeId == src {
+		return true
+	} else if p.GetGroupCommitLoadBeId == nil || src == nil {
+		return false
+	}
+	if *p.GetGroupCommitLoadBeId != *src {
+		return false
+	}
+	return true
+}
+func (p *TGroupCommitInfo) Field2DeepEqual(src *int64) bool {
+
+	if p.GroupCommitLoadTableId == src {
+		return true
+	} else if p.GroupCommitLoadTableId == nil || src == nil {
+		return false
+	}
+	if *p.GroupCommitLoadTableId != *src {
+		return false
+	}
+	return true
+}
+func (p *TGroupCommitInfo) Field3DeepEqual(src *string) bool {
+
+	if p.Cluster == src {
+		return true
+	} else if p.Cluster == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Cluster, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TGroupCommitInfo) Field4DeepEqual(src *bool) bool {
+
+	if p.IsCloud == src {
+		return true
+	} else if p.IsCloud == nil || src == nil {
+		return false
+	}
+	if *p.IsCloud != *src {
+		return false
+	}
+	return true
+}
+func (p *TGroupCommitInfo) Field5DeepEqual(src *bool) bool {
+
+	if p.UpdateLoadData == src {
+		return true
+	} else if p.UpdateLoadData == nil || src == nil {
+		return false
+	}
+	if *p.UpdateLoadData != *src {
+		return false
+	}
+	return true
+}
+func (p *TGroupCommitInfo) Field6DeepEqual(src *int64) bool {
+
+	if p.TableId == src {
+		return true
+	} else if p.TableId == nil || src == nil {
+		return false
+	}
+	if *p.TableId != *src {
+		return false
+	}
+	return true
+}
+func (p *TGroupCommitInfo) Field7DeepEqual(src *int64) bool {
+
+	if p.ReceiveData == src {
+		return true
+	} else if p.ReceiveData == nil || src == nil {
+		return false
+	}
+	if *p.ReceiveData != *src {
+		return false
+	}
+	return true
+}
+
 type TMasterOpRequest struct {
 	User                   string                             `thrift:"user,1,required" frugal:"1,required,string" json:"user"`
 	Db                     string                             `thrift:"db,2,required" frugal:"2,required,string" json:"db"`
@@ -19390,6 +20041,7 @@ type TMasterOpRequest struct {
 	CancelQeury            *bool                              `thrift:"cancel_qeury,27,optional" frugal:"27,optional,bool" json:"cancel_qeury,omitempty"`
 	UserVariables          map[string]*exprs.TExprNode        `thrift:"user_variables,28,optional" frugal:"28,optional,map<string:exprs.TExprNode>" json:"user_variables,omitempty"`
 	TxnLoadInfo            *TTxnLoadInfo                      `thrift:"txnLoadInfo,29,optional" frugal:"29,optional,TTxnLoadInfo" json:"txnLoadInfo,omitempty"`
+	GroupCommitInfo        *TGroupCommitInfo                  `thrift:"groupCommitInfo,30,optional" frugal:"30,optional,TGroupCommitInfo" json:"groupCommitInfo,omitempty"`
 	CloudCluster           *string                            `thrift:"cloud_cluster,1000,optional" frugal:"1000,optional,string" json:"cloud_cluster,omitempty"`
 	NoAuth                 *bool                              `thrift:"noAuth,1001,optional" frugal:"1001,optional,bool" json:"noAuth,omitempty"`
 }
@@ -19647,6 +20299,15 @@ func (p *TMasterOpRequest) GetTxnLoadInfo() (v *TTxnLoadInfo) {
 	return p.TxnLoadInfo
 }
 
+var TMasterOpRequest_GroupCommitInfo_DEFAULT *TGroupCommitInfo
+
+func (p *TMasterOpRequest) GetGroupCommitInfo() (v *TGroupCommitInfo) {
+	if !p.IsSetGroupCommitInfo() {
+		return TMasterOpRequest_GroupCommitInfo_DEFAULT
+	}
+	return p.GroupCommitInfo
+}
+
 var TMasterOpRequest_CloudCluster_DEFAULT string
 
 func (p *TMasterOpRequest) GetCloudCluster() (v string) {
@@ -19751,6 +20412,9 @@ func (p *TMasterOpRequest) SetUserVariables(val map[string]*exprs.TExprNode) {
 func (p *TMasterOpRequest) SetTxnLoadInfo(val *TTxnLoadInfo) {
 	p.TxnLoadInfo = val
 }
+func (p *TMasterOpRequest) SetGroupCommitInfo(val *TGroupCommitInfo) {
+	p.GroupCommitInfo = val
+}
 func (p *TMasterOpRequest) SetCloudCluster(val *string) {
 	p.CloudCluster = val
 }
@@ -19788,6 +20452,7 @@ var fieldIDToName_TMasterOpRequest = map[int16]string{
 	27:   "cancel_qeury",
 	28:   "user_variables",
 	29:   "txnLoadInfo",
+	30:   "groupCommitInfo",
 	1000: "cloud_cluster",
 	1001: "noAuth",
 }
@@ -19894,6 +20559,10 @@ func (p *TMasterOpRequest) IsSetUserVariables() bool {
 
 func (p *TMasterOpRequest) IsSetTxnLoadInfo() bool {
 	return p.TxnLoadInfo != nil
+}
+
+func (p *TMasterOpRequest) IsSetGroupCommitInfo() bool {
+	return p.GroupCommitInfo != nil
 }
 
 func (p *TMasterOpRequest) IsSetCloudCluster() bool {
@@ -20156,6 +20825,14 @@ func (p *TMasterOpRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 29:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField29(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 30:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField30(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -20580,6 +21257,14 @@ func (p *TMasterOpRequest) ReadField29(iprot thrift.TProtocol) error {
 	p.TxnLoadInfo = _field
 	return nil
 }
+func (p *TMasterOpRequest) ReadField30(iprot thrift.TProtocol) error {
+	_field := NewTGroupCommitInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.GroupCommitInfo = _field
+	return nil
+}
 func (p *TMasterOpRequest) ReadField1000(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -20723,6 +21408,10 @@ func (p *TMasterOpRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField29(oprot); err != nil {
 			fieldId = 29
+			goto WriteFieldError
+		}
+		if err = p.writeField30(oprot); err != nil {
+			fieldId = 30
 			goto WriteFieldError
 		}
 		if err = p.writeField1000(oprot); err != nil {
@@ -21329,6 +22018,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 29 end error: ", p), err)
 }
 
+func (p *TMasterOpRequest) writeField30(oprot thrift.TProtocol) (err error) {
+	if p.IsSetGroupCommitInfo() {
+		if err = oprot.WriteFieldBegin("groupCommitInfo", thrift.STRUCT, 30); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.GroupCommitInfo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 30 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 30 end error: ", p), err)
+}
+
 func (p *TMasterOpRequest) writeField1000(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCloudCluster() {
 		if err = oprot.WriteFieldBegin("cloud_cluster", thrift.STRING, 1000); err != nil {
@@ -21466,6 +22174,9 @@ func (p *TMasterOpRequest) DeepEqual(ano *TMasterOpRequest) bool {
 		return false
 	}
 	if !p.Field29DeepEqual(ano.TxnLoadInfo) {
+		return false
+	}
+	if !p.Field30DeepEqual(ano.GroupCommitInfo) {
 		return false
 	}
 	if !p.Field1000DeepEqual(ano.CloudCluster) {
@@ -21784,6 +22495,13 @@ func (p *TMasterOpRequest) Field28DeepEqual(src map[string]*exprs.TExprNode) boo
 func (p *TMasterOpRequest) Field29DeepEqual(src *TTxnLoadInfo) bool {
 
 	if !p.TxnLoadInfo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TMasterOpRequest) Field30DeepEqual(src *TGroupCommitInfo) bool {
+
+	if !p.GroupCommitInfo.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -22700,15 +23418,16 @@ func (p *TShowResultSet) Field2DeepEqual(src [][]string) bool {
 }
 
 type TMasterOpResult_ struct {
-	MaxJournalId       int64            `thrift:"maxJournalId,1,required" frugal:"1,required,i64" json:"maxJournalId"`
-	Packet             []byte           `thrift:"packet,2,required" frugal:"2,required,binary" json:"packet"`
-	ResultSet          *TShowResultSet  `thrift:"resultSet,3,optional" frugal:"3,optional,TShowResultSet" json:"resultSet,omitempty"`
-	QueryId            *types.TUniqueId `thrift:"queryId,4,optional" frugal:"4,optional,types.TUniqueId" json:"queryId,omitempty"`
-	Status             *string          `thrift:"status,5,optional" frugal:"5,optional,string" json:"status,omitempty"`
-	StatusCode         *int32           `thrift:"statusCode,6,optional" frugal:"6,optional,i32" json:"statusCode,omitempty"`
-	ErrMessage         *string          `thrift:"errMessage,7,optional" frugal:"7,optional,string" json:"errMessage,omitempty"`
-	QueryResultBufList [][]byte         `thrift:"queryResultBufList,8,optional" frugal:"8,optional,list<binary>" json:"queryResultBufList,omitempty"`
-	TxnLoadInfo        *TTxnLoadInfo    `thrift:"txnLoadInfo,9,optional" frugal:"9,optional,TTxnLoadInfo" json:"txnLoadInfo,omitempty"`
+	MaxJournalId        int64            `thrift:"maxJournalId,1,required" frugal:"1,required,i64" json:"maxJournalId"`
+	Packet              []byte           `thrift:"packet,2,required" frugal:"2,required,binary" json:"packet"`
+	ResultSet           *TShowResultSet  `thrift:"resultSet,3,optional" frugal:"3,optional,TShowResultSet" json:"resultSet,omitempty"`
+	QueryId             *types.TUniqueId `thrift:"queryId,4,optional" frugal:"4,optional,types.TUniqueId" json:"queryId,omitempty"`
+	Status              *string          `thrift:"status,5,optional" frugal:"5,optional,string" json:"status,omitempty"`
+	StatusCode          *int32           `thrift:"statusCode,6,optional" frugal:"6,optional,i32" json:"statusCode,omitempty"`
+	ErrMessage          *string          `thrift:"errMessage,7,optional" frugal:"7,optional,string" json:"errMessage,omitempty"`
+	QueryResultBufList  [][]byte         `thrift:"queryResultBufList,8,optional" frugal:"8,optional,list<binary>" json:"queryResultBufList,omitempty"`
+	TxnLoadInfo         *TTxnLoadInfo    `thrift:"txnLoadInfo,9,optional" frugal:"9,optional,TTxnLoadInfo" json:"txnLoadInfo,omitempty"`
+	GroupCommitLoadBeId *int64           `thrift:"groupCommitLoadBeId,10,optional" frugal:"10,optional,i64" json:"groupCommitLoadBeId,omitempty"`
 }
 
 func NewTMasterOpResult_() *TMasterOpResult_ {
@@ -22788,6 +23507,15 @@ func (p *TMasterOpResult_) GetTxnLoadInfo() (v *TTxnLoadInfo) {
 	}
 	return p.TxnLoadInfo
 }
+
+var TMasterOpResult__GroupCommitLoadBeId_DEFAULT int64
+
+func (p *TMasterOpResult_) GetGroupCommitLoadBeId() (v int64) {
+	if !p.IsSetGroupCommitLoadBeId() {
+		return TMasterOpResult__GroupCommitLoadBeId_DEFAULT
+	}
+	return *p.GroupCommitLoadBeId
+}
 func (p *TMasterOpResult_) SetMaxJournalId(val int64) {
 	p.MaxJournalId = val
 }
@@ -22815,17 +23543,21 @@ func (p *TMasterOpResult_) SetQueryResultBufList(val [][]byte) {
 func (p *TMasterOpResult_) SetTxnLoadInfo(val *TTxnLoadInfo) {
 	p.TxnLoadInfo = val
 }
+func (p *TMasterOpResult_) SetGroupCommitLoadBeId(val *int64) {
+	p.GroupCommitLoadBeId = val
+}
 
 var fieldIDToName_TMasterOpResult_ = map[int16]string{
-	1: "maxJournalId",
-	2: "packet",
-	3: "resultSet",
-	4: "queryId",
-	5: "status",
-	6: "statusCode",
-	7: "errMessage",
-	8: "queryResultBufList",
-	9: "txnLoadInfo",
+	1:  "maxJournalId",
+	2:  "packet",
+	3:  "resultSet",
+	4:  "queryId",
+	5:  "status",
+	6:  "statusCode",
+	7:  "errMessage",
+	8:  "queryResultBufList",
+	9:  "txnLoadInfo",
+	10: "groupCommitLoadBeId",
 }
 
 func (p *TMasterOpResult_) IsSetResultSet() bool {
@@ -22854,6 +23586,10 @@ func (p *TMasterOpResult_) IsSetQueryResultBufList() bool {
 
 func (p *TMasterOpResult_) IsSetTxnLoadInfo() bool {
 	return p.TxnLoadInfo != nil
+}
+
+func (p *TMasterOpResult_) IsSetGroupCommitLoadBeId() bool {
+	return p.GroupCommitLoadBeId != nil
 }
 
 func (p *TMasterOpResult_) Read(iprot thrift.TProtocol) (err error) {
@@ -22946,6 +23682,14 @@ func (p *TMasterOpResult_) Read(iprot thrift.TProtocol) (err error) {
 		case 9:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -23093,6 +23837,17 @@ func (p *TMasterOpResult_) ReadField9(iprot thrift.TProtocol) error {
 	p.TxnLoadInfo = _field
 	return nil
 }
+func (p *TMasterOpResult_) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.GroupCommitLoadBeId = _field
+	return nil
+}
 
 func (p *TMasterOpResult_) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -23134,6 +23889,10 @@ func (p *TMasterOpResult_) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField9(oprot); err != nil {
 			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 	}
@@ -23329,6 +24088,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
 
+func (p *TMasterOpResult_) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetGroupCommitLoadBeId() {
+		if err = oprot.WriteFieldBegin("groupCommitLoadBeId", thrift.I64, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.GroupCommitLoadBeId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
 func (p *TMasterOpResult_) String() string {
 	if p == nil {
 		return "<nil>"
@@ -23368,6 +24146,9 @@ func (p *TMasterOpResult_) DeepEqual(ano *TMasterOpResult_) bool {
 		return false
 	}
 	if !p.Field9DeepEqual(ano.TxnLoadInfo) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.GroupCommitLoadBeId) {
 		return false
 	}
 	return true
@@ -23453,6 +24234,18 @@ func (p *TMasterOpResult_) Field8DeepEqual(src [][]byte) bool {
 func (p *TMasterOpResult_) Field9DeepEqual(src *TTxnLoadInfo) bool {
 
 	if !p.TxnLoadInfo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TMasterOpResult_) Field10DeepEqual(src *int64) bool {
+
+	if p.GroupCommitLoadBeId == src {
+		return true
+	} else if p.GroupCommitLoadBeId == nil || src == nil {
+		return false
+	}
+	if *p.GroupCommitLoadBeId != *src {
 		return false
 	}
 	return true
@@ -34452,6 +35245,9 @@ type TLoadTxnCommitRequest struct {
 	Tbls                []string                   `thrift:"tbls,15,optional" frugal:"15,optional,list<string>" json:"tbls,omitempty"`
 	TableId             *int64                     `thrift:"table_id,16,optional" frugal:"16,optional,i64" json:"table_id,omitempty"`
 	AuthCodeUuid        *string                    `thrift:"auth_code_uuid,17,optional" frugal:"17,optional,string" json:"auth_code_uuid,omitempty"`
+	GroupCommit         *bool                      `thrift:"groupCommit,18,optional" frugal:"18,optional,bool" json:"groupCommit,omitempty"`
+	ReceiveBytes        *int64                     `thrift:"receiveBytes,19,optional" frugal:"19,optional,i64" json:"receiveBytes,omitempty"`
+	BackendId           *int64                     `thrift:"backendId,20,optional" frugal:"20,optional,i64" json:"backendId,omitempty"`
 }
 
 func NewTLoadTxnCommitRequest() *TLoadTxnCommitRequest {
@@ -34583,6 +35379,33 @@ func (p *TLoadTxnCommitRequest) GetAuthCodeUuid() (v string) {
 	}
 	return *p.AuthCodeUuid
 }
+
+var TLoadTxnCommitRequest_GroupCommit_DEFAULT bool
+
+func (p *TLoadTxnCommitRequest) GetGroupCommit() (v bool) {
+	if !p.IsSetGroupCommit() {
+		return TLoadTxnCommitRequest_GroupCommit_DEFAULT
+	}
+	return *p.GroupCommit
+}
+
+var TLoadTxnCommitRequest_ReceiveBytes_DEFAULT int64
+
+func (p *TLoadTxnCommitRequest) GetReceiveBytes() (v int64) {
+	if !p.IsSetReceiveBytes() {
+		return TLoadTxnCommitRequest_ReceiveBytes_DEFAULT
+	}
+	return *p.ReceiveBytes
+}
+
+var TLoadTxnCommitRequest_BackendId_DEFAULT int64
+
+func (p *TLoadTxnCommitRequest) GetBackendId() (v int64) {
+	if !p.IsSetBackendId() {
+		return TLoadTxnCommitRequest_BackendId_DEFAULT
+	}
+	return *p.BackendId
+}
 func (p *TLoadTxnCommitRequest) SetCluster(val *string) {
 	p.Cluster = val
 }
@@ -34634,6 +35457,15 @@ func (p *TLoadTxnCommitRequest) SetTableId(val *int64) {
 func (p *TLoadTxnCommitRequest) SetAuthCodeUuid(val *string) {
 	p.AuthCodeUuid = val
 }
+func (p *TLoadTxnCommitRequest) SetGroupCommit(val *bool) {
+	p.GroupCommit = val
+}
+func (p *TLoadTxnCommitRequest) SetReceiveBytes(val *int64) {
+	p.ReceiveBytes = val
+}
+func (p *TLoadTxnCommitRequest) SetBackendId(val *int64) {
+	p.BackendId = val
+}
 
 var fieldIDToName_TLoadTxnCommitRequest = map[int16]string{
 	1:  "cluster",
@@ -34653,6 +35485,9 @@ var fieldIDToName_TLoadTxnCommitRequest = map[int16]string{
 	15: "tbls",
 	16: "table_id",
 	17: "auth_code_uuid",
+	18: "groupCommit",
+	19: "receiveBytes",
+	20: "backendId",
 }
 
 func (p *TLoadTxnCommitRequest) IsSetCluster() bool {
@@ -34697,6 +35532,18 @@ func (p *TLoadTxnCommitRequest) IsSetTableId() bool {
 
 func (p *TLoadTxnCommitRequest) IsSetAuthCodeUuid() bool {
 	return p.AuthCodeUuid != nil
+}
+
+func (p *TLoadTxnCommitRequest) IsSetGroupCommit() bool {
+	return p.GroupCommit != nil
+}
+
+func (p *TLoadTxnCommitRequest) IsSetReceiveBytes() bool {
+	return p.ReceiveBytes != nil
+}
+
+func (p *TLoadTxnCommitRequest) IsSetBackendId() bool {
+	return p.BackendId != nil
 }
 
 func (p *TLoadTxnCommitRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -34861,6 +35708,30 @@ func (p *TLoadTxnCommitRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 17:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField17(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 18:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField18(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 19:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField19(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 20:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField20(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -35134,6 +36005,39 @@ func (p *TLoadTxnCommitRequest) ReadField17(iprot thrift.TProtocol) error {
 	p.AuthCodeUuid = _field
 	return nil
 }
+func (p *TLoadTxnCommitRequest) ReadField18(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.GroupCommit = _field
+	return nil
+}
+func (p *TLoadTxnCommitRequest) ReadField19(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ReceiveBytes = _field
+	return nil
+}
+func (p *TLoadTxnCommitRequest) ReadField20(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.BackendId = _field
+	return nil
+}
 
 func (p *TLoadTxnCommitRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -35207,6 +36111,18 @@ func (p *TLoadTxnCommitRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField17(oprot); err != nil {
 			fieldId = 17
+			goto WriteFieldError
+		}
+		if err = p.writeField18(oprot); err != nil {
+			fieldId = 18
+			goto WriteFieldError
+		}
+		if err = p.writeField19(oprot); err != nil {
+			fieldId = 19
+			goto WriteFieldError
+		}
+		if err = p.writeField20(oprot); err != nil {
+			fieldId = 20
 			goto WriteFieldError
 		}
 	}
@@ -35554,6 +36470,63 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
 }
 
+func (p *TLoadTxnCommitRequest) writeField18(oprot thrift.TProtocol) (err error) {
+	if p.IsSetGroupCommit() {
+		if err = oprot.WriteFieldBegin("groupCommit", thrift.BOOL, 18); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.GroupCommit); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 end error: ", p), err)
+}
+
+func (p *TLoadTxnCommitRequest) writeField19(oprot thrift.TProtocol) (err error) {
+	if p.IsSetReceiveBytes() {
+		if err = oprot.WriteFieldBegin("receiveBytes", thrift.I64, 19); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ReceiveBytes); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 end error: ", p), err)
+}
+
+func (p *TLoadTxnCommitRequest) writeField20(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBackendId() {
+		if err = oprot.WriteFieldBegin("backendId", thrift.I64, 20); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.BackendId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
+}
+
 func (p *TLoadTxnCommitRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -35617,6 +36590,15 @@ func (p *TLoadTxnCommitRequest) DeepEqual(ano *TLoadTxnCommitRequest) bool {
 		return false
 	}
 	if !p.Field17DeepEqual(ano.AuthCodeUuid) {
+		return false
+	}
+	if !p.Field18DeepEqual(ano.GroupCommit) {
+		return false
+	}
+	if !p.Field19DeepEqual(ano.ReceiveBytes) {
+		return false
+	}
+	if !p.Field20DeepEqual(ano.BackendId) {
 		return false
 	}
 	return true
@@ -35789,6 +36771,42 @@ func (p *TLoadTxnCommitRequest) Field17DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.AuthCodeUuid, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TLoadTxnCommitRequest) Field18DeepEqual(src *bool) bool {
+
+	if p.GroupCommit == src {
+		return true
+	} else if p.GroupCommit == nil || src == nil {
+		return false
+	}
+	if *p.GroupCommit != *src {
+		return false
+	}
+	return true
+}
+func (p *TLoadTxnCommitRequest) Field19DeepEqual(src *int64) bool {
+
+	if p.ReceiveBytes == src {
+		return true
+	} else if p.ReceiveBytes == nil || src == nil {
+		return false
+	}
+	if *p.ReceiveBytes != *src {
+		return false
+	}
+	return true
+}
+func (p *TLoadTxnCommitRequest) Field20DeepEqual(src *int64) bool {
+
+	if p.BackendId == src {
+		return true
+	} else if p.BackendId == nil || src == nil {
+		return false
+	}
+	if *p.BackendId != *src {
 		return false
 	}
 	return true
@@ -54892,18 +55910,20 @@ func (p *TTableRef) Field3DeepEqual(src *string) bool {
 }
 
 type TRestoreSnapshotRequest struct {
-	Cluster    *string           `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
-	User       *string           `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
-	Passwd     *string           `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
-	Db         *string           `thrift:"db,4,optional" frugal:"4,optional,string" json:"db,omitempty"`
-	Table      *string           `thrift:"table,5,optional" frugal:"5,optional,string" json:"table,omitempty"`
-	Token      *string           `thrift:"token,6,optional" frugal:"6,optional,string" json:"token,omitempty"`
-	LabelName  *string           `thrift:"label_name,7,optional" frugal:"7,optional,string" json:"label_name,omitempty"`
-	RepoName   *string           `thrift:"repo_name,8,optional" frugal:"8,optional,string" json:"repo_name,omitempty"`
-	TableRefs  []*TTableRef      `thrift:"table_refs,9,optional" frugal:"9,optional,list<TTableRef>" json:"table_refs,omitempty"`
-	Properties map[string]string `thrift:"properties,10,optional" frugal:"10,optional,map<string:string>" json:"properties,omitempty"`
-	Meta       []byte            `thrift:"meta,11,optional" frugal:"11,optional,binary" json:"meta,omitempty"`
-	JobInfo    []byte            `thrift:"job_info,12,optional" frugal:"12,optional,binary" json:"job_info,omitempty"`
+	Cluster         *string           `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
+	User            *string           `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
+	Passwd          *string           `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
+	Db              *string           `thrift:"db,4,optional" frugal:"4,optional,string" json:"db,omitempty"`
+	Table           *string           `thrift:"table,5,optional" frugal:"5,optional,string" json:"table,omitempty"`
+	Token           *string           `thrift:"token,6,optional" frugal:"6,optional,string" json:"token,omitempty"`
+	LabelName       *string           `thrift:"label_name,7,optional" frugal:"7,optional,string" json:"label_name,omitempty"`
+	RepoName        *string           `thrift:"repo_name,8,optional" frugal:"8,optional,string" json:"repo_name,omitempty"`
+	TableRefs       []*TTableRef      `thrift:"table_refs,9,optional" frugal:"9,optional,list<TTableRef>" json:"table_refs,omitempty"`
+	Properties      map[string]string `thrift:"properties,10,optional" frugal:"10,optional,map<string:string>" json:"properties,omitempty"`
+	Meta            []byte            `thrift:"meta,11,optional" frugal:"11,optional,binary" json:"meta,omitempty"`
+	JobInfo         []byte            `thrift:"job_info,12,optional" frugal:"12,optional,binary" json:"job_info,omitempty"`
+	CleanTables     *bool             `thrift:"clean_tables,13,optional" frugal:"13,optional,bool" json:"clean_tables,omitempty"`
+	CleanPartitions *bool             `thrift:"clean_partitions,14,optional" frugal:"14,optional,bool" json:"clean_partitions,omitempty"`
 }
 
 func NewTRestoreSnapshotRequest() *TRestoreSnapshotRequest {
@@ -55020,6 +56040,24 @@ func (p *TRestoreSnapshotRequest) GetJobInfo() (v []byte) {
 	}
 	return p.JobInfo
 }
+
+var TRestoreSnapshotRequest_CleanTables_DEFAULT bool
+
+func (p *TRestoreSnapshotRequest) GetCleanTables() (v bool) {
+	if !p.IsSetCleanTables() {
+		return TRestoreSnapshotRequest_CleanTables_DEFAULT
+	}
+	return *p.CleanTables
+}
+
+var TRestoreSnapshotRequest_CleanPartitions_DEFAULT bool
+
+func (p *TRestoreSnapshotRequest) GetCleanPartitions() (v bool) {
+	if !p.IsSetCleanPartitions() {
+		return TRestoreSnapshotRequest_CleanPartitions_DEFAULT
+	}
+	return *p.CleanPartitions
+}
 func (p *TRestoreSnapshotRequest) SetCluster(val *string) {
 	p.Cluster = val
 }
@@ -55056,6 +56094,12 @@ func (p *TRestoreSnapshotRequest) SetMeta(val []byte) {
 func (p *TRestoreSnapshotRequest) SetJobInfo(val []byte) {
 	p.JobInfo = val
 }
+func (p *TRestoreSnapshotRequest) SetCleanTables(val *bool) {
+	p.CleanTables = val
+}
+func (p *TRestoreSnapshotRequest) SetCleanPartitions(val *bool) {
+	p.CleanPartitions = val
+}
 
 var fieldIDToName_TRestoreSnapshotRequest = map[int16]string{
 	1:  "cluster",
@@ -55070,6 +56114,8 @@ var fieldIDToName_TRestoreSnapshotRequest = map[int16]string{
 	10: "properties",
 	11: "meta",
 	12: "job_info",
+	13: "clean_tables",
+	14: "clean_partitions",
 }
 
 func (p *TRestoreSnapshotRequest) IsSetCluster() bool {
@@ -55118,6 +56164,14 @@ func (p *TRestoreSnapshotRequest) IsSetMeta() bool {
 
 func (p *TRestoreSnapshotRequest) IsSetJobInfo() bool {
 	return p.JobInfo != nil
+}
+
+func (p *TRestoreSnapshotRequest) IsSetCleanTables() bool {
+	return p.CleanTables != nil
+}
+
+func (p *TRestoreSnapshotRequest) IsSetCleanPartitions() bool {
+	return p.CleanPartitions != nil
 }
 
 func (p *TRestoreSnapshotRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -55230,6 +56284,22 @@ func (p *TRestoreSnapshotRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField14(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -55426,6 +56496,28 @@ func (p *TRestoreSnapshotRequest) ReadField12(iprot thrift.TProtocol) error {
 	p.JobInfo = _field
 	return nil
 }
+func (p *TRestoreSnapshotRequest) ReadField13(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CleanTables = _field
+	return nil
+}
+func (p *TRestoreSnapshotRequest) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CleanPartitions = _field
+	return nil
+}
 
 func (p *TRestoreSnapshotRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -55479,6 +56571,14 @@ func (p *TRestoreSnapshotRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
 			goto WriteFieldError
 		}
 	}
@@ -55746,6 +56846,44 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
 
+func (p *TRestoreSnapshotRequest) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCleanTables() {
+		if err = oprot.WriteFieldBegin("clean_tables", thrift.BOOL, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.CleanTables); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
+
+func (p *TRestoreSnapshotRequest) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCleanPartitions() {
+		if err = oprot.WriteFieldBegin("clean_partitions", thrift.BOOL, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.CleanPartitions); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
+
 func (p *TRestoreSnapshotRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -55794,6 +56932,12 @@ func (p *TRestoreSnapshotRequest) DeepEqual(ano *TRestoreSnapshotRequest) bool {
 		return false
 	}
 	if !p.Field12DeepEqual(ano.JobInfo) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.CleanTables) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.CleanPartitions) {
 		return false
 	}
 	return true
@@ -55931,6 +57075,30 @@ func (p *TRestoreSnapshotRequest) Field11DeepEqual(src []byte) bool {
 func (p *TRestoreSnapshotRequest) Field12DeepEqual(src []byte) bool {
 
 	if bytes.Compare(p.JobInfo, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TRestoreSnapshotRequest) Field13DeepEqual(src *bool) bool {
+
+	if p.CleanTables == src {
+		return true
+	} else if p.CleanTables == nil || src == nil {
+		return false
+	}
+	if *p.CleanTables != *src {
+		return false
+	}
+	return true
+}
+func (p *TRestoreSnapshotRequest) Field14DeepEqual(src *bool) bool {
+
+	if p.CleanPartitions == src {
+		return true
+	} else if p.CleanPartitions == nil || src == nil {
+		return false
+	}
+	if *p.CleanPartitions != *src {
 		return false
 	}
 	return true

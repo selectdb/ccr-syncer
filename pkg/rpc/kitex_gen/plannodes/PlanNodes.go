@@ -26873,19 +26873,20 @@ func (p *TCsvScanNode) Field10DeepEqual(src map[string]*TMiniLoadEtlFunction) bo
 }
 
 type TSchemaScanNode struct {
-	TupleId           types.TTupleId       `thrift:"tuple_id,1,required" frugal:"1,required,i32" json:"tuple_id"`
-	TableName         string               `thrift:"table_name,2,required" frugal:"2,required,string" json:"table_name"`
-	Db                *string              `thrift:"db,3,optional" frugal:"3,optional,string" json:"db,omitempty"`
-	Table             *string              `thrift:"table,4,optional" frugal:"4,optional,string" json:"table,omitempty"`
-	Wild              *string              `thrift:"wild,5,optional" frugal:"5,optional,string" json:"wild,omitempty"`
-	User              *string              `thrift:"user,6,optional" frugal:"6,optional,string" json:"user,omitempty"`
-	Ip                *string              `thrift:"ip,7,optional" frugal:"7,optional,string" json:"ip,omitempty"`
-	Port              *int32               `thrift:"port,8,optional" frugal:"8,optional,i32" json:"port,omitempty"`
-	ThreadId          *int64               `thrift:"thread_id,9,optional" frugal:"9,optional,i64" json:"thread_id,omitempty"`
-	UserIp            *string              `thrift:"user_ip,10,optional" frugal:"10,optional,string" json:"user_ip,omitempty"`
-	CurrentUserIdent  *types.TUserIdentity `thrift:"current_user_ident,11,optional" frugal:"11,optional,types.TUserIdentity" json:"current_user_ident,omitempty"`
-	ShowHiddenCloumns bool                 `thrift:"show_hidden_cloumns,12,optional" frugal:"12,optional,bool" json:"show_hidden_cloumns,omitempty"`
-	Catalog           *string              `thrift:"catalog,14,optional" frugal:"14,optional,string" json:"catalog,omitempty"`
+	TupleId           types.TTupleId           `thrift:"tuple_id,1,required" frugal:"1,required,i32" json:"tuple_id"`
+	TableName         string                   `thrift:"table_name,2,required" frugal:"2,required,string" json:"table_name"`
+	Db                *string                  `thrift:"db,3,optional" frugal:"3,optional,string" json:"db,omitempty"`
+	Table             *string                  `thrift:"table,4,optional" frugal:"4,optional,string" json:"table,omitempty"`
+	Wild              *string                  `thrift:"wild,5,optional" frugal:"5,optional,string" json:"wild,omitempty"`
+	User              *string                  `thrift:"user,6,optional" frugal:"6,optional,string" json:"user,omitempty"`
+	Ip                *string                  `thrift:"ip,7,optional" frugal:"7,optional,string" json:"ip,omitempty"`
+	Port              *int32                   `thrift:"port,8,optional" frugal:"8,optional,i32" json:"port,omitempty"`
+	ThreadId          *int64                   `thrift:"thread_id,9,optional" frugal:"9,optional,i64" json:"thread_id,omitempty"`
+	UserIp            *string                  `thrift:"user_ip,10,optional" frugal:"10,optional,string" json:"user_ip,omitempty"`
+	CurrentUserIdent  *types.TUserIdentity     `thrift:"current_user_ident,11,optional" frugal:"11,optional,types.TUserIdentity" json:"current_user_ident,omitempty"`
+	ShowHiddenCloumns bool                     `thrift:"show_hidden_cloumns,12,optional" frugal:"12,optional,bool" json:"show_hidden_cloumns,omitempty"`
+	Catalog           *string                  `thrift:"catalog,14,optional" frugal:"14,optional,string" json:"catalog,omitempty"`
+	FeAddrList        []*types.TNetworkAddress `thrift:"fe_addr_list,15,optional" frugal:"15,optional,list<types.TNetworkAddress>" json:"fe_addr_list,omitempty"`
 }
 
 func NewTSchemaScanNode() *TSchemaScanNode {
@@ -27005,6 +27006,15 @@ func (p *TSchemaScanNode) GetCatalog() (v string) {
 	}
 	return *p.Catalog
 }
+
+var TSchemaScanNode_FeAddrList_DEFAULT []*types.TNetworkAddress
+
+func (p *TSchemaScanNode) GetFeAddrList() (v []*types.TNetworkAddress) {
+	if !p.IsSetFeAddrList() {
+		return TSchemaScanNode_FeAddrList_DEFAULT
+	}
+	return p.FeAddrList
+}
 func (p *TSchemaScanNode) SetTupleId(val types.TTupleId) {
 	p.TupleId = val
 }
@@ -27044,6 +27054,9 @@ func (p *TSchemaScanNode) SetShowHiddenCloumns(val bool) {
 func (p *TSchemaScanNode) SetCatalog(val *string) {
 	p.Catalog = val
 }
+func (p *TSchemaScanNode) SetFeAddrList(val []*types.TNetworkAddress) {
+	p.FeAddrList = val
+}
 
 var fieldIDToName_TSchemaScanNode = map[int16]string{
 	1:  "tuple_id",
@@ -27059,6 +27072,7 @@ var fieldIDToName_TSchemaScanNode = map[int16]string{
 	11: "current_user_ident",
 	12: "show_hidden_cloumns",
 	14: "catalog",
+	15: "fe_addr_list",
 }
 
 func (p *TSchemaScanNode) IsSetDb() bool {
@@ -27103,6 +27117,10 @@ func (p *TSchemaScanNode) IsSetShowHiddenCloumns() bool {
 
 func (p *TSchemaScanNode) IsSetCatalog() bool {
 	return p.Catalog != nil
+}
+
+func (p *TSchemaScanNode) IsSetFeAddrList() bool {
+	return p.FeAddrList != nil
 }
 
 func (p *TSchemaScanNode) Read(iprot thrift.TProtocol) (err error) {
@@ -27227,6 +27245,14 @@ func (p *TSchemaScanNode) Read(iprot thrift.TProtocol) (err error) {
 		case 14:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField14(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 15:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField15(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -27412,6 +27438,29 @@ func (p *TSchemaScanNode) ReadField14(iprot thrift.TProtocol) error {
 	p.Catalog = _field
 	return nil
 }
+func (p *TSchemaScanNode) ReadField15(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*types.TNetworkAddress, 0, size)
+	values := make([]types.TNetworkAddress, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.FeAddrList = _field
+	return nil
+}
 
 func (p *TSchemaScanNode) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -27469,6 +27518,10 @@ func (p *TSchemaScanNode) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField14(oprot); err != nil {
 			fieldId = 14
+			goto WriteFieldError
+		}
+		if err = p.writeField15(oprot); err != nil {
+			fieldId = 15
 			goto WriteFieldError
 		}
 	}
@@ -27732,6 +27785,33 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
 }
 
+func (p *TSchemaScanNode) writeField15(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFeAddrList() {
+		if err = oprot.WriteFieldBegin("fe_addr_list", thrift.LIST, 15); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.FeAddrList)); err != nil {
+			return err
+		}
+		for _, v := range p.FeAddrList {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
+}
+
 func (p *TSchemaScanNode) String() string {
 	if p == nil {
 		return "<nil>"
@@ -27783,6 +27863,9 @@ func (p *TSchemaScanNode) DeepEqual(ano *TSchemaScanNode) bool {
 		return false
 	}
 	if !p.Field14DeepEqual(ano.Catalog) {
+		return false
+	}
+	if !p.Field15DeepEqual(ano.FeAddrList) {
 		return false
 	}
 	return true
@@ -27921,6 +28004,19 @@ func (p *TSchemaScanNode) Field14DeepEqual(src *string) bool {
 	}
 	if strings.Compare(*p.Catalog, *src) != 0 {
 		return false
+	}
+	return true
+}
+func (p *TSchemaScanNode) Field15DeepEqual(src []*types.TNetworkAddress) bool {
+
+	if len(p.FeAddrList) != len(src) {
+		return false
+	}
+	for i, v := range p.FeAddrList {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }

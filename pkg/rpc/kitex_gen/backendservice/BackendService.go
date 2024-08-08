@@ -11559,6 +11559,9 @@ type TWorkloadGroupInfo struct {
 	MinRemoteScanThreadNum      *int32  `thrift:"min_remote_scan_thread_num,11,optional" frugal:"11,optional,i32" json:"min_remote_scan_thread_num,omitempty"`
 	SpillThresholdLowWatermark  *int32  `thrift:"spill_threshold_low_watermark,12,optional" frugal:"12,optional,i32" json:"spill_threshold_low_watermark,omitempty"`
 	SpillThresholdHighWatermark *int32  `thrift:"spill_threshold_high_watermark,13,optional" frugal:"13,optional,i32" json:"spill_threshold_high_watermark,omitempty"`
+	ReadBytesPerSecond          *int64  `thrift:"read_bytes_per_second,14,optional" frugal:"14,optional,i64" json:"read_bytes_per_second,omitempty"`
+	RemoteReadBytesPerSecond    *int64  `thrift:"remote_read_bytes_per_second,15,optional" frugal:"15,optional,i64" json:"remote_read_bytes_per_second,omitempty"`
+	Tag                         *string `thrift:"tag,16,optional" frugal:"16,optional,string" json:"tag,omitempty"`
 }
 
 func NewTWorkloadGroupInfo() *TWorkloadGroupInfo {
@@ -11684,6 +11687,33 @@ func (p *TWorkloadGroupInfo) GetSpillThresholdHighWatermark() (v int32) {
 	}
 	return *p.SpillThresholdHighWatermark
 }
+
+var TWorkloadGroupInfo_ReadBytesPerSecond_DEFAULT int64
+
+func (p *TWorkloadGroupInfo) GetReadBytesPerSecond() (v int64) {
+	if !p.IsSetReadBytesPerSecond() {
+		return TWorkloadGroupInfo_ReadBytesPerSecond_DEFAULT
+	}
+	return *p.ReadBytesPerSecond
+}
+
+var TWorkloadGroupInfo_RemoteReadBytesPerSecond_DEFAULT int64
+
+func (p *TWorkloadGroupInfo) GetRemoteReadBytesPerSecond() (v int64) {
+	if !p.IsSetRemoteReadBytesPerSecond() {
+		return TWorkloadGroupInfo_RemoteReadBytesPerSecond_DEFAULT
+	}
+	return *p.RemoteReadBytesPerSecond
+}
+
+var TWorkloadGroupInfo_Tag_DEFAULT string
+
+func (p *TWorkloadGroupInfo) GetTag() (v string) {
+	if !p.IsSetTag() {
+		return TWorkloadGroupInfo_Tag_DEFAULT
+	}
+	return *p.Tag
+}
 func (p *TWorkloadGroupInfo) SetId(val *int64) {
 	p.Id = val
 }
@@ -11723,6 +11753,15 @@ func (p *TWorkloadGroupInfo) SetSpillThresholdLowWatermark(val *int32) {
 func (p *TWorkloadGroupInfo) SetSpillThresholdHighWatermark(val *int32) {
 	p.SpillThresholdHighWatermark = val
 }
+func (p *TWorkloadGroupInfo) SetReadBytesPerSecond(val *int64) {
+	p.ReadBytesPerSecond = val
+}
+func (p *TWorkloadGroupInfo) SetRemoteReadBytesPerSecond(val *int64) {
+	p.RemoteReadBytesPerSecond = val
+}
+func (p *TWorkloadGroupInfo) SetTag(val *string) {
+	p.Tag = val
+}
 
 var fieldIDToName_TWorkloadGroupInfo = map[int16]string{
 	1:  "id",
@@ -11738,6 +11777,9 @@ var fieldIDToName_TWorkloadGroupInfo = map[int16]string{
 	11: "min_remote_scan_thread_num",
 	12: "spill_threshold_low_watermark",
 	13: "spill_threshold_high_watermark",
+	14: "read_bytes_per_second",
+	15: "remote_read_bytes_per_second",
+	16: "tag",
 }
 
 func (p *TWorkloadGroupInfo) IsSetId() bool {
@@ -11790,6 +11832,18 @@ func (p *TWorkloadGroupInfo) IsSetSpillThresholdLowWatermark() bool {
 
 func (p *TWorkloadGroupInfo) IsSetSpillThresholdHighWatermark() bool {
 	return p.SpillThresholdHighWatermark != nil
+}
+
+func (p *TWorkloadGroupInfo) IsSetReadBytesPerSecond() bool {
+	return p.ReadBytesPerSecond != nil
+}
+
+func (p *TWorkloadGroupInfo) IsSetRemoteReadBytesPerSecond() bool {
+	return p.RemoteReadBytesPerSecond != nil
+}
+
+func (p *TWorkloadGroupInfo) IsSetTag() bool {
+	return p.Tag != nil
 }
 
 func (p *TWorkloadGroupInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -11910,6 +11964,30 @@ func (p *TWorkloadGroupInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 13:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField14(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 15:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField15(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 16:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField16(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -12087,6 +12165,39 @@ func (p *TWorkloadGroupInfo) ReadField13(iprot thrift.TProtocol) error {
 	p.SpillThresholdHighWatermark = _field
 	return nil
 }
+func (p *TWorkloadGroupInfo) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ReadBytesPerSecond = _field
+	return nil
+}
+func (p *TWorkloadGroupInfo) ReadField15(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.RemoteReadBytesPerSecond = _field
+	return nil
+}
+func (p *TWorkloadGroupInfo) ReadField16(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Tag = _field
+	return nil
+}
 
 func (p *TWorkloadGroupInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -12144,6 +12255,18 @@ func (p *TWorkloadGroupInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField13(oprot); err != nil {
 			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
+			goto WriteFieldError
+		}
+		if err = p.writeField15(oprot); err != nil {
+			fieldId = 15
+			goto WriteFieldError
+		}
+		if err = p.writeField16(oprot); err != nil {
+			fieldId = 16
 			goto WriteFieldError
 		}
 	}
@@ -12411,6 +12534,63 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
 
+func (p *TWorkloadGroupInfo) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetReadBytesPerSecond() {
+		if err = oprot.WriteFieldBegin("read_bytes_per_second", thrift.I64, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ReadBytesPerSecond); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
+
+func (p *TWorkloadGroupInfo) writeField15(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRemoteReadBytesPerSecond() {
+		if err = oprot.WriteFieldBegin("remote_read_bytes_per_second", thrift.I64, 15); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.RemoteReadBytesPerSecond); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
+}
+
+func (p *TWorkloadGroupInfo) writeField16(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTag() {
+		if err = oprot.WriteFieldBegin("tag", thrift.STRING, 16); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Tag); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
+}
+
 func (p *TWorkloadGroupInfo) String() string {
 	if p == nil {
 		return "<nil>"
@@ -12462,6 +12642,15 @@ func (p *TWorkloadGroupInfo) DeepEqual(ano *TWorkloadGroupInfo) bool {
 		return false
 	}
 	if !p.Field13DeepEqual(ano.SpillThresholdHighWatermark) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.ReadBytesPerSecond) {
+		return false
+	}
+	if !p.Field15DeepEqual(ano.RemoteReadBytesPerSecond) {
+		return false
+	}
+	if !p.Field16DeepEqual(ano.Tag) {
 		return false
 	}
 	return true
@@ -12619,6 +12808,42 @@ func (p *TWorkloadGroupInfo) Field13DeepEqual(src *int32) bool {
 		return false
 	}
 	if *p.SpillThresholdHighWatermark != *src {
+		return false
+	}
+	return true
+}
+func (p *TWorkloadGroupInfo) Field14DeepEqual(src *int64) bool {
+
+	if p.ReadBytesPerSecond == src {
+		return true
+	} else if p.ReadBytesPerSecond == nil || src == nil {
+		return false
+	}
+	if *p.ReadBytesPerSecond != *src {
+		return false
+	}
+	return true
+}
+func (p *TWorkloadGroupInfo) Field15DeepEqual(src *int64) bool {
+
+	if p.RemoteReadBytesPerSecond == src {
+		return true
+	} else if p.RemoteReadBytesPerSecond == nil || src == nil {
+		return false
+	}
+	if *p.RemoteReadBytesPerSecond != *src {
+		return false
+	}
+	return true
+}
+func (p *TWorkloadGroupInfo) Field16DeepEqual(src *string) bool {
+
+	if p.Tag == src {
+		return true
+	} else if p.Tag == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Tag, *src) != 0 {
 		return false
 	}
 	return true
