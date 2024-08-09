@@ -223,7 +223,7 @@ suite("test_replace_partial_partition") {
     // }
     def jsonSlurper = new groovy.json.JsonSlurper()
     def object = jsonSlurper.parseText "${restore_objects}"
-    assertTrue(object.olap_table_list[0].partition_names[0], "p2");
+    assertTrue(object.olap_table_list[0].partition_names[0] == "p2");
 }
 
 
