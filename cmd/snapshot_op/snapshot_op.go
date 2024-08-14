@@ -103,7 +103,7 @@ func test_restore_snapshot(src *base.Spec, dest *base.Spec) {
 	if err != nil {
 		panic(err)
 	}
-	restoreResp, err := destRpc.RestoreSnapshot(dest, nil, labelName, snapshotResp)
+	restoreResp, err := destRpc.RestoreSnapshot(dest, nil, labelName, snapshotResp, false, false)
 	if err != nil {
 		panic(err)
 	}
