@@ -1740,6 +1740,14 @@ type TQueryOptions struct {
 	EnableNoNeedReadDataOpt                  bool            `thrift:"enable_no_need_read_data_opt,116,optional" frugal:"116,optional,bool" json:"enable_no_need_read_data_opt,omitempty"`
 	ReadCsvEmptyLineAsNull                   bool            `thrift:"read_csv_empty_line_as_null,117,optional" frugal:"117,optional,bool" json:"read_csv_empty_line_as_null,omitempty"`
 	SerdeDialect                             TSerdeDialect   `thrift:"serde_dialect,118,optional" frugal:"118,optional,TSerdeDialect" json:"serde_dialect,omitempty"`
+	EnableMatchWithoutInvertedIndex          bool            `thrift:"enable_match_without_inverted_index,119,optional" frugal:"119,optional,bool" json:"enable_match_without_inverted_index,omitempty"`
+	EnableFallbackOnMissingInvertedIndex     bool            `thrift:"enable_fallback_on_missing_inverted_index,120,optional" frugal:"120,optional,bool" json:"enable_fallback_on_missing_inverted_index,omitempty"`
+	KeepCarriageReturn                       bool            `thrift:"keep_carriage_return,121,optional" frugal:"121,optional,bool" json:"keep_carriage_return,omitempty"`
+	RuntimeBloomFilterMinSize                int32           `thrift:"runtime_bloom_filter_min_size,122,optional" frugal:"122,optional,i32" json:"runtime_bloom_filter_min_size,omitempty"`
+	HiveParquetUseColumnNames                bool            `thrift:"hive_parquet_use_column_names,123,optional" frugal:"123,optional,bool" json:"hive_parquet_use_column_names,omitempty"`
+	HiveOrcUseColumnNames                    bool            `thrift:"hive_orc_use_column_names,124,optional" frugal:"124,optional,bool" json:"hive_orc_use_column_names,omitempty"`
+	EnableSegmentCache                       bool            `thrift:"enable_segment_cache,125,optional" frugal:"125,optional,bool" json:"enable_segment_cache,omitempty"`
+	RuntimeBloomFilterMaxSize                int32           `thrift:"runtime_bloom_filter_max_size,126,optional" frugal:"126,optional,i32" json:"runtime_bloom_filter_max_size,omitempty"`
 	DisableFileCache                         bool            `thrift:"disable_file_cache,1000,optional" frugal:"1000,optional,bool" json:"disable_file_cache,omitempty"`
 }
 
@@ -1844,6 +1852,14 @@ func NewTQueryOptions() *TQueryOptions {
 		EnableNoNeedReadDataOpt:                  true,
 		ReadCsvEmptyLineAsNull:                   false,
 		SerdeDialect:                             TSerdeDialect_DORIS,
+		EnableMatchWithoutInvertedIndex:          true,
+		EnableFallbackOnMissingInvertedIndex:     true,
+		KeepCarriageReturn:                       false,
+		RuntimeBloomFilterMinSize:                1048576,
+		HiveParquetUseColumnNames:                true,
+		HiveOrcUseColumnNames:                    true,
+		EnableSegmentCache:                       true,
+		RuntimeBloomFilterMaxSize:                16777216,
 		DisableFileCache:                         false,
 	}
 }
@@ -1947,6 +1963,14 @@ func (p *TQueryOptions) InitDefault() {
 	p.EnableNoNeedReadDataOpt = true
 	p.ReadCsvEmptyLineAsNull = false
 	p.SerdeDialect = TSerdeDialect_DORIS
+	p.EnableMatchWithoutInvertedIndex = true
+	p.EnableFallbackOnMissingInvertedIndex = true
+	p.KeepCarriageReturn = false
+	p.RuntimeBloomFilterMinSize = 1048576
+	p.HiveParquetUseColumnNames = true
+	p.HiveOrcUseColumnNames = true
+	p.EnableSegmentCache = true
+	p.RuntimeBloomFilterMaxSize = 16777216
 	p.DisableFileCache = false
 }
 
@@ -2931,6 +2955,78 @@ func (p *TQueryOptions) GetSerdeDialect() (v TSerdeDialect) {
 	return p.SerdeDialect
 }
 
+var TQueryOptions_EnableMatchWithoutInvertedIndex_DEFAULT bool = true
+
+func (p *TQueryOptions) GetEnableMatchWithoutInvertedIndex() (v bool) {
+	if !p.IsSetEnableMatchWithoutInvertedIndex() {
+		return TQueryOptions_EnableMatchWithoutInvertedIndex_DEFAULT
+	}
+	return p.EnableMatchWithoutInvertedIndex
+}
+
+var TQueryOptions_EnableFallbackOnMissingInvertedIndex_DEFAULT bool = true
+
+func (p *TQueryOptions) GetEnableFallbackOnMissingInvertedIndex() (v bool) {
+	if !p.IsSetEnableFallbackOnMissingInvertedIndex() {
+		return TQueryOptions_EnableFallbackOnMissingInvertedIndex_DEFAULT
+	}
+	return p.EnableFallbackOnMissingInvertedIndex
+}
+
+var TQueryOptions_KeepCarriageReturn_DEFAULT bool = false
+
+func (p *TQueryOptions) GetKeepCarriageReturn() (v bool) {
+	if !p.IsSetKeepCarriageReturn() {
+		return TQueryOptions_KeepCarriageReturn_DEFAULT
+	}
+	return p.KeepCarriageReturn
+}
+
+var TQueryOptions_RuntimeBloomFilterMinSize_DEFAULT int32 = 1048576
+
+func (p *TQueryOptions) GetRuntimeBloomFilterMinSize() (v int32) {
+	if !p.IsSetRuntimeBloomFilterMinSize() {
+		return TQueryOptions_RuntimeBloomFilterMinSize_DEFAULT
+	}
+	return p.RuntimeBloomFilterMinSize
+}
+
+var TQueryOptions_HiveParquetUseColumnNames_DEFAULT bool = true
+
+func (p *TQueryOptions) GetHiveParquetUseColumnNames() (v bool) {
+	if !p.IsSetHiveParquetUseColumnNames() {
+		return TQueryOptions_HiveParquetUseColumnNames_DEFAULT
+	}
+	return p.HiveParquetUseColumnNames
+}
+
+var TQueryOptions_HiveOrcUseColumnNames_DEFAULT bool = true
+
+func (p *TQueryOptions) GetHiveOrcUseColumnNames() (v bool) {
+	if !p.IsSetHiveOrcUseColumnNames() {
+		return TQueryOptions_HiveOrcUseColumnNames_DEFAULT
+	}
+	return p.HiveOrcUseColumnNames
+}
+
+var TQueryOptions_EnableSegmentCache_DEFAULT bool = true
+
+func (p *TQueryOptions) GetEnableSegmentCache() (v bool) {
+	if !p.IsSetEnableSegmentCache() {
+		return TQueryOptions_EnableSegmentCache_DEFAULT
+	}
+	return p.EnableSegmentCache
+}
+
+var TQueryOptions_RuntimeBloomFilterMaxSize_DEFAULT int32 = 16777216
+
+func (p *TQueryOptions) GetRuntimeBloomFilterMaxSize() (v int32) {
+	if !p.IsSetRuntimeBloomFilterMaxSize() {
+		return TQueryOptions_RuntimeBloomFilterMaxSize_DEFAULT
+	}
+	return p.RuntimeBloomFilterMaxSize
+}
+
 var TQueryOptions_DisableFileCache_DEFAULT bool = false
 
 func (p *TQueryOptions) GetDisableFileCache() (v bool) {
@@ -3266,6 +3362,30 @@ func (p *TQueryOptions) SetReadCsvEmptyLineAsNull(val bool) {
 func (p *TQueryOptions) SetSerdeDialect(val TSerdeDialect) {
 	p.SerdeDialect = val
 }
+func (p *TQueryOptions) SetEnableMatchWithoutInvertedIndex(val bool) {
+	p.EnableMatchWithoutInvertedIndex = val
+}
+func (p *TQueryOptions) SetEnableFallbackOnMissingInvertedIndex(val bool) {
+	p.EnableFallbackOnMissingInvertedIndex = val
+}
+func (p *TQueryOptions) SetKeepCarriageReturn(val bool) {
+	p.KeepCarriageReturn = val
+}
+func (p *TQueryOptions) SetRuntimeBloomFilterMinSize(val int32) {
+	p.RuntimeBloomFilterMinSize = val
+}
+func (p *TQueryOptions) SetHiveParquetUseColumnNames(val bool) {
+	p.HiveParquetUseColumnNames = val
+}
+func (p *TQueryOptions) SetHiveOrcUseColumnNames(val bool) {
+	p.HiveOrcUseColumnNames = val
+}
+func (p *TQueryOptions) SetEnableSegmentCache(val bool) {
+	p.EnableSegmentCache = val
+}
+func (p *TQueryOptions) SetRuntimeBloomFilterMaxSize(val int32) {
+	p.RuntimeBloomFilterMaxSize = val
+}
 func (p *TQueryOptions) SetDisableFileCache(val bool) {
 	p.DisableFileCache = val
 }
@@ -3380,6 +3500,14 @@ var fieldIDToName_TQueryOptions = map[int16]string{
 	116:  "enable_no_need_read_data_opt",
 	117:  "read_csv_empty_line_as_null",
 	118:  "serde_dialect",
+	119:  "enable_match_without_inverted_index",
+	120:  "enable_fallback_on_missing_inverted_index",
+	121:  "keep_carriage_return",
+	122:  "runtime_bloom_filter_min_size",
+	123:  "hive_parquet_use_column_names",
+	124:  "hive_orc_use_column_names",
+	125:  "enable_segment_cache",
+	126:  "runtime_bloom_filter_max_size",
 	1000: "disable_file_cache",
 }
 
@@ -3817,6 +3945,38 @@ func (p *TQueryOptions) IsSetReadCsvEmptyLineAsNull() bool {
 
 func (p *TQueryOptions) IsSetSerdeDialect() bool {
 	return p.SerdeDialect != TQueryOptions_SerdeDialect_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableMatchWithoutInvertedIndex() bool {
+	return p.EnableMatchWithoutInvertedIndex != TQueryOptions_EnableMatchWithoutInvertedIndex_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableFallbackOnMissingInvertedIndex() bool {
+	return p.EnableFallbackOnMissingInvertedIndex != TQueryOptions_EnableFallbackOnMissingInvertedIndex_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetKeepCarriageReturn() bool {
+	return p.KeepCarriageReturn != TQueryOptions_KeepCarriageReturn_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetRuntimeBloomFilterMinSize() bool {
+	return p.RuntimeBloomFilterMinSize != TQueryOptions_RuntimeBloomFilterMinSize_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetHiveParquetUseColumnNames() bool {
+	return p.HiveParquetUseColumnNames != TQueryOptions_HiveParquetUseColumnNames_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetHiveOrcUseColumnNames() bool {
+	return p.HiveOrcUseColumnNames != TQueryOptions_HiveOrcUseColumnNames_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableSegmentCache() bool {
+	return p.EnableSegmentCache != TQueryOptions_EnableSegmentCache_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetRuntimeBloomFilterMaxSize() bool {
+	return p.RuntimeBloomFilterMaxSize != TQueryOptions_RuntimeBloomFilterMaxSize_DEFAULT
 }
 
 func (p *TQueryOptions) IsSetDisableFileCache() bool {
@@ -4709,6 +4869,70 @@ func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
 		case 118:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField118(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 119:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField119(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 120:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField120(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 121:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField121(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 122:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField122(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 123:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField123(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 124:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField124(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 125:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField125(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 126:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField126(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5947,6 +6171,94 @@ func (p *TQueryOptions) ReadField118(iprot thrift.TProtocol) error {
 	p.SerdeDialect = _field
 	return nil
 }
+func (p *TQueryOptions) ReadField119(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnableMatchWithoutInvertedIndex = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField120(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnableFallbackOnMissingInvertedIndex = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField121(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.KeepCarriageReturn = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField122(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.RuntimeBloomFilterMinSize = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField123(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.HiveParquetUseColumnNames = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField124(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.HiveOrcUseColumnNames = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField125(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnableSegmentCache = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField126(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.RuntimeBloomFilterMaxSize = _field
+	return nil
+}
 func (p *TQueryOptions) ReadField1000(iprot thrift.TProtocol) error {
 
 	var _field bool
@@ -6399,6 +6711,38 @@ func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField118(oprot); err != nil {
 			fieldId = 118
+			goto WriteFieldError
+		}
+		if err = p.writeField119(oprot); err != nil {
+			fieldId = 119
+			goto WriteFieldError
+		}
+		if err = p.writeField120(oprot); err != nil {
+			fieldId = 120
+			goto WriteFieldError
+		}
+		if err = p.writeField121(oprot); err != nil {
+			fieldId = 121
+			goto WriteFieldError
+		}
+		if err = p.writeField122(oprot); err != nil {
+			fieldId = 122
+			goto WriteFieldError
+		}
+		if err = p.writeField123(oprot); err != nil {
+			fieldId = 123
+			goto WriteFieldError
+		}
+		if err = p.writeField124(oprot); err != nil {
+			fieldId = 124
+			goto WriteFieldError
+		}
+		if err = p.writeField125(oprot); err != nil {
+			fieldId = 125
+			goto WriteFieldError
+		}
+		if err = p.writeField126(oprot); err != nil {
+			fieldId = 126
 			goto WriteFieldError
 		}
 		if err = p.writeField1000(oprot); err != nil {
@@ -8494,6 +8838,158 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 118 end error: ", p), err)
 }
 
+func (p *TQueryOptions) writeField119(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableMatchWithoutInvertedIndex() {
+		if err = oprot.WriteFieldBegin("enable_match_without_inverted_index", thrift.BOOL, 119); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableMatchWithoutInvertedIndex); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 119 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 119 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField120(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableFallbackOnMissingInvertedIndex() {
+		if err = oprot.WriteFieldBegin("enable_fallback_on_missing_inverted_index", thrift.BOOL, 120); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableFallbackOnMissingInvertedIndex); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 120 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 120 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField121(oprot thrift.TProtocol) (err error) {
+	if p.IsSetKeepCarriageReturn() {
+		if err = oprot.WriteFieldBegin("keep_carriage_return", thrift.BOOL, 121); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.KeepCarriageReturn); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 121 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 121 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField122(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRuntimeBloomFilterMinSize() {
+		if err = oprot.WriteFieldBegin("runtime_bloom_filter_min_size", thrift.I32, 122); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.RuntimeBloomFilterMinSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 122 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 122 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField123(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHiveParquetUseColumnNames() {
+		if err = oprot.WriteFieldBegin("hive_parquet_use_column_names", thrift.BOOL, 123); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.HiveParquetUseColumnNames); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 123 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 123 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField124(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHiveOrcUseColumnNames() {
+		if err = oprot.WriteFieldBegin("hive_orc_use_column_names", thrift.BOOL, 124); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.HiveOrcUseColumnNames); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 124 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 124 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField125(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableSegmentCache() {
+		if err = oprot.WriteFieldBegin("enable_segment_cache", thrift.BOOL, 125); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableSegmentCache); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 125 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 125 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField126(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRuntimeBloomFilterMaxSize() {
+		if err = oprot.WriteFieldBegin("runtime_bloom_filter_max_size", thrift.I32, 126); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.RuntimeBloomFilterMaxSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 126 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 126 end error: ", p), err)
+}
+
 func (p *TQueryOptions) writeField1000(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDisableFileCache() {
 		if err = oprot.WriteFieldBegin("disable_file_cache", thrift.BOOL, 1000); err != nil {
@@ -8852,6 +9348,30 @@ func (p *TQueryOptions) DeepEqual(ano *TQueryOptions) bool {
 		return false
 	}
 	if !p.Field118DeepEqual(ano.SerdeDialect) {
+		return false
+	}
+	if !p.Field119DeepEqual(ano.EnableMatchWithoutInvertedIndex) {
+		return false
+	}
+	if !p.Field120DeepEqual(ano.EnableFallbackOnMissingInvertedIndex) {
+		return false
+	}
+	if !p.Field121DeepEqual(ano.KeepCarriageReturn) {
+		return false
+	}
+	if !p.Field122DeepEqual(ano.RuntimeBloomFilterMinSize) {
+		return false
+	}
+	if !p.Field123DeepEqual(ano.HiveParquetUseColumnNames) {
+		return false
+	}
+	if !p.Field124DeepEqual(ano.HiveOrcUseColumnNames) {
+		return false
+	}
+	if !p.Field125DeepEqual(ano.EnableSegmentCache) {
+		return false
+	}
+	if !p.Field126DeepEqual(ano.RuntimeBloomFilterMaxSize) {
 		return false
 	}
 	if !p.Field1000DeepEqual(ano.DisableFileCache) {
@@ -9669,6 +10189,62 @@ func (p *TQueryOptions) Field117DeepEqual(src bool) bool {
 func (p *TQueryOptions) Field118DeepEqual(src TSerdeDialect) bool {
 
 	if p.SerdeDialect != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field119DeepEqual(src bool) bool {
+
+	if p.EnableMatchWithoutInvertedIndex != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field120DeepEqual(src bool) bool {
+
+	if p.EnableFallbackOnMissingInvertedIndex != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field121DeepEqual(src bool) bool {
+
+	if p.KeepCarriageReturn != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field122DeepEqual(src int32) bool {
+
+	if p.RuntimeBloomFilterMinSize != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field123DeepEqual(src bool) bool {
+
+	if p.HiveParquetUseColumnNames != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field124DeepEqual(src bool) bool {
+
+	if p.HiveOrcUseColumnNames != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field125DeepEqual(src bool) bool {
+
+	if p.EnableSegmentCache != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field126DeepEqual(src int32) bool {
+
+	if p.RuntimeBloomFilterMaxSize != src {
 		return false
 	}
 	return true

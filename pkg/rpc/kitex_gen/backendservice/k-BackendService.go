@@ -8856,6 +8856,48 @@ func (p *TWorkloadGroupInfo) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 14:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField14(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 15:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField15(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 16:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField16(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -9060,6 +9102,45 @@ func (p *TWorkloadGroupInfo) FastReadField13(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TWorkloadGroupInfo) FastReadField14(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.ReadBytesPerSecond = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TWorkloadGroupInfo) FastReadField15(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.RemoteReadBytesPerSecond = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TWorkloadGroupInfo) FastReadField16(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.Tag = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TWorkloadGroupInfo) FastWrite(buf []byte) int {
 	return 0
@@ -9080,8 +9161,11 @@ func (p *TWorkloadGroupInfo) FastWriteNocopy(buf []byte, binaryWriter bthrift.Bi
 		offset += p.fastWriteField11(buf[offset:], binaryWriter)
 		offset += p.fastWriteField12(buf[offset:], binaryWriter)
 		offset += p.fastWriteField13(buf[offset:], binaryWriter)
+		offset += p.fastWriteField14(buf[offset:], binaryWriter)
+		offset += p.fastWriteField15(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
+		offset += p.fastWriteField16(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -9105,6 +9189,9 @@ func (p *TWorkloadGroupInfo) BLength() int {
 		l += p.field11Length()
 		l += p.field12Length()
 		l += p.field13Length()
+		l += p.field14Length()
+		l += p.field15Length()
+		l += p.field16Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -9254,6 +9341,39 @@ func (p *TWorkloadGroupInfo) fastWriteField13(buf []byte, binaryWriter bthrift.B
 	return offset
 }
 
+func (p *TWorkloadGroupInfo) fastWriteField14(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetReadBytesPerSecond() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "read_bytes_per_second", thrift.I64, 14)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.ReadBytesPerSecond)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TWorkloadGroupInfo) fastWriteField15(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetRemoteReadBytesPerSecond() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "remote_read_bytes_per_second", thrift.I64, 15)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.RemoteReadBytesPerSecond)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TWorkloadGroupInfo) fastWriteField16(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTag() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "tag", thrift.STRING, 16)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.Tag)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TWorkloadGroupInfo) field1Length() int {
 	l := 0
 	if p.IsSetId() {
@@ -9391,6 +9511,39 @@ func (p *TWorkloadGroupInfo) field13Length() int {
 	if p.IsSetSpillThresholdHighWatermark() {
 		l += bthrift.Binary.FieldBeginLength("spill_threshold_high_watermark", thrift.I32, 13)
 		l += bthrift.Binary.I32Length(*p.SpillThresholdHighWatermark)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TWorkloadGroupInfo) field14Length() int {
+	l := 0
+	if p.IsSetReadBytesPerSecond() {
+		l += bthrift.Binary.FieldBeginLength("read_bytes_per_second", thrift.I64, 14)
+		l += bthrift.Binary.I64Length(*p.ReadBytesPerSecond)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TWorkloadGroupInfo) field15Length() int {
+	l := 0
+	if p.IsSetRemoteReadBytesPerSecond() {
+		l += bthrift.Binary.FieldBeginLength("remote_read_bytes_per_second", thrift.I64, 15)
+		l += bthrift.Binary.I64Length(*p.RemoteReadBytesPerSecond)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TWorkloadGroupInfo) field16Length() int {
+	l := 0
+	if p.IsSetTag() {
+		l += bthrift.Binary.FieldBeginLength("tag", thrift.STRING, 16)
+		l += bthrift.Binary.StringLengthNocopy(*p.Tag)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
