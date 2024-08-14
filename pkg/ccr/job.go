@@ -411,7 +411,8 @@ func (j *Job) partialSync() error {
 			}
 			tableRefs = append(tableRefs, tableRef)
 		}
-		restoreResp, err := destRpc.RestoreSnapshot(dest, tableRefs, restoreSnapshotName, snapshotResp)
+		cleanPartitions, cleanTables := false, false // DO NOT drop exists tables and partitions
+		restoreResp, err := destRpc.RestoreSnapshot(dest, tableRefs, restoreSnapshotName, snapshotResp, cleanTables, cleanPartitions)
 		if err != nil {
 			return err
 		}
@@ -609,7 +610,13 @@ func (j *Job) fullSync() error {
 			}
 			tableRefs = append(tableRefs, tableRef)
 		}
-		restoreResp, err := destRpc.RestoreSnapshot(dest, tableRefs, restoreSnapshotName, snapshotResp)
+
+		// drop exists partitions, and drop tables if in db sync.
+		cleanTables, cleanPartitions := false, true
+		if j.SyncType == DBSync {
+			cleanTables = true
+		}
+		restoreResp, err := destRpc.RestoreSnapshot(dest, tableRefs, restoreSnapshotName, snapshotResp, cleanTables, cleanPartitions)
 		if err != nil {
 			return err
 		}

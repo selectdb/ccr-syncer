@@ -78,7 +78,7 @@ type IFeRpc interface {
 	GetBinlog(*base.Spec, int64) (*festruct.TGetBinlogResult_, error)
 	GetBinlogLag(*base.Spec, int64) (*festruct.TGetBinlogLagResult_, error)
 	GetSnapshot(*base.Spec, string) (*festruct.TGetSnapshotResult_, error)
-	RestoreSnapshot(*base.Spec, []*festruct.TTableRef, string, *festruct.TGetSnapshotResult_) (*festruct.TRestoreSnapshotResult_, error)
+	RestoreSnapshot(*base.Spec, []*festruct.TTableRef, string, *festruct.TGetSnapshotResult_, bool, bool) (*festruct.TRestoreSnapshotResult_, error)
 	GetMasterToken(*base.Spec) (*festruct.TGetMasterTokenResult_, error)
 	GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error)
 	GetTableMeta(spec *base.Spec, tableIds []int64) (*festruct.TGetMetaResult_, error)
@@ -384,10 +384,10 @@ func (rpc *FeRpc) GetSnapshot(spec *base.Spec, labelName string) (*festruct.TGet
 	return convertResult[festruct.TGetSnapshotResult_](result, err)
 }
 
-func (rpc *FeRpc) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableRef, label string, snapshotResult *festruct.TGetSnapshotResult_) (*festruct.TRestoreSnapshotResult_, error) {
+func (rpc *FeRpc) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableRef, label string, snapshotResult *festruct.TGetSnapshotResult_, cleanTables bool, cleanPartitions bool) (*festruct.TRestoreSnapshotResult_, error) {
 	// return rpc.masterClient.RestoreSnapshot(spec, tableRefs, label, snapshotResult)
 	caller := func(client IFeRpc) (resultType, error) {
-		return client.RestoreSnapshot(spec, tableRefs, label, snapshotResult)
+		return client.RestoreSnapshot(spec, tableRefs, label, snapshotResult, cleanTables, cleanPartitions)
 	}
 	result, err := rpc.callWithMasterRedirect(caller)
 	return convertResult[festruct.TRestoreSnapshotResult_](result, err)
@@ -664,7 +664,7 @@ func (rpc *singleFeClient) GetSnapshot(spec *base.Spec, labelName string) (*fest
 //	}
 //
 // Restore Snapshot rpc
-func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableRef, label string, snapshotResult *festruct.TGetSnapshotResult_) (*festruct.TRestoreSnapshotResult_, error) {
+func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableRef, label string, snapshotResult *festruct.TGetSnapshotResult_, cleanTables bool, cleanPartitions bool) (*festruct.TRestoreSnapshotResult_, error) {
 	// NOTE: ignore meta, because it's too large
 	log.Debugf("Call RestoreSnapshot, addr: %s, spec: %s", rpc.Address(), spec)
 
@@ -673,19 +673,21 @@ func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, tableRefs []*festruc
 	properties := make(map[string]string)
 	properties["reserve_replica"] = "true"
 	req := &festruct.TRestoreSnapshotRequest{
-		Table:      &spec.Table,
-		LabelName:  &label,
-		RepoName:   &repoName,
-		TableRefs:  tableRefs,
-		Properties: properties,
-		Meta:       snapshotResult.GetMeta(),
-		JobInfo:    snapshotResult.GetJobInfo(),
+		Table:           &spec.Table,
+		LabelName:       &label,
+		RepoName:        &repoName,
+		TableRefs:       tableRefs,
+		Properties:      properties,
+		Meta:            snapshotResult.GetMeta(),
+		JobInfo:         snapshotResult.GetJobInfo(),
+		CleanTables:     &cleanTables,
+		CleanPartitions: &cleanPartitions,
 	}
 	setAuthInfo(req, spec)
 
 	// NOTE: ignore meta, because it's too large
-	log.Debugf("RestoreSnapshotRequest user %s, db %s, table %s, label name %s, properties %v",
-		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), properties)
+	log.Debugf("RestoreSnapshotRequest user %s, db %s, table %s, label name %s, properties %v, clean tables: %v, clean partitions: %v",
+		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), properties, cleanTables, cleanPartitions)
 	if resp, err := client.RestoreSnapshot(context.Background(), req); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "RestoreSnapshot failed")
 	} else {

@@ -137,6 +137,7 @@ const (
 	TSchemaTableType_SCH_PROCS_PRIV                            TSchemaTableType = 45
 	TSchemaTableType_SCH_WORKLOAD_POLICY                       TSchemaTableType = 46
 	TSchemaTableType_SCH_TABLE_OPTIONS                         TSchemaTableType = 47
+	TSchemaTableType_SCH_WORKLOAD_GROUP_PRIVILEGES             TSchemaTableType = 48
 )
 
 func (p TSchemaTableType) String() string {
@@ -237,6 +238,8 @@ func (p TSchemaTableType) String() string {
 		return "SCH_WORKLOAD_POLICY"
 	case TSchemaTableType_SCH_TABLE_OPTIONS:
 		return "SCH_TABLE_OPTIONS"
+	case TSchemaTableType_SCH_WORKLOAD_GROUP_PRIVILEGES:
+		return "SCH_WORKLOAD_GROUP_PRIVILEGES"
 	}
 	return "<UNSET>"
 }
@@ -339,6 +342,8 @@ func TSchemaTableTypeFromString(s string) (TSchemaTableType, error) {
 		return TSchemaTableType_SCH_WORKLOAD_POLICY, nil
 	case "SCH_TABLE_OPTIONS":
 		return TSchemaTableType_SCH_TABLE_OPTIONS, nil
+	case "SCH_WORKLOAD_GROUP_PRIVILEGES":
+		return TSchemaTableType_SCH_WORKLOAD_GROUP_PRIVILEGES, nil
 	}
 	return TSchemaTableType(0), fmt.Errorf("not a valid TSchemaTableType string")
 }
