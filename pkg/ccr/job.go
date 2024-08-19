@@ -663,6 +663,10 @@ func (j *Job) fullSync() error {
 
 		switch j.SyncType {
 		case DBSync:
+			// refresh dest meta cache
+			if _, err := j.destMeta.GetTables(); err != nil {
+				return err
+			}
 			tableMapping := make(map[int64]int64)
 			for srcTableId := range j.progress.TableCommitSeqMap {
 				srcTableName, err := j.srcMeta.GetTableNameById(srcTableId)
