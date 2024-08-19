@@ -234,6 +234,7 @@ func (j *Job) genExtraInfo() (*base.ExtraInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Infof("gen extra info with master token %s", masterToken)
 
 	backends, err := meta.GetBackends()
 	if err != nil {
@@ -244,7 +245,7 @@ func (j *Job) genExtraInfo() (*base.ExtraInfo, error) {
 
 	beNetworkMap := make(map[int64]base.NetworkAddr)
 	for _, backend := range backends {
-		log.Infof("backend: %v", backend)
+		log.Infof("gen extra info with backend: %v", backend)
 		addr := base.NetworkAddr{
 			Ip:   backend.Host,
 			Port: backend.HttpPort,
@@ -844,7 +845,8 @@ func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*
 }
 
 func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
-	log.Infof("handle upsert binlog, sub sync state: %s", j.progress.SubSyncState)
+	log.Infof("handle upsert binlog, sub sync state: %s, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.SubSyncState, j.progress.PrevCommitSeq, j.progress.CommitSeq)
 
 	// inMemory will be update in state machine, but progress keep any, so progress.inMemory is also latest, well call NextSubCheckpoint don't need to upate inMemory in progress
 	type inMemoryData struct {
@@ -1068,7 +1070,8 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 
 // handleAddPartition
 func (j *Job) handleAddPartition(binlog *festruct.TBinlog) error {
-	log.Infof("handle add partition binlog")
+	log.Infof("handle add partition binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
 
 	data := binlog.GetData()
 	addPartition, err := record.NewAddPartitionFromJson(data)
@@ -1101,7 +1104,8 @@ func (j *Job) handleAddPartition(binlog *festruct.TBinlog) error {
 
 // handleDropPartition
 func (j *Job) handleDropPartition(binlog *festruct.TBinlog) error {
-	log.Infof("handle drop partition binlog")
+	log.Infof("handle drop partition binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
 
 	data := binlog.GetData()
 	dropPartition, err := record.NewDropPartitionFromJson(data)
@@ -1129,7 +1133,8 @@ func (j *Job) handleDropPartition(binlog *festruct.TBinlog) error {
 
 // handleCreateTable
 func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
-	log.Infof("handle create table binlog")
+	log.Infof("handle create table binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
 
 	if j.SyncType != DBSync {
 		return xerror.Errorf(xerror.Normal, "invalid sync type: %v", j.SyncType)
@@ -1168,7 +1173,8 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 
 // handleDropTable
 func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
-	log.Infof("handle drop table binlog")
+	log.Infof("handle drop table binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
 
 	if j.SyncType != DBSync {
 		return xerror.Errorf(xerror.Normal, "invalid sync type: %v", j.SyncType)
@@ -1215,7 +1221,8 @@ func (j *Job) handleDummy(binlog *festruct.TBinlog) error {
 
 // handleAlterJob
 func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
-	log.Infof("handle alter job binlog")
+	log.Infof("handle alter job binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
 
 	data := binlog.GetData()
 	alterJob, err := record.NewAlterJobV2FromJson(data)
@@ -1271,7 +1278,8 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 
 // handleLightningSchemaChange
 func (j *Job) handleLightningSchemaChange(binlog *festruct.TBinlog) error {
-	log.Infof("handle lightning schema change binlog")
+	log.Infof("handle lightning schema change binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
 
 	data := binlog.GetData()
 	lightningSchemaChange, err := record.NewModifyTableAddOrDropColumnsFromJson(data)
@@ -1283,7 +1291,8 @@ func (j *Job) handleLightningSchemaChange(binlog *festruct.TBinlog) error {
 }
 
 func (j *Job) handleTruncateTable(binlog *festruct.TBinlog) error {
-	log.Infof("handle truncate table binlog")
+	log.Infof("handle truncate table binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
 
 	data := binlog.GetData()
 	truncateTable, err := record.NewTruncateTableFromJson(data)
@@ -1314,7 +1323,8 @@ func (j *Job) handleTruncateTable(binlog *festruct.TBinlog) error {
 }
 
 func (j *Job) handleReplacePartitions(binlog *festruct.TBinlog) error {
-	log.Infof("handle replace partitions binlog, commit seq: %d", *binlog.CommitSeq)
+	log.Infof("handle replace partitions binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
 
 	data := binlog.GetData()
 	replacePartition, err := record.NewReplacePartitionFromJson(data)
@@ -1352,6 +1362,8 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 	for _, binlog := range binlogs {
 		// Step 1: dispatch handle binlog
 		if err := j.handleBinlog(binlog); err != nil {
+			log.Errorf("handle binlog failed, prevCommitSeq: %d, commitSeq: %d, binlog type: %s, binlog data: %s",
+				j.progress.PrevCommitSeq, j.progress.CommitSeq, binlog.GetType(), binlog.GetData())
 			return err, false
 		}
 
