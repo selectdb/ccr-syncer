@@ -77,6 +77,7 @@ func NewThriftMeta(spec *base.Spec, rpcFactory rpc.IRpcFactory, tableIds []int64
 			PartitionIdMap:    make(map[int64]*PartitionMeta),
 			PartitionRangeMap: make(map[string]*PartitionMeta),
 		}
+		meta.Id = dbMeta.GetId()
 		meta.Tables[tableMeta.Id] = tableMeta
 		meta.TableName2IdMap[tableMeta.Name] = tableMeta.Id
 
