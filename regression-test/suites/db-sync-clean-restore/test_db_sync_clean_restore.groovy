@@ -113,6 +113,7 @@ suite("test_db_sync_clean_restore") {
         )
     """
 
+    target_sql "CREATE DATABASE IF NOT EXISTS TEST_${context.dbName}"
     target_sql """
         CREATE TABLE if NOT EXISTS ${tableName}_1
         (
