@@ -20,13 +20,7 @@ tarball_suffix := $(tag)-$(platform)
 LDFLAGS="-X 'github.com/selectdb/ccr_syncer/pkg/version.GitTagSha=$(git_tag_sha)'"
 GOFLAGS=
 
-# Check formatter, if exist gofumpt, use it
-GOFUMPT := $(shell command -v gofumpt 2> /dev/null)
-ifdef GOFUMPT
-	GOFORMAT := gofumpt -w
-else
-	GOFORMAT := go fmt
-endif
+GOFORMAT := gofmt -l -d -w
 
 # COVERAGE=ON make
 ifeq ($(COVERAGE),ON)
@@ -63,7 +57,7 @@ fmt:
 .PHONY: test
 ## test : Run test
 test:
-	$(V)go test $(shell go list ./... | grep -v github.com/selectdb/ccr_syncer/cmd | grep -v github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/) | grep -F -v '[no test files]'
+	$(V)go test $(shell go list ./... | grep -v github.com/selectdb/ccr_syncer/cmd | grep -v github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/)
 
 .PHONY: help
 ## help : Print help message
