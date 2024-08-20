@@ -117,6 +117,7 @@ suite("test_db_sync_signature_not_matched") {
         )
     """
 
+    target_sql "CREATE DATABASE IF NOT EXISTS TEST_${context.dbName}"
     target_sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (

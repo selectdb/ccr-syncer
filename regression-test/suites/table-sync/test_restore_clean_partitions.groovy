@@ -111,6 +111,7 @@ suite("test_restore_clean_partitions") {
         )
     """
 
+    target_sql "CREATE DATABASE IF NOT EXISTS TEST_${context.dbName}"
     target_sql """
         CREATE TABLE if NOT EXISTS ${tableName}_1
         (
