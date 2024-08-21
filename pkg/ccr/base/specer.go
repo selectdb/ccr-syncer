@@ -31,6 +31,7 @@ type Specer interface {
 	WaitTransactionDone(txnId int64) // busy wait
 
 	LightningSchemaChange(srcDatabase string, changes *record.ModifyTableAddOrDropColumns) error
+	RenameColumn(srcTableName string, renameColumn *record.RenameColumn) error
 	TruncateTable(destTableName string, truncateTable *record.TruncateTable) error
 	DropTable(tableName string) error
 	DropView(viewName string) error

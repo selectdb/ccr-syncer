@@ -613,6 +613,7 @@ const (
 	TBinlogType_REPLACE_PARTITIONS               TBinlogType = 12
 	TBinlogType_TRUNCATE_TABLE                   TBinlogType = 13
 	TBinlogType_RENAME_TABLE                     TBinlogType = 14
+	TBinlogType_RENAME_COLUMN                	 TBinlogType = 15
 )
 
 func (p TBinlogType) String() string {
@@ -647,6 +648,8 @@ func (p TBinlogType) String() string {
 		return "TRUNCATE_TABLE"
 	case TBinlogType_RENAME_TABLE:
 		return "RENAME_TABLE"
+	case TBinlogType_RENAME_COLUMN:
+		return "RENAME_COLUMN"
 	}
 	return "<UNSET>"
 }
@@ -683,6 +686,8 @@ func TBinlogTypeFromString(s string) (TBinlogType, error) {
 		return TBinlogType_TRUNCATE_TABLE, nil
 	case "RENAME_TABLE":
 		return TBinlogType_RENAME_TABLE, nil
+	case "RENAME_COLUMN":
+		return TBinlogType_RENAME_COLUMN, nil
 	}
 	return TBinlogType(0), fmt.Errorf("not a valid TBinlogType string")
 }

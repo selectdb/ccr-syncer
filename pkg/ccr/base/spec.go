@@ -886,6 +886,13 @@ func (s *Spec) LightningSchemaChange(srcDatabase string, lightningSchemaChange *
 	return s.DbExec(sql)
 }
 
+func (s *Spec) RenameColumn(srcTableName string, renameColumn *record.RenameColumn) error {
+	destTableName := srcTableName
+	renameSql := fmt.Sprintf("ALTER TABLE `%s` RENAME COLUMN `%s` `%s`", destTableName, renameColumn.ColName, renameColumn.NewColName)
+	log.Infof("rename column sql: %s", renameSql)
+	return s.DbExec(renameSql)
+}
+
 func (s *Spec) TruncateTable(destTableName string, truncateTable *record.TruncateTable) error {
 	var sql string
 	if truncateTable.RawSql == "" {
