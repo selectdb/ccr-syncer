@@ -613,7 +613,7 @@ const (
 	TBinlogType_REPLACE_PARTITIONS               TBinlogType = 12
 	TBinlogType_TRUNCATE_TABLE                   TBinlogType = 13
 	TBinlogType_RENAME_TABLE                     TBinlogType = 14
-	TBinlogType_RENAME_COLUMN                	 TBinlogType = 15
+	TBinlogType_RENAME_COLUMN                    TBinlogType = 15
 )
 
 func (p TBinlogType) String() string {
