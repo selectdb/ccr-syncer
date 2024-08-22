@@ -67,6 +67,7 @@ suite("test_db_sync_clean_restore") {
         Boolean ret = false
         while (times > 0) {
             def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
+            logger.info("SHOW RESTORE RESULT: ${sqlInfo}")
             for (List<Object> row : sqlInfo) {
                 if ((row[10] as String).contains(checkTable)) {
                     ret = (row[4] as String) == "FINISHED"
