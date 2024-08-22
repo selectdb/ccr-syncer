@@ -1630,6 +1630,25 @@ func (j *Job) handleRenameColumn(binlog *festruct.TBinlog) error {
 	return err
 }
 
+// handle modify comment
+func (j *Job) handleModifyComment(binlog *festruct.TBinlog) error {
+	log.Infof("handle modify comment binlog")
+
+	data := binlog.GetData()
+	modifyComment, err := record.NewModifyCommentFromJson(data)
+	if err != nil {
+		return err
+	}
+
+	srcTableName, err := j.srcMeta.GetTableNameById(modifyComment.TblId)
+	if err != nil {
+		return err
+	}
+
+	err = j.IDest.ModifyComment(srcTableName, modifyComment)
+	return err
+}
+
 func (j *Job) handleTruncateTable(binlog *festruct.TBinlog) error {
 	log.Infof("handle truncate table binlog, prevCommitSeq: %d, commitSeq: %d",
 		j.progress.PrevCommitSeq, j.progress.CommitSeq)
@@ -1814,6 +1833,8 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		return j.handleLightningSchemaChange(binlog)
 	case festruct.TBinlogType_RENAME_COLUMN:
 		return j.handleRenameColumn(binlog)
+	case festruct.TBinlogType_MODIFY_COMMENT:
+		return j.handleModifyComment(binlog)
 	case festruct.TBinlogType_DUMMY:
 		return j.handleDummy(binlog)
 	case festruct.TBinlogType_ALTER_DATABASE_PROPERTY:
