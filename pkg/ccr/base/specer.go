@@ -32,7 +32,7 @@ type Specer interface {
 
 	LightningSchemaChange(srcDatabase string, changes *record.ModifyTableAddOrDropColumns) error
 	TruncateTable(destTableName string, truncateTable *record.TruncateTable) error
-	DropTable(tableName string) error
+	DropTable(tableName string, force bool) error
 	DropView(viewName string) error
 
 	AddPartition(destTableName string, addPartition *record.AddPartition) error
