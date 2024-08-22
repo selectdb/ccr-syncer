@@ -645,7 +645,7 @@ func (j *Job) fullSync() error {
 				}
 				log.Infof("the signature of table %s is not matched with the target table in snapshot", tableName)
 				for {
-					if err := j.IDest.DropTable(tableName); err == nil {
+					if err := j.IDest.DropTable(tableName, false); err == nil {
 						break
 					}
 				}
@@ -1203,7 +1203,7 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 		tableName = srcTable.Name
 	}
 
-	if err = j.IDest.DropTable(tableName); err != nil {
+	if err = j.IDest.DropTable(tableName, true); err != nil {
 		return xerror.Wrapf(err, xerror.Normal, "drop table %s", tableName)
 	}
 
@@ -1273,7 +1273,7 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 			allViewDeleted = true
 		}
 
-		if err := j.IDest.DropTable(destTableName); err == nil {
+		if err := j.IDest.DropTable(destTableName, true); err == nil {
 			break
 		}
 	}

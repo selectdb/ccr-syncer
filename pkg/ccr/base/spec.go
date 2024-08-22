@@ -358,7 +358,7 @@ func (s *Spec) GetAllViewsFromTable(tableName string) ([]string, error) {
 	return results, nil
 }
 
-func (s *Spec) dropTable(table string) error {
+func (s *Spec) dropTable(table string, force bool) error {
 	log.Infof("drop table %s.%s", s.Database, table)
 
 	db, err := s.Connect()
@@ -366,7 +366,11 @@ func (s *Spec) dropTable(table string) error {
 		return err
 	}
 
-	sql := fmt.Sprintf("DROP TABLE %s.%s", utils.FormatKeywordName(s.Database), utils.FormatKeywordName(table))
+	suffix := ""
+	if force {
+		suffix = "FORCE"
+	}
+	sql := fmt.Sprintf("DROP TABLE %s.%s %s", utils.FormatKeywordName(s.Database), utils.FormatKeywordName(table), suffix)
 	_, err = db.Exec(sql)
 	if err != nil {
 		return xerror.Wrapf(err, xerror.Normal, "drop table %s.%s failed, sql: %s", s.Database, table, sql)
@@ -899,8 +903,12 @@ func (s *Spec) TruncateTable(destTableName string, truncateTable *record.Truncat
 	return s.DbExec(sql)
 }
 
-func (s *Spec) DropTable(tableName string) error {
-	dropSql := fmt.Sprintf("DROP TABLE %s FORCE", utils.FormatKeywordName(tableName))
+func (s *Spec) DropTable(tableName string, force bool) error {
+	sqlSuffix := ""
+	if force {
+		sqlSuffix = "FORCE"
+	}
+	dropSql := fmt.Sprintf("DROP TABLE %s %s", utils.FormatKeywordName(tableName), sqlSuffix)
 	log.Infof("drop table sql: %s", dropSql)
 	return s.DbExec(dropSql)
 }
