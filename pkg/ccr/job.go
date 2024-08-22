@@ -84,6 +84,8 @@ type Job struct {
 
 	factory *Factory `json:"-"`
 
+	allowTableExists bool `json:"-"` // Only for FirstRun(), don't need to persist.
+
 	progress   *JobProgress `json:"-"`
 	db         storage.DB   `json:"-"`
 	jobFactory *JobFactory  `json:"-"`
@@ -96,21 +98,23 @@ type Job struct {
 
 type jobContext struct {
 	context.Context
-	src       base.Spec
-	dest      base.Spec
-	db        storage.DB
-	skipError bool
-	factory   *Factory
+	src              base.Spec
+	dest             base.Spec
+	db               storage.DB
+	skipError        bool
+	allowTableExists bool
+	factory          *Factory
 }
 
-func NewJobContext(src, dest base.Spec, skipError bool, db storage.DB, factory *Factory) *jobContext {
+func NewJobContext(src, dest base.Spec, skipError bool, allowTableExists bool, db storage.DB, factory *Factory) *jobContext {
 	return &jobContext{
-		Context:   context.Background(),
-		src:       src,
-		dest:      dest,
-		skipError: skipError,
-		db:        db,
-		factory:   factory,
+		Context:          context.Background(),
+		src:              src,
+		dest:             dest,
+		skipError:        skipError,
+		allowTableExists: allowTableExists,
+		db:               db,
+		factory:          factory,
 	}
 }
 
@@ -135,7 +139,8 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 		SkipError: jobContext.skipError,
 		State:     JobRunning,
 
-		factory: factory,
+		allowTableExists: jobContext.allowTableExists,
+		factory:          factory,
 
 		progress: nil,
 		db:       jobContext.db,
@@ -1907,7 +1912,7 @@ func (j *Job) FirstRun() error {
 	} else {
 		j.Dest.DbId = destDbId
 	}
-	if j.SyncType == TableSync {
+	if j.SyncType == TableSync && !j.allowTableExists {
 		dest_table_exists, err := j.IDest.CheckTableExists()
 		if err != nil {
 			return err

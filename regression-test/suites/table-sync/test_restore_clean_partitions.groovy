@@ -196,6 +196,11 @@ suite("test_restore_clean_partitions") {
         uri "/create_ccr"
         endpoint syncerAddress
         def bodyJson = get_ccr_body "${tableName}_2"
+        def jsonSlurper = new groovy.json.JsonSlurper()
+        def object = jsonSlurper.parseText "${bodyJson}"
+        object['allow_table_exists'] = true
+        logger.info("json object ${object}")
+        bodyJson = new groovy.json.JsonBuilder(object).toString()
         body "${bodyJson}"
         op "post"
         result response

@@ -78,6 +78,8 @@ type CreateCcrRequest struct {
 	Src       base.Spec `json:"src,required"`
 	Dest      base.Spec `json:"dest,required"`
 	SkipError bool      `json:"skip_error"`
+	// For table sync, allow to create ccr job even if the target table already exists.
+	AllowTableExists bool `json:"allow_table_exists"`
 }
 
 // Stringer
@@ -107,7 +109,7 @@ func (s *HttpService) versionHandler(w http.ResponseWriter, r *http.Request) {
 func createCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobManager) error {
 	log.Infof("create ccr %s", request)
 
-	ctx := ccr.NewJobContext(request.Src, request.Dest, request.SkipError, db, jobManager.GetFactory())
+	ctx := ccr.NewJobContext(request.Src, request.Dest, request.SkipError, request.AllowTableExists, db, jobManager.GetFactory())
 	job, err := ccr.NewJobFromService(request.Name, ctx)
 	if err != nil {
 		return err
