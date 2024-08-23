@@ -1300,12 +1300,19 @@ func (j *Job) handleRenameColumn(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	srcTableName, err := j.srcMeta.GetTableNameById(renameColumn.TableId)
+	destTableId, err := j.getDestTableIdBySrc(renameColumn.TableId)
 	if err != nil {
 		return err
 	}
 
-	err = j.IDest.RenameColumn(srcTableName, renameColumn)
+	destTableName, err := j.destMeta.GetTableNameById(destTableId)
+	if err != nil {
+		return err
+	} else if destTableName == "" {
+		return xerror.Errorf(xerror.Normal, "tableId %d not found in destMeta", destTableId)
+	}
+
+	err = j.IDest.RenameColumn(destTableName, renameColumn)
 	return err
 }
 
