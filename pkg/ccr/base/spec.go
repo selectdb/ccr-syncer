@@ -948,9 +948,7 @@ func (s *Spec) RenameColumn(destTableName string, renameColumn *record.RenameCol
 	return s.DbExec(renameSql)
 }
 
-func (s *Spec) ModifyComment(srcTableName string, modifyComment *record.ModifyComment) error {
-	destTableName := srcTableName
-
+func (s *Spec) ModifyComment(destTableName string, modifyComment *record.ModifyComment) error {
 	var modifySql string
 	if modifyComment.Type == "COLUMN" {
 		var sb strings.Builder

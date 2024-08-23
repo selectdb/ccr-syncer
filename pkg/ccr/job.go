@@ -1640,12 +1640,19 @@ func (j *Job) handleModifyComment(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	srcTableName, err := j.srcMeta.GetTableNameById(modifyComment.TblId)
+	destTableId, err := j.getDestTableIdBySrc(modifyComment.TblId)
 	if err != nil {
 		return err
 	}
 
-	err = j.IDest.ModifyComment(srcTableName, modifyComment)
+	destTableName, err := j.destMeta.GetTableNameById(destTableId)
+	if err != nil {
+		return err
+	} else if destTableName == "" {
+		return xerror.Errorf(xerror.Normal, "tableId %d not found in destMeta", destTableId)
+	}
+
+	err = j.IDest.ModifyComment(destTableName, modifyComment)
 	return err
 }
 
