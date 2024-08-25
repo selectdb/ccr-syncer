@@ -1017,9 +1017,8 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			break
 		}
 
-		if statusCode := resp.Status.GetStatusCode(); statusCode == tstatus.TStatusCode_PUBLISH_TIMEOUT {
-			dest.WaitTransactionDone(txnId)
-		} else if statusCode != tstatus.TStatusCode_OK {
+		statusCode := resp.Status.GetStatusCode()
+		if statusCode != tstatus.TStatusCode_OK && statusCode != tstatus.TStatusCode_PUBLISH_TIMEOUT {
 			err := xerror.Errorf(xerror.Normal, "commit txn failed, status: %v", resp.Status)
 			rollback(err, inMemoryData)
 			break

@@ -750,59 +750,6 @@ func (s *Spec) GetRestoreSignatureNotMatchedTable(snapshotName string) (string, 
 	return "", nil
 }
 
-func (s *Spec) waitTransactionDone(txnId int64) error {
-	db, err := s.Connect()
-	if err != nil {
-		return err
-	}
-
-	// SHOW TRANSACTION
-	// [FROM db_name]
-	// WHERE
-	// [id=transaction_id]
-	// [label = label_name];
-	query := fmt.Sprintf("SHOW TRANSACTION FROM %s WHERE id = %d", utils.FormatKeywordName(s.Database), txnId)
-
-	log.Debugf("wait transaction done sql: %s", query)
-	rows, err := db.Query(query)
-	if err != nil {
-		return xerror.Wrap(err, xerror.Normal, "query restore state failed")
-	}
-	defer rows.Close()
-
-	var transactionStatus string
-	if rows.Next() {
-		rowParser := utils.NewRowParser()
-		if err := rowParser.Parse(rows); err != nil {
-			return xerror.Wrap(err, xerror.Normal, "scan transaction status failed")
-		}
-
-		transactionStatus, err = rowParser.GetString("TransactionStatus")
-		if err != nil {
-			return xerror.Wrap(err, xerror.Normal, "scan transaction status failed")
-		}
-
-		log.Debugf("check transaction %d status: [%v]", txnId, transactionStatus)
-		if transactionStatus == "VISIBLE" {
-			return nil
-		} else {
-			return xerror.Errorf(xerror.Normal, "transaction %d status: %s", txnId, transactionStatus)
-		}
-	}
-	return xerror.Errorf(xerror.Normal, "no transaction status found")
-}
-
-func (s *Spec) WaitTransactionDone(txnId int64) {
-	for {
-		if err := s.waitTransactionDone(txnId); err != nil {
-			log.Errorf("wait transaction done failed, err +%v", err)
-			time.Sleep(time.Second)
-		} else {
-			break
-		}
-	}
-}
-
 // Exec sql
 func (s *Spec) Exec(sql string) error {
 	db, err := s.Connect()

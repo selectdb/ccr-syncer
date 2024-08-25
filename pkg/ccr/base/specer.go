@@ -28,7 +28,6 @@ type Specer interface {
 	CreateSnapshotAndWaitForDone(tables []string) (string, error)
 	CheckRestoreFinished(snapshotName string) (bool, error)
 	GetRestoreSignatureNotMatchedTable(snapshotName string) (string, error)
-	WaitTransactionDone(txnId int64) // busy wait
 
 	LightningSchemaChange(srcDatabase string, changes *record.ModifyTableAddOrDropColumns) error
 	TruncateTable(destTableName string, truncateTable *record.TruncateTable) error
