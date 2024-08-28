@@ -19462,6 +19462,20 @@ func (p *TSchemaScanNode) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 15:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField15(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -19680,6 +19694,33 @@ func (p *TSchemaScanNode) FastReadField14(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TSchemaScanNode) FastReadField15(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := bthrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.FeAddrList = make([]*types.TNetworkAddress, 0, size)
+	for i := 0; i < size; i++ {
+		_elem := types.NewTNetworkAddress()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		p.FeAddrList = append(p.FeAddrList, _elem)
+	}
+	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TSchemaScanNode) FastWrite(buf []byte) int {
 	return 0
@@ -19702,6 +19743,7 @@ func (p *TSchemaScanNode) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binar
 		offset += p.fastWriteField10(buf[offset:], binaryWriter)
 		offset += p.fastWriteField11(buf[offset:], binaryWriter)
 		offset += p.fastWriteField14(buf[offset:], binaryWriter)
+		offset += p.fastWriteField15(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -19725,6 +19767,7 @@ func (p *TSchemaScanNode) BLength() int {
 		l += p.field11Length()
 		l += p.field12Length()
 		l += p.field14Length()
+		l += p.field15Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -19869,6 +19912,24 @@ func (p *TSchemaScanNode) fastWriteField14(buf []byte, binaryWriter bthrift.Bina
 	return offset
 }
 
+func (p *TSchemaScanNode) fastWriteField15(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetFeAddrList() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "fe_addr_list", thrift.LIST, 15)
+		listBeginOffset := offset
+		offset += bthrift.Binary.ListBeginLength(thrift.STRUCT, 0)
+		var length int
+		for _, v := range p.FeAddrList {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], binaryWriter)
+		}
+		bthrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+		offset += bthrift.Binary.WriteListEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TSchemaScanNode) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("tuple_id", thrift.I32, 1)
@@ -20002,6 +20063,20 @@ func (p *TSchemaScanNode) field14Length() int {
 		l += bthrift.Binary.FieldBeginLength("catalog", thrift.STRING, 14)
 		l += bthrift.Binary.StringLengthNocopy(*p.Catalog)
 
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TSchemaScanNode) field15Length() int {
+	l := 0
+	if p.IsSetFeAddrList() {
+		l += bthrift.Binary.FieldBeginLength("fe_addr_list", thrift.LIST, 15)
+		l += bthrift.Binary.ListBeginLength(thrift.STRUCT, len(p.FeAddrList))
+		for _, v := range p.FeAddrList {
+			l += v.BLength()
+		}
+		l += bthrift.Binary.ListEndLength()
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l

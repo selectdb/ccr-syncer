@@ -358,7 +358,7 @@ func (s *Spec) GetAllViewsFromTable(tableName string) ([]string, error) {
 	return results, nil
 }
 
-func (s *Spec) dropTable(table string) error {
+func (s *Spec) dropTable(table string, force bool) error {
 	log.Infof("drop table %s.%s", s.Database, table)
 
 	db, err := s.Connect()
@@ -366,7 +366,11 @@ func (s *Spec) dropTable(table string) error {
 		return err
 	}
 
-	sql := fmt.Sprintf("DROP TABLE %s.%s", utils.FormatKeywordName(s.Database), utils.FormatKeywordName(table))
+	suffix := ""
+	if force {
+		suffix = "FORCE"
+	}
+	sql := fmt.Sprintf("DROP TABLE %s.%s %s", utils.FormatKeywordName(s.Database), utils.FormatKeywordName(table), suffix)
 	_, err = db.Exec(sql)
 	if err != nil {
 		return xerror.Wrapf(err, xerror.Normal, "drop table %s.%s failed, sql: %s", s.Database, table, sql)
@@ -537,6 +541,48 @@ func (s *Spec) CreateSnapshotAndWaitForDone(tables []string) (string, error) {
 	_, err = db.Exec(backupSnapshotSql)
 	if err != nil {
 		return "", xerror.Wrapf(err, xerror.Normal, "backup snapshot %s failed, sql: %s", snapshotName, backupSnapshotSql)
+	}
+
+	backupFinished, err := s.CheckBackupFinished(snapshotName)
+	if err != nil {
+		return "", err
+	}
+	if !backupFinished {
+		err = xerror.Errorf(xerror.Normal, "check backup state timeout, max try times: %d, sql: %s", MAX_CHECK_RETRY_TIMES, backupSnapshotSql)
+		return "", err
+	}
+
+	return snapshotName, nil
+}
+
+// mysql> BACKUP SNAPSHOT ccr.snapshot_20230605 TO `__keep_on_local__` ON (src_1 PARTITION (`p1`)) PROPERTIES ("type" = "full");
+func (s *Spec) CreatePartialSnapshotAndWaitForDone(table string, partitions []string) (string, error) {
+	if len(table) == 0 {
+		return "", xerror.Errorf(xerror.Normal, "source db is empty! you should have at least one table")
+	}
+
+	if len(partitions) == 0 {
+		return "", xerror.Errorf(xerror.Normal, "partition is empty! you should have at least one partition")
+	}
+
+	// snapshot name format "ccrp_${table}_${timestamp}"
+	// table refs = table
+	snapshotName := fmt.Sprintf("ccrp_%s_%s_%d", s.Database, s.Table, time.Now().Unix())
+	tableRef := utils.FormatKeywordName(table)
+	partitionRefs := "`" + strings.Join(partitions, "`,`") + "`"
+
+	log.Infof("create partial snapshot %s.%s", s.Database, snapshotName)
+
+	db, err := s.Connect()
+	if err != nil {
+		return "", err
+	}
+
+	backupSnapshotSql := fmt.Sprintf("BACKUP SNAPSHOT %s.%s TO `__keep_on_local__` ON ( %s PARTITION (%s) ) PROPERTIES (\"type\" = \"full\")", utils.FormatKeywordName(s.Database), snapshotName, tableRef, partitionRefs)
+	log.Debugf("backup partial snapshot sql: %s", backupSnapshotSql)
+	_, err = db.Exec(backupSnapshotSql)
+	if err != nil {
+		return "", xerror.Wrapf(err, xerror.Normal, "backup partial snapshot %s failed, sql: %s", snapshotName, backupSnapshotSql)
 	}
 
 	backupFinished, err := s.CheckBackupFinished(snapshotName)
@@ -857,8 +903,12 @@ func (s *Spec) TruncateTable(destTableName string, truncateTable *record.Truncat
 	return s.DbExec(sql)
 }
 
-func (s *Spec) DropTable(tableName string) error {
-	dropSql := fmt.Sprintf("DROP TABLE %s FORCE", utils.FormatKeywordName(tableName))
+func (s *Spec) DropTable(tableName string, force bool) error {
+	sqlSuffix := ""
+	if force {
+		sqlSuffix = "FORCE"
+	}
+	dropSql := fmt.Sprintf("DROP TABLE %s %s", utils.FormatKeywordName(tableName), sqlSuffix)
 	log.Infof("drop table sql: %s", dropSql)
 	return s.DbExec(dropSql)
 }
