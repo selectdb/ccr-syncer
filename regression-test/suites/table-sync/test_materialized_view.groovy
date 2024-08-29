@@ -84,6 +84,7 @@ suite("test_materialized_index") {
             "replication_allocation" = "tag.location.default: 1"
         )
     """
+
     sql """
         CREATE MATERIALIZED VIEW mtr_${tableName}_full AS
         SELECT id, col1, col3 FROM ${tableName}
@@ -134,6 +135,15 @@ suite("test_materialized_index") {
 
 
     logger.info("=== Test 2: incremental update rollup ===")
+    // binlog type: ALTER_JOB, binlog data:
+    // {
+    //   "type": "ROLLUP",
+    //   "dbId": 10099,
+    //   "tableId": 12828,
+    //   "tableName": "tbl_materialized_sync_f8096d00b4634a078f9a3df6311b68db",
+    //   "jobId": 12853,
+    //   "jobState": "FINISHED"
+    // }
     sql """
         CREATE MATERIALIZED VIEW ${tableName}_incr AS
         SELECT id, col2, col4 FROM ${tableName}
@@ -168,4 +178,15 @@ suite("test_materialized_index") {
                                 """,
                                 checkViewExists1, 30, "target"))
 
+    logger.info("=== Test 3: drop materialized view ===")
+
+    sql """
+        DROP MATERIALIZED VIEW ${tableName}_incr ON ${tableName}
+        """
+    // FIXME(walter) support drop rollup binlog
+    // assertTrue(checkShowTimesOf("""
+    //                             SHOW CREATE MATERIALIZED VIEW ${tableName}_incr
+    //                             ON ${tableName}
+    //                             """,
+    //                             { res -> res.size() == 0 }, 30, "target"))
 }
