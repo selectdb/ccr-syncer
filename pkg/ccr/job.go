@@ -673,10 +673,8 @@ func (j *Job) fullSync() error {
 
 		switch j.SyncType {
 		case DBSync:
-			// refresh dest meta cache
-			if _, err := j.destMeta.GetTables(); err != nil {
-				return err
-			}
+			// refresh dest meta cache before building table mapping.
+			j.destMeta.ClearTablesCache()
 			tableMapping := make(map[int64]int64)
 			for srcTableId := range j.progress.TableCommitSeqMap {
 				srcTableName, err := j.srcMeta.GetTableNameById(srcTableId)
@@ -1159,8 +1157,8 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 		return xerror.Wrapf(err, xerror.Normal, "create table %d", createTable.TableId)
 	}
 
-	j.srcMeta.GetTables()
-	j.destMeta.GetTables()
+	j.srcMeta.ClearTablesCache()
+	j.destMeta.ClearTablesCache()
 
 	var srcTableName string
 	srcTableName, err = j.srcMeta.GetTableNameById(createTable.TableId)
@@ -1211,8 +1209,8 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 		return xerror.Wrapf(err, xerror.Normal, "drop table %s", tableName)
 	}
 
-	j.srcMeta.GetTables()
-	j.destMeta.GetTables()
+	j.srcMeta.ClearTablesCache()
+	j.destMeta.ClearTablesCache()
 	if j.progress.TableMapping != nil {
 		delete(j.progress.TableMapping, dropTable.TableId)
 		j.progress.Done()
@@ -1617,7 +1615,7 @@ func (j *Job) handleError(err error) error {
 
 	if xerr.Category() == xerror.Meta {
 		log.Warnf("receive meta category error, make new snapshot, job: %s, err: %v", j.Name, err)
-		j.newSnapshot(j.progress.CommitSeq)
+		_ = j.newSnapshot(j.progress.CommitSeq)
 	}
 	return nil
 }
@@ -1743,8 +1741,8 @@ func (j *Job) Run() error {
 
 	// Hack: for drop table
 	if j.SyncType == DBSync {
-		j.srcMeta.GetTables()
-		j.destMeta.GetTables()
+		j.srcMeta.ClearTablesCache()
+		j.destMeta.ClearTablesCache()
 	}
 
 	j.run()

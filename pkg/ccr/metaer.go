@@ -111,6 +111,7 @@ type Metaer interface {
 
 	CheckBinlogFeature() error
 	DirtyGetTables() map[int64]*TableMeta
+	ClearTablesCache()
 
 	IngestBinlogMetaer
 
