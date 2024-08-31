@@ -10162,6 +10162,7 @@ type TPaimonFileDesc struct {
 	LastUpdateTime    *int64                   `thrift:"last_update_time,10,optional" frugal:"10,optional,i64" json:"last_update_time,omitempty"`
 	FileFormat        *string                  `thrift:"file_format,11,optional" frugal:"11,optional,string" json:"file_format,omitempty"`
 	DeletionFile      *TPaimonDeletionFileDesc `thrift:"deletion_file,12,optional" frugal:"12,optional,TPaimonDeletionFileDesc" json:"deletion_file,omitempty"`
+	HadoopConf        map[string]string        `thrift:"hadoop_conf,13,optional" frugal:"13,optional,map<string:string>" json:"hadoop_conf,omitempty"`
 }
 
 func NewTPaimonFileDesc() *TPaimonFileDesc {
@@ -10278,6 +10279,15 @@ func (p *TPaimonFileDesc) GetDeletionFile() (v *TPaimonDeletionFileDesc) {
 	}
 	return p.DeletionFile
 }
+
+var TPaimonFileDesc_HadoopConf_DEFAULT map[string]string
+
+func (p *TPaimonFileDesc) GetHadoopConf() (v map[string]string) {
+	if !p.IsSetHadoopConf() {
+		return TPaimonFileDesc_HadoopConf_DEFAULT
+	}
+	return p.HadoopConf
+}
 func (p *TPaimonFileDesc) SetPaimonSplit(val *string) {
 	p.PaimonSplit = val
 }
@@ -10314,6 +10324,9 @@ func (p *TPaimonFileDesc) SetFileFormat(val *string) {
 func (p *TPaimonFileDesc) SetDeletionFile(val *TPaimonDeletionFileDesc) {
 	p.DeletionFile = val
 }
+func (p *TPaimonFileDesc) SetHadoopConf(val map[string]string) {
+	p.HadoopConf = val
+}
 
 var fieldIDToName_TPaimonFileDesc = map[int16]string{
 	1:  "paimon_split",
@@ -10328,6 +10341,7 @@ var fieldIDToName_TPaimonFileDesc = map[int16]string{
 	10: "last_update_time",
 	11: "file_format",
 	12: "deletion_file",
+	13: "hadoop_conf",
 }
 
 func (p *TPaimonFileDesc) IsSetPaimonSplit() bool {
@@ -10376,6 +10390,10 @@ func (p *TPaimonFileDesc) IsSetFileFormat() bool {
 
 func (p *TPaimonFileDesc) IsSetDeletionFile() bool {
 	return p.DeletionFile != nil
+}
+
+func (p *TPaimonFileDesc) IsSetHadoopConf() bool {
+	return p.HadoopConf != nil
 }
 
 func (p *TPaimonFileDesc) Read(iprot thrift.TProtocol) (err error) {
@@ -10488,6 +10506,14 @@ func (p *TPaimonFileDesc) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10669,6 +10695,35 @@ func (p *TPaimonFileDesc) ReadField12(iprot thrift.TProtocol) error {
 	p.DeletionFile = _field
 	return nil
 }
+func (p *TPaimonFileDesc) ReadField13(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.HadoopConf = _field
+	return nil
+}
 
 func (p *TPaimonFileDesc) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -10722,6 +10777,10 @@ func (p *TPaimonFileDesc) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 	}
@@ -10981,6 +11040,36 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
 
+func (p *TPaimonFileDesc) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHadoopConf() {
+		if err = oprot.WriteFieldBegin("hadoop_conf", thrift.MAP, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.HadoopConf)); err != nil {
+			return err
+		}
+		for k, v := range p.HadoopConf {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
+
 func (p *TPaimonFileDesc) String() string {
 	if p == nil {
 		return "<nil>"
@@ -11029,6 +11118,9 @@ func (p *TPaimonFileDesc) DeepEqual(ano *TPaimonFileDesc) bool {
 		return false
 	}
 	if !p.Field12DeepEqual(ano.DeletionFile) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.HadoopConf) {
 		return false
 	}
 	return true
@@ -11171,6 +11263,19 @@ func (p *TPaimonFileDesc) Field12DeepEqual(src *TPaimonDeletionFileDesc) bool {
 
 	if !p.DeletionFile.DeepEqual(src) {
 		return false
+	}
+	return true
+}
+func (p *TPaimonFileDesc) Field13DeepEqual(src map[string]string) bool {
+
+	if len(p.HadoopConf) != len(src) {
+		return false
+	}
+	for k, v := range p.HadoopConf {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }

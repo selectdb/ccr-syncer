@@ -73,6 +73,7 @@ type Client interface {
 	SyncQueryColumns(ctx context.Context, request *frontendservice.TSyncQueryColumns, callOptions ...callopt.Option) (r *status.TStatus, err error)
 	FetchSplitBatch(ctx context.Context, request *frontendservice.TFetchSplitBatchRequest, callOptions ...callopt.Option) (r *frontendservice.TFetchSplitBatchResult_, err error)
 	UpdatePartitionStatsCache(ctx context.Context, request *frontendservice.TUpdateFollowerPartitionStatsCacheRequest, callOptions ...callopt.Option) (r *status.TStatus, err error)
+	FetchRunningQueries(ctx context.Context, request *frontendservice.TFetchRunningQueriesRequest, callOptions ...callopt.Option) (r *frontendservice.TFetchRunningQueriesResult_, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -402,4 +403,9 @@ func (p *kFrontendServiceClient) FetchSplitBatch(ctx context.Context, request *f
 func (p *kFrontendServiceClient) UpdatePartitionStatsCache(ctx context.Context, request *frontendservice.TUpdateFollowerPartitionStatsCacheRequest, callOptions ...callopt.Option) (r *status.TStatus, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.UpdatePartitionStatsCache(ctx, request)
+}
+
+func (p *kFrontendServiceClient) FetchRunningQueries(ctx context.Context, request *frontendservice.TFetchRunningQueriesRequest, callOptions ...callopt.Option) (r *frontendservice.TFetchRunningQueriesResult_, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.FetchRunningQueries(ctx, request)
 }

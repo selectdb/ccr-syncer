@@ -81,6 +81,7 @@ func NewServiceInfo() *kitex.ServiceInfo {
 		"syncQueryColumns":          kitex.NewMethodInfo(syncQueryColumnsHandler, newFrontendServiceSyncQueryColumnsArgs, newFrontendServiceSyncQueryColumnsResult, false),
 		"fetchSplitBatch":           kitex.NewMethodInfo(fetchSplitBatchHandler, newFrontendServiceFetchSplitBatchArgs, newFrontendServiceFetchSplitBatchResult, false),
 		"updatePartitionStatsCache": kitex.NewMethodInfo(updatePartitionStatsCacheHandler, newFrontendServiceUpdatePartitionStatsCacheArgs, newFrontendServiceUpdatePartitionStatsCacheResult, false),
+		"fetchRunningQueries":       kitex.NewMethodInfo(fetchRunningQueriesHandler, newFrontendServiceFetchRunningQueriesArgs, newFrontendServiceFetchRunningQueriesResult, false),
 	}
 	extra := map[string]interface{}{
 		"PackageName":     "frontendservice",
@@ -1177,6 +1178,24 @@ func newFrontendServiceUpdatePartitionStatsCacheResult() interface{} {
 	return frontendservice.NewFrontendServiceUpdatePartitionStatsCacheResult()
 }
 
+func fetchRunningQueriesHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*frontendservice.FrontendServiceFetchRunningQueriesArgs)
+	realResult := result.(*frontendservice.FrontendServiceFetchRunningQueriesResult)
+	success, err := handler.(frontendservice.FrontendService).FetchRunningQueries(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newFrontendServiceFetchRunningQueriesArgs() interface{} {
+	return frontendservice.NewFrontendServiceFetchRunningQueriesArgs()
+}
+
+func newFrontendServiceFetchRunningQueriesResult() interface{} {
+	return frontendservice.NewFrontendServiceFetchRunningQueriesResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -1780,6 +1799,16 @@ func (p *kClient) UpdatePartitionStatsCache(ctx context.Context, request *fronte
 	_args.Request = request
 	var _result frontendservice.FrontendServiceUpdatePartitionStatsCacheResult
 	if err = p.c.Call(ctx, "updatePartitionStatsCache", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) FetchRunningQueries(ctx context.Context, request *frontendservice.TFetchRunningQueriesRequest) (r *frontendservice.TFetchRunningQueriesResult_, err error) {
+	var _args frontendservice.FrontendServiceFetchRunningQueriesArgs
+	_args.Request = request
+	var _result frontendservice.FrontendServiceFetchRunningQueriesResult
+	if err = p.c.Call(ctx, "fetchRunningQueries", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

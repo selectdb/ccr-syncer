@@ -30,6 +30,7 @@ include "RuntimeProfile.thrift"
 include "MasterService.thrift"
 include "AgentService.thrift"
 include "DataSinks.thrift"
+include "HeartbeatService.thrift"
 
 // These are supporting structs for JniFrontend.java, which serves as the glue
 // between our C++ execution environment and the Java frontend.
@@ -1003,6 +1004,7 @@ enum TSchemaTableName {
   WORKLOAD_SCHEDULE_POLICY = 5,
   TABLE_OPTIONS = 6,
   WORKLOAD_GROUP_PRIVILEGES = 7,
+  TABLE_PROPERTIES = 8,
 }
 
 struct TMetadataTableRequestParams {
@@ -1023,6 +1025,8 @@ struct TSchemaTableRequestParams {
     1: optional list<string> columns_name
     2: optional Types.TUserIdentity current_user_ident
     3: optional bool replay_to_other_fe
+    4: optional string catalog  // use for table specific queries
+    5: optional i64 dbId         // used for table specific queries
 }
 
 struct TFetchSchemaTableDataRequest {
@@ -1516,6 +1520,7 @@ struct TGetColumnInfoResult {
 
 struct TShowProcessListRequest {
     1: optional bool show_full_sql
+    2: optional Types.TUserIdentity current_user_ident
 }
 
 struct TShowProcessListResult {
@@ -1555,6 +1560,15 @@ struct TFetchSplitBatchRequest {
 
 struct TFetchSplitBatchResult {
     1: optional list<Planner.TScanRangeLocations> splits
+    2: optional Status.TStatus status
+}
+
+struct TFetchRunningQueriesResult {
+    1: optional Status.TStatus status
+    2: optional list<Types.TUniqueId> running_queries
+}
+
+struct TFetchRunningQueriesRequest {
 }
 
 service FrontendService {
@@ -1651,4 +1665,6 @@ service FrontendService {
 
     TFetchSplitBatchResult fetchSplitBatch(1: TFetchSplitBatchRequest request)
     Status.TStatus updatePartitionStatsCache(1: TUpdateFollowerPartitionStatsCacheRequest request)
+
+    TFetchRunningQueriesResult fetchRunningQueries(1: TFetchRunningQueriesRequest request)
 }
