@@ -36,5 +36,5 @@ func NewRenameTableFromJson(data string) (*RenameTable, error) {
 
 // Stringer
 func (r *RenameTable) String() string {
-	return fmt.Sprintf("RenameTable: %v", r)
+	return fmt.Sprintf("RenameTable: DbId: %d, TableId: %d, ParititonId: %d, IndexId: %d, NewTableName: %s, OldTableName: %s, NewRollupName: %s, OldRollupName: %s, NewParitionName: %s, OldParitionName: %s", r.DbId, r.TableId, r.ParititonId, r.IndexId, r.NewTableName, r.OldTableName, r.NewRollupName, r.OldRollupName, r.NewParitionName, r.OldParitionName)
 }
