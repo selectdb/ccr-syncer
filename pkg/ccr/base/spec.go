@@ -471,12 +471,17 @@ func (s *Spec) CheckDatabaseExists() (bool, error) {
 func (s *Spec) CheckTableExists() (bool, error) {
 	log.Debugf("check table exist by spec: %s", s.String())
 
+	return s.CheckTableExistsByName(s.Table)
+}
+
+// check table exists in database dir by the specified table name.
+func (s *Spec) CheckTableExistsByName(tableName string) (bool, error) {
 	db, err := s.Connect()
 	if err != nil {
 		return false, err
 	}
 
-	sql := fmt.Sprintf("SHOW TABLES FROM %s LIKE '%s'", utils.FormatKeywordName(s.Database), s.Table)
+	sql := fmt.Sprintf("SHOW TABLES FROM %s LIKE '%s'", utils.FormatKeywordName(s.Database), tableName)
 	rows, err := db.Query(sql)
 	if err != nil {
 		return false, xerror.Wrapf(err, xerror.Normal, "show tables failed, sql: %s", sql)
@@ -886,7 +891,7 @@ func (s *Spec) LightningSchemaChange(srcDatabase string, lightningSchemaChange *
 	} else {
 		sql = strings.Replace(rawSql, fmt.Sprintf("`%s`.", srcDatabase), "", 1)
 	}
-	log.Infof("lightningSchemaChangeSql, rawSql: %s, sql: %s", rawSql, sql)
+	log.Infof("lighting schema change sql, rawSql: %s, sql: %s", rawSql, sql)
 	return s.DbExec(sql)
 }
 
@@ -898,7 +903,16 @@ func (s *Spec) TruncateTable(destTableName string, truncateTable *record.Truncat
 		sql = fmt.Sprintf("TRUNCATE TABLE %s %s", utils.FormatKeywordName(destTableName), truncateTable.RawSql)
 	}
 
-	log.Infof("truncateTableSql: %s", sql)
+	log.Infof("truncate table sql: %s", sql)
+
+	return s.DbExec(sql)
+}
+
+func (s *Spec) ReplaceTable(fromName, toName string, swap bool) error {
+	sql := fmt.Sprintf("ALTER TABLE %s REPLACE WITH TABLE %s PROPERTIES(\"swap\"=\"%t\")",
+		utils.FormatKeywordName(fromName), utils.FormatKeywordName(toName), swap)
+
+	log.Infof("replace table sql: %s", sql)
 
 	return s.DbExec(sql)
 }

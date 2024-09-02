@@ -315,7 +315,8 @@ func (j *Job) partialSync() error {
 	switch j.progress.SubSyncState {
 	case Done:
 		log.Infof("partial sync status: done")
-		if err := j.newPartialSnapshot(table, partitions); err != nil {
+		withAlias := len(j.progress.TableAliases) > 0
+		if err := j.newPartialSnapshot(table, partitions, withAlias); err != nil {
 			return err
 		}
 
@@ -411,7 +412,16 @@ func (j *Job) partialSync() error {
 		log.Debugf("partial sync begin restore snapshot %s to %s", snapshotName, restoreSnapshotName)
 
 		var tableRefs []*festruct.TTableRef
-		if j.isTableSyncWithAlias() {
+
+		// ATTN: The table name of the alias is from the source cluster.
+		if aliasName, ok := j.progress.TableAliases[table]; ok {
+			tableRefs = make([]*festruct.TTableRef, 0)
+			tableRef := &festruct.TTableRef{
+				Table:     &j.Src.Table,
+				AliasName: &aliasName,
+			}
+			tableRefs = append(tableRefs, tableRef)
+		} else if j.isTableSyncWithAlias() {
 			log.Debugf("table sync snapshot not same name, table: %s, dest table: %s", j.Src.Table, j.Dest.Table)
 			tableRefs = make([]*festruct.TTableRef, 0)
 			tableRef := &festruct.TTableRef{
@@ -420,6 +430,7 @@ func (j *Job) partialSync() error {
 			}
 			tableRefs = append(tableRefs, tableRef)
 		}
+
 		cleanPartitions, cleanTables := false, false // DO NOT drop exists tables and partitions
 		restoreResp, err := destRpc.RestoreSnapshot(dest, tableRefs, restoreSnapshotName, snapshotResp, cleanTables, cleanPartitions)
 		if err != nil {
@@ -446,8 +457,33 @@ func (j *Job) partialSync() error {
 	case PersistRestoreInfo:
 		// Step 5: Update job progress && dest table id
 		// update job info, only for dest table id
-		log.Infof("fullsync status: persist restore info")
+		if alias, ok := j.progress.TableAliases[table]; ok {
+			targetName := table
+			if j.isTableSyncWithAlias() {
+				targetName = j.Dest.Table
+			}
 
+			// check table exists to ensure the idempotent
+			if exist, err := j.IDest.CheckTableExistsByName(alias); err != nil {
+				return err
+			} else if exist {
+				log.Infof("partial sync swap table with alias, table: %s, alias: %s", targetName, alias)
+				swap := false // drop the old table
+				if err := j.IDest.ReplaceTable(alias, targetName, swap); err != nil {
+					return err
+				}
+				// Since the meta of dest table has been changed, refresh it.
+				j.destMeta.ClearTablesCache()
+			} else {
+				log.Infof("partial sync the table alias has been swapped, table: %s, alias: %s", targetName, alias)
+			}
+
+			// Save the replace result
+			j.progress.TableAliases = nil
+			j.progress.NextSubCheckpoint(PersistRestoreInfo, j.progress.PersistData)
+		}
+
+		log.Infof("partial sync status: persist restore info")
 		switch j.SyncType {
 		case DBSync:
 			j.progress.NextWithPersist(j.progress.CommitSeq, DBTablesIncrementalSync, Done, "")
@@ -1359,7 +1395,7 @@ func (j *Job) handleReplacePartitions(binlog *festruct.TBinlog) error {
 		partitions = replacePartition.TempPartitions
 	}
 
-	return j.newPartialSnapshot(replacePartition.TableName, partitions)
+	return j.newPartialSnapshot(replacePartition.TableName, partitions, false)
 }
 
 // return: error && bool backToRunLoop
@@ -1663,6 +1699,8 @@ func (j *Job) run() {
 func (j *Job) newSnapshot(commitSeq int64) error {
 	log.Infof("new snapshot, commitSeq: %d", commitSeq)
 
+	j.progress.PartialSyncData = nil
+	j.progress.TableAliases = nil
 	switch j.SyncType {
 	case TableSync:
 		j.progress.NextWithPersist(commitSeq, TableFullSync, BeginCreateSnapshot, "")
@@ -1679,20 +1717,38 @@ func (j *Job) newSnapshot(commitSeq int64) error {
 
 // New partial snapshot, with the source cluster table name and the partitions to sync.
 // A empty partitions means to sync the whole table.
-func (j *Job) newPartialSnapshot(table string, partitions []string) error {
-	// The binlog of commitSeq will be skipped once the partial snapshot finished.
-	commitSeq := j.progress.CommitSeq
-	log.Infof("new partial snapshot, commitSeq: %d, table: %s, partitions: %v", commitSeq, table, partitions)
-
+//
+// If the replace is true, the restore task will load data into a new table and replaces the old
+// one when restore finished. So replace requires whole table partial sync.
+func (j *Job) newPartialSnapshot(table string, partitions []string, replace bool) error {
 	if j.SyncType == TableSync && table != j.Src.Table {
 		return xerror.Errorf(xerror.Normal,
 			"partial sync table name is not equals to the source name %s, table: %s, sync type: table", j.Src.Table, table)
 	}
 
-	j.progress.PartialSyncData = &JobPartialSyncData{
+	if replace && len(partitions) != 0 {
+		return xerror.Errorf(xerror.Normal,
+			"partial sync with replace but partitions is not empty, table: %s, len: %d", table, len(partitions))
+	}
+
+	// The binlog of commitSeq will be skipped once the partial snapshot finished.
+	commitSeq := j.progress.CommitSeq
+
+	syncData := &JobPartialSyncData{
 		Table:      table,
 		Partitions: partitions,
 	}
+	j.progress.PartialSyncData = syncData
+	j.progress.TableAliases = nil
+	if replace {
+		alias := tableAlias(table)
+		j.progress.TableAliases = make(map[string]string)
+		j.progress.TableAliases[table] = alias
+		log.Infof("new partial snapshot, commitSeq: %d, table: %s, alias: %s", commitSeq, table, alias)
+	} else {
+		log.Infof("new partial snapshot, commitSeq: %d, table: %s, partitions: %v", commitSeq, table, partitions)
+	}
+
 	switch j.SyncType {
 	case TableSync:
 		j.progress.NextWithPersist(commitSeq, TablePartialSync, BeginCreateSnapshot, "")
@@ -2051,4 +2107,8 @@ func restoreSnapshotName(snapshotName string) string {
 
 	// use current seconds
 	return fmt.Sprintf("%s_r_%d", snapshotName, time.Now().Unix())
+}
+
+func tableAlias(tableName string) string {
+	return fmt.Sprintf("__ccr_%s_%d", tableName, time.Now().Unix())
 }
