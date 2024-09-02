@@ -24,6 +24,7 @@ type Specer interface {
 	CreateTableOrView(createTable *record.CreateTable, srcDatabase string) error
 	CheckDatabaseExists() (bool, error)
 	CheckTableExists() (bool, error)
+	CheckTableExistsByName(tableName string) (bool, error)
 	CreatePartialSnapshotAndWaitForDone(table string, partitions []string) (string, error)
 	CreateSnapshotAndWaitForDone(tables []string) (string, error)
 	CheckRestoreFinished(snapshotName string) (bool, error)
@@ -32,6 +33,7 @@ type Specer interface {
 
 	LightningSchemaChange(srcDatabase string, changes *record.ModifyTableAddOrDropColumns) error
 	TruncateTable(destTableName string, truncateTable *record.TruncateTable) error
+	ReplaceTable(fromName, toName string, swap bool) error
 	DropTable(tableName string, force bool) error
 	DropView(viewName string) error
 
