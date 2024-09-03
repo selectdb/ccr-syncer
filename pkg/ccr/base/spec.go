@@ -337,7 +337,7 @@ func (s *Spec) GetAllViewsFromTable(tableName string) ([]string, error) {
 	}
 
 	// then query view's create sql, if create sql contains tableName, this view is wanted
-	viewRegex := regexp.MustCompile("`internal`.`(\\w+)`.`" + strings.TrimSpace(tableName) + "`")
+	viewRegex := regexp.MustCompile("(`internal`\\.`\\w+`|`default_cluster:\\w+`)\\.`" + strings.TrimSpace(tableName) + "`")
 	for _, eachViewName := range viewsFromQuery {
 		showCreateViewSql := fmt.Sprintf("SHOW CREATE VIEW %s", eachViewName)
 		createViewSqlList, err := s.queryResult(showCreateViewSql, "Create View", "SHOW CREATE VIEW")
@@ -421,10 +421,12 @@ func (s *Spec) CreateTableOrView(createTable *record.CreateTable, srcDatabase st
 	if isCreateView {
 		log.Debugf("create view, use dest db name to replace source db name")
 
-		// replace `internal`.`source_db_name`. to `internal`.`dest_db_name`.
-		originalName := "`internal`.`" + strings.TrimSpace(srcDatabase) + "`."
+		// replace `internal`.`source_db_name`. or `default_cluster:source_db_name`. to `internal`.`dest_db_name`.
+		originalNameNewStyle := "`internal`.`" + strings.TrimSpace(srcDatabase) + "`."
+		originalNameOldStyle := "`default_cluster:" + strings.TrimSpace(srcDatabase) + "`." // for Doris 2.0.x
 		replaceName := "`internal`.`" + strings.TrimSpace(s.Database) + "`."
-		createTable.Sql = strings.ReplaceAll(createTable.Sql, originalName, replaceName)
+		createTable.Sql = strings.ReplaceAll(
+			strings.ReplaceAll(createTable.Sql, originalNameNewStyle, replaceName), originalNameOldStyle, replaceName)
 		log.Debugf("original create view sql is %s, after replace, now sql is %s", createSql, createTable.Sql)
 	}
 
