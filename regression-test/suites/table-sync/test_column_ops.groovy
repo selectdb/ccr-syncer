@@ -108,6 +108,31 @@ suite("test_column_ops") {
         return ret
     }
 
+    def checkColumnCommentTimesOf = { checkTable, expectedColComments, times -> Boolean
+        def res = target_sql "SHOW FULL COLUMNS FROM ${checkTable}"
+        while (times > 0) {
+            Boolean allMatch = true
+            for (expected in expectedColComments.entrySet()) {
+                Boolean oneMatch = false
+                for (List<Object> row : res) {
+                    if (!oneMatch) {
+                        oneMatch =
+                            (row[0] as String).equals(expected.key) && (row[8] as String).equals(expected.value)
+                    }
+                }
+                allMatch = allMatch & oneMatch
+            }
+            if (allMatch) {
+                return true
+            } else if (--times > 0) {
+                sleep(sync_gap_time)
+                res = target_sql "SHOW FULL COLUMNS FROM ${checkTable}"
+            }
+        }
+
+        return false
+    }
+
     def exist = { res -> Boolean
         return res.size() != 0
     }
@@ -147,7 +172,7 @@ suite("test_column_ops") {
     assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
 
 
-    logger.info("=== Test 2: add column case ===")
+    logger.info("=== Test 1: add column case ===")
     sql """
         ALTER TABLE ${tableName}
         ADD COLUMN (`cost` VARCHAR(3) DEFAULT "123")
@@ -164,8 +189,8 @@ suite("test_column_ops") {
                                       3, 30))
 
 
-    logger.info("=== Test 3: modify column length case ===")
-    test_num = 3
+    logger.info("=== Test 2: modify column length case ===")
+    test_num = 2
     sql """
         ALTER TABLE ${tableName}
         MODIFY COLUMN `cost` VARCHAR(4) DEFAULT "123"
@@ -178,8 +203,8 @@ suite("test_column_ops") {
                                       1, 30))
 
 
-//     logger.info("=== Test 4: modify column type case ===")
-//     test_num = 4
+//     logger.info("=== Test 3: modify column type case ===")
+//     test_num = 3
 //     sql """
 //         ALTER TABLE ${tableName}
 //         MODIFY COLUMN `cost` INT DEFAULT "123"
@@ -191,6 +216,16 @@ suite("test_column_ops") {
 //         """
 //     assertTrue(checkSelectRowTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
 //                                       1, 30))
+
+
+    logger.info("=== Test 4: modify column comment case ===")
+    sql """
+        ALTER TABLE ${tableName}
+        MODIFY COLUMN `test` COMMENT 'test number',
+        MODIFY COLUMN `id` COMMENT 'index of one test number'
+        """
+    assertTrue(checkColumnCommentTimesOf(tableName,
+        [test: "test number", id: "index of one test number", cost: ""], 30))
 
 
     logger.info("=== Test 5: drop column case ===")
