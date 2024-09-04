@@ -156,7 +156,7 @@ suite("test_view_and_mv") {
 
     def checkTableOrViewExists = { res, name -> Boolean
         for (List<Object> row : res) {
-            if ((row[1] as String).equals(name)) {
+            if ((row[0] as String).equals(name)) {
                 return true
             }
         }
@@ -230,10 +230,10 @@ suite("test_view_and_mv") {
     logger.info("=== Test 2: drop view ===")
     sql "DROP VIEW view_test"
     sql "sync"
-    def checkFunc = { res -> Boolean
-        return checkTableOrViewExists(res, "view_test")
+    def checkViewNotExistFunc = { res -> Boolean
+        return !checkTableOrViewExists(res, "view_test")
     }
-    assertFalse(checkShowTimesOf("SHOW VIEWS", checkFunc, 5, func = "target_sql"))
+    assertTrue(checkShowTimesOf("SHOW VIEWS", checkViewNotExistFunc, 5, func = "target_sql"))
 
     logger.info("=== Test 3: delete job ===")
     httpTest {
