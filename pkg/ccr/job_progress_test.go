@@ -14,6 +14,20 @@ func init() {
 	log.SetOutput(io.Discard)
 }
 
+func deepEqual(got, expect string) bool {
+	var v1, v2 interface{}
+	err := json.Unmarshal([]byte(got), &v1)
+	if err != nil {
+		return false
+	}
+
+	err = json.Unmarshal([]byte(expect), &v2)
+	if err != nil {
+		return false
+	}
+	return reflect.DeepEqual(v1, v2)
+}
+
 func TestJobProgress_MarshalJSON(t *testing.T) {
 	type fields struct {
 		JobName           string
@@ -27,11 +41,12 @@ func TestJobProgress_MarshalJSON(t *testing.T) {
 		TableCommitSeqMap map[int64]int64
 		InMemoryData      any
 		PersistData       string
+		TableAliases      map[string]string
 	}
 	tests := []struct {
 		name    string
 		fields  fields
-		want    []byte
+		want    string
 		wantErr bool
 	}{
 		{
@@ -46,8 +61,26 @@ func TestJobProgress_MarshalJSON(t *testing.T) {
 				TableCommitSeqMap: map[int64]int64{1: 2},
 				InMemoryData:      nil,
 				PersistData:       "test-data",
+				TableAliases:      map[string]string{"table": "alias"},
 			},
-			want:    []byte(`{"job_name":"test-job","sync_state":500,"sub_sync_state":{"state":0,"binlog_type":-1},"prev_commit_seq":0,"commit_seq":1,"table_mapping":null,"table_commit_seq_map":{"1":2},"data":"test-data"}`),
+			want: `{
+  "job_name": "test-job",
+  "sync_state": 500,
+  "sub_sync_state": {
+    "state": 0,
+    "binlog_type": -1
+  },
+  "prev_commit_seq": 0,
+  "commit_seq": 1,
+  "table_mapping": null,
+  "table_commit_seq_map": {
+    "1": 2
+  },
+  "data": "test-data",
+  "table_aliases": {
+    "table": "alias"
+  }
+}`,
 			wantErr: false,
 		},
 	}
@@ -63,13 +96,14 @@ func TestJobProgress_MarshalJSON(t *testing.T) {
 				TableCommitSeqMap: tt.fields.TableCommitSeqMap,
 				InMemoryData:      tt.fields.InMemoryData,
 				PersistData:       tt.fields.PersistData,
+				TableAliases:      tt.fields.TableAliases,
 			}
 			got, err := json.Marshal(jp)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("JobProgress.MarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+			if !deepEqual(string(got), tt.want) {
 				t.Errorf("JobProgress.MarshalJSON() = %v, want %v", string(got), string(tt.want))
 			}
 		})
