@@ -16,6 +16,11 @@
 // under the License.
 
 suite("test_db_sync_rename_table") {
+    def versions = sql_return_maparray "show variables like 'version_comment'"
+    if (versions[0].Value.contains('doris-2.0.') || versions[0].Value.contains('doris-2.1.')) {
+        logger.info("2.0/2.1 not support this case, current version is: ${versions[0].Value}")
+        return
+    }
 
     def tableName = "tbl_rename_table_" + UUID.randomUUID().toString().replace("-", "")
     def syncerAddress = "127.0.0.1:9190"
