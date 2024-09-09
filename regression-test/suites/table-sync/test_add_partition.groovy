@@ -273,6 +273,12 @@ suite("test_add_partition") {
 
     assertTrue(checkRestoreFinishTimesOf("${tableName}", 60))
 
+    def versions = sql_return_maparray "show variables like 'version_comment'"
+    if (versions[0].Value.contains('doris-2.0.')) {
+        logger.info("2.0 not support INSERT OVERWRITE yet, current version is: ${versions[0].Value}")
+        return
+    }
+
     sql """
         INSERT OVERWRITE TABLE ${tableName} VALUES (1, 100);
        """
