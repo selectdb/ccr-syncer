@@ -178,10 +178,10 @@ suite("test_add_many_column") {
         def found_last_key = false
         def found_last_value = false
         for (int i = 0; i < res.size(); i++) {
-            if (res[i][0] == 'last_key' && res[i][3] == 'YES') {
+            if (res[i][0] == 'last_key' && (res[i][3] == 'YES' || res[i][3] == 'true')) {
                 found_last_key = true
             }
-            if (res[i][0] == 'last_value' && res[i][3] == 'NO') {
+            if (res[i][0] == 'last_value' && (res[i][3] == 'NO' || res[i][3] == 'false')) {
                 found_last_value = true
             }
         }

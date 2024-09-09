@@ -181,7 +181,7 @@ suite("test_add_agg_column") {
 
     def has_column_first = { res -> Boolean
         // Field == 'first' && 'Key' == 'YES'
-        return res[0][0] == 'first' && res[0][3] == 'YES'
+        return res[0][0] == 'first' && (res[0][3] == 'YES' || res[0][3] == 'true')
     }
 
     assertTrue(checkShowTimesOf("SHOW COLUMNS FROM `${tableName}`", has_column_first, 60, "target_sql"))
@@ -212,7 +212,7 @@ suite("test_add_agg_column") {
 
     def has_column_last = { res -> Boolean
         // Field == 'last' && 'Key' == 'YES'
-        return res[3][0] == 'last' && res[3][3] == 'YES'
+        return res[3][0] == 'last' && (res[3][3] == 'YES' || res[3][3] == 'true')
     }
 
     assertTrue(checkShowTimesOf("SHOW COLUMNS FROM `${tableName}`", has_column_last, 60, "target_sql"))
@@ -244,7 +244,7 @@ suite("test_add_agg_column") {
 
     def has_column_first_value = { res -> Boolean
         // Field == 'first_value' && 'Key' == 'NO'
-        return res[4][0] == 'first_value' && res[4][3] == 'NO'
+        return res[4][0] == 'first_value' && (res[4][3] == 'NO' || res[4][3] == 'false')
     }
 
     assertTrue(checkShowTimesOf("SHOW COLUMNS FROM `${tableName}`", has_column_first_value, 60, "target_sql"))
@@ -276,7 +276,7 @@ suite("test_add_agg_column") {
 
     def has_column_last_value = { res -> Boolean
         // Field == 'last_value' && 'Key' == 'NO'
-        return res[6][0] == 'last_value' && res[6][3] == 'NO'
+        return res[6][0] == 'last_value' && (res[6][3] == 'NO' || res[6][3] == 'false')
     }
 
     assertTrue(checkShowTimesOf("SHOW COLUMNS FROM `${tableName}`", has_column_last_value, 60, "target_sql"))

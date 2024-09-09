@@ -176,10 +176,10 @@ suite("test_order_by") {
 
     def key_columns_order = { res -> Boolean
         // Field == 'id' && 'Key' == 'YES'
-        return res[0][0] == 'id' && res[0][3] == 'YES' &&
-            res[1][0] == 'test' && res[1][3] == 'YES' &&
-            res[2][0] == 'value1' && res[2][3] == 'NO' &&
-            res[3][0] == 'value' && res[3][3] == 'NO'
+        return res[0][0] == 'id' && (res[0][3] == 'YES' || res[0][3] == 'true') &&
+            res[1][0] == 'test' && (res[1][3] == 'YES' || res[1][3] == 'true') &&
+            res[2][0] == 'value1' && (res[2][3] == 'NO' || res[2][3] == 'false') &&
+            res[3][0] == 'value' && (res[3][3] == 'NO' || res[3][3] == 'false')
     }
 
     assertTrue(checkShowTimesOf("SHOW COLUMNS FROM `${tableName}`", key_columns_order, 60, "target_sql"))
