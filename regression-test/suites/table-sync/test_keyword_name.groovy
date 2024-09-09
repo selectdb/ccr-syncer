@@ -131,7 +131,7 @@ suite("test_keyword_name") {
         endpoint syncerAddress
         def bodyJson = get_ccr_body "${tableName}"
         body "${bodyJson}"
-        on "post"
+        op "post"
     }
 
     httpTest {
