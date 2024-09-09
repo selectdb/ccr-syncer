@@ -36,11 +36,16 @@ const (
 
 var (
 	featureSchemaChangePartialSync bool
+	featureCleanTableAndPartitions bool
 )
 
 func init() {
 	flag.BoolVar(&featureSchemaChangePartialSync, "feature_schema_change_partial_sync", true,
 		"use partial sync when working with schema change")
+
+	// The default value is false, since clean tables will erase views unexpectedly.
+	flag.BoolVar(&featureCleanTableAndPartitions, "feature_clean_table_and_partitions", false,
+		"clean non restored tables and partitions during fullsync")
 }
 
 type SyncType int
@@ -670,6 +675,10 @@ func (j *Job) fullSync() error {
 		cleanTables, cleanPartitions := false, true
 		if j.SyncType == DBSync {
 			cleanTables = true
+		}
+		if featureCleanTableAndPartitions {
+			cleanTables = false
+			cleanPartitions = false
 		}
 		restoreResp, err := destRpc.RestoreSnapshot(dest, tableRefs, restoreSnapshotName, snapshotResp, cleanTables, cleanPartitions)
 		if err != nil {
