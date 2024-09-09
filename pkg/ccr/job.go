@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"math"
 	"math/rand"
@@ -32,6 +33,15 @@ import (
 const (
 	SYNC_DURATION = time.Second * 3
 )
+
+var (
+	featureSchemaChangePartialSync bool
+)
+
+func init() {
+	flag.BoolVar(&featureSchemaChangePartialSync, "feature_schema_change_partial_sync", true,
+		"use partial sync when working with schema change")
+}
 
 type SyncType int
 
@@ -1272,9 +1282,7 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 	if err != nil {
 		return err
 	}
-	if alterJob.TableName == "" {
-		return xerror.Errorf(xerror.Normal, "invalid alter job, tableName: %s", alterJob.TableName)
-	}
+
 	if !alterJob.IsFinished() {
 		return nil
 	}
@@ -1285,6 +1293,11 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 		destTableName = j.Dest.Table
 	} else {
 		destTableName = alterJob.TableName
+	}
+
+	if featureSchemaChangePartialSync && alterJob.Type == record.ALTER_JOB_SCHEMA_CHANGE {
+		replaceTable := true
+		return j.newPartialSnapshot(alterJob.TableName, nil, replaceTable)
 	}
 
 	var allViewDeleted bool = false

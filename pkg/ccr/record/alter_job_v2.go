@@ -7,6 +7,11 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 )
 
+const (
+	ALTER_JOB_SCHEMA_CHANGE = "SCHEMA_CHANGE"
+	ALTER_JOB_ROLLUP        = "ROLLUP"
+)
+
 type AlterJobV2 struct {
 	Type      string `json:"type"`
 	DbId      int64  `json:"dbId"`
@@ -31,7 +36,11 @@ func NewAlterJobV2FromJson(data string) (*AlterJobV2, error) {
 	// }
 
 	if alterJob.TableId == 0 {
-		return nil, xerror.Errorf(xerror.Normal, "table id not found")
+		return nil, xerror.Errorf(xerror.Normal, "invalid alter job, table id not found")
+	}
+
+	if alterJob.TableName == "" {
+		return nil, xerror.Errorf(xerror.Normal, "invalid alter job, tableName is empty")
 	}
 
 	return &alterJob, nil
