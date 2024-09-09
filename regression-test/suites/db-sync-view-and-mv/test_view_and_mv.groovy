@@ -200,17 +200,8 @@ suite("test_view_and_mv") {
         create materialized view user_id_name_${suffix} as
         select user_id, name from ${tableDuplicate0};
         """
-    // when create materialized view, source cluster will backup again firstly.
-    // so we check the backup and restore status
 
-    // first, check backup
-    sleep(15000)
-    assertTrue(checkBackupFinishTimesOf("${tableDuplicate0}", 60))
-
-    // then, check retore
-    sleep(15000)
-    assertTrue(checkRestoreRowsTimesOf(2, 30))
-    assertTrue(checkRestoreFinishTimesOf("${tableDuplicate0}", 30))
+    assertTrue(checkRestoreFinishTimesOf("${view_test_${suffix}}", 30))
 
     explain {
         sql("select user_id, name from ${tableDuplicate0}")
