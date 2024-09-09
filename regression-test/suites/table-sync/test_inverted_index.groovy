@@ -180,6 +180,12 @@ suite("test_inverted_index") {
 
     run_test.call()
 
+    def versions = sql_return_maparray "show variables like 'version_comment'"
+    if (versions[0].Value.contains('doris-2.0.')) {
+        logger.info("doris 2.0 not support inverted index with unique mor")
+        return
+    }
+
     /**
     * test for unique key table with mor
     */
