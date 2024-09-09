@@ -17,8 +17,8 @@
 
 suite("test_allow_table_exists") {
     def versions = sql_return_maparray "show variables like 'version_comment'"
-    if (versions[0].Value.contains('doris-2.0.')) {
-        logger.info("2.0 not support this case, current version is: ${versions[0].Value}")
+    if (versions[0].Value.contains('doris-2.0.') || versions[0].Value.contains('doris-2.1')) {
+        logger.info("2.0/2.1 not support this case, current version is: ${versions[0].Value}")
         return
     }
 
