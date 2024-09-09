@@ -161,10 +161,11 @@ suite("test_view_and_mv") {
         return res.size() == 0
     }
 
-    def tableDuplicate0 = "tbl_duplicate_0_" + UUID.randomUUID().toString().replace("-", "")
+    def suffix = UUID.randomUUID().toString().replace("-", "")
+    def tableDuplicate0 = "tbl_duplicate_0_${suffix}"
     createDuplicateTable(tableDuplicate0)
     sql """
-        INSERT INTO ${tableDuplicate0} VALUES 
+        INSERT INTO ${tableDuplicate0} VALUES
         (1, "Emily", 25),
         (2, "Benjamin", 35),
         (3, "Olivia", 28),
@@ -189,14 +190,14 @@ suite("test_view_and_mv") {
 
     logger.info("=== Test1: create view and materialized view ===")
     sql """
-        CREATE VIEW view_test (k1, name,  v1)
+        CREATE VIEW view_test_${suffix} (k1, name,  v1)
         AS
         SELECT user_id as k1, name,  SUM(age) FROM ${tableDuplicate0}
         GROUP BY k1,name;
         """
 
     sql """
-        create materialized view user_id_name as
+        create materialized view user_id_name_${suffix} as
         select user_id, name from ${tableDuplicate0};
         """
     // when create materialized view, source cluster will backup again firstly.
