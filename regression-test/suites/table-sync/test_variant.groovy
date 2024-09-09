@@ -16,6 +16,12 @@
 // under the License.
 
 suite("test_variant_ccr") {
+    def versions = sql_return_maparray "show variables like 'version_comment'"
+    if (versions[0].Value.contains('doris-2.0.')) {
+        logger.info("2.0 not support variant case, current version is: ${versions[0].Value}")
+        return
+    }
+
     def tableName = "test_variant_" + UUID.randomUUID().toString().replace("-", "")
     def syncerAddress = "127.0.0.1:9190"
     def insert_num = 5
