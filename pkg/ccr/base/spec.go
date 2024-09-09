@@ -676,24 +676,27 @@ func (s *Spec) CheckRestoreFinished(snapshotName string) (bool, error) {
 	return false, nil
 }
 
-func (s *Spec) GetRestoreSignatureNotMatchedTable(snapshotName string) (string, error) {
+func (s *Spec) GetRestoreSignatureNotMatchedTableOrView(snapshotName string) (string, bool, error) {
 	log.Debugf("get restore signature not matched table, spec: %s, snapshot: %s", s.String(), snapshotName)
 
 	for i := 0; i < MAX_CHECK_RETRY_TIMES; i++ {
 		if restoreState, status, err := s.checkRestoreFinished(snapshotName); err != nil {
-			return "", err
+			return "", false, err
 		} else if restoreState == RestoreStateFinished {
-			return "", nil
+			return "", false, nil
 		} else if restoreState == RestoreStateCancelled && strings.Contains(status, SIGNATURE_NOT_MATCHED) {
-			pattern := regexp.MustCompile("Table (?P<tableName>.*) already exist but with different schema")
+			pattern := regexp.MustCompile("(?P<tableOrView>Table|View) (?P<tableName>.*) already exist but with different schema")
 			matches := pattern.FindStringSubmatch(status)
 			index := pattern.SubexpIndex("tableName")
-			if len(matches) < index && len(matches[index]) == 0 {
-				return "", xerror.Errorf(xerror.Normal, "match table name from restore status failed, spec: %s, snapshot: %s, status: %s", s.String(), snapshotName, status)
+			if len(matches) == 0 || index == -1 || len(matches[index]) == 0 {
+				return "", false, xerror.Errorf(xerror.Normal, "match table name from restore status failed, spec: %s, snapshot: %s, status: %s", s.String(), snapshotName, status)
 			}
-			return matches[index], nil
+
+			resource := matches[pattern.SubexpIndex("tableOrView")]
+			tableOrView := resource == "Table"
+			return matches[index], tableOrView, nil
 		} else if restoreState == RestoreStateCancelled {
-			return "", xerror.Errorf(xerror.Normal, "restore failed or canceled, spec: %s, snapshot: %s, status: %s", s.String(), snapshotName, status)
+			return "", false, xerror.Errorf(xerror.Normal, "restore failed or canceled, spec: %s, snapshot: %s, status: %s", s.String(), snapshotName, status)
 		} else {
 			// RestoreStatePending, RestoreStateUnknown
 			time.Sleep(RESTORE_CHECK_DURATION)
@@ -701,7 +704,7 @@ func (s *Spec) GetRestoreSignatureNotMatchedTable(snapshotName string) (string, 
 	}
 
 	log.Warnf("get restore signature not matched timeout, max try times: %d, spec: %s, snapshot: %s", MAX_CHECK_RETRY_TIMES, s, snapshotName)
-	return "", nil
+	return "", false, nil
 }
 
 func (s *Spec) waitTransactionDone(txnId int64) error {

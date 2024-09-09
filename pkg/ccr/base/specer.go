@@ -26,7 +26,7 @@ type Specer interface {
 	CheckTableExists() (bool, error)
 	CreateSnapshotAndWaitForDone(tables []string) (string, error)
 	CheckRestoreFinished(snapshotName string) (bool, error)
-	GetRestoreSignatureNotMatchedTable(snapshotName string) (string, error)
+	GetRestoreSignatureNotMatchedTableOrView(snapshotName string) (string, bool, error)
 	WaitTransactionDone(txnId int64) // busy wait
 
 	LightningSchemaChange(srcDatabase string, changes *record.ModifyTableAddOrDropColumns) error

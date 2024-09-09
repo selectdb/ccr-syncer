@@ -382,7 +382,7 @@ func (j *Job) fullSync() error {
 		if err != nil {
 			return xerror.Errorf(xerror.Normal, "marshal jobInfo failed, jobInfo: %v", jobInfoMap)
 		}
-		log.Debugf("job info size: %d, bytes: %s", len(jobInfoBytes), string(jobInfoBytes))
+		log.Debugf("job info size: %d, bytes: %.128s", len(jobInfoBytes), string(jobInfoBytes))
 		snapshotResp.SetJobInfo(jobInfoBytes)
 
 		var commitSeq int64 = math.MaxInt64
@@ -448,21 +448,33 @@ func (j *Job) fullSync() error {
 			if err != nil && errors.Is(err, base.ErrRestoreSignatureNotMatched) {
 				// We need rebuild the exists table.
 				var tableName string
+				var tableOrView bool = true
 				if j.SyncType == TableSync {
 					tableName = j.Dest.Table
 				} else {
-					tableName, err = j.IDest.GetRestoreSignatureNotMatchedTable(restoreSnapshotName)
+					tableName, tableOrView, err = j.IDest.GetRestoreSignatureNotMatchedTableOrView(restoreSnapshotName)
 					if err != nil || len(tableName) == 0 {
 						continue
 					}
 				}
-				log.Infof("the signature of table %s is not matched with the target table in snapshot", tableName)
+
+				resource := "table"
+				if !tableOrView {
+					resource = "view"
+				}
+				log.Infof("the signature of %s %s is not matched with the target table in snapshot", resource, tableName)
 				for {
-					if err := j.IDest.DropTable(tableName); err == nil {
-						break
+					if tableOrView {
+						if err := j.IDest.DropTable(tableName); err == nil {
+							break
+						}
+					} else {
+						if err := j.IDest.DropView(tableName); err == nil {
+							break
+						}
 					}
 				}
-				log.Infof("the restore is cancelled, the unmatched table %s is dropped, restore snapshot again", tableName)
+				log.Infof("the restore is cancelled, the unmatched %s %s is dropped, restore snapshot again", resource, tableName)
 				break
 			} else if err != nil {
 				return err
