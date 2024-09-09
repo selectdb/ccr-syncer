@@ -96,7 +96,7 @@ suite("test_add_partition") {
         CREATE TABLE if NOT EXISTS ${tableName}
         (
             `test` INT,
-            `id` INT
+            `id` INT NOT NULL
         )
         ENGINE=OLAP
         UNIQUE KEY(`test`, `id`)
@@ -146,7 +146,7 @@ suite("test_add_partition") {
         CREATE TABLE if NOT EXISTS ${tableName}
         (
             `test` INT,
-            `id` INT
+            `id` INT NOT NULL
         )
         ENGINE=OLAP
         UNIQUE KEY(`test`, `id`)
@@ -251,7 +251,7 @@ suite("test_add_partition") {
         CREATE TABLE if NOT EXISTS ${tableName}
         (
             `test` INT,
-            `id` INT
+            `id` INT NOT NULL
         )
         ENGINE=OLAP
         UNIQUE KEY(`test`, `id`)
