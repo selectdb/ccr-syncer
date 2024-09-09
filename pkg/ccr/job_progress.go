@@ -159,7 +159,7 @@ type JobProgress struct {
 	PartialSyncData   *JobPartialSyncData `json:"partial_sync_data,omitempty"`
 
 	// The tables need to be replaced rather than dropped during sync.
-	TableAliases map[string]string `json:"table_aliases"`
+	TableAliases map[string]string `json:"table_aliases,omitempty"`
 
 	// Some fields to save the unix epoch time of the key timepoint.
 	CreatedAt              int64 `json:"created_at,omitempty"`

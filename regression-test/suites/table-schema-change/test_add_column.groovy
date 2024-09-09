@@ -117,6 +117,40 @@ suite("test_add_column") {
         }
     }
 
+    def get_ccr_name = { ccr_body_json ->
+        def jsonSlurper = new groovy.json.JsonSlurper()
+        def object = jsonSlurper.parseText "${ccr_body_json}"
+        return object.name
+    }
+
+    def get_job_progress = { ccr_name ->
+        def request_body = """ {"name":"${ccr_name}"} """
+        def get_job_progress_uri = { check_func ->
+            httpTest {
+                uri "/job_progress"
+                endpoint syncerAddress
+                body request_body
+                op "post"
+                check check_func
+            }
+        }
+
+        def result = null
+        get_job_progress_uri.call() { code, body ->
+            if (!"${code}".toString().equals("200")) {
+                throw "request failed, code: ${code}, body: ${body}"
+            }
+            def jsonSlurper = new groovy.json.JsonSlurper()
+            def object = jsonSlurper.parseText "${body}"
+            if (!object.success) {
+                throw "request failed, error msg: ${object.error_msg}"
+            }
+            logger.info("job progress: ${object.job_progress}")
+            result = jsonSlurper.parseText object.job_progress
+        }
+        return result
+    }
+
     sql "DROP TABLE IF EXISTS ${tableName}"
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
@@ -143,17 +177,20 @@ suite("test_add_column") {
         """
     sql "sync"
 
+    def bodyJson = get_ccr_body "${tableName}"
+    ccr_name = get_ccr_name(bodyJson)
     httpTest {
         uri "/create_ccr"
         endpoint syncerAddress
-        def bodyJson = get_ccr_body "${tableName}"
         body "${bodyJson}"
         op "post"
         result response
     }
+    logger.info("ccr job name: ${ccr_name}")
 
     assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
 
+    first_job_progress = get_job_progress(ccr_name)
 
     logger.info("=== Test 1: add first column case ===")
     // binlog type: ALTER_JOB, binlog data:
@@ -280,4 +317,8 @@ suite("test_add_column") {
     }
 
     assertTrue(checkShowTimesOf("SHOW COLUMNS FROM `${tableName}`", has_column_last_value, 60, "target_sql"))
+
+    // no full sync triggered.
+    last_job_progress = get_job_progress(ccr_name)
+    assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
 }

@@ -568,15 +568,10 @@ func (s *Spec) CreatePartialSnapshotAndWaitForDone(table string, partitions []st
 		return "", xerror.Errorf(xerror.Normal, "source db is empty! you should have at least one table")
 	}
 
-	if len(partitions) == 0 {
-		return "", xerror.Errorf(xerror.Normal, "partition is empty! you should have at least one partition")
-	}
-
 	// snapshot name format "ccrp_${table}_${timestamp}"
 	// table refs = table
 	snapshotName := fmt.Sprintf("ccrp_%s_%s_%d", s.Database, s.Table, time.Now().Unix())
 	tableRef := utils.FormatKeywordName(table)
-	partitionRefs := "`" + strings.Join(partitions, "`,`") + "`"
 
 	log.Infof("create partial snapshot %s.%s", s.Database, snapshotName)
 
@@ -585,7 +580,13 @@ func (s *Spec) CreatePartialSnapshotAndWaitForDone(table string, partitions []st
 		return "", err
 	}
 
-	backupSnapshotSql := fmt.Sprintf("BACKUP SNAPSHOT %s.%s TO `__keep_on_local__` ON ( %s PARTITION (%s) ) PROPERTIES (\"type\" = \"full\")", utils.FormatKeywordName(s.Database), snapshotName, tableRef, partitionRefs)
+	partitionRefs := ""
+	if len(partitions) > 0 {
+		partitionRefs = " PARTITION (`" + strings.Join(partitions, "`,`") + "`)"
+	}
+	backupSnapshotSql := fmt.Sprintf(
+		"BACKUP SNAPSHOT %s.%s TO `__keep_on_local__` ON (%s%s) PROPERTIES (\"type\" = \"full\")",
+		utils.FormatKeywordName(s.Database), snapshotName, tableRef, partitionRefs)
 	log.Debugf("backup partial snapshot sql: %s", backupSnapshotSql)
 	_, err = db.Exec(backupSnapshotSql)
 	if err != nil {
@@ -912,7 +913,7 @@ func (s *Spec) TruncateTable(destTableName string, truncateTable *record.Truncat
 
 func (s *Spec) ReplaceTable(fromName, toName string, swap bool) error {
 	sql := fmt.Sprintf("ALTER TABLE %s REPLACE WITH TABLE %s PROPERTIES(\"swap\"=\"%t\")",
-		utils.FormatKeywordName(fromName), utils.FormatKeywordName(toName), swap)
+		utils.FormatKeywordName(toName), utils.FormatKeywordName(fromName), swap)
 
 	log.Infof("replace table sql: %s", sql)
 
