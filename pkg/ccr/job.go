@@ -1346,6 +1346,32 @@ func (j *Job) handleLightningSchemaChange(binlog *festruct.TBinlog) error {
 	return j.IDest.LightningSchemaChange(j.Src.Database, lightningSchemaChange)
 }
 
+// handle modify comment
+func (j *Job) handleModifyComment(binlog *festruct.TBinlog) error {
+	log.Infof("handle modify comment binlog")
+
+	data := binlog.GetData()
+	modifyComment, err := record.NewModifyCommentFromJson(data)
+	if err != nil {
+		return err
+	}
+
+	destTableId, err := j.getDestTableIdBySrc(modifyComment.TblId)
+	if err != nil {
+		return err
+	}
+
+	destTableName, err := j.destMeta.GetTableNameById(destTableId)
+	if err != nil {
+		return err
+	} else if destTableName == "" {
+		return xerror.Errorf(xerror.Normal, "tableId %d not found in destMeta", destTableId)
+	}
+
+	err = j.IDest.ModifyComment(destTableName, modifyComment)
+	return err
+}
+
 func (j *Job) handleTruncateTable(binlog *festruct.TBinlog) error {
 	log.Infof("handle truncate table binlog, prevCommitSeq: %d, commitSeq: %d",
 		j.progress.PrevCommitSeq, j.progress.CommitSeq)
@@ -1481,6 +1507,8 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		return j.handleAlterJob(binlog)
 	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS:
 		return j.handleLightningSchemaChange(binlog)
+	case festruct.TBinlogType_MODIFY_COMMENT:
+		return j.handleModifyComment(binlog)
 	case festruct.TBinlogType_DUMMY:
 		return j.handleDummy(binlog)
 	case festruct.TBinlogType_ALTER_DATABASE_PROPERTY:

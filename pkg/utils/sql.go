@@ -88,3 +88,10 @@ func (r *RowParser) GetString(columnName string) (string, error) {
 func FormatKeywordName(name string) string {
 	return "`" + strings.TrimSpace(name) + "`"
 }
+
+func EscapeStringValue(value string) string {
+	escaped := strings.ReplaceAll(value, "\\", "\\\\")
+	escaped = strings.ReplaceAll(escaped, "\"", "\\\"")
+	escaped = strings.ReplaceAll(escaped, "'", "\\'")
+	return escaped
+}
