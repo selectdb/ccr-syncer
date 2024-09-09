@@ -162,7 +162,7 @@ suite("test_add_many_column") {
     // }
     sql """
         ALTER TABLE ${tableName}
-        ADD COLUMN (`last_key` INT KEY DEFAULT 0, `last_value` INT DEFAULT 0)
+        ADD COLUMN (`last_key` INT KEY DEFAULT "0", `last_value` INT DEFAULT "0")
         """
     sql "sync"
 

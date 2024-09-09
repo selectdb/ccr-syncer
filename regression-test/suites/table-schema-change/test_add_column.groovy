@@ -205,7 +205,7 @@ suite("test_add_column") {
     //  }
     sql """
         ALTER TABLE ${tableName}
-        ADD COLUMN `first` INT KEY DEFAULT 0 FIRST
+        ADD COLUMN `first` INT KEY DEFAULT "0" FIRST
         """
     sql "sync"
 
@@ -236,7 +236,7 @@ suite("test_add_column") {
     // }
     sql """
         ALTER TABLE ${tableName}
-        ADD COLUMN `last` INT KEY DEFAULT 0 AFTER `id`
+        ADD COLUMN `last` INT KEY DEFAULT "0" AFTER `id`
         """
     sql "sync"
 
@@ -268,7 +268,7 @@ suite("test_add_column") {
     //   }
     sql """
         ALTER TABLE ${tableName}
-        ADD COLUMN `first_value` INT DEFAULT 0 AFTER `last`
+        ADD COLUMN `first_value` INT DEFAULT "0" AFTER `last`
         """
     sql "sync"
 
@@ -300,7 +300,7 @@ suite("test_add_column") {
     // }
     sql """
         ALTER TABLE ${tableName}
-        ADD COLUMN `last_value` INT DEFAULT 0 AFTER `value`
+        ADD COLUMN `last_value` INT DEFAULT "0" AFTER `value`
         """
     sql "sync"
 
