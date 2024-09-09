@@ -11454,6 +11454,560 @@ func (p *THivePartition) Field3DeepEqual(src *plannodes.TFileFormatType) bool {
 	return true
 }
 
+type THiveSerDeProperties struct {
+	FieldDelim      *string `thrift:"field_delim,1,optional" frugal:"1,optional,string" json:"field_delim,omitempty"`
+	LineDelim       *string `thrift:"line_delim,2,optional" frugal:"2,optional,string" json:"line_delim,omitempty"`
+	CollectionDelim *string `thrift:"collection_delim,3,optional" frugal:"3,optional,string" json:"collection_delim,omitempty"`
+	MapkvDelim      *string `thrift:"mapkv_delim,4,optional" frugal:"4,optional,string" json:"mapkv_delim,omitempty"`
+	EscapeChar      *string `thrift:"escape_char,5,optional" frugal:"5,optional,string" json:"escape_char,omitempty"`
+	NullFormat      *string `thrift:"null_format,6,optional" frugal:"6,optional,string" json:"null_format,omitempty"`
+}
+
+func NewTHiveSerDeProperties() *THiveSerDeProperties {
+	return &THiveSerDeProperties{}
+}
+
+func (p *THiveSerDeProperties) InitDefault() {
+}
+
+var THiveSerDeProperties_FieldDelim_DEFAULT string
+
+func (p *THiveSerDeProperties) GetFieldDelim() (v string) {
+	if !p.IsSetFieldDelim() {
+		return THiveSerDeProperties_FieldDelim_DEFAULT
+	}
+	return *p.FieldDelim
+}
+
+var THiveSerDeProperties_LineDelim_DEFAULT string
+
+func (p *THiveSerDeProperties) GetLineDelim() (v string) {
+	if !p.IsSetLineDelim() {
+		return THiveSerDeProperties_LineDelim_DEFAULT
+	}
+	return *p.LineDelim
+}
+
+var THiveSerDeProperties_CollectionDelim_DEFAULT string
+
+func (p *THiveSerDeProperties) GetCollectionDelim() (v string) {
+	if !p.IsSetCollectionDelim() {
+		return THiveSerDeProperties_CollectionDelim_DEFAULT
+	}
+	return *p.CollectionDelim
+}
+
+var THiveSerDeProperties_MapkvDelim_DEFAULT string
+
+func (p *THiveSerDeProperties) GetMapkvDelim() (v string) {
+	if !p.IsSetMapkvDelim() {
+		return THiveSerDeProperties_MapkvDelim_DEFAULT
+	}
+	return *p.MapkvDelim
+}
+
+var THiveSerDeProperties_EscapeChar_DEFAULT string
+
+func (p *THiveSerDeProperties) GetEscapeChar() (v string) {
+	if !p.IsSetEscapeChar() {
+		return THiveSerDeProperties_EscapeChar_DEFAULT
+	}
+	return *p.EscapeChar
+}
+
+var THiveSerDeProperties_NullFormat_DEFAULT string
+
+func (p *THiveSerDeProperties) GetNullFormat() (v string) {
+	if !p.IsSetNullFormat() {
+		return THiveSerDeProperties_NullFormat_DEFAULT
+	}
+	return *p.NullFormat
+}
+func (p *THiveSerDeProperties) SetFieldDelim(val *string) {
+	p.FieldDelim = val
+}
+func (p *THiveSerDeProperties) SetLineDelim(val *string) {
+	p.LineDelim = val
+}
+func (p *THiveSerDeProperties) SetCollectionDelim(val *string) {
+	p.CollectionDelim = val
+}
+func (p *THiveSerDeProperties) SetMapkvDelim(val *string) {
+	p.MapkvDelim = val
+}
+func (p *THiveSerDeProperties) SetEscapeChar(val *string) {
+	p.EscapeChar = val
+}
+func (p *THiveSerDeProperties) SetNullFormat(val *string) {
+	p.NullFormat = val
+}
+
+var fieldIDToName_THiveSerDeProperties = map[int16]string{
+	1: "field_delim",
+	2: "line_delim",
+	3: "collection_delim",
+	4: "mapkv_delim",
+	5: "escape_char",
+	6: "null_format",
+}
+
+func (p *THiveSerDeProperties) IsSetFieldDelim() bool {
+	return p.FieldDelim != nil
+}
+
+func (p *THiveSerDeProperties) IsSetLineDelim() bool {
+	return p.LineDelim != nil
+}
+
+func (p *THiveSerDeProperties) IsSetCollectionDelim() bool {
+	return p.CollectionDelim != nil
+}
+
+func (p *THiveSerDeProperties) IsSetMapkvDelim() bool {
+	return p.MapkvDelim != nil
+}
+
+func (p *THiveSerDeProperties) IsSetEscapeChar() bool {
+	return p.EscapeChar != nil
+}
+
+func (p *THiveSerDeProperties) IsSetNullFormat() bool {
+	return p.NullFormat != nil
+}
+
+func (p *THiveSerDeProperties) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_THiveSerDeProperties[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *THiveSerDeProperties) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FieldDelim = _field
+	return nil
+}
+func (p *THiveSerDeProperties) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.LineDelim = _field
+	return nil
+}
+func (p *THiveSerDeProperties) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CollectionDelim = _field
+	return nil
+}
+func (p *THiveSerDeProperties) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.MapkvDelim = _field
+	return nil
+}
+func (p *THiveSerDeProperties) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EscapeChar = _field
+	return nil
+}
+func (p *THiveSerDeProperties) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.NullFormat = _field
+	return nil
+}
+
+func (p *THiveSerDeProperties) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("THiveSerDeProperties"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *THiveSerDeProperties) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFieldDelim() {
+		if err = oprot.WriteFieldBegin("field_delim", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.FieldDelim); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *THiveSerDeProperties) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLineDelim() {
+		if err = oprot.WriteFieldBegin("line_delim", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.LineDelim); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *THiveSerDeProperties) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCollectionDelim() {
+		if err = oprot.WriteFieldBegin("collection_delim", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.CollectionDelim); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *THiveSerDeProperties) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMapkvDelim() {
+		if err = oprot.WriteFieldBegin("mapkv_delim", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.MapkvDelim); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *THiveSerDeProperties) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEscapeChar() {
+		if err = oprot.WriteFieldBegin("escape_char", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.EscapeChar); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *THiveSerDeProperties) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNullFormat() {
+		if err = oprot.WriteFieldBegin("null_format", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.NullFormat); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *THiveSerDeProperties) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("THiveSerDeProperties(%+v)", *p)
+
+}
+
+func (p *THiveSerDeProperties) DeepEqual(ano *THiveSerDeProperties) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.FieldDelim) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.LineDelim) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.CollectionDelim) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.MapkvDelim) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.EscapeChar) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.NullFormat) {
+		return false
+	}
+	return true
+}
+
+func (p *THiveSerDeProperties) Field1DeepEqual(src *string) bool {
+
+	if p.FieldDelim == src {
+		return true
+	} else if p.FieldDelim == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.FieldDelim, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *THiveSerDeProperties) Field2DeepEqual(src *string) bool {
+
+	if p.LineDelim == src {
+		return true
+	} else if p.LineDelim == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.LineDelim, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *THiveSerDeProperties) Field3DeepEqual(src *string) bool {
+
+	if p.CollectionDelim == src {
+		return true
+	} else if p.CollectionDelim == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.CollectionDelim, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *THiveSerDeProperties) Field4DeepEqual(src *string) bool {
+
+	if p.MapkvDelim == src {
+		return true
+	} else if p.MapkvDelim == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.MapkvDelim, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *THiveSerDeProperties) Field5DeepEqual(src *string) bool {
+
+	if p.EscapeChar == src {
+		return true
+	} else if p.EscapeChar == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.EscapeChar, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *THiveSerDeProperties) Field6DeepEqual(src *string) bool {
+
+	if p.NullFormat == src {
+		return true
+	} else if p.NullFormat == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.NullFormat, *src) != 0 {
+		return false
+	}
+	return true
+}
+
 type THiveTableSink struct {
 	DbName          *string                      `thrift:"db_name,1,optional" frugal:"1,optional,string" json:"db_name,omitempty"`
 	TableName       *string                      `thrift:"table_name,2,optional" frugal:"2,optional,string" json:"table_name,omitempty"`
@@ -11465,6 +12019,7 @@ type THiveTableSink struct {
 	Location        *THiveLocationParams         `thrift:"location,8,optional" frugal:"8,optional,THiveLocationParams" json:"location,omitempty"`
 	HadoopConfig    map[string]string            `thrift:"hadoop_config,9,optional" frugal:"9,optional,map<string:string>" json:"hadoop_config,omitempty"`
 	Overwrite       *bool                        `thrift:"overwrite,10,optional" frugal:"10,optional,bool" json:"overwrite,omitempty"`
+	SerdeProperties *THiveSerDeProperties        `thrift:"serde_properties,11,optional" frugal:"11,optional,THiveSerDeProperties" json:"serde_properties,omitempty"`
 }
 
 func NewTHiveTableSink() *THiveTableSink {
@@ -11563,6 +12118,15 @@ func (p *THiveTableSink) GetOverwrite() (v bool) {
 	}
 	return *p.Overwrite
 }
+
+var THiveTableSink_SerdeProperties_DEFAULT *THiveSerDeProperties
+
+func (p *THiveTableSink) GetSerdeProperties() (v *THiveSerDeProperties) {
+	if !p.IsSetSerdeProperties() {
+		return THiveTableSink_SerdeProperties_DEFAULT
+	}
+	return p.SerdeProperties
+}
 func (p *THiveTableSink) SetDbName(val *string) {
 	p.DbName = val
 }
@@ -11593,6 +12157,9 @@ func (p *THiveTableSink) SetHadoopConfig(val map[string]string) {
 func (p *THiveTableSink) SetOverwrite(val *bool) {
 	p.Overwrite = val
 }
+func (p *THiveTableSink) SetSerdeProperties(val *THiveSerDeProperties) {
+	p.SerdeProperties = val
+}
 
 var fieldIDToName_THiveTableSink = map[int16]string{
 	1:  "db_name",
@@ -11605,6 +12172,7 @@ var fieldIDToName_THiveTableSink = map[int16]string{
 	8:  "location",
 	9:  "hadoop_config",
 	10: "overwrite",
+	11: "serde_properties",
 }
 
 func (p *THiveTableSink) IsSetDbName() bool {
@@ -11645,6 +12213,10 @@ func (p *THiveTableSink) IsSetHadoopConfig() bool {
 
 func (p *THiveTableSink) IsSetOverwrite() bool {
 	return p.Overwrite != nil
+}
+
+func (p *THiveTableSink) IsSetSerdeProperties() bool {
+	return p.SerdeProperties != nil
 }
 
 func (p *THiveTableSink) Read(iprot thrift.TProtocol) (err error) {
@@ -11741,6 +12313,14 @@ func (p *THiveTableSink) Read(iprot thrift.TProtocol) (err error) {
 		case 10:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -11923,6 +12503,14 @@ func (p *THiveTableSink) ReadField10(iprot thrift.TProtocol) error {
 	p.Overwrite = _field
 	return nil
 }
+func (p *THiveTableSink) ReadField11(iprot thrift.TProtocol) error {
+	_field := NewTHiveSerDeProperties()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SerdeProperties = _field
+	return nil
+}
 
 func (p *THiveTableSink) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -11968,6 +12556,10 @@ func (p *THiveTableSink) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 	}
@@ -12205,6 +12797,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
 
+func (p *THiveTableSink) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSerdeProperties() {
+		if err = oprot.WriteFieldBegin("serde_properties", thrift.STRUCT, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SerdeProperties.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+
 func (p *THiveTableSink) String() string {
 	if p == nil {
 		return "<nil>"
@@ -12247,6 +12858,9 @@ func (p *THiveTableSink) DeepEqual(ano *THiveTableSink) bool {
 		return false
 	}
 	if !p.Field10DeepEqual(ano.Overwrite) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.SerdeProperties) {
 		return false
 	}
 	return true
@@ -12361,6 +12975,13 @@ func (p *THiveTableSink) Field10DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.Overwrite != *src {
+		return false
+	}
+	return true
+}
+func (p *THiveTableSink) Field11DeepEqual(src *THiveSerDeProperties) bool {
+
+	if !p.SerdeProperties.DeepEqual(src) {
 		return false
 	}
 	return true

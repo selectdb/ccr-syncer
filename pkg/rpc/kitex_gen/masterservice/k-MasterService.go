@@ -1482,6 +1482,20 @@ func (p *TFinishTaskRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 20:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField20(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -2000,6 +2014,33 @@ func (p *TFinishTaskRequest) FastReadField19(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TFinishTaskRequest) FastReadField20(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := bthrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.RespPartitions = make([]*agentservice.TCalcDeleteBitmapPartitionInfo, 0, size)
+	for i := 0; i < size; i++ {
+		_elem := agentservice.NewTCalcDeleteBitmapPartitionInfo()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		p.RespPartitions = append(p.RespPartitions, _elem)
+	}
+	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TFinishTaskRequest) FastWrite(buf []byte) int {
 	return 0
@@ -2028,6 +2069,7 @@ func (p *TFinishTaskRequest) FastWriteNocopy(buf []byte, binaryWriter bthrift.Bi
 		offset += p.fastWriteField17(buf[offset:], binaryWriter)
 		offset += p.fastWriteField18(buf[offset:], binaryWriter)
 		offset += p.fastWriteField19(buf[offset:], binaryWriter)
+		offset += p.fastWriteField20(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -2057,6 +2099,7 @@ func (p *TFinishTaskRequest) BLength() int {
 		l += p.field17Length()
 		l += p.field18Length()
 		l += p.field19Length()
+		l += p.field20Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -2356,6 +2399,24 @@ func (p *TFinishTaskRequest) fastWriteField19(buf []byte, binaryWriter bthrift.B
 	return offset
 }
 
+func (p *TFinishTaskRequest) fastWriteField20(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetRespPartitions() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "resp_partitions", thrift.LIST, 20)
+		listBeginOffset := offset
+		offset += bthrift.Binary.ListBeginLength(thrift.STRUCT, 0)
+		var length int
+		for _, v := range p.RespPartitions {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], binaryWriter)
+		}
+		bthrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+		offset += bthrift.Binary.WriteListEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TFinishTaskRequest) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("backend", thrift.STRUCT, 1)
@@ -2588,6 +2649,20 @@ func (p *TFinishTaskRequest) field19Length() int {
 			l += bthrift.Binary.MapEndLength()
 		}
 		l += bthrift.Binary.MapEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TFinishTaskRequest) field20Length() int {
+	l := 0
+	if p.IsSetRespPartitions() {
+		l += bthrift.Binary.FieldBeginLength("resp_partitions", thrift.LIST, 20)
+		l += bthrift.Binary.ListBeginLength(thrift.STRUCT, len(p.RespPartitions))
+		for _, v := range p.RespPartitions {
+			l += v.BLength()
+		}
+		l += bthrift.Binary.ListEndLength()
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l

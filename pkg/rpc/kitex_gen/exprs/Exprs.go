@@ -2662,16 +2662,24 @@ func (p *TLikePredicate) Field1DeepEqual(src string) bool {
 }
 
 type TMatchPredicate struct {
-	ParserType    string            `thrift:"parser_type,1,required" frugal:"1,required,string" json:"parser_type"`
-	ParserMode    string            `thrift:"parser_mode,2,required" frugal:"2,required,string" json:"parser_mode"`
-	CharFilterMap map[string]string `thrift:"char_filter_map,3,optional" frugal:"3,optional,map<string:string>" json:"char_filter_map,omitempty"`
+	ParserType      string            `thrift:"parser_type,1,required" frugal:"1,required,string" json:"parser_type"`
+	ParserMode      string            `thrift:"parser_mode,2,required" frugal:"2,required,string" json:"parser_mode"`
+	CharFilterMap   map[string]string `thrift:"char_filter_map,3,optional" frugal:"3,optional,map<string:string>" json:"char_filter_map,omitempty"`
+	ParserLowercase bool              `thrift:"parser_lowercase,4,optional" frugal:"4,optional,bool" json:"parser_lowercase,omitempty"`
+	ParserStopwords string            `thrift:"parser_stopwords,5,optional" frugal:"5,optional,string" json:"parser_stopwords,omitempty"`
 }
 
 func NewTMatchPredicate() *TMatchPredicate {
-	return &TMatchPredicate{}
+	return &TMatchPredicate{
+
+		ParserLowercase: true,
+		ParserStopwords: "",
+	}
 }
 
 func (p *TMatchPredicate) InitDefault() {
+	p.ParserLowercase = true
+	p.ParserStopwords = ""
 }
 
 func (p *TMatchPredicate) GetParserType() (v string) {
@@ -2690,6 +2698,24 @@ func (p *TMatchPredicate) GetCharFilterMap() (v map[string]string) {
 	}
 	return p.CharFilterMap
 }
+
+var TMatchPredicate_ParserLowercase_DEFAULT bool = true
+
+func (p *TMatchPredicate) GetParserLowercase() (v bool) {
+	if !p.IsSetParserLowercase() {
+		return TMatchPredicate_ParserLowercase_DEFAULT
+	}
+	return p.ParserLowercase
+}
+
+var TMatchPredicate_ParserStopwords_DEFAULT string = ""
+
+func (p *TMatchPredicate) GetParserStopwords() (v string) {
+	if !p.IsSetParserStopwords() {
+		return TMatchPredicate_ParserStopwords_DEFAULT
+	}
+	return p.ParserStopwords
+}
 func (p *TMatchPredicate) SetParserType(val string) {
 	p.ParserType = val
 }
@@ -2699,15 +2725,31 @@ func (p *TMatchPredicate) SetParserMode(val string) {
 func (p *TMatchPredicate) SetCharFilterMap(val map[string]string) {
 	p.CharFilterMap = val
 }
+func (p *TMatchPredicate) SetParserLowercase(val bool) {
+	p.ParserLowercase = val
+}
+func (p *TMatchPredicate) SetParserStopwords(val string) {
+	p.ParserStopwords = val
+}
 
 var fieldIDToName_TMatchPredicate = map[int16]string{
 	1: "parser_type",
 	2: "parser_mode",
 	3: "char_filter_map",
+	4: "parser_lowercase",
+	5: "parser_stopwords",
 }
 
 func (p *TMatchPredicate) IsSetCharFilterMap() bool {
 	return p.CharFilterMap != nil
+}
+
+func (p *TMatchPredicate) IsSetParserLowercase() bool {
+	return p.ParserLowercase != TMatchPredicate_ParserLowercase_DEFAULT
+}
+
+func (p *TMatchPredicate) IsSetParserStopwords() bool {
+	return p.ParserStopwords != TMatchPredicate_ParserStopwords_DEFAULT
 }
 
 func (p *TMatchPredicate) Read(iprot thrift.TProtocol) (err error) {
@@ -2752,6 +2794,22 @@ func (p *TMatchPredicate) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2848,6 +2906,28 @@ func (p *TMatchPredicate) ReadField3(iprot thrift.TProtocol) error {
 	p.CharFilterMap = _field
 	return nil
 }
+func (p *TMatchPredicate) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.ParserLowercase = _field
+	return nil
+}
+func (p *TMatchPredicate) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.ParserStopwords = _field
+	return nil
+}
 
 func (p *TMatchPredicate) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2865,6 +2945,14 @@ func (p *TMatchPredicate) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -2949,6 +3037,44 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 
+func (p *TMatchPredicate) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetParserLowercase() {
+		if err = oprot.WriteFieldBegin("parser_lowercase", thrift.BOOL, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.ParserLowercase); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *TMatchPredicate) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetParserStopwords() {
+		if err = oprot.WriteFieldBegin("parser_stopwords", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(p.ParserStopwords); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
 func (p *TMatchPredicate) String() string {
 	if p == nil {
 		return "<nil>"
@@ -2970,6 +3096,12 @@ func (p *TMatchPredicate) DeepEqual(ano *TMatchPredicate) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.CharFilterMap) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.ParserLowercase) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.ParserStopwords) {
 		return false
 	}
 	return true
@@ -2999,6 +3131,20 @@ func (p *TMatchPredicate) Field3DeepEqual(src map[string]string) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *TMatchPredicate) Field4DeepEqual(src bool) bool {
+
+	if p.ParserLowercase != src {
+		return false
+	}
+	return true
+}
+func (p *TMatchPredicate) Field5DeepEqual(src string) bool {
+
+	if strings.Compare(p.ParserStopwords, src) != 0 {
+		return false
 	}
 	return true
 }
