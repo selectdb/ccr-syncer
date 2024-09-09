@@ -125,6 +125,15 @@ suite("test_keyword_name") {
         (8, 'hunter', 'horde', NULL);
      """
 
+    // delete the exists ccr job first.
+    httpTest {
+        uri "/delete"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body "${tableName}"
+        body "${bodyJson}"
+        on "post"
+    }
+
     httpTest {
         uri "/create_ccr"
         endpoint syncerAddress
