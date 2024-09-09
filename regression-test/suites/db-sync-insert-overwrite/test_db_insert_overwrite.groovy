@@ -172,6 +172,15 @@ suite("test_db_insert_overwrite") {
 
     // test 1: target cluster follow source cluster
     logger.info("=== Test 1: backup/restore case ===")
+
+    httpTest {
+        uri "/delete"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body ""
+        body "${bodyJson}"
+        op "post"
+    }
+
     httpTest {
         uri "/create_ccr"
         endpoint syncerAddress

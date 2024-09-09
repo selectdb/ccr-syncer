@@ -188,6 +188,14 @@ suite("test_db_sync") {
 
     sql "ALTER DATABASE ${context.dbName} SET properties (\"binlog.enable\" = \"true\")"
 
+    httpTest {
+        uri "/delete"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body ""
+        body "${bodyJson}"
+        op "post"
+    }
+
     String response
     httpTest {
         uri "/create_ccr"

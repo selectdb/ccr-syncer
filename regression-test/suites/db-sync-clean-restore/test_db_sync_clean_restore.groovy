@@ -244,6 +244,14 @@ suite("test_db_sync_clean_restore") {
     sql "sync"
 
     httpTest {
+        uri "/delete"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body ""
+        body "${bodyJson}"
+        op "post"
+    }
+
+    httpTest {
         uri "/create_ccr"
         endpoint syncerAddress
         def bodyJson = get_ccr_body ""

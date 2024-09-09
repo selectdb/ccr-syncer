@@ -143,6 +143,13 @@ suite("test_db_sync_rename_table") {
     sql "ALTER DATABASE ${context.dbName} SET properties (\"binlog.enable\" = \"true\")"
     sql """ INSERT INTO ${tableName}_1 VALUES (1, '2017-03-30', 1), (2, '2017-03-29', 2), (3, '2017-03-28', 1) """
 
+    httpTest {
+        uri "/delete"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body ""
+        body "${bodyJson}"
+        op "post"
+    }
 
     httpTest {
         uri "/create_ccr"

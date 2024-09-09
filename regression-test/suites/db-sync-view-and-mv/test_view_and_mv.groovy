@@ -176,6 +176,15 @@ suite("test_view_and_mv") {
     sql "ALTER DATABASE ${context.dbName} SET properties (\"binlog.enable\" = \"true\")"
 
     String response
+
+    httpTest {
+        uri "/delete"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body ""
+        body "${bodyJson}"
+        op "post"
+    }
+
     httpTest {
         uri "/create_ccr"
         endpoint syncerAddress

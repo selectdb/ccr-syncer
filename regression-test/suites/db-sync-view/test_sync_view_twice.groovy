@@ -182,6 +182,15 @@ suite("test_sync_view_twice") {
         """
 
     String response
+
+    httpTest {
+        uri "/delete"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body ""
+        body "${bodyJson}"
+        op "post"
+    }
+
     httpTest {
         uri "/create_ccr"
         endpoint syncerAddress

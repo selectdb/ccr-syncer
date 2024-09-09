@@ -152,6 +152,14 @@ suite("test_db_sync_signature_not_matched") {
     assertEquals(v.size(), insert_num);
 
     httpTest {
+        uri "/delete"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body ""
+        body "${bodyJson}"
+        op "post"
+    }
+
+    httpTest {
         uri "/create_ccr"
         endpoint syncerAddress
         def bodyJson = get_ccr_body ""
