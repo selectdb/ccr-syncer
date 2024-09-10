@@ -201,7 +201,7 @@ suite("test_view_and_mv") {
         select user_id, name from ${tableDuplicate0};
         """
 
-    assertTrue(checkRestoreFinishTimesOf("${view_test_${suffix}}", 30))
+    assertTrue(checkRestoreFinishTimesOf("view_test_${suffix}", 30))
 
     explain {
         sql("select user_id, name from ${tableDuplicate0}")
