@@ -672,13 +672,12 @@ func (j *Job) fullSync() error {
 		}
 
 		// drop exists partitions, and drop tables if in db sync.
-		cleanTables, cleanPartitions := false, true
-		if j.SyncType == DBSync {
-			cleanTables = true
-		}
+		cleanTables, cleanPartitions := false, false
 		if featureCleanTableAndPartitions {
-			cleanTables = false
-			cleanPartitions = false
+			cleanPartitions = true
+			if j.SyncType == DBSync {
+				cleanTables = true
+			}
 		}
 		restoreResp, err := destRpc.RestoreSnapshot(dest, tableRefs, restoreSnapshotName, snapshotResp, cleanTables, cleanPartitions)
 		if err != nil {
