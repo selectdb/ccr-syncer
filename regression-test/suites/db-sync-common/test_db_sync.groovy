@@ -16,6 +16,11 @@
 // under the License.
 
 suite("test_db_sync") {
+    def versions = sql_return_maparray "show variables like 'version_comment'"
+    if (versions[0].Value.contains('doris-2.0.')) {
+        logger.info("2.0 not support AUTO PARTITION, current version is: ${versions[0].Value}")
+        return
+    }
 
     def syncerAddress = "127.0.0.1:9190"
     def test_num = 0
@@ -182,6 +187,14 @@ suite("test_db_sync") {
     }
 
     sql "ALTER DATABASE ${context.dbName} SET properties (\"binlog.enable\" = \"true\")"
+
+    httpTest {
+        uri "/delete"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body ""
+        body "${bodyJson}"
+        op "post"
+    }
 
     String response
     httpTest {

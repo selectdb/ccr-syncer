@@ -493,6 +493,7 @@ type TTabletSchema struct {
 	ClusterKeyIdxes               []int32                        `thrift:"cluster_key_idxes,19,optional" frugal:"19,optional,list<i32>" json:"cluster_key_idxes,omitempty"`
 	RowStoreColCids               []int32                        `thrift:"row_store_col_cids,20,optional" frugal:"20,optional,list<i32>" json:"row_store_col_cids,omitempty"`
 	RowStorePageSize              int64                          `thrift:"row_store_page_size,21,optional" frugal:"21,optional,i64" json:"row_store_page_size,omitempty"`
+	VariantEnableFlattenNested    bool                           `thrift:"variant_enable_flatten_nested,22,optional" frugal:"22,optional,bool" json:"variant_enable_flatten_nested,omitempty"`
 }
 
 func NewTTabletSchema() *TTabletSchema {
@@ -506,6 +507,7 @@ func NewTTabletSchema() *TTabletSchema {
 		EnableSingleReplicaCompaction: false,
 		SkipWriteIndexOnLoad:          false,
 		RowStorePageSize:              16384,
+		VariantEnableFlattenNested:    false,
 	}
 }
 
@@ -518,6 +520,7 @@ func (p *TTabletSchema) InitDefault() {
 	p.EnableSingleReplicaCompaction = false
 	p.SkipWriteIndexOnLoad = false
 	p.RowStorePageSize = 16384
+	p.VariantEnableFlattenNested = false
 }
 
 func (p *TTabletSchema) GetShortKeyColumnCount() (v int16) {
@@ -683,6 +686,15 @@ func (p *TTabletSchema) GetRowStorePageSize() (v int64) {
 	}
 	return p.RowStorePageSize
 }
+
+var TTabletSchema_VariantEnableFlattenNested_DEFAULT bool = false
+
+func (p *TTabletSchema) GetVariantEnableFlattenNested() (v bool) {
+	if !p.IsSetVariantEnableFlattenNested() {
+		return TTabletSchema_VariantEnableFlattenNested_DEFAULT
+	}
+	return p.VariantEnableFlattenNested
+}
 func (p *TTabletSchema) SetShortKeyColumnCount(val int16) {
 	p.ShortKeyColumnCount = val
 }
@@ -746,6 +758,9 @@ func (p *TTabletSchema) SetRowStoreColCids(val []int32) {
 func (p *TTabletSchema) SetRowStorePageSize(val int64) {
 	p.RowStorePageSize = val
 }
+func (p *TTabletSchema) SetVariantEnableFlattenNested(val bool) {
+	p.VariantEnableFlattenNested = val
+}
 
 var fieldIDToName_TTabletSchema = map[int16]string{
 	1:  "short_key_column_count",
@@ -769,6 +784,7 @@ var fieldIDToName_TTabletSchema = map[int16]string{
 	19: "cluster_key_idxes",
 	20: "row_store_col_cids",
 	21: "row_store_page_size",
+	22: "variant_enable_flatten_nested",
 }
 
 func (p *TTabletSchema) IsSetBloomFilterFpp() bool {
@@ -833,6 +849,10 @@ func (p *TTabletSchema) IsSetRowStoreColCids() bool {
 
 func (p *TTabletSchema) IsSetRowStorePageSize() bool {
 	return p.RowStorePageSize != TTabletSchema_RowStorePageSize_DEFAULT
+}
+
+func (p *TTabletSchema) IsSetVariantEnableFlattenNested() bool {
+	return p.VariantEnableFlattenNested != TTabletSchema_VariantEnableFlattenNested_DEFAULT
 }
 
 func (p *TTabletSchema) Read(iprot thrift.TProtocol) (err error) {
@@ -1027,6 +1047,14 @@ func (p *TTabletSchema) Read(iprot thrift.TProtocol) (err error) {
 		case 21:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField21(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 22:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField22(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1367,6 +1395,17 @@ func (p *TTabletSchema) ReadField21(iprot thrift.TProtocol) error {
 	p.RowStorePageSize = _field
 	return nil
 }
+func (p *TTabletSchema) ReadField22(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.VariantEnableFlattenNested = _field
+	return nil
+}
 
 func (p *TTabletSchema) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1456,6 +1495,10 @@ func (p *TTabletSchema) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField21(oprot); err != nil {
 			fieldId = 21
+			goto WriteFieldError
+		}
+		if err = p.writeField22(oprot); err != nil {
+			fieldId = 22
 			goto WriteFieldError
 		}
 	}
@@ -1897,6 +1940,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
 }
 
+func (p *TTabletSchema) writeField22(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVariantEnableFlattenNested() {
+		if err = oprot.WriteFieldBegin("variant_enable_flatten_nested", thrift.BOOL, 22); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.VariantEnableFlattenNested); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
+}
+
 func (p *TTabletSchema) String() string {
 	if p == nil {
 		return "<nil>"
@@ -1972,6 +2034,9 @@ func (p *TTabletSchema) DeepEqual(ano *TTabletSchema) bool {
 		return false
 	}
 	if !p.Field21DeepEqual(ano.RowStorePageSize) {
+		return false
+	}
+	if !p.Field22DeepEqual(ano.VariantEnableFlattenNested) {
 		return false
 	}
 	return true
@@ -2169,6 +2234,13 @@ func (p *TTabletSchema) Field20DeepEqual(src []int32) bool {
 func (p *TTabletSchema) Field21DeepEqual(src int64) bool {
 
 	if p.RowStorePageSize != src {
+		return false
+	}
+	return true
+}
+func (p *TTabletSchema) Field22DeepEqual(src bool) bool {
+
+	if p.VariantEnableFlattenNested != src {
 		return false
 	}
 	return true

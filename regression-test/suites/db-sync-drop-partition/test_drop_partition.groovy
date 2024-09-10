@@ -121,6 +121,14 @@ suite("test_drop_partition_without_fullsync") {
     """
 
     httpTest {
+        uri "/delete"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body ""
+        body "${bodyJson}"
+        op "post"
+    }
+
+    httpTest {
         uri "/create_ccr"
         endpoint syncerAddress
         def bodyJson = get_ccr_body ""

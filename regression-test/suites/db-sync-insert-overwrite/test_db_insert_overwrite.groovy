@@ -15,6 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 suite("test_db_insert_overwrite") {
+    def versions = sql_return_maparray "show variables like 'version_comment'"
+    if (versions[0].Value.contains('doris-2.0.')) {
+        logger.info("2.0 not support INSERT OVERWRITE yet, current version is: ${versions[0].Value}")
+        return
+    }
+
     // The doris has two kind of insert overwrite handle logic: leagcy and nereids.
     // The first will
     //  1. create temp table
@@ -166,6 +172,15 @@ suite("test_db_insert_overwrite") {
 
     // test 1: target cluster follow source cluster
     logger.info("=== Test 1: backup/restore case ===")
+
+    httpTest {
+        uri "/delete"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body ""
+        body "${bodyJson}"
+        op "post"
+    }
+
     httpTest {
         uri "/create_ccr"
         endpoint syncerAddress

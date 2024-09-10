@@ -6831,6 +6831,20 @@ func (p *TPaimonFileDesc) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 13:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField13(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -7049,6 +7063,46 @@ func (p *TPaimonFileDesc) FastReadField12(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TPaimonFileDesc) FastReadField13(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := bthrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.HadoopConf = make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_key = v
+
+		}
+
+		var _val string
+		if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_val = v
+
+		}
+
+		p.HadoopConf[_key] = _val
+	}
+	if l, err := bthrift.Binary.ReadMapEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TPaimonFileDesc) FastWrite(buf []byte) int {
 	return 0
@@ -7070,6 +7124,7 @@ func (p *TPaimonFileDesc) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binar
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 		offset += p.fastWriteField11(buf[offset:], binaryWriter)
 		offset += p.fastWriteField12(buf[offset:], binaryWriter)
+		offset += p.fastWriteField13(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -7092,6 +7147,7 @@ func (p *TPaimonFileDesc) BLength() int {
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field12Length()
+		l += p.field13Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -7240,6 +7296,28 @@ func (p *TPaimonFileDesc) fastWriteField12(buf []byte, binaryWriter bthrift.Bina
 	return offset
 }
 
+func (p *TPaimonFileDesc) fastWriteField13(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetHadoopConf() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "hadoop_conf", thrift.MAP, 13)
+		mapBeginOffset := offset
+		offset += bthrift.Binary.MapBeginLength(thrift.STRING, thrift.STRING, 0)
+		var length int
+		for k, v := range p.HadoopConf {
+			length++
+
+			offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, k)
+
+			offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, v)
+
+		}
+		bthrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.STRING, length)
+		offset += bthrift.Binary.WriteMapEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TPaimonFileDesc) field1Length() int {
 	l := 0
 	if p.IsSetPaimonSplit() {
@@ -7373,6 +7451,24 @@ func (p *TPaimonFileDesc) field12Length() int {
 	if p.IsSetDeletionFile() {
 		l += bthrift.Binary.FieldBeginLength("deletion_file", thrift.STRUCT, 12)
 		l += p.DeletionFile.BLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TPaimonFileDesc) field13Length() int {
+	l := 0
+	if p.IsSetHadoopConf() {
+		l += bthrift.Binary.FieldBeginLength("hadoop_conf", thrift.MAP, 13)
+		l += bthrift.Binary.MapBeginLength(thrift.STRING, thrift.STRING, len(p.HadoopConf))
+		for k, v := range p.HadoopConf {
+
+			l += bthrift.Binary.StringLengthNocopy(k)
+
+			l += bthrift.Binary.StringLengthNocopy(v)
+
+		}
+		l += bthrift.Binary.MapEndLength()
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l

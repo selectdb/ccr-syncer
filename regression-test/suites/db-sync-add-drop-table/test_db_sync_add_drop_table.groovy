@@ -113,6 +113,14 @@ suite("test_db_sync_add_drop_table") {
     """
 
     httpTest {
+        uri "/delete"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body ""
+        body "${bodyJson}"
+        op "post"
+    }
+
+    httpTest {
         uri "/create_ccr"
         endpoint syncerAddress
         def bodyJson = get_ccr_body ""
