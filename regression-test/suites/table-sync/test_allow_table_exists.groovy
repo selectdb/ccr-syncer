@@ -16,12 +16,6 @@
 // under the License.
 
 suite("test_allow_table_exists") {
-    def versions = sql_return_maparray "show variables like 'version_comment'"
-    if (versions[0].Value.contains('doris-2.0.')) {
-        logger.info("2.0 not support this case, current version is: ${versions[0].Value}")
-        return
-    }
-
     def tableName = "tbl_allow_exists_" + UUID.randomUUID().toString().replace("-", "")
     def syncerAddress = "127.0.0.1:9190"
     def test_num = 0
