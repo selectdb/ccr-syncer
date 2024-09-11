@@ -16,6 +16,9 @@
 // under the License.
 
 suite("test_sync_view_twice") {
+    logger.info("this case is not supported by 2.1")
+    return
+
     def syncerAddress = "127.0.0.1:9190"
     def sync_gap_time = 5000
     def createDuplicateTable = { tableName ->
@@ -182,15 +185,6 @@ suite("test_sync_view_twice") {
         """
 
     String response
-
-    httpTest {
-        uri "/delete"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body ""
-        body "${bodyJson}"
-        op "post"
-    }
-
     httpTest {
         uri "/create_ccr"
         endpoint syncerAddress
