@@ -1302,8 +1302,14 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 		tableName = srcTable.Name
 	}
 
-	if err = j.IDest.DropTable(tableName, true); err != nil {
-		return xerror.Wrapf(err, xerror.Normal, "drop table %s", tableName)
+	if dropTable.IsView {
+		if err = j.IDest.DropView(tableName); err != nil {
+			return xerror.Wrapf(err, xerror.Normal, "drop view %s", tableName)
+		}
+	} else {
+		if err = j.IDest.DropTable(tableName, true); err != nil {
+			return xerror.Wrapf(err, xerror.Normal, "drop table %s", tableName)
+		}
 	}
 
 	j.srcMeta.ClearTablesCache()
