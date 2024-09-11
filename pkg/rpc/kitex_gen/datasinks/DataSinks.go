@@ -1129,6 +1129,7 @@ type TResultFileSinkOptions struct {
 	FileSuffix               *string                      `thrift:"file_suffix,17,optional" frugal:"17,optional,string" json:"file_suffix,omitempty"`
 	WithBom                  *bool                        `thrift:"with_bom,18,optional" frugal:"18,optional,bool" json:"with_bom,omitempty"`
 	OrcCompressionType       *plannodes.TFileCompressType `thrift:"orc_compression_type,19,optional" frugal:"19,optional,TFileCompressType" json:"orc_compression_type,omitempty"`
+	OrcWriterVersion         *int64                       `thrift:"orc_writer_version,20,optional" frugal:"20,optional,i64" json:"orc_writer_version,omitempty"`
 }
 
 func NewTResultFileSinkOptions() *TResultFileSinkOptions {
@@ -1298,6 +1299,15 @@ func (p *TResultFileSinkOptions) GetOrcCompressionType() (v plannodes.TFileCompr
 	}
 	return *p.OrcCompressionType
 }
+
+var TResultFileSinkOptions_OrcWriterVersion_DEFAULT int64
+
+func (p *TResultFileSinkOptions) GetOrcWriterVersion() (v int64) {
+	if !p.IsSetOrcWriterVersion() {
+		return TResultFileSinkOptions_OrcWriterVersion_DEFAULT
+	}
+	return *p.OrcWriterVersion
+}
 func (p *TResultFileSinkOptions) SetFilePath(val string) {
 	p.FilePath = val
 }
@@ -1355,6 +1365,9 @@ func (p *TResultFileSinkOptions) SetWithBom(val *bool) {
 func (p *TResultFileSinkOptions) SetOrcCompressionType(val *plannodes.TFileCompressType) {
 	p.OrcCompressionType = val
 }
+func (p *TResultFileSinkOptions) SetOrcWriterVersion(val *int64) {
+	p.OrcWriterVersion = val
+}
 
 var fieldIDToName_TResultFileSinkOptions = map[int16]string{
 	1:  "file_path",
@@ -1376,6 +1389,7 @@ var fieldIDToName_TResultFileSinkOptions = map[int16]string{
 	17: "file_suffix",
 	18: "with_bom",
 	19: "orc_compression_type",
+	20: "orc_writer_version",
 }
 
 func (p *TResultFileSinkOptions) IsSetColumnSeparator() bool {
@@ -1444,6 +1458,10 @@ func (p *TResultFileSinkOptions) IsSetWithBom() bool {
 
 func (p *TResultFileSinkOptions) IsSetOrcCompressionType() bool {
 	return p.OrcCompressionType != nil
+}
+
+func (p *TResultFileSinkOptions) IsSetOrcWriterVersion() bool {
+	return p.OrcWriterVersion != nil
 }
 
 func (p *TResultFileSinkOptions) Read(iprot thrift.TProtocol) (err error) {
@@ -1616,6 +1634,14 @@ func (p *TResultFileSinkOptions) Read(iprot thrift.TProtocol) (err error) {
 		case 19:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField19(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 20:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField20(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1957,6 +1983,17 @@ func (p *TResultFileSinkOptions) ReadField19(iprot thrift.TProtocol) error {
 	p.OrcCompressionType = _field
 	return nil
 }
+func (p *TResultFileSinkOptions) ReadField20(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.OrcWriterVersion = _field
+	return nil
+}
 
 func (p *TResultFileSinkOptions) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2038,6 +2075,10 @@ func (p *TResultFileSinkOptions) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField19(oprot); err != nil {
 			fieldId = 19
+			goto WriteFieldError
+		}
+		if err = p.writeField20(oprot); err != nil {
+			fieldId = 20
 			goto WriteFieldError
 		}
 	}
@@ -2469,6 +2510,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 19 end error: ", p), err)
 }
 
+func (p *TResultFileSinkOptions) writeField20(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOrcWriterVersion() {
+		if err = oprot.WriteFieldBegin("orc_writer_version", thrift.I64, 20); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.OrcWriterVersion); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
+}
+
 func (p *TResultFileSinkOptions) String() string {
 	if p == nil {
 		return "<nil>"
@@ -2538,6 +2598,9 @@ func (p *TResultFileSinkOptions) DeepEqual(ano *TResultFileSinkOptions) bool {
 		return false
 	}
 	if !p.Field19DeepEqual(ano.OrcCompressionType) {
+		return false
+	}
+	if !p.Field20DeepEqual(ano.OrcWriterVersion) {
 		return false
 	}
 	return true
@@ -2768,6 +2831,18 @@ func (p *TResultFileSinkOptions) Field19DeepEqual(src *plannodes.TFileCompressTy
 		return false
 	}
 	if *p.OrcCompressionType != *src {
+		return false
+	}
+	return true
+}
+func (p *TResultFileSinkOptions) Field20DeepEqual(src *int64) bool {
+
+	if p.OrcWriterVersion == src {
+		return true
+	} else if p.OrcWriterVersion == nil || src == nil {
+		return false
+	}
+	if *p.OrcWriterVersion != *src {
 		return false
 	}
 	return true
