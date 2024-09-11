@@ -16,6 +16,8 @@
 // under the License.
 
 suite("test_db_sync_rename_table") {
+    logger.info("rename table is not supported by 2.0")
+    return
 
     def tableName = "tbl_rename_table_" + UUID.randomUUID().toString().replace("-", "")
     def syncerAddress = "127.0.0.1:9190"
