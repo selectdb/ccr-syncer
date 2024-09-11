@@ -281,6 +281,20 @@ func (p *TTabletStat) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 7:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -401,6 +415,19 @@ func (p *TTabletStat) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TTabletStat) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.VisibleVersion = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TTabletStat) FastWrite(buf []byte) int {
 	return 0
@@ -416,6 +443,7 @@ func (p *TTabletStat) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWri
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
+		offset += p.fastWriteField7(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -432,6 +460,7 @@ func (p *TTabletStat) BLength() int {
 		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
+		l += p.field7Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -502,6 +531,17 @@ func (p *TTabletStat) fastWriteField6(buf []byte, binaryWriter bthrift.BinaryWri
 	return offset
 }
 
+func (p *TTabletStat) fastWriteField7(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetVisibleVersion() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "visible_version", thrift.I64, 7)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.VisibleVersion)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TTabletStat) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("tablet_id", thrift.I64, 1)
@@ -560,6 +600,17 @@ func (p *TTabletStat) field6Length() int {
 	if p.IsSetVisibleVersionCount() {
 		l += bthrift.Binary.FieldBeginLength("visible_version_count", thrift.I64, 6)
 		l += bthrift.Binary.I64Length(*p.VisibleVersionCount)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TTabletStat) field7Length() int {
+	l := 0
+	if p.IsSetVisibleVersion() {
+		l += bthrift.Binary.FieldBeginLength("visible_version", thrift.I64, 7)
+		l += bthrift.Binary.I64Length(*p.VisibleVersion)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
