@@ -17655,6 +17655,7 @@ type TSnapshotRequest struct {
 	StartVersion             *types.TVersion     `thrift:"start_version,11,optional" frugal:"11,optional,i64" json:"start_version,omitempty"`
 	EndVersion               *types.TVersion     `thrift:"end_version,12,optional" frugal:"12,optional,i64" json:"end_version,omitempty"`
 	IsCopyBinlog             *bool               `thrift:"is_copy_binlog,13,optional" frugal:"13,optional,bool" json:"is_copy_binlog,omitempty"`
+	RefTabletId              *types.TTabletId    `thrift:"ref_tablet_id,14,optional" frugal:"14,optional,i64" json:"ref_tablet_id,omitempty"`
 }
 
 func NewTSnapshotRequest() *TSnapshotRequest {
@@ -17774,6 +17775,15 @@ func (p *TSnapshotRequest) GetIsCopyBinlog() (v bool) {
 	}
 	return *p.IsCopyBinlog
 }
+
+var TSnapshotRequest_RefTabletId_DEFAULT types.TTabletId
+
+func (p *TSnapshotRequest) GetRefTabletId() (v types.TTabletId) {
+	if !p.IsSetRefTabletId() {
+		return TSnapshotRequest_RefTabletId_DEFAULT
+	}
+	return *p.RefTabletId
+}
 func (p *TSnapshotRequest) SetTabletId(val types.TTabletId) {
 	p.TabletId = val
 }
@@ -17813,6 +17823,9 @@ func (p *TSnapshotRequest) SetEndVersion(val *types.TVersion) {
 func (p *TSnapshotRequest) SetIsCopyBinlog(val *bool) {
 	p.IsCopyBinlog = val
 }
+func (p *TSnapshotRequest) SetRefTabletId(val *types.TTabletId) {
+	p.RefTabletId = val
+}
 
 var fieldIDToName_TSnapshotRequest = map[int16]string{
 	1:  "tablet_id",
@@ -17828,6 +17841,7 @@ var fieldIDToName_TSnapshotRequest = map[int16]string{
 	11: "start_version",
 	12: "end_version",
 	13: "is_copy_binlog",
+	14: "ref_tablet_id",
 }
 
 func (p *TSnapshotRequest) IsSetVersion() bool {
@@ -17872,6 +17886,10 @@ func (p *TSnapshotRequest) IsSetEndVersion() bool {
 
 func (p *TSnapshotRequest) IsSetIsCopyBinlog() bool {
 	return p.IsCopyBinlog != nil
+}
+
+func (p *TSnapshotRequest) IsSetRefTabletId() bool {
+	return p.RefTabletId != nil
 }
 
 func (p *TSnapshotRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -17996,6 +18014,14 @@ func (p *TSnapshotRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 13:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField14(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -18196,6 +18222,17 @@ func (p *TSnapshotRequest) ReadField13(iprot thrift.TProtocol) error {
 	p.IsCopyBinlog = _field
 	return nil
 }
+func (p *TSnapshotRequest) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *types.TTabletId
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.RefTabletId = _field
+	return nil
+}
 
 func (p *TSnapshotRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -18253,6 +18290,10 @@ func (p *TSnapshotRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField13(oprot); err != nil {
 			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
 			goto WriteFieldError
 		}
 	}
@@ -18524,6 +18565,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
 
+func (p *TSnapshotRequest) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRefTabletId() {
+		if err = oprot.WriteFieldBegin("ref_tablet_id", thrift.I64, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.RefTabletId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
+
 func (p *TSnapshotRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -18575,6 +18635,9 @@ func (p *TSnapshotRequest) DeepEqual(ano *TSnapshotRequest) bool {
 		return false
 	}
 	if !p.Field13DeepEqual(ano.IsCopyBinlog) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.RefTabletId) {
 		return false
 	}
 	return true
@@ -18718,6 +18781,18 @@ func (p *TSnapshotRequest) Field13DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.IsCopyBinlog != *src {
+		return false
+	}
+	return true
+}
+func (p *TSnapshotRequest) Field14DeepEqual(src *types.TTabletId) bool {
+
+	if p.RefTabletId == src {
+		return true
+	} else if p.RefTabletId == nil || src == nil {
+		return false
+	}
+	if *p.RefTabletId != *src {
 		return false
 	}
 	return true

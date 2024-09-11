@@ -1631,238 +1631,246 @@ func (p *TResourceLimit) Field1DeepEqual(src *int32) bool {
 }
 
 type TQueryOptions struct {
-	AbortOnError                             bool            `thrift:"abort_on_error,1,optional" frugal:"1,optional,bool" json:"abort_on_error,omitempty"`
-	MaxErrors                                int32           `thrift:"max_errors,2,optional" frugal:"2,optional,i32" json:"max_errors,omitempty"`
-	DisableCodegen                           bool            `thrift:"disable_codegen,3,optional" frugal:"3,optional,bool" json:"disable_codegen,omitempty"`
-	BatchSize                                int32           `thrift:"batch_size,4,optional" frugal:"4,optional,i32" json:"batch_size,omitempty"`
-	NumNodes                                 int32           `thrift:"num_nodes,5,optional" frugal:"5,optional,i32" json:"num_nodes,omitempty"`
-	MaxScanRangeLength                       int64           `thrift:"max_scan_range_length,6,optional" frugal:"6,optional,i64" json:"max_scan_range_length,omitempty"`
-	NumScannerThreads                        int32           `thrift:"num_scanner_threads,7,optional" frugal:"7,optional,i32" json:"num_scanner_threads,omitempty"`
-	MaxIoBuffers                             int32           `thrift:"max_io_buffers,8,optional" frugal:"8,optional,i32" json:"max_io_buffers,omitempty"`
-	AllowUnsupportedFormats                  bool            `thrift:"allow_unsupported_formats,9,optional" frugal:"9,optional,bool" json:"allow_unsupported_formats,omitempty"`
-	DefaultOrderByLimit                      int64           `thrift:"default_order_by_limit,10,optional" frugal:"10,optional,i64" json:"default_order_by_limit,omitempty"`
-	MemLimit                                 int64           `thrift:"mem_limit,12,optional" frugal:"12,optional,i64" json:"mem_limit,omitempty"`
-	AbortOnDefaultLimitExceeded              bool            `thrift:"abort_on_default_limit_exceeded,13,optional" frugal:"13,optional,bool" json:"abort_on_default_limit_exceeded,omitempty"`
-	QueryTimeout                             int32           `thrift:"query_timeout,14,optional" frugal:"14,optional,i32" json:"query_timeout,omitempty"`
-	IsReportSuccess                          bool            `thrift:"is_report_success,15,optional" frugal:"15,optional,bool" json:"is_report_success,omitempty"`
-	CodegenLevel                             int32           `thrift:"codegen_level,16,optional" frugal:"16,optional,i32" json:"codegen_level,omitempty"`
-	KuduLatestObservedTs                     int64           `thrift:"kudu_latest_observed_ts,17,optional" frugal:"17,optional,i64" json:"kudu_latest_observed_ts,omitempty"`
-	QueryType                                TQueryType      `thrift:"query_type,18,optional" frugal:"18,optional,TQueryType" json:"query_type,omitempty"`
-	MinReservation                           int64           `thrift:"min_reservation,19,optional" frugal:"19,optional,i64" json:"min_reservation,omitempty"`
-	MaxReservation                           int64           `thrift:"max_reservation,20,optional" frugal:"20,optional,i64" json:"max_reservation,omitempty"`
-	InitialReservationTotalClaims            int64           `thrift:"initial_reservation_total_claims,21,optional" frugal:"21,optional,i64" json:"initial_reservation_total_claims,omitempty"`
-	BufferPoolLimit                          int64           `thrift:"buffer_pool_limit,22,optional" frugal:"22,optional,i64" json:"buffer_pool_limit,omitempty"`
-	DefaultSpillableBufferSize               int64           `thrift:"default_spillable_buffer_size,23,optional" frugal:"23,optional,i64" json:"default_spillable_buffer_size,omitempty"`
-	MinSpillableBufferSize                   int64           `thrift:"min_spillable_buffer_size,24,optional" frugal:"24,optional,i64" json:"min_spillable_buffer_size,omitempty"`
-	MaxRowSize                               int64           `thrift:"max_row_size,25,optional" frugal:"25,optional,i64" json:"max_row_size,omitempty"`
-	DisableStreamPreaggregations             bool            `thrift:"disable_stream_preaggregations,26,optional" frugal:"26,optional,bool" json:"disable_stream_preaggregations,omitempty"`
-	MtDop                                    int32           `thrift:"mt_dop,27,optional" frugal:"27,optional,i32" json:"mt_dop,omitempty"`
-	LoadMemLimit                             int64           `thrift:"load_mem_limit,28,optional" frugal:"28,optional,i64" json:"load_mem_limit,omitempty"`
-	MaxScanKeyNum                            *int32          `thrift:"max_scan_key_num,29,optional" frugal:"29,optional,i32" json:"max_scan_key_num,omitempty"`
-	MaxPushdownConditionsPerColumn           *int32          `thrift:"max_pushdown_conditions_per_column,30,optional" frugal:"30,optional,i32" json:"max_pushdown_conditions_per_column,omitempty"`
-	EnableSpilling                           bool            `thrift:"enable_spilling,31,optional" frugal:"31,optional,bool" json:"enable_spilling,omitempty"`
-	EnableEnableExchangeNodeParallelMerge    bool            `thrift:"enable_enable_exchange_node_parallel_merge,32,optional" frugal:"32,optional,bool" json:"enable_enable_exchange_node_parallel_merge,omitempty"`
-	RuntimeFilterWaitTimeMs                  int32           `thrift:"runtime_filter_wait_time_ms,33,optional" frugal:"33,optional,i32" json:"runtime_filter_wait_time_ms,omitempty"`
-	RuntimeFilterMaxInNum                    int32           `thrift:"runtime_filter_max_in_num,34,optional" frugal:"34,optional,i32" json:"runtime_filter_max_in_num,omitempty"`
-	ResourceLimit                            *TResourceLimit `thrift:"resource_limit,42,optional" frugal:"42,optional,TResourceLimit" json:"resource_limit,omitempty"`
-	ReturnObjectDataAsBinary                 bool            `thrift:"return_object_data_as_binary,43,optional" frugal:"43,optional,bool" json:"return_object_data_as_binary,omitempty"`
-	TrimTailingSpacesForExternalTableQuery   bool            `thrift:"trim_tailing_spaces_for_external_table_query,44,optional" frugal:"44,optional,bool" json:"trim_tailing_spaces_for_external_table_query,omitempty"`
-	EnableFunctionPushdown                   *bool           `thrift:"enable_function_pushdown,45,optional" frugal:"45,optional,bool" json:"enable_function_pushdown,omitempty"`
-	FragmentTransmissionCompressionCodec     *string         `thrift:"fragment_transmission_compression_codec,46,optional" frugal:"46,optional,string" json:"fragment_transmission_compression_codec,omitempty"`
-	EnableLocalExchange                      *bool           `thrift:"enable_local_exchange,48,optional" frugal:"48,optional,bool" json:"enable_local_exchange,omitempty"`
-	SkipStorageEngineMerge                   bool            `thrift:"skip_storage_engine_merge,49,optional" frugal:"49,optional,bool" json:"skip_storage_engine_merge,omitempty"`
-	SkipDeletePredicate                      bool            `thrift:"skip_delete_predicate,50,optional" frugal:"50,optional,bool" json:"skip_delete_predicate,omitempty"`
-	EnableNewShuffleHashMethod               *bool           `thrift:"enable_new_shuffle_hash_method,51,optional" frugal:"51,optional,bool" json:"enable_new_shuffle_hash_method,omitempty"`
-	BeExecVersion                            int32           `thrift:"be_exec_version,52,optional" frugal:"52,optional,i32" json:"be_exec_version,omitempty"`
-	PartitionedHashJoinRowsThreshold         int32           `thrift:"partitioned_hash_join_rows_threshold,53,optional" frugal:"53,optional,i32" json:"partitioned_hash_join_rows_threshold,omitempty"`
-	EnableShareHashTableForBroadcastJoin     *bool           `thrift:"enable_share_hash_table_for_broadcast_join,54,optional" frugal:"54,optional,bool" json:"enable_share_hash_table_for_broadcast_join,omitempty"`
-	CheckOverflowForDecimal                  bool            `thrift:"check_overflow_for_decimal,55,optional" frugal:"55,optional,bool" json:"check_overflow_for_decimal,omitempty"`
-	SkipDeleteBitmap                         bool            `thrift:"skip_delete_bitmap,56,optional" frugal:"56,optional,bool" json:"skip_delete_bitmap,omitempty"`
-	EnablePipelineEngine                     bool            `thrift:"enable_pipeline_engine,57,optional" frugal:"57,optional,bool" json:"enable_pipeline_engine,omitempty"`
-	RepeatMaxNum                             int32           `thrift:"repeat_max_num,58,optional" frugal:"58,optional,i32" json:"repeat_max_num,omitempty"`
-	ExternalSortBytesThreshold               int64           `thrift:"external_sort_bytes_threshold,59,optional" frugal:"59,optional,i64" json:"external_sort_bytes_threshold,omitempty"`
-	PartitionedHashAggRowsThreshold          int32           `thrift:"partitioned_hash_agg_rows_threshold,60,optional" frugal:"60,optional,i32" json:"partitioned_hash_agg_rows_threshold,omitempty"`
-	EnableFileCache                          bool            `thrift:"enable_file_cache,61,optional" frugal:"61,optional,bool" json:"enable_file_cache,omitempty"`
-	InsertTimeout                            int32           `thrift:"insert_timeout,62,optional" frugal:"62,optional,i32" json:"insert_timeout,omitempty"`
-	ExecutionTimeout                         int32           `thrift:"execution_timeout,63,optional" frugal:"63,optional,i32" json:"execution_timeout,omitempty"`
-	DryRunQuery                              bool            `thrift:"dry_run_query,64,optional" frugal:"64,optional,bool" json:"dry_run_query,omitempty"`
-	EnableCommonExprPushdown                 bool            `thrift:"enable_common_expr_pushdown,65,optional" frugal:"65,optional,bool" json:"enable_common_expr_pushdown,omitempty"`
-	ParallelInstance                         int32           `thrift:"parallel_instance,66,optional" frugal:"66,optional,i32" json:"parallel_instance,omitempty"`
-	MysqlRowBinaryFormat                     bool            `thrift:"mysql_row_binary_format,67,optional" frugal:"67,optional,bool" json:"mysql_row_binary_format,omitempty"`
-	ExternalAggBytesThreshold                int64           `thrift:"external_agg_bytes_threshold,68,optional" frugal:"68,optional,i64" json:"external_agg_bytes_threshold,omitempty"`
-	ExternalAggPartitionBits                 int32           `thrift:"external_agg_partition_bits,69,optional" frugal:"69,optional,i32" json:"external_agg_partition_bits,omitempty"`
-	FileCacheBasePath                        *string         `thrift:"file_cache_base_path,70,optional" frugal:"70,optional,string" json:"file_cache_base_path,omitempty"`
-	EnableParquetLazyMat                     bool            `thrift:"enable_parquet_lazy_mat,71,optional" frugal:"71,optional,bool" json:"enable_parquet_lazy_mat,omitempty"`
-	EnableOrcLazyMat                         bool            `thrift:"enable_orc_lazy_mat,72,optional" frugal:"72,optional,bool" json:"enable_orc_lazy_mat,omitempty"`
-	ScanQueueMemLimit                        *int64          `thrift:"scan_queue_mem_limit,73,optional" frugal:"73,optional,i64" json:"scan_queue_mem_limit,omitempty"`
-	EnableScanNodeRunSerial                  bool            `thrift:"enable_scan_node_run_serial,74,optional" frugal:"74,optional,bool" json:"enable_scan_node_run_serial,omitempty"`
-	EnableInsertStrict                       bool            `thrift:"enable_insert_strict,75,optional" frugal:"75,optional,bool" json:"enable_insert_strict,omitempty"`
-	EnableInvertedIndexQuery                 bool            `thrift:"enable_inverted_index_query,76,optional" frugal:"76,optional,bool" json:"enable_inverted_index_query,omitempty"`
-	TruncateCharOrVarcharColumns             bool            `thrift:"truncate_char_or_varchar_columns,77,optional" frugal:"77,optional,bool" json:"truncate_char_or_varchar_columns,omitempty"`
-	EnableHashJoinEarlyStartProbe            bool            `thrift:"enable_hash_join_early_start_probe,78,optional" frugal:"78,optional,bool" json:"enable_hash_join_early_start_probe,omitempty"`
-	EnablePipelineXEngine                    bool            `thrift:"enable_pipeline_x_engine,79,optional" frugal:"79,optional,bool" json:"enable_pipeline_x_engine,omitempty"`
-	EnableMemtableOnSinkNode                 bool            `thrift:"enable_memtable_on_sink_node,80,optional" frugal:"80,optional,bool" json:"enable_memtable_on_sink_node,omitempty"`
-	EnableDeleteSubPredicateV2               bool            `thrift:"enable_delete_sub_predicate_v2,81,optional" frugal:"81,optional,bool" json:"enable_delete_sub_predicate_v2,omitempty"`
-	FeProcessUuid                            int64           `thrift:"fe_process_uuid,82,optional" frugal:"82,optional,i64" json:"fe_process_uuid,omitempty"`
-	InvertedIndexConjunctionOptThreshold     int32           `thrift:"inverted_index_conjunction_opt_threshold,83,optional" frugal:"83,optional,i32" json:"inverted_index_conjunction_opt_threshold,omitempty"`
-	EnableProfile                            bool            `thrift:"enable_profile,84,optional" frugal:"84,optional,bool" json:"enable_profile,omitempty"`
-	EnablePageCache                          bool            `thrift:"enable_page_cache,85,optional" frugal:"85,optional,bool" json:"enable_page_cache,omitempty"`
-	AnalyzeTimeout                           int32           `thrift:"analyze_timeout,86,optional" frugal:"86,optional,i32" json:"analyze_timeout,omitempty"`
-	FasterFloatConvert                       bool            `thrift:"faster_float_convert,87,optional" frugal:"87,optional,bool" json:"faster_float_convert,omitempty"`
-	EnableDecimal256                         bool            `thrift:"enable_decimal256,88,optional" frugal:"88,optional,bool" json:"enable_decimal256,omitempty"`
-	EnableLocalShuffle                       bool            `thrift:"enable_local_shuffle,89,optional" frugal:"89,optional,bool" json:"enable_local_shuffle,omitempty"`
-	SkipMissingVersion                       bool            `thrift:"skip_missing_version,90,optional" frugal:"90,optional,bool" json:"skip_missing_version,omitempty"`
-	RuntimeFilterWaitInfinitely              bool            `thrift:"runtime_filter_wait_infinitely,91,optional" frugal:"91,optional,bool" json:"runtime_filter_wait_infinitely,omitempty"`
-	WaitFullBlockScheduleTimes               int32           `thrift:"wait_full_block_schedule_times,92,optional" frugal:"92,optional,i32" json:"wait_full_block_schedule_times,omitempty"`
-	InvertedIndexMaxExpansions               int32           `thrift:"inverted_index_max_expansions,93,optional" frugal:"93,optional,i32" json:"inverted_index_max_expansions,omitempty"`
-	InvertedIndexSkipThreshold               int32           `thrift:"inverted_index_skip_threshold,94,optional" frugal:"94,optional,i32" json:"inverted_index_skip_threshold,omitempty"`
-	EnableParallelScan                       bool            `thrift:"enable_parallel_scan,95,optional" frugal:"95,optional,bool" json:"enable_parallel_scan,omitempty"`
-	ParallelScanMaxScannersCount             int32           `thrift:"parallel_scan_max_scanners_count,96,optional" frugal:"96,optional,i32" json:"parallel_scan_max_scanners_count,omitempty"`
-	ParallelScanMinRowsPerScanner            int64           `thrift:"parallel_scan_min_rows_per_scanner,97,optional" frugal:"97,optional,i64" json:"parallel_scan_min_rows_per_scanner,omitempty"`
-	SkipBadTablet                            bool            `thrift:"skip_bad_tablet,98,optional" frugal:"98,optional,bool" json:"skip_bad_tablet,omitempty"`
-	ScannerScaleUpRatio                      float64         `thrift:"scanner_scale_up_ratio,99,optional" frugal:"99,optional,double" json:"scanner_scale_up_ratio,omitempty"`
-	EnableDistinctStreamingAggregation       bool            `thrift:"enable_distinct_streaming_aggregation,100,optional" frugal:"100,optional,bool" json:"enable_distinct_streaming_aggregation,omitempty"`
-	EnableJoinSpill                          bool            `thrift:"enable_join_spill,101,optional" frugal:"101,optional,bool" json:"enable_join_spill,omitempty"`
-	EnableSortSpill                          bool            `thrift:"enable_sort_spill,102,optional" frugal:"102,optional,bool" json:"enable_sort_spill,omitempty"`
-	EnableAggSpill                           bool            `thrift:"enable_agg_spill,103,optional" frugal:"103,optional,bool" json:"enable_agg_spill,omitempty"`
-	MinRevocableMem                          int64           `thrift:"min_revocable_mem,104,optional" frugal:"104,optional,i64" json:"min_revocable_mem,omitempty"`
-	SpillStreamingAggMemLimit                int64           `thrift:"spill_streaming_agg_mem_limit,105,optional" frugal:"105,optional,i64" json:"spill_streaming_agg_mem_limit,omitempty"`
-	DataQueueMaxBlocks                       int64           `thrift:"data_queue_max_blocks,106,optional" frugal:"106,optional,i64" json:"data_queue_max_blocks,omitempty"`
-	EnableCommonExprPushdownForInvertedIndex bool            `thrift:"enable_common_expr_pushdown_for_inverted_index,107,optional" frugal:"107,optional,bool" json:"enable_common_expr_pushdown_for_inverted_index,omitempty"`
-	LocalExchangeFreeBlocksLimit             *int64          `thrift:"local_exchange_free_blocks_limit,108,optional" frugal:"108,optional,i64" json:"local_exchange_free_blocks_limit,omitempty"`
-	EnableForceSpill                         bool            `thrift:"enable_force_spill,109,optional" frugal:"109,optional,bool" json:"enable_force_spill,omitempty"`
-	EnableParquetFilterByMinMax              bool            `thrift:"enable_parquet_filter_by_min_max,110,optional" frugal:"110,optional,bool" json:"enable_parquet_filter_by_min_max,omitempty"`
-	EnableOrcFilterByMinMax                  bool            `thrift:"enable_orc_filter_by_min_max,111,optional" frugal:"111,optional,bool" json:"enable_orc_filter_by_min_max,omitempty"`
-	MaxColumnReaderNum                       int32           `thrift:"max_column_reader_num,112,optional" frugal:"112,optional,i32" json:"max_column_reader_num,omitempty"`
-	EnableLocalMergeSort                     bool            `thrift:"enable_local_merge_sort,113,optional" frugal:"113,optional,bool" json:"enable_local_merge_sort,omitempty"`
-	EnableParallelResultSink                 bool            `thrift:"enable_parallel_result_sink,114,optional" frugal:"114,optional,bool" json:"enable_parallel_result_sink,omitempty"`
-	EnableShortCircuitQueryAccessColumnStore bool            `thrift:"enable_short_circuit_query_access_column_store,115,optional" frugal:"115,optional,bool" json:"enable_short_circuit_query_access_column_store,omitempty"`
-	EnableNoNeedReadDataOpt                  bool            `thrift:"enable_no_need_read_data_opt,116,optional" frugal:"116,optional,bool" json:"enable_no_need_read_data_opt,omitempty"`
-	ReadCsvEmptyLineAsNull                   bool            `thrift:"read_csv_empty_line_as_null,117,optional" frugal:"117,optional,bool" json:"read_csv_empty_line_as_null,omitempty"`
-	SerdeDialect                             TSerdeDialect   `thrift:"serde_dialect,118,optional" frugal:"118,optional,TSerdeDialect" json:"serde_dialect,omitempty"`
-	KeepCarriageReturn                       bool            `thrift:"keep_carriage_return,119,optional" frugal:"119,optional,bool" json:"keep_carriage_return,omitempty"`
-	EnableMatchWithoutInvertedIndex          bool            `thrift:"enable_match_without_inverted_index,120,optional" frugal:"120,optional,bool" json:"enable_match_without_inverted_index,omitempty"`
-	EnableFallbackOnMissingInvertedIndex     bool            `thrift:"enable_fallback_on_missing_inverted_index,121,optional" frugal:"121,optional,bool" json:"enable_fallback_on_missing_inverted_index,omitempty"`
-	RuntimeBloomFilterMinSize                int32           `thrift:"runtime_bloom_filter_min_size,122,optional" frugal:"122,optional,i32" json:"runtime_bloom_filter_min_size,omitempty"`
-	HiveParquetUseColumnNames                bool            `thrift:"hive_parquet_use_column_names,123,optional" frugal:"123,optional,bool" json:"hive_parquet_use_column_names,omitempty"`
-	HiveOrcUseColumnNames                    bool            `thrift:"hive_orc_use_column_names,124,optional" frugal:"124,optional,bool" json:"hive_orc_use_column_names,omitempty"`
-	EnableSegmentCache                       bool            `thrift:"enable_segment_cache,125,optional" frugal:"125,optional,bool" json:"enable_segment_cache,omitempty"`
-	RuntimeBloomFilterMaxSize                int32           `thrift:"runtime_bloom_filter_max_size,126,optional" frugal:"126,optional,i32" json:"runtime_bloom_filter_max_size,omitempty"`
-	InListValueCountThreshold                int32           `thrift:"in_list_value_count_threshold,127,optional" frugal:"127,optional,i32" json:"in_list_value_count_threshold,omitempty"`
-	DisableFileCache                         bool            `thrift:"disable_file_cache,1000,optional" frugal:"1000,optional,bool" json:"disable_file_cache,omitempty"`
+	AbortOnError                                bool            `thrift:"abort_on_error,1,optional" frugal:"1,optional,bool" json:"abort_on_error,omitempty"`
+	MaxErrors                                   int32           `thrift:"max_errors,2,optional" frugal:"2,optional,i32" json:"max_errors,omitempty"`
+	DisableCodegen                              bool            `thrift:"disable_codegen,3,optional" frugal:"3,optional,bool" json:"disable_codegen,omitempty"`
+	BatchSize                                   int32           `thrift:"batch_size,4,optional" frugal:"4,optional,i32" json:"batch_size,omitempty"`
+	NumNodes                                    int32           `thrift:"num_nodes,5,optional" frugal:"5,optional,i32" json:"num_nodes,omitempty"`
+	MaxScanRangeLength                          int64           `thrift:"max_scan_range_length,6,optional" frugal:"6,optional,i64" json:"max_scan_range_length,omitempty"`
+	NumScannerThreads                           int32           `thrift:"num_scanner_threads,7,optional" frugal:"7,optional,i32" json:"num_scanner_threads,omitempty"`
+	MaxIoBuffers                                int32           `thrift:"max_io_buffers,8,optional" frugal:"8,optional,i32" json:"max_io_buffers,omitempty"`
+	AllowUnsupportedFormats                     bool            `thrift:"allow_unsupported_formats,9,optional" frugal:"9,optional,bool" json:"allow_unsupported_formats,omitempty"`
+	DefaultOrderByLimit                         int64           `thrift:"default_order_by_limit,10,optional" frugal:"10,optional,i64" json:"default_order_by_limit,omitempty"`
+	MemLimit                                    int64           `thrift:"mem_limit,12,optional" frugal:"12,optional,i64" json:"mem_limit,omitempty"`
+	AbortOnDefaultLimitExceeded                 bool            `thrift:"abort_on_default_limit_exceeded,13,optional" frugal:"13,optional,bool" json:"abort_on_default_limit_exceeded,omitempty"`
+	QueryTimeout                                int32           `thrift:"query_timeout,14,optional" frugal:"14,optional,i32" json:"query_timeout,omitempty"`
+	IsReportSuccess                             bool            `thrift:"is_report_success,15,optional" frugal:"15,optional,bool" json:"is_report_success,omitempty"`
+	CodegenLevel                                int32           `thrift:"codegen_level,16,optional" frugal:"16,optional,i32" json:"codegen_level,omitempty"`
+	KuduLatestObservedTs                        int64           `thrift:"kudu_latest_observed_ts,17,optional" frugal:"17,optional,i64" json:"kudu_latest_observed_ts,omitempty"`
+	QueryType                                   TQueryType      `thrift:"query_type,18,optional" frugal:"18,optional,TQueryType" json:"query_type,omitempty"`
+	MinReservation                              int64           `thrift:"min_reservation,19,optional" frugal:"19,optional,i64" json:"min_reservation,omitempty"`
+	MaxReservation                              int64           `thrift:"max_reservation,20,optional" frugal:"20,optional,i64" json:"max_reservation,omitempty"`
+	InitialReservationTotalClaims               int64           `thrift:"initial_reservation_total_claims,21,optional" frugal:"21,optional,i64" json:"initial_reservation_total_claims,omitempty"`
+	BufferPoolLimit                             int64           `thrift:"buffer_pool_limit,22,optional" frugal:"22,optional,i64" json:"buffer_pool_limit,omitempty"`
+	DefaultSpillableBufferSize                  int64           `thrift:"default_spillable_buffer_size,23,optional" frugal:"23,optional,i64" json:"default_spillable_buffer_size,omitempty"`
+	MinSpillableBufferSize                      int64           `thrift:"min_spillable_buffer_size,24,optional" frugal:"24,optional,i64" json:"min_spillable_buffer_size,omitempty"`
+	MaxRowSize                                  int64           `thrift:"max_row_size,25,optional" frugal:"25,optional,i64" json:"max_row_size,omitempty"`
+	DisableStreamPreaggregations                bool            `thrift:"disable_stream_preaggregations,26,optional" frugal:"26,optional,bool" json:"disable_stream_preaggregations,omitempty"`
+	MtDop                                       int32           `thrift:"mt_dop,27,optional" frugal:"27,optional,i32" json:"mt_dop,omitempty"`
+	LoadMemLimit                                int64           `thrift:"load_mem_limit,28,optional" frugal:"28,optional,i64" json:"load_mem_limit,omitempty"`
+	MaxScanKeyNum                               *int32          `thrift:"max_scan_key_num,29,optional" frugal:"29,optional,i32" json:"max_scan_key_num,omitempty"`
+	MaxPushdownConditionsPerColumn              *int32          `thrift:"max_pushdown_conditions_per_column,30,optional" frugal:"30,optional,i32" json:"max_pushdown_conditions_per_column,omitempty"`
+	EnableSpilling                              bool            `thrift:"enable_spilling,31,optional" frugal:"31,optional,bool" json:"enable_spilling,omitempty"`
+	EnableEnableExchangeNodeParallelMerge       bool            `thrift:"enable_enable_exchange_node_parallel_merge,32,optional" frugal:"32,optional,bool" json:"enable_enable_exchange_node_parallel_merge,omitempty"`
+	RuntimeFilterWaitTimeMs                     int32           `thrift:"runtime_filter_wait_time_ms,33,optional" frugal:"33,optional,i32" json:"runtime_filter_wait_time_ms,omitempty"`
+	RuntimeFilterMaxInNum                       int32           `thrift:"runtime_filter_max_in_num,34,optional" frugal:"34,optional,i32" json:"runtime_filter_max_in_num,omitempty"`
+	ResourceLimit                               *TResourceLimit `thrift:"resource_limit,42,optional" frugal:"42,optional,TResourceLimit" json:"resource_limit,omitempty"`
+	ReturnObjectDataAsBinary                    bool            `thrift:"return_object_data_as_binary,43,optional" frugal:"43,optional,bool" json:"return_object_data_as_binary,omitempty"`
+	TrimTailingSpacesForExternalTableQuery      bool            `thrift:"trim_tailing_spaces_for_external_table_query,44,optional" frugal:"44,optional,bool" json:"trim_tailing_spaces_for_external_table_query,omitempty"`
+	EnableFunctionPushdown                      *bool           `thrift:"enable_function_pushdown,45,optional" frugal:"45,optional,bool" json:"enable_function_pushdown,omitempty"`
+	FragmentTransmissionCompressionCodec        *string         `thrift:"fragment_transmission_compression_codec,46,optional" frugal:"46,optional,string" json:"fragment_transmission_compression_codec,omitempty"`
+	EnableLocalExchange                         *bool           `thrift:"enable_local_exchange,48,optional" frugal:"48,optional,bool" json:"enable_local_exchange,omitempty"`
+	SkipStorageEngineMerge                      bool            `thrift:"skip_storage_engine_merge,49,optional" frugal:"49,optional,bool" json:"skip_storage_engine_merge,omitempty"`
+	SkipDeletePredicate                         bool            `thrift:"skip_delete_predicate,50,optional" frugal:"50,optional,bool" json:"skip_delete_predicate,omitempty"`
+	EnableNewShuffleHashMethod                  *bool           `thrift:"enable_new_shuffle_hash_method,51,optional" frugal:"51,optional,bool" json:"enable_new_shuffle_hash_method,omitempty"`
+	BeExecVersion                               int32           `thrift:"be_exec_version,52,optional" frugal:"52,optional,i32" json:"be_exec_version,omitempty"`
+	PartitionedHashJoinRowsThreshold            int32           `thrift:"partitioned_hash_join_rows_threshold,53,optional" frugal:"53,optional,i32" json:"partitioned_hash_join_rows_threshold,omitempty"`
+	EnableShareHashTableForBroadcastJoin        *bool           `thrift:"enable_share_hash_table_for_broadcast_join,54,optional" frugal:"54,optional,bool" json:"enable_share_hash_table_for_broadcast_join,omitempty"`
+	CheckOverflowForDecimal                     bool            `thrift:"check_overflow_for_decimal,55,optional" frugal:"55,optional,bool" json:"check_overflow_for_decimal,omitempty"`
+	SkipDeleteBitmap                            bool            `thrift:"skip_delete_bitmap,56,optional" frugal:"56,optional,bool" json:"skip_delete_bitmap,omitempty"`
+	EnablePipelineEngine                        bool            `thrift:"enable_pipeline_engine,57,optional" frugal:"57,optional,bool" json:"enable_pipeline_engine,omitempty"`
+	RepeatMaxNum                                int32           `thrift:"repeat_max_num,58,optional" frugal:"58,optional,i32" json:"repeat_max_num,omitempty"`
+	ExternalSortBytesThreshold                  int64           `thrift:"external_sort_bytes_threshold,59,optional" frugal:"59,optional,i64" json:"external_sort_bytes_threshold,omitempty"`
+	PartitionedHashAggRowsThreshold             int32           `thrift:"partitioned_hash_agg_rows_threshold,60,optional" frugal:"60,optional,i32" json:"partitioned_hash_agg_rows_threshold,omitempty"`
+	EnableFileCache                             bool            `thrift:"enable_file_cache,61,optional" frugal:"61,optional,bool" json:"enable_file_cache,omitempty"`
+	InsertTimeout                               int32           `thrift:"insert_timeout,62,optional" frugal:"62,optional,i32" json:"insert_timeout,omitempty"`
+	ExecutionTimeout                            int32           `thrift:"execution_timeout,63,optional" frugal:"63,optional,i32" json:"execution_timeout,omitempty"`
+	DryRunQuery                                 bool            `thrift:"dry_run_query,64,optional" frugal:"64,optional,bool" json:"dry_run_query,omitempty"`
+	EnableCommonExprPushdown                    bool            `thrift:"enable_common_expr_pushdown,65,optional" frugal:"65,optional,bool" json:"enable_common_expr_pushdown,omitempty"`
+	ParallelInstance                            int32           `thrift:"parallel_instance,66,optional" frugal:"66,optional,i32" json:"parallel_instance,omitempty"`
+	MysqlRowBinaryFormat                        bool            `thrift:"mysql_row_binary_format,67,optional" frugal:"67,optional,bool" json:"mysql_row_binary_format,omitempty"`
+	ExternalAggBytesThreshold                   int64           `thrift:"external_agg_bytes_threshold,68,optional" frugal:"68,optional,i64" json:"external_agg_bytes_threshold,omitempty"`
+	ExternalAggPartitionBits                    int32           `thrift:"external_agg_partition_bits,69,optional" frugal:"69,optional,i32" json:"external_agg_partition_bits,omitempty"`
+	FileCacheBasePath                           *string         `thrift:"file_cache_base_path,70,optional" frugal:"70,optional,string" json:"file_cache_base_path,omitempty"`
+	EnableParquetLazyMat                        bool            `thrift:"enable_parquet_lazy_mat,71,optional" frugal:"71,optional,bool" json:"enable_parquet_lazy_mat,omitempty"`
+	EnableOrcLazyMat                            bool            `thrift:"enable_orc_lazy_mat,72,optional" frugal:"72,optional,bool" json:"enable_orc_lazy_mat,omitempty"`
+	ScanQueueMemLimit                           *int64          `thrift:"scan_queue_mem_limit,73,optional" frugal:"73,optional,i64" json:"scan_queue_mem_limit,omitempty"`
+	EnableScanNodeRunSerial                     bool            `thrift:"enable_scan_node_run_serial,74,optional" frugal:"74,optional,bool" json:"enable_scan_node_run_serial,omitempty"`
+	EnableInsertStrict                          bool            `thrift:"enable_insert_strict,75,optional" frugal:"75,optional,bool" json:"enable_insert_strict,omitempty"`
+	EnableInvertedIndexQuery                    bool            `thrift:"enable_inverted_index_query,76,optional" frugal:"76,optional,bool" json:"enable_inverted_index_query,omitempty"`
+	TruncateCharOrVarcharColumns                bool            `thrift:"truncate_char_or_varchar_columns,77,optional" frugal:"77,optional,bool" json:"truncate_char_or_varchar_columns,omitempty"`
+	EnableHashJoinEarlyStartProbe               bool            `thrift:"enable_hash_join_early_start_probe,78,optional" frugal:"78,optional,bool" json:"enable_hash_join_early_start_probe,omitempty"`
+	EnablePipelineXEngine                       bool            `thrift:"enable_pipeline_x_engine,79,optional" frugal:"79,optional,bool" json:"enable_pipeline_x_engine,omitempty"`
+	EnableMemtableOnSinkNode                    bool            `thrift:"enable_memtable_on_sink_node,80,optional" frugal:"80,optional,bool" json:"enable_memtable_on_sink_node,omitempty"`
+	EnableDeleteSubPredicateV2                  bool            `thrift:"enable_delete_sub_predicate_v2,81,optional" frugal:"81,optional,bool" json:"enable_delete_sub_predicate_v2,omitempty"`
+	FeProcessUuid                               int64           `thrift:"fe_process_uuid,82,optional" frugal:"82,optional,i64" json:"fe_process_uuid,omitempty"`
+	InvertedIndexConjunctionOptThreshold        int32           `thrift:"inverted_index_conjunction_opt_threshold,83,optional" frugal:"83,optional,i32" json:"inverted_index_conjunction_opt_threshold,omitempty"`
+	EnableProfile                               bool            `thrift:"enable_profile,84,optional" frugal:"84,optional,bool" json:"enable_profile,omitempty"`
+	EnablePageCache                             bool            `thrift:"enable_page_cache,85,optional" frugal:"85,optional,bool" json:"enable_page_cache,omitempty"`
+	AnalyzeTimeout                              int32           `thrift:"analyze_timeout,86,optional" frugal:"86,optional,i32" json:"analyze_timeout,omitempty"`
+	FasterFloatConvert                          bool            `thrift:"faster_float_convert,87,optional" frugal:"87,optional,bool" json:"faster_float_convert,omitempty"`
+	EnableDecimal256                            bool            `thrift:"enable_decimal256,88,optional" frugal:"88,optional,bool" json:"enable_decimal256,omitempty"`
+	EnableLocalShuffle                          bool            `thrift:"enable_local_shuffle,89,optional" frugal:"89,optional,bool" json:"enable_local_shuffle,omitempty"`
+	SkipMissingVersion                          bool            `thrift:"skip_missing_version,90,optional" frugal:"90,optional,bool" json:"skip_missing_version,omitempty"`
+	RuntimeFilterWaitInfinitely                 bool            `thrift:"runtime_filter_wait_infinitely,91,optional" frugal:"91,optional,bool" json:"runtime_filter_wait_infinitely,omitempty"`
+	WaitFullBlockScheduleTimes                  int32           `thrift:"wait_full_block_schedule_times,92,optional" frugal:"92,optional,i32" json:"wait_full_block_schedule_times,omitempty"`
+	InvertedIndexMaxExpansions                  int32           `thrift:"inverted_index_max_expansions,93,optional" frugal:"93,optional,i32" json:"inverted_index_max_expansions,omitempty"`
+	InvertedIndexSkipThreshold                  int32           `thrift:"inverted_index_skip_threshold,94,optional" frugal:"94,optional,i32" json:"inverted_index_skip_threshold,omitempty"`
+	EnableParallelScan                          bool            `thrift:"enable_parallel_scan,95,optional" frugal:"95,optional,bool" json:"enable_parallel_scan,omitempty"`
+	ParallelScanMaxScannersCount                int32           `thrift:"parallel_scan_max_scanners_count,96,optional" frugal:"96,optional,i32" json:"parallel_scan_max_scanners_count,omitempty"`
+	ParallelScanMinRowsPerScanner               int64           `thrift:"parallel_scan_min_rows_per_scanner,97,optional" frugal:"97,optional,i64" json:"parallel_scan_min_rows_per_scanner,omitempty"`
+	SkipBadTablet                               bool            `thrift:"skip_bad_tablet,98,optional" frugal:"98,optional,bool" json:"skip_bad_tablet,omitempty"`
+	ScannerScaleUpRatio                         float64         `thrift:"scanner_scale_up_ratio,99,optional" frugal:"99,optional,double" json:"scanner_scale_up_ratio,omitempty"`
+	EnableDistinctStreamingAggregation          bool            `thrift:"enable_distinct_streaming_aggregation,100,optional" frugal:"100,optional,bool" json:"enable_distinct_streaming_aggregation,omitempty"`
+	EnableJoinSpill                             bool            `thrift:"enable_join_spill,101,optional" frugal:"101,optional,bool" json:"enable_join_spill,omitempty"`
+	EnableSortSpill                             bool            `thrift:"enable_sort_spill,102,optional" frugal:"102,optional,bool" json:"enable_sort_spill,omitempty"`
+	EnableAggSpill                              bool            `thrift:"enable_agg_spill,103,optional" frugal:"103,optional,bool" json:"enable_agg_spill,omitempty"`
+	MinRevocableMem                             int64           `thrift:"min_revocable_mem,104,optional" frugal:"104,optional,i64" json:"min_revocable_mem,omitempty"`
+	SpillStreamingAggMemLimit                   int64           `thrift:"spill_streaming_agg_mem_limit,105,optional" frugal:"105,optional,i64" json:"spill_streaming_agg_mem_limit,omitempty"`
+	DataQueueMaxBlocks                          int64           `thrift:"data_queue_max_blocks,106,optional" frugal:"106,optional,i64" json:"data_queue_max_blocks,omitempty"`
+	EnableCommonExprPushdownForInvertedIndex    bool            `thrift:"enable_common_expr_pushdown_for_inverted_index,107,optional" frugal:"107,optional,bool" json:"enable_common_expr_pushdown_for_inverted_index,omitempty"`
+	LocalExchangeFreeBlocksLimit                *int64          `thrift:"local_exchange_free_blocks_limit,108,optional" frugal:"108,optional,i64" json:"local_exchange_free_blocks_limit,omitempty"`
+	EnableForceSpill                            bool            `thrift:"enable_force_spill,109,optional" frugal:"109,optional,bool" json:"enable_force_spill,omitempty"`
+	EnableParquetFilterByMinMax                 bool            `thrift:"enable_parquet_filter_by_min_max,110,optional" frugal:"110,optional,bool" json:"enable_parquet_filter_by_min_max,omitempty"`
+	EnableOrcFilterByMinMax                     bool            `thrift:"enable_orc_filter_by_min_max,111,optional" frugal:"111,optional,bool" json:"enable_orc_filter_by_min_max,omitempty"`
+	MaxColumnReaderNum                          int32           `thrift:"max_column_reader_num,112,optional" frugal:"112,optional,i32" json:"max_column_reader_num,omitempty"`
+	EnableLocalMergeSort                        bool            `thrift:"enable_local_merge_sort,113,optional" frugal:"113,optional,bool" json:"enable_local_merge_sort,omitempty"`
+	EnableParallelResultSink                    bool            `thrift:"enable_parallel_result_sink,114,optional" frugal:"114,optional,bool" json:"enable_parallel_result_sink,omitempty"`
+	EnableShortCircuitQueryAccessColumnStore    bool            `thrift:"enable_short_circuit_query_access_column_store,115,optional" frugal:"115,optional,bool" json:"enable_short_circuit_query_access_column_store,omitempty"`
+	EnableNoNeedReadDataOpt                     bool            `thrift:"enable_no_need_read_data_opt,116,optional" frugal:"116,optional,bool" json:"enable_no_need_read_data_opt,omitempty"`
+	ReadCsvEmptyLineAsNull                      bool            `thrift:"read_csv_empty_line_as_null,117,optional" frugal:"117,optional,bool" json:"read_csv_empty_line_as_null,omitempty"`
+	SerdeDialect                                TSerdeDialect   `thrift:"serde_dialect,118,optional" frugal:"118,optional,TSerdeDialect" json:"serde_dialect,omitempty"`
+	KeepCarriageReturn                          bool            `thrift:"keep_carriage_return,119,optional" frugal:"119,optional,bool" json:"keep_carriage_return,omitempty"`
+	EnableMatchWithoutInvertedIndex             bool            `thrift:"enable_match_without_inverted_index,120,optional" frugal:"120,optional,bool" json:"enable_match_without_inverted_index,omitempty"`
+	EnableFallbackOnMissingInvertedIndex        bool            `thrift:"enable_fallback_on_missing_inverted_index,121,optional" frugal:"121,optional,bool" json:"enable_fallback_on_missing_inverted_index,omitempty"`
+	RuntimeBloomFilterMinSize                   int32           `thrift:"runtime_bloom_filter_min_size,122,optional" frugal:"122,optional,i32" json:"runtime_bloom_filter_min_size,omitempty"`
+	HiveParquetUseColumnNames                   bool            `thrift:"hive_parquet_use_column_names,123,optional" frugal:"123,optional,bool" json:"hive_parquet_use_column_names,omitempty"`
+	HiveOrcUseColumnNames                       bool            `thrift:"hive_orc_use_column_names,124,optional" frugal:"124,optional,bool" json:"hive_orc_use_column_names,omitempty"`
+	EnableSegmentCache                          bool            `thrift:"enable_segment_cache,125,optional" frugal:"125,optional,bool" json:"enable_segment_cache,omitempty"`
+	RuntimeBloomFilterMaxSize                   int32           `thrift:"runtime_bloom_filter_max_size,126,optional" frugal:"126,optional,i32" json:"runtime_bloom_filter_max_size,omitempty"`
+	InListValueCountThreshold                   int32           `thrift:"in_list_value_count_threshold,127,optional" frugal:"127,optional,i32" json:"in_list_value_count_threshold,omitempty"`
+	EnableVerboseProfile                        bool            `thrift:"enable_verbose_profile,128,optional" frugal:"128,optional,bool" json:"enable_verbose_profile,omitempty"`
+	RpcVerboseProfileMaxInstanceCount           int32           `thrift:"rpc_verbose_profile_max_instance_count,129,optional" frugal:"129,optional,i32" json:"rpc_verbose_profile_max_instance_count,omitempty"`
+	EnableAdaptivePipelineTaskSerialReadOnLimit bool            `thrift:"enable_adaptive_pipeline_task_serial_read_on_limit,130,optional" frugal:"130,optional,bool" json:"enable_adaptive_pipeline_task_serial_read_on_limit,omitempty"`
+	AdaptivePipelineTaskSerialReadOnLimit       int32           `thrift:"adaptive_pipeline_task_serial_read_on_limit,131,optional" frugal:"131,optional,i32" json:"adaptive_pipeline_task_serial_read_on_limit,omitempty"`
+	DisableFileCache                            bool            `thrift:"disable_file_cache,1000,optional" frugal:"1000,optional,bool" json:"disable_file_cache,omitempty"`
 }
 
 func NewTQueryOptions() *TQueryOptions {
 	return &TQueryOptions{
 
-		AbortOnError:                             false,
-		MaxErrors:                                0,
-		DisableCodegen:                           true,
-		BatchSize:                                0,
-		NumNodes:                                 int32(NUM_NODES_ALL),
-		MaxScanRangeLength:                       0,
-		NumScannerThreads:                        0,
-		MaxIoBuffers:                             0,
-		AllowUnsupportedFormats:                  false,
-		DefaultOrderByLimit:                      -1,
-		MemLimit:                                 2147483648,
-		AbortOnDefaultLimitExceeded:              false,
-		QueryTimeout:                             3600,
-		IsReportSuccess:                          false,
-		CodegenLevel:                             0,
-		KuduLatestObservedTs:                     9223372036854775807,
-		QueryType:                                TQueryType_SELECT,
-		MinReservation:                           0,
-		MaxReservation:                           107374182400,
-		InitialReservationTotalClaims:            2147483647,
-		BufferPoolLimit:                          2147483648,
-		DefaultSpillableBufferSize:               2097152,
-		MinSpillableBufferSize:                   65536,
-		MaxRowSize:                               524288,
-		DisableStreamPreaggregations:             false,
-		MtDop:                                    0,
-		LoadMemLimit:                             0,
-		EnableSpilling:                           false,
-		EnableEnableExchangeNodeParallelMerge:    false,
-		RuntimeFilterWaitTimeMs:                  1000,
-		RuntimeFilterMaxInNum:                    1024,
-		ReturnObjectDataAsBinary:                 false,
-		TrimTailingSpacesForExternalTableQuery:   false,
-		SkipStorageEngineMerge:                   false,
-		SkipDeletePredicate:                      false,
-		BeExecVersion:                            0,
-		PartitionedHashJoinRowsThreshold:         0,
-		CheckOverflowForDecimal:                  true,
-		SkipDeleteBitmap:                         false,
-		EnablePipelineEngine:                     true,
-		RepeatMaxNum:                             0,
-		ExternalSortBytesThreshold:               0,
-		PartitionedHashAggRowsThreshold:          0,
-		EnableFileCache:                          false,
-		InsertTimeout:                            14400,
-		ExecutionTimeout:                         3600,
-		DryRunQuery:                              false,
-		EnableCommonExprPushdown:                 false,
-		ParallelInstance:                         1,
-		MysqlRowBinaryFormat:                     false,
-		ExternalAggBytesThreshold:                0,
-		ExternalAggPartitionBits:                 4,
-		EnableParquetLazyMat:                     true,
-		EnableOrcLazyMat:                         true,
-		EnableScanNodeRunSerial:                  false,
-		EnableInsertStrict:                       false,
-		EnableInvertedIndexQuery:                 true,
-		TruncateCharOrVarcharColumns:             false,
-		EnableHashJoinEarlyStartProbe:            false,
-		EnablePipelineXEngine:                    true,
-		EnableMemtableOnSinkNode:                 false,
-		EnableDeleteSubPredicateV2:               false,
-		FeProcessUuid:                            0,
-		InvertedIndexConjunctionOptThreshold:     1000,
-		EnableProfile:                            false,
-		EnablePageCache:                          false,
-		AnalyzeTimeout:                           43200,
-		FasterFloatConvert:                       false,
-		EnableDecimal256:                         false,
-		EnableLocalShuffle:                       false,
-		SkipMissingVersion:                       false,
-		RuntimeFilterWaitInfinitely:              false,
-		WaitFullBlockScheduleTimes:               1,
-		InvertedIndexMaxExpansions:               50,
-		InvertedIndexSkipThreshold:               50,
-		EnableParallelScan:                       false,
-		ParallelScanMaxScannersCount:             0,
-		ParallelScanMinRowsPerScanner:            0,
-		SkipBadTablet:                            false,
-		ScannerScaleUpRatio:                      0.0,
-		EnableDistinctStreamingAggregation:       true,
-		EnableJoinSpill:                          false,
-		EnableSortSpill:                          false,
-		EnableAggSpill:                           false,
-		MinRevocableMem:                          0,
-		SpillStreamingAggMemLimit:                0,
-		DataQueueMaxBlocks:                       0,
-		EnableCommonExprPushdownForInvertedIndex: false,
-		EnableForceSpill:                         false,
-		EnableParquetFilterByMinMax:              true,
-		EnableOrcFilterByMinMax:                  true,
-		MaxColumnReaderNum:                       0,
-		EnableLocalMergeSort:                     false,
-		EnableParallelResultSink:                 false,
-		EnableShortCircuitQueryAccessColumnStore: false,
-		EnableNoNeedReadDataOpt:                  true,
-		ReadCsvEmptyLineAsNull:                   false,
-		SerdeDialect:                             TSerdeDialect_DORIS,
-		KeepCarriageReturn:                       false,
-		EnableMatchWithoutInvertedIndex:          true,
-		EnableFallbackOnMissingInvertedIndex:     true,
-		RuntimeBloomFilterMinSize:                1048576,
-		HiveParquetUseColumnNames:                true,
-		HiveOrcUseColumnNames:                    true,
-		EnableSegmentCache:                       true,
-		RuntimeBloomFilterMaxSize:                16777216,
-		InListValueCountThreshold:                10,
-		DisableFileCache:                         false,
+		AbortOnError:                                false,
+		MaxErrors:                                   0,
+		DisableCodegen:                              true,
+		BatchSize:                                   0,
+		NumNodes:                                    int32(NUM_NODES_ALL),
+		MaxScanRangeLength:                          0,
+		NumScannerThreads:                           0,
+		MaxIoBuffers:                                0,
+		AllowUnsupportedFormats:                     false,
+		DefaultOrderByLimit:                         -1,
+		MemLimit:                                    2147483648,
+		AbortOnDefaultLimitExceeded:                 false,
+		QueryTimeout:                                3600,
+		IsReportSuccess:                             false,
+		CodegenLevel:                                0,
+		KuduLatestObservedTs:                        9223372036854775807,
+		QueryType:                                   TQueryType_SELECT,
+		MinReservation:                              0,
+		MaxReservation:                              107374182400,
+		InitialReservationTotalClaims:               2147483647,
+		BufferPoolLimit:                             2147483648,
+		DefaultSpillableBufferSize:                  2097152,
+		MinSpillableBufferSize:                      65536,
+		MaxRowSize:                                  524288,
+		DisableStreamPreaggregations:                false,
+		MtDop:                                       0,
+		LoadMemLimit:                                0,
+		EnableSpilling:                              false,
+		EnableEnableExchangeNodeParallelMerge:       false,
+		RuntimeFilterWaitTimeMs:                     1000,
+		RuntimeFilterMaxInNum:                       1024,
+		ReturnObjectDataAsBinary:                    false,
+		TrimTailingSpacesForExternalTableQuery:      false,
+		SkipStorageEngineMerge:                      false,
+		SkipDeletePredicate:                         false,
+		BeExecVersion:                               0,
+		PartitionedHashJoinRowsThreshold:            0,
+		CheckOverflowForDecimal:                     true,
+		SkipDeleteBitmap:                            false,
+		EnablePipelineEngine:                        true,
+		RepeatMaxNum:                                0,
+		ExternalSortBytesThreshold:                  0,
+		PartitionedHashAggRowsThreshold:             0,
+		EnableFileCache:                             false,
+		InsertTimeout:                               14400,
+		ExecutionTimeout:                            3600,
+		DryRunQuery:                                 false,
+		EnableCommonExprPushdown:                    false,
+		ParallelInstance:                            1,
+		MysqlRowBinaryFormat:                        false,
+		ExternalAggBytesThreshold:                   0,
+		ExternalAggPartitionBits:                    4,
+		EnableParquetLazyMat:                        true,
+		EnableOrcLazyMat:                            true,
+		EnableScanNodeRunSerial:                     false,
+		EnableInsertStrict:                          false,
+		EnableInvertedIndexQuery:                    true,
+		TruncateCharOrVarcharColumns:                false,
+		EnableHashJoinEarlyStartProbe:               false,
+		EnablePipelineXEngine:                       true,
+		EnableMemtableOnSinkNode:                    false,
+		EnableDeleteSubPredicateV2:                  false,
+		FeProcessUuid:                               0,
+		InvertedIndexConjunctionOptThreshold:        1000,
+		EnableProfile:                               false,
+		EnablePageCache:                             false,
+		AnalyzeTimeout:                              43200,
+		FasterFloatConvert:                          false,
+		EnableDecimal256:                            false,
+		EnableLocalShuffle:                          false,
+		SkipMissingVersion:                          false,
+		RuntimeFilterWaitInfinitely:                 false,
+		WaitFullBlockScheduleTimes:                  1,
+		InvertedIndexMaxExpansions:                  50,
+		InvertedIndexSkipThreshold:                  50,
+		EnableParallelScan:                          false,
+		ParallelScanMaxScannersCount:                0,
+		ParallelScanMinRowsPerScanner:               0,
+		SkipBadTablet:                               false,
+		ScannerScaleUpRatio:                         0.0,
+		EnableDistinctStreamingAggregation:          true,
+		EnableJoinSpill:                             false,
+		EnableSortSpill:                             false,
+		EnableAggSpill:                              false,
+		MinRevocableMem:                             0,
+		SpillStreamingAggMemLimit:                   0,
+		DataQueueMaxBlocks:                          0,
+		EnableCommonExprPushdownForInvertedIndex:    false,
+		EnableForceSpill:                            false,
+		EnableParquetFilterByMinMax:                 true,
+		EnableOrcFilterByMinMax:                     true,
+		MaxColumnReaderNum:                          0,
+		EnableLocalMergeSort:                        false,
+		EnableParallelResultSink:                    false,
+		EnableShortCircuitQueryAccessColumnStore:    false,
+		EnableNoNeedReadDataOpt:                     true,
+		ReadCsvEmptyLineAsNull:                      false,
+		SerdeDialect:                                TSerdeDialect_DORIS,
+		KeepCarriageReturn:                          false,
+		EnableMatchWithoutInvertedIndex:             true,
+		EnableFallbackOnMissingInvertedIndex:        true,
+		RuntimeBloomFilterMinSize:                   1048576,
+		HiveParquetUseColumnNames:                   true,
+		HiveOrcUseColumnNames:                       true,
+		EnableSegmentCache:                          true,
+		RuntimeBloomFilterMaxSize:                   16777216,
+		InListValueCountThreshold:                   10,
+		EnableVerboseProfile:                        false,
+		RpcVerboseProfileMaxInstanceCount:           0,
+		EnableAdaptivePipelineTaskSerialReadOnLimit: true,
+		AdaptivePipelineTaskSerialReadOnLimit:       10000,
+		DisableFileCache:                            false,
 	}
 }
 
@@ -1974,6 +1982,10 @@ func (p *TQueryOptions) InitDefault() {
 	p.EnableSegmentCache = true
 	p.RuntimeBloomFilterMaxSize = 16777216
 	p.InListValueCountThreshold = 10
+	p.EnableVerboseProfile = false
+	p.RpcVerboseProfileMaxInstanceCount = 0
+	p.EnableAdaptivePipelineTaskSerialReadOnLimit = true
+	p.AdaptivePipelineTaskSerialReadOnLimit = 10000
 	p.DisableFileCache = false
 }
 
@@ -3039,6 +3051,42 @@ func (p *TQueryOptions) GetInListValueCountThreshold() (v int32) {
 	return p.InListValueCountThreshold
 }
 
+var TQueryOptions_EnableVerboseProfile_DEFAULT bool = false
+
+func (p *TQueryOptions) GetEnableVerboseProfile() (v bool) {
+	if !p.IsSetEnableVerboseProfile() {
+		return TQueryOptions_EnableVerboseProfile_DEFAULT
+	}
+	return p.EnableVerboseProfile
+}
+
+var TQueryOptions_RpcVerboseProfileMaxInstanceCount_DEFAULT int32 = 0
+
+func (p *TQueryOptions) GetRpcVerboseProfileMaxInstanceCount() (v int32) {
+	if !p.IsSetRpcVerboseProfileMaxInstanceCount() {
+		return TQueryOptions_RpcVerboseProfileMaxInstanceCount_DEFAULT
+	}
+	return p.RpcVerboseProfileMaxInstanceCount
+}
+
+var TQueryOptions_EnableAdaptivePipelineTaskSerialReadOnLimit_DEFAULT bool = true
+
+func (p *TQueryOptions) GetEnableAdaptivePipelineTaskSerialReadOnLimit() (v bool) {
+	if !p.IsSetEnableAdaptivePipelineTaskSerialReadOnLimit() {
+		return TQueryOptions_EnableAdaptivePipelineTaskSerialReadOnLimit_DEFAULT
+	}
+	return p.EnableAdaptivePipelineTaskSerialReadOnLimit
+}
+
+var TQueryOptions_AdaptivePipelineTaskSerialReadOnLimit_DEFAULT int32 = 10000
+
+func (p *TQueryOptions) GetAdaptivePipelineTaskSerialReadOnLimit() (v int32) {
+	if !p.IsSetAdaptivePipelineTaskSerialReadOnLimit() {
+		return TQueryOptions_AdaptivePipelineTaskSerialReadOnLimit_DEFAULT
+	}
+	return p.AdaptivePipelineTaskSerialReadOnLimit
+}
+
 var TQueryOptions_DisableFileCache_DEFAULT bool = false
 
 func (p *TQueryOptions) GetDisableFileCache() (v bool) {
@@ -3401,6 +3449,18 @@ func (p *TQueryOptions) SetRuntimeBloomFilterMaxSize(val int32) {
 func (p *TQueryOptions) SetInListValueCountThreshold(val int32) {
 	p.InListValueCountThreshold = val
 }
+func (p *TQueryOptions) SetEnableVerboseProfile(val bool) {
+	p.EnableVerboseProfile = val
+}
+func (p *TQueryOptions) SetRpcVerboseProfileMaxInstanceCount(val int32) {
+	p.RpcVerboseProfileMaxInstanceCount = val
+}
+func (p *TQueryOptions) SetEnableAdaptivePipelineTaskSerialReadOnLimit(val bool) {
+	p.EnableAdaptivePipelineTaskSerialReadOnLimit = val
+}
+func (p *TQueryOptions) SetAdaptivePipelineTaskSerialReadOnLimit(val int32) {
+	p.AdaptivePipelineTaskSerialReadOnLimit = val
+}
 func (p *TQueryOptions) SetDisableFileCache(val bool) {
 	p.DisableFileCache = val
 }
@@ -3524,6 +3584,10 @@ var fieldIDToName_TQueryOptions = map[int16]string{
 	125:  "enable_segment_cache",
 	126:  "runtime_bloom_filter_max_size",
 	127:  "in_list_value_count_threshold",
+	128:  "enable_verbose_profile",
+	129:  "rpc_verbose_profile_max_instance_count",
+	130:  "enable_adaptive_pipeline_task_serial_read_on_limit",
+	131:  "adaptive_pipeline_task_serial_read_on_limit",
 	1000: "disable_file_cache",
 }
 
@@ -3997,6 +4061,22 @@ func (p *TQueryOptions) IsSetRuntimeBloomFilterMaxSize() bool {
 
 func (p *TQueryOptions) IsSetInListValueCountThreshold() bool {
 	return p.InListValueCountThreshold != TQueryOptions_InListValueCountThreshold_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableVerboseProfile() bool {
+	return p.EnableVerboseProfile != TQueryOptions_EnableVerboseProfile_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetRpcVerboseProfileMaxInstanceCount() bool {
+	return p.RpcVerboseProfileMaxInstanceCount != TQueryOptions_RpcVerboseProfileMaxInstanceCount_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableAdaptivePipelineTaskSerialReadOnLimit() bool {
+	return p.EnableAdaptivePipelineTaskSerialReadOnLimit != TQueryOptions_EnableAdaptivePipelineTaskSerialReadOnLimit_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetAdaptivePipelineTaskSerialReadOnLimit() bool {
+	return p.AdaptivePipelineTaskSerialReadOnLimit != TQueryOptions_AdaptivePipelineTaskSerialReadOnLimit_DEFAULT
 }
 
 func (p *TQueryOptions) IsSetDisableFileCache() bool {
@@ -4961,6 +5041,38 @@ func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
 		case 127:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField127(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 128:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField128(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 129:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField129(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 130:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField130(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 131:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField131(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6298,6 +6410,50 @@ func (p *TQueryOptions) ReadField127(iprot thrift.TProtocol) error {
 	p.InListValueCountThreshold = _field
 	return nil
 }
+func (p *TQueryOptions) ReadField128(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnableVerboseProfile = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField129(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.RpcVerboseProfileMaxInstanceCount = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField130(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnableAdaptivePipelineTaskSerialReadOnLimit = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField131(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.AdaptivePipelineTaskSerialReadOnLimit = _field
+	return nil
+}
 func (p *TQueryOptions) ReadField1000(iprot thrift.TProtocol) error {
 
 	var _field bool
@@ -6786,6 +6942,22 @@ func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField127(oprot); err != nil {
 			fieldId = 127
+			goto WriteFieldError
+		}
+		if err = p.writeField128(oprot); err != nil {
+			fieldId = 128
+			goto WriteFieldError
+		}
+		if err = p.writeField129(oprot); err != nil {
+			fieldId = 129
+			goto WriteFieldError
+		}
+		if err = p.writeField130(oprot); err != nil {
+			fieldId = 130
+			goto WriteFieldError
+		}
+		if err = p.writeField131(oprot); err != nil {
+			fieldId = 131
 			goto WriteFieldError
 		}
 		if err = p.writeField1000(oprot); err != nil {
@@ -9052,6 +9224,82 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 127 end error: ", p), err)
 }
 
+func (p *TQueryOptions) writeField128(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableVerboseProfile() {
+		if err = oprot.WriteFieldBegin("enable_verbose_profile", thrift.BOOL, 128); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableVerboseProfile); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 128 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 128 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField129(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRpcVerboseProfileMaxInstanceCount() {
+		if err = oprot.WriteFieldBegin("rpc_verbose_profile_max_instance_count", thrift.I32, 129); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.RpcVerboseProfileMaxInstanceCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 129 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 129 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField130(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableAdaptivePipelineTaskSerialReadOnLimit() {
+		if err = oprot.WriteFieldBegin("enable_adaptive_pipeline_task_serial_read_on_limit", thrift.BOOL, 130); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableAdaptivePipelineTaskSerialReadOnLimit); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 130 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 130 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField131(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAdaptivePipelineTaskSerialReadOnLimit() {
+		if err = oprot.WriteFieldBegin("adaptive_pipeline_task_serial_read_on_limit", thrift.I32, 131); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.AdaptivePipelineTaskSerialReadOnLimit); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 131 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 131 end error: ", p), err)
+}
+
 func (p *TQueryOptions) writeField1000(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDisableFileCache() {
 		if err = oprot.WriteFieldBegin("disable_file_cache", thrift.BOOL, 1000); err != nil {
@@ -9437,6 +9685,18 @@ func (p *TQueryOptions) DeepEqual(ano *TQueryOptions) bool {
 		return false
 	}
 	if !p.Field127DeepEqual(ano.InListValueCountThreshold) {
+		return false
+	}
+	if !p.Field128DeepEqual(ano.EnableVerboseProfile) {
+		return false
+	}
+	if !p.Field129DeepEqual(ano.RpcVerboseProfileMaxInstanceCount) {
+		return false
+	}
+	if !p.Field130DeepEqual(ano.EnableAdaptivePipelineTaskSerialReadOnLimit) {
+		return false
+	}
+	if !p.Field131DeepEqual(ano.AdaptivePipelineTaskSerialReadOnLimit) {
 		return false
 	}
 	if !p.Field1000DeepEqual(ano.DisableFileCache) {
@@ -10317,6 +10577,34 @@ func (p *TQueryOptions) Field126DeepEqual(src int32) bool {
 func (p *TQueryOptions) Field127DeepEqual(src int32) bool {
 
 	if p.InListValueCountThreshold != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field128DeepEqual(src bool) bool {
+
+	if p.EnableVerboseProfile != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field129DeepEqual(src int32) bool {
+
+	if p.RpcVerboseProfileMaxInstanceCount != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field130DeepEqual(src bool) bool {
+
+	if p.EnableAdaptivePipelineTaskSerialReadOnLimit != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field131DeepEqual(src int32) bool {
+
+	if p.AdaptivePipelineTaskSerialReadOnLimit != src {
 		return false
 	}
 	return true

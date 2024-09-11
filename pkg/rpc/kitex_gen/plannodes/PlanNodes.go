@@ -21690,6 +21690,98 @@ func (p *TQueriesMetadataParams) Field6DeepEqual(src *TPartitionsMetadataParams)
 	return true
 }
 
+type TMetaCacheStatsParams struct {
+}
+
+func NewTMetaCacheStatsParams() *TMetaCacheStatsParams {
+	return &TMetaCacheStatsParams{}
+}
+
+func (p *TMetaCacheStatsParams) InitDefault() {
+}
+
+var fieldIDToName_TMetaCacheStatsParams = map[int16]string{}
+
+func (p *TMetaCacheStatsParams) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		if err = iprot.Skip(fieldTypeId); err != nil {
+			goto SkipFieldTypeError
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+SkipFieldTypeError:
+	return thrift.PrependError(fmt.Sprintf("%T skip field type %d error", p, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TMetaCacheStatsParams) Write(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteStructBegin("TMetaCacheStatsParams"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TMetaCacheStatsParams) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TMetaCacheStatsParams(%+v)", *p)
+
+}
+
+func (p *TMetaCacheStatsParams) DeepEqual(ano *TMetaCacheStatsParams) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	return true
+}
+
 type TMetaScanRange struct {
 	MetadataType            *types.TMetadataType              `thrift:"metadata_type,1,optional" frugal:"1,optional,TMetadataType" json:"metadata_type,omitempty"`
 	IcebergParams           *TIcebergMetadataParams           `thrift:"iceberg_params,2,optional" frugal:"2,optional,TIcebergMetadataParams" json:"iceberg_params,omitempty"`
@@ -21700,6 +21792,7 @@ type TMetaScanRange struct {
 	JobsParams              *TJobsMetadataParams              `thrift:"jobs_params,7,optional" frugal:"7,optional,TJobsMetadataParams" json:"jobs_params,omitempty"`
 	TasksParams             *TTasksMetadataParams             `thrift:"tasks_params,8,optional" frugal:"8,optional,TTasksMetadataParams" json:"tasks_params,omitempty"`
 	PartitionsParams        *TPartitionsMetadataParams        `thrift:"partitions_params,9,optional" frugal:"9,optional,TPartitionsMetadataParams" json:"partitions_params,omitempty"`
+	MetaCacheStatsParams    *TMetaCacheStatsParams            `thrift:"meta_cache_stats_params,10,optional" frugal:"10,optional,TMetaCacheStatsParams" json:"meta_cache_stats_params,omitempty"`
 }
 
 func NewTMetaScanRange() *TMetaScanRange {
@@ -21789,6 +21882,15 @@ func (p *TMetaScanRange) GetPartitionsParams() (v *TPartitionsMetadataParams) {
 	}
 	return p.PartitionsParams
 }
+
+var TMetaScanRange_MetaCacheStatsParams_DEFAULT *TMetaCacheStatsParams
+
+func (p *TMetaScanRange) GetMetaCacheStatsParams() (v *TMetaCacheStatsParams) {
+	if !p.IsSetMetaCacheStatsParams() {
+		return TMetaScanRange_MetaCacheStatsParams_DEFAULT
+	}
+	return p.MetaCacheStatsParams
+}
 func (p *TMetaScanRange) SetMetadataType(val *types.TMetadataType) {
 	p.MetadataType = val
 }
@@ -21816,17 +21918,21 @@ func (p *TMetaScanRange) SetTasksParams(val *TTasksMetadataParams) {
 func (p *TMetaScanRange) SetPartitionsParams(val *TPartitionsMetadataParams) {
 	p.PartitionsParams = val
 }
+func (p *TMetaScanRange) SetMetaCacheStatsParams(val *TMetaCacheStatsParams) {
+	p.MetaCacheStatsParams = val
+}
 
 var fieldIDToName_TMetaScanRange = map[int16]string{
-	1: "metadata_type",
-	2: "iceberg_params",
-	3: "backends_params",
-	4: "frontends_params",
-	5: "queries_params",
-	6: "materialized_views_params",
-	7: "jobs_params",
-	8: "tasks_params",
-	9: "partitions_params",
+	1:  "metadata_type",
+	2:  "iceberg_params",
+	3:  "backends_params",
+	4:  "frontends_params",
+	5:  "queries_params",
+	6:  "materialized_views_params",
+	7:  "jobs_params",
+	8:  "tasks_params",
+	9:  "partitions_params",
+	10: "meta_cache_stats_params",
 }
 
 func (p *TMetaScanRange) IsSetMetadataType() bool {
@@ -21863,6 +21969,10 @@ func (p *TMetaScanRange) IsSetTasksParams() bool {
 
 func (p *TMetaScanRange) IsSetPartitionsParams() bool {
 	return p.PartitionsParams != nil
+}
+
+func (p *TMetaScanRange) IsSetMetaCacheStatsParams() bool {
+	return p.MetaCacheStatsParams != nil
 }
 
 func (p *TMetaScanRange) Read(iprot thrift.TProtocol) (err error) {
@@ -21951,6 +22061,14 @@ func (p *TMetaScanRange) Read(iprot thrift.TProtocol) (err error) {
 		case 9:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -22061,6 +22179,14 @@ func (p *TMetaScanRange) ReadField9(iprot thrift.TProtocol) error {
 	p.PartitionsParams = _field
 	return nil
 }
+func (p *TMetaScanRange) ReadField10(iprot thrift.TProtocol) error {
+	_field := NewTMetaCacheStatsParams()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.MetaCacheStatsParams = _field
+	return nil
+}
 
 func (p *TMetaScanRange) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -22102,6 +22228,10 @@ func (p *TMetaScanRange) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField9(oprot); err != nil {
 			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 	}
@@ -22293,6 +22423,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
 
+func (p *TMetaScanRange) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMetaCacheStatsParams() {
+		if err = oprot.WriteFieldBegin("meta_cache_stats_params", thrift.STRUCT, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.MetaCacheStatsParams.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
 func (p *TMetaScanRange) String() string {
 	if p == nil {
 		return "<nil>"
@@ -22332,6 +22481,9 @@ func (p *TMetaScanRange) DeepEqual(ano *TMetaScanRange) bool {
 		return false
 	}
 	if !p.Field9DeepEqual(ano.PartitionsParams) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.MetaCacheStatsParams) {
 		return false
 	}
 	return true
@@ -22401,6 +22553,13 @@ func (p *TMetaScanRange) Field8DeepEqual(src *TTasksMetadataParams) bool {
 func (p *TMetaScanRange) Field9DeepEqual(src *TPartitionsMetadataParams) bool {
 
 	if !p.PartitionsParams.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TMetaScanRange) Field10DeepEqual(src *TMetaCacheStatsParams) bool {
+
+	if !p.MetaCacheStatsParams.DeepEqual(src) {
 		return false
 	}
 	return true

@@ -16,6 +16,7 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/exprs"
 	"github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/partitions"
 	"github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/plannodes"
+	"github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/querycache"
 	"github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/types"
 )
 
@@ -31,6 +32,7 @@ var (
 	_ = exprs.KitexUnusedProtection
 	_ = partitions.KitexUnusedProtection
 	_ = plannodes.KitexUnusedProtection
+	_ = querycache.KitexUnusedProtection
 	_ = types.KitexUnusedProtection
 )
 
@@ -131,6 +133,20 @@ func (p *TPlanFragment) FastRead(buf []byte) (int, error) {
 		case 8:
 			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField8(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 9:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField9(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -275,6 +291,19 @@ func (p *TPlanFragment) FastReadField8(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TPlanFragment) FastReadField9(buf []byte) (int, error) {
+	offset := 0
+
+	tmp := querycache.NewTQueryCacheParam()
+	if l, err := tmp.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.QueryCacheParam = tmp
+	return offset, nil
+}
+
 // for compatibility
 func (p *TPlanFragment) FastWrite(buf []byte) int {
 	return 0
@@ -290,6 +319,7 @@ func (p *TPlanFragment) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryW
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
+		offset += p.fastWriteField9(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -306,6 +336,7 @@ func (p *TPlanFragment) BLength() int {
 		l += p.field6Length()
 		l += p.field7Length()
 		l += p.field8Length()
+		l += p.field9Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -380,6 +411,16 @@ func (p *TPlanFragment) fastWriteField8(buf []byte, binaryWriter bthrift.BinaryW
 	return offset
 }
 
+func (p *TPlanFragment) fastWriteField9(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetQueryCacheParam() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "query_cache_param", thrift.STRUCT, 9)
+		offset += p.QueryCacheParam.FastWriteNocopy(buf[offset:], binaryWriter)
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TPlanFragment) field2Length() int {
 	l := 0
 	if p.IsSetPlan() {
@@ -439,6 +480,16 @@ func (p *TPlanFragment) field8Length() int {
 		l += bthrift.Binary.FieldBeginLength("initial_reservation_total_claims", thrift.I64, 8)
 		l += bthrift.Binary.I64Length(*p.InitialReservationTotalClaims)
 
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TPlanFragment) field9Length() int {
+	l := 0
+	if p.IsSetQueryCacheParam() {
+		l += bthrift.Binary.FieldBeginLength("query_cache_param", thrift.STRUCT, 9)
+		l += p.QueryCacheParam.BLength()
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l
