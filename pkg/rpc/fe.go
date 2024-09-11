@@ -71,6 +71,15 @@ func canUseNextAddr(err error) bool {
 	return false
 }
 
+type RestoreSnapshotRequest struct {
+	TableRefs       []*festruct.TTableRef
+	SnapshotName    string
+	SnapshotResult  *festruct.TGetSnapshotResult_
+	AtomicRestore   bool
+	CleanPartitions bool
+	CleanTables     bool
+}
+
 type IFeRpc interface {
 	BeginTransaction(*base.Spec, string, []int64) (*festruct.TBeginTxnResult_, error)
 	CommitTransaction(*base.Spec, int64, []*festruct_types.TTabletCommitInfo) (*festruct.TCommitTxnResult_, error)
@@ -78,7 +87,7 @@ type IFeRpc interface {
 	GetBinlog(*base.Spec, int64) (*festruct.TGetBinlogResult_, error)
 	GetBinlogLag(*base.Spec, int64) (*festruct.TGetBinlogLagResult_, error)
 	GetSnapshot(*base.Spec, string) (*festruct.TGetSnapshotResult_, error)
-	RestoreSnapshot(*base.Spec, []*festruct.TTableRef, string, *festruct.TGetSnapshotResult_, bool, bool) (*festruct.TRestoreSnapshotResult_, error)
+	RestoreSnapshot(*base.Spec, *RestoreSnapshotRequest) (*festruct.TRestoreSnapshotResult_, error)
 	GetMasterToken(*base.Spec) (*festruct.TGetMasterTokenResult_, error)
 	GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error)
 	GetTableMeta(spec *base.Spec, tableIds []int64) (*festruct.TGetMetaResult_, error)
@@ -384,10 +393,9 @@ func (rpc *FeRpc) GetSnapshot(spec *base.Spec, labelName string) (*festruct.TGet
 	return convertResult[festruct.TGetSnapshotResult_](result, err)
 }
 
-func (rpc *FeRpc) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableRef, label string, snapshotResult *festruct.TGetSnapshotResult_, cleanTables bool, cleanPartitions bool) (*festruct.TRestoreSnapshotResult_, error) {
-	// return rpc.masterClient.RestoreSnapshot(spec, tableRefs, label, snapshotResult)
+func (rpc *FeRpc) RestoreSnapshot(spec *base.Spec, req *RestoreSnapshotRequest) (*festruct.TRestoreSnapshotResult_, error) {
 	caller := func(client IFeRpc) (resultType, error) {
-		return client.RestoreSnapshot(spec, tableRefs, label, snapshotResult, cleanTables, cleanPartitions)
+		return client.RestoreSnapshot(spec, req)
 	}
 	result, err := rpc.callWithMasterRedirect(caller)
 	return convertResult[festruct.TRestoreSnapshotResult_](result, err)
@@ -661,10 +669,13 @@ func (rpc *singleFeClient) GetSnapshot(spec *base.Spec, labelName string) (*fest
 //	    10: optional map<string, string> properties
 //	    11: optional binary meta
 //	    12: optional binary job_info
+//	    13: optional bool clean_tables
+//	    14: optional bool clean_partitions
+//	    15: optional bool atomic_restore
 //	}
 //
 // Restore Snapshot rpc
-func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, tableRefs []*festruct.TTableRef, label string, snapshotResult *festruct.TGetSnapshotResult_, cleanTables bool, cleanPartitions bool) (*festruct.TRestoreSnapshotResult_, error) {
+func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, restoreReq *RestoreSnapshotRequest) (*festruct.TRestoreSnapshotResult_, error) {
 	// NOTE: ignore meta, because it's too large
 	log.Debugf("Call RestoreSnapshot, addr: %s, spec: %s", rpc.Address(), spec)
 
@@ -674,20 +685,23 @@ func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, tableRefs []*festruc
 	properties["reserve_replica"] = "true"
 	req := &festruct.TRestoreSnapshotRequest{
 		Table:           &spec.Table,
-		LabelName:       &label,
+		LabelName:       &restoreReq.SnapshotName,
 		RepoName:        &repoName,
-		TableRefs:       tableRefs,
+		TableRefs:       restoreReq.TableRefs,
 		Properties:      properties,
-		Meta:            snapshotResult.GetMeta(),
-		JobInfo:         snapshotResult.GetJobInfo(),
-		CleanTables:     &cleanTables,
-		CleanPartitions: &cleanPartitions,
+		Meta:            restoreReq.SnapshotResult.GetMeta(),
+		JobInfo:         restoreReq.SnapshotResult.GetJobInfo(),
+		CleanTables:     &restoreReq.CleanTables,
+		CleanPartitions: &restoreReq.CleanPartitions,
+		AtomicRestore:   &restoreReq.AtomicRestore,
 	}
 	setAuthInfo(req, spec)
 
 	// NOTE: ignore meta, because it's too large
-	log.Debugf("RestoreSnapshotRequest user %s, db %s, table %s, label name %s, properties %v, clean tables: %v, clean partitions: %v",
-		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), properties, cleanTables, cleanPartitions)
+	log.Debugf("RestoreSnapshotRequest user %s, db %s, table %s, label name %s, properties %v, clean tables: %t, clean partitions: %t, atomic restore: %t",
+		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), properties,
+		restoreReq.CleanTables, restoreReq.CleanPartitions, restoreReq.AtomicRestore)
+
 	if resp, err := client.RestoreSnapshot(context.Background(), req); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "RestoreSnapshot failed")
 	} else {
