@@ -1036,6 +1036,8 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		if beginTxnResp.GetStatus().GetStatusCode() != tstatus.TStatusCode_OK {
 			if isTableNotFound(beginTxnResp.GetStatus()) && j.SyncType == DBSync {
 				// It might caused by the staled TableMapping entries.
+				// In order to rebuild the dest table ids, this progress should be rollback.
+				j.progress.Rollback(j.SkipError)
 				for _, tableRecord := range inMemoryData.TableRecords {
 					delete(j.progress.TableMapping, tableRecord.Id)
 				}
