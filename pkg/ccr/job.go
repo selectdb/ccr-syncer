@@ -1034,13 +1034,13 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		}
 		log.Debugf("resp: %v", beginTxnResp)
 		if beginTxnResp.GetStatus().GetStatusCode() != tstatus.TStatusCode_OK {
-			if isTableNotFound(beginTxnResp.GetStatus()) {
-				// The IngestBinlog and CommitTxn will rollback and retry, so the "table not found"
-				// error will be triggered at the BeginTxn stage, now force a new snapshot progress.
-				return xerror.Errorf(xerror.Meta, "begin txn failed, table is not found, status: %v", beginTxnResp.GetStatus())
-			} else {
-				return xerror.Errorf(xerror.Normal, "begin txn failed, status: %v", beginTxnResp.GetStatus())
+			if isTableNotFound(beginTxnResp.GetStatus()) && j.SyncType == DBSync {
+				// It might caused by the staled TableMapping entries.
+				for _, tableRecord := range inMemoryData.TableRecords {
+					delete(j.progress.TableMapping, tableRecord.Id)
+				}
 			}
+			return xerror.Errorf(xerror.Normal, "begin txn failed, status: %v", beginTxnResp.GetStatus())
 		}
 		txnId := beginTxnResp.GetTxnId()
 		log.Debugf("TxnId: %d, DbId: %d", txnId, beginTxnResp.GetDbId())
