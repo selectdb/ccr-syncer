@@ -618,6 +618,20 @@ func (p *TResultFileSinkOptions) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 20:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField20(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1033,6 +1047,19 @@ func (p *TResultFileSinkOptions) FastReadField19(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TResultFileSinkOptions) FastReadField20(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.OrcWriterVersion = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TResultFileSinkOptions) FastWrite(buf []byte) int {
 	return 0
@@ -1046,6 +1073,7 @@ func (p *TResultFileSinkOptions) FastWriteNocopy(buf []byte, binaryWriter bthrif
 		offset += p.fastWriteField13(buf[offset:], binaryWriter)
 		offset += p.fastWriteField16(buf[offset:], binaryWriter)
 		offset += p.fastWriteField18(buf[offset:], binaryWriter)
+		offset += p.fastWriteField20(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -1090,6 +1118,7 @@ func (p *TResultFileSinkOptions) BLength() int {
 		l += p.field17Length()
 		l += p.field18Length()
 		l += p.field19Length()
+		l += p.field20Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -1353,6 +1382,17 @@ func (p *TResultFileSinkOptions) fastWriteField19(buf []byte, binaryWriter bthri
 	return offset
 }
 
+func (p *TResultFileSinkOptions) fastWriteField20(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetOrcWriterVersion() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "orc_writer_version", thrift.I64, 20)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.OrcWriterVersion)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TResultFileSinkOptions) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("file_path", thrift.STRING, 1)
@@ -1580,6 +1620,17 @@ func (p *TResultFileSinkOptions) field19Length() int {
 	if p.IsSetOrcCompressionType() {
 		l += bthrift.Binary.FieldBeginLength("orc_compression_type", thrift.I32, 19)
 		l += bthrift.Binary.I32Length(int32(*p.OrcCompressionType))
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TResultFileSinkOptions) field20Length() int {
+	l := 0
+	if p.IsSetOrcWriterVersion() {
+		l += bthrift.Binary.FieldBeginLength("orc_writer_version", thrift.I64, 20)
+		l += bthrift.Binary.I64Length(*p.OrcWriterVersion)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

@@ -141,6 +141,7 @@ const (
 	TSchemaTableType_SCH_WORKLOAD_GROUP_RESOURCE_USAGE         TSchemaTableType = 49
 	TSchemaTableType_SCH_TABLE_PROPERTIES                      TSchemaTableType = 50
 	TSchemaTableType_SCH_FILE_CACHE_STATISTICS                 TSchemaTableType = 51
+	TSchemaTableType_SCH_CATALOG_META_CACHE_STATISTICS         TSchemaTableType = 52
 )
 
 func (p TSchemaTableType) String() string {
@@ -249,6 +250,8 @@ func (p TSchemaTableType) String() string {
 		return "SCH_TABLE_PROPERTIES"
 	case TSchemaTableType_SCH_FILE_CACHE_STATISTICS:
 		return "SCH_FILE_CACHE_STATISTICS"
+	case TSchemaTableType_SCH_CATALOG_META_CACHE_STATISTICS:
+		return "SCH_CATALOG_META_CACHE_STATISTICS"
 	}
 	return "<UNSET>"
 }
@@ -359,6 +362,8 @@ func TSchemaTableTypeFromString(s string) (TSchemaTableType, error) {
 		return TSchemaTableType_SCH_TABLE_PROPERTIES, nil
 	case "SCH_FILE_CACHE_STATISTICS":
 		return TSchemaTableType_SCH_FILE_CACHE_STATISTICS, nil
+	case "SCH_CATALOG_META_CACHE_STATISTICS":
+		return TSchemaTableType_SCH_CATALOG_META_CACHE_STATISTICS, nil
 	}
 	return TSchemaTableType(0), fmt.Errorf("not a valid TSchemaTableType string")
 }
