@@ -16,6 +16,7 @@ import (
 
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/record"
+	"github.com/selectdb/ccr_syncer/pkg/rpc"
 	"github.com/selectdb/ccr_syncer/pkg/storage"
 	utils "github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
@@ -37,6 +38,7 @@ const (
 var (
 	featureSchemaChangePartialSync bool
 	featureCleanTableAndPartitions bool
+	featureAtomicRestore           bool
 	featureCreateViewDropExists    bool
 )
 
@@ -47,6 +49,8 @@ func init() {
 	// The default value is false, since clean tables will erase views unexpectedly.
 	flag.BoolVar(&featureCleanTableAndPartitions, "feature_clean_table_and_partitions", false,
 		"clean non restored tables and partitions during fullsync")
+	flag.BoolVar(&featureAtomicRestore, "feature_atomic_restore", true,
+		"replace tables in atomic during fullsync (otherwise the dest table will not be able to read).")
 	flag.BoolVar(&featureCreateViewDropExists, "feature_create_view_drop_exists", true,
 		"drop the exists view if exists, when sync the creating view binlog")
 }
@@ -453,8 +457,17 @@ func (j *Job) partialSync() error {
 			tableRefs = append(tableRefs, tableRef)
 		}
 
-		cleanPartitions, cleanTables := false, false // DO NOT drop exists tables and partitions
-		restoreResp, err := destRpc.RestoreSnapshot(dest, tableRefs, restoreSnapshotName, snapshotResp, cleanTables, cleanPartitions)
+		restoreReq := rpc.RestoreSnapshotRequest{
+			TableRefs:      tableRefs,
+			SnapshotName:   restoreSnapshotName,
+			SnapshotResult: snapshotResp,
+
+			// DO NOT drop exists tables and partitions
+			CleanPartitions: false,
+			CleanTables:     false,
+			AtomicRestore:   false,
+		}
+		restoreResp, err := destRpc.RestoreSnapshot(dest, &restoreReq)
 		if err != nil {
 			return err
 		}
@@ -689,15 +702,25 @@ func (j *Job) fullSync() error {
 			tableRefs = append(tableRefs, tableRef)
 		}
 
-		// drop exists partitions, and drop tables if in db sync.
-		cleanTables, cleanPartitions := false, false
+		restoreReq := rpc.RestoreSnapshotRequest{
+			TableRefs:       tableRefs,
+			SnapshotName:    restoreSnapshotName,
+			SnapshotResult:  snapshotResp,
+			CleanPartitions: false,
+			CleanTables:     false,
+			AtomicRestore:   false,
+		}
 		if featureCleanTableAndPartitions {
-			cleanPartitions = true
+			// drop exists partitions, and drop tables if in db sync.
+			restoreReq.CleanPartitions = true
 			if j.SyncType == DBSync {
-				cleanTables = true
+				restoreReq.CleanTables = true
 			}
 		}
-		restoreResp, err := destRpc.RestoreSnapshot(dest, tableRefs, restoreSnapshotName, snapshotResp, cleanTables, cleanPartitions)
+		if featureAtomicRestore {
+			restoreReq.AtomicRestore = true
+		}
+		restoreResp, err := destRpc.RestoreSnapshot(dest, &restoreReq)
 		if err != nil {
 			return err
 		}
