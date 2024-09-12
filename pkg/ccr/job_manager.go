@@ -205,6 +205,13 @@ func (jm *JobManager) Resume(jobName string) error {
 	})
 }
 
+func (jm *JobManager) ForceFullsync(jobName string) error {
+	return jm.dealJob(jobName, func(job *Job) error {
+		job.ForceFullsync()
+		return nil
+	})
+}
+
 func (jm *JobManager) GetJobStatus(jobName string) (*JobStatus, error) {
 	jm.lock.RLock()
 	defer jm.lock.RUnlock()
