@@ -18,6 +18,7 @@
 suite("test_keyword_name") {
 
     def tableName = "roles"
+    def newTableName = "test-hyphen"
     def syncerAddress = "127.0.0.1:9190"
     def test_num = 0
     def insert_num = 5
@@ -110,6 +111,21 @@ suite("test_keyword_name") {
             "binlog.enable" = "true"
         );
     """
+
+    sql "DROP TABLE IF EXISTS `${newTableName}` FORCE"
+    target_sql "DROP TABLE IF EXISTS `${newTableName}` FORCE"
+    sql """
+        CREATE TABLE `${newTableName}` (
+            id       INT,
+            name    VARCHAR(10)
+        )
+        UNIQUE KEY(id)
+        DISTRIBUTED BY HASH(id) BUCKETS 1
+        PROPERTIES (
+            "replication_allocation" = "tag.location.default: 1",
+            "binlog.enable" = "true"
+        );
+    """ 
     // sql """ALTER TABLE ${tableName} set ("binlog.enable" = "true")"""
 
     sql """
@@ -124,6 +140,12 @@ suite("test_keyword_name") {
         (7, 'warlock', 'horde', '2018-12-04 16:11:28'),
         (8, 'hunter', 'horde', NULL);
      """
+    sql """
+        INSERT INTO `${newTableName}` VALUES
+        (1, 'a'),
+        (2, 'b'),
+        (3, 'c');
+     """   
 
     // delete the exists ccr job first.
     httpTest {
@@ -145,12 +167,27 @@ suite("test_keyword_name") {
 
     assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
 
+    httpTest {
+        uri "/create_ccr"
+        endpoint syncerAddress
+        def bodyJson = get_ccr_body "${newTableName}"
+        body "${bodyJson}"
+        op "post"
+        result response
+    }
+    assertTrue(checkRestoreFinishTimesOf("${newTableName}", 30))
+
     logger.info("=== Test 1: Check keyword name table ===")
     // def checkShowTimesOf = { sqlString, myClosure, times, func = "sql" -> Boolean
     assertTrue(checkShowTimesOf("""
                                 SHOW CREATE TABLE `TEST_${context.dbName}`.`${tableName}`
                                 """,
                                 exist, 30, "target"))
+
+    assertTrue(checkShowTimesOf("""
+                                SHOW CREATE TABLE `TEST_${context.dbName}`.`${newTableName}`
+                                """,
+                                exist, 30, "target"))                                
 
     logger.info("=== Test 2: Add new partition ===")
     sql """
