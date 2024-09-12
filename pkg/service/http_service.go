@@ -612,7 +612,7 @@ func (s *HttpService) jobDetailHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *HttpService) forceFullsyncHandler(w http.ResponseWriter, r* http.Request) {
+func (s *HttpService) forceFullsyncHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("force job fullsync")
 
 	var result *defaultResult
@@ -641,7 +641,7 @@ func (s *HttpService) forceFullsyncHandler(w http.ResponseWriter, r* http.Reques
 		log.Warnf("force fullsync failed: %+v", err)
 		result = newErrorResult(err.Error())
 	} else {
-result = newSuccessResult()
+		result = newSuccessResult()
 	}
 }
 
