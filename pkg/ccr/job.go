@@ -111,6 +111,8 @@ type Job struct {
 	stop      chan struct{} `json:"-"`
 	isDeleted atomic.Bool   `json:"-"`
 
+	forceFullsync bool `json:"-"` // Force job step fullsync, for test only.
+
 	lock sync.Mutex `json:"-"`
 }
 
@@ -159,6 +161,7 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 
 		allowTableExists: jobContext.allowTableExists,
 		factory:          factory,
+		forceFullsync:    false,
 
 		progress: nil,
 		db:       jobContext.db,
@@ -1625,6 +1628,13 @@ func (j *Job) incrementalSync() error {
 
 	// Step 2: handle all binlog
 	for {
+		if j.forceFullsync {
+			log.Warnf("job is forced to step fullsync by user")
+			j.forceFullsync = false
+			_ = j.newSnapshot(j.progress.CommitSeq)
+			return nil
+		}
+
 		// The CommitSeq is equals to PrevCommitSeq in here.
 		commitSeq := j.progress.CommitSeq
 		log.Debugf("src: %s, commitSeq: %v", src, commitSeq)
@@ -2154,6 +2164,14 @@ func (j *Job) Resume() error {
 	log.Infof("resume job %s", j.Name)
 
 	return j.changeJobState(JobRunning)
+}
+
+func (j *Job) ForceFullsync() {
+	log.Infof("force job %s step full sync", j.Name)
+
+	j.lock.Lock()
+	defer j.lock.Unlock()
+	j.forceFullsync = true
 }
 
 type JobStatus struct {
