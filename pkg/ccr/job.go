@@ -1299,7 +1299,7 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 	}
 
 	if err = j.IDest.DropTable(tableName, true); err != nil {
-		if !strings.Contains(err.Error(), "is not TABLE. Use 'DROP VIEW") {
+		if !strings.Contains(err.Error(), "is not TABLE") {
 			return xerror.Wrapf(err, xerror.Normal, "drop table %s", tableName)
 		} else if err = j.IDest.DropView(tableName); err != nil { // retry with drop view.
 			return xerror.Wrapf(err, xerror.Normal, "drop view %s", tableName)

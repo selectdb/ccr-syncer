@@ -16,11 +16,11 @@
 // under the License.
 
 suite("test_sync_view_drop_delete_create") {
-    def versions = sql_return_maparray "show variables like 'version_comment'"
-    if (versions[0].Value.contains('doris-2.0.') || versions[0].Value.contains('doris-2.1.')) {
-        logger.info("2.0/2.1 not support this case, current version is: ${versions[0].Value}")
-        return
-    }
+    // def versions = sql_return_maparray "show variables like 'version_comment'"
+    // if (versions[0].Value.contains('doris-2.0.') || versions[0].Value.contains('doris-2.1.')) {
+    //     logger.info("2.0/2.1 not support this case, current version is: ${versions[0].Value}")
+    //     return
+    // }
 
     def syncerAddress = "127.0.0.1:9190"
     def sync_gap_time = 5000
