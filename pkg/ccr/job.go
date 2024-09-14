@@ -48,7 +48,7 @@ func init() {
 	// The default value is false, since clean tables will erase views unexpectedly.
 	flag.BoolVar(&featureCleanTableAndPartitions, "feature_clean_table_and_partitions", false,
 		"clean non restored tables and partitions during fullsync")
-	flag.BoolVar(&featureAtomicRestore, "feature_atomic_restore", true,
+	flag.BoolVar(&featureAtomicRestore, "feature_atomic_restore", false,
 		"replace tables in atomic during fullsync (otherwise the dest table will not be able to read).")
 }
 
@@ -1306,7 +1306,11 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 	}
 
 	if err = j.IDest.DropTable(tableName, true); err != nil {
-		return xerror.Wrapf(err, xerror.Normal, "drop table %s", tableName)
+		if !strings.Contains(err.Error(), "is not TABLE. Use 'DROP VIEW") {
+			return xerror.Wrapf(err, xerror.Normal, "drop table %s", tableName)
+		} else if err = j.IDest.DropView(tableName); err != nil { // retry with drop view.
+			return xerror.Wrapf(err, xerror.Normal, "drop view %s", tableName)
+		}
 	}
 
 	j.srcMeta.ClearTablesCache()
