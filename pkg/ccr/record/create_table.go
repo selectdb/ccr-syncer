@@ -11,6 +11,10 @@ type CreateTable struct {
 	DbId    int64  `json:"dbId"`
 	TableId int64  `json:"tableId"`
 	Sql     string `json:"sql"`
+
+	// Below fields was added in doris 2.0.3: https://github.com/apache/doris/pull/26901
+	DbName    string `json:"dbName"`
+	TableName string `json:"tableName"`
 }
 
 func NewCreateTableFromJson(data string) (*CreateTable, error) {
@@ -34,5 +38,6 @@ func NewCreateTableFromJson(data string) (*CreateTable, error) {
 
 // String
 func (c *CreateTable) String() string {
-	return fmt.Sprintf("CreateTable: DbId: %d, TableId: %d, Sql: %s", c.DbId, c.TableId, c.Sql)
+	return fmt.Sprintf("CreateTable: DbId: %d, DbName: %s, TableId: %d, TableName: %s, Sql: %s",
+		c.DbId, c.DbName, c.TableId, c.TableName, c.Sql)
 }
