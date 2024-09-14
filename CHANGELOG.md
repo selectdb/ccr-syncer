@@ -4,13 +4,23 @@
 
 ### Fix
 
+- 修复 create table 时下游 view 已经存在的问题（先删除 view），feature gate: `feature_create_view_drop_exists` (selectdb/ccr-syncer#170,selectdb/ccr-syncer#171)
+- **修复下游删表后重做 snapshot 是 table mapping 过期的问题 (selectdb/ccr-syncer#162,selectdb/ccr-syncer#163,selectdb/ccr-syncer#164)**
+- 修复 full sync 期间 view already exists 的问题，如果 signature 不匹配会先删除 (selectdb/ccr-syncer#152)
+- 修复 2.0 中 get view 逻辑，兼容 default_cluster 语法 (selectdb/ccr-syncer#149)
 - 修复 job state 变化时仍然更新了 job progress 的问题，对之前的逻辑无影响，主要用于支持 partial sync (selectdb/ccr-syncer#124)
 - 修复 get_lag 接口中不含 lag 的问题 (selectdb/ccr-syncer#126)
 - 修复下游 restore 时未清理 orphan tables/partitions 的问题 (selectdb/ccr-syncer#128)
+    - 备注： 暂时禁用，因为 doris 侧发现了 bug (selectdb/ccr-syncer#153,selectdb/ccr-syncer#161)
 - **修复下游删表后重做 snapshot 时 dest meta cache 过期的问题 (selectdb/ccr-syncer#132)**
 
 ### Feature
 
+- 支持同步 drop view（drop table 失败后使用 drop view 重试）(selectdb/ccr-syncer#169)
+- 支持 atomic restore (selectdb/ccr-syncer#166)
+- 支持同步 rename 操作 (selectdb/ccr-syncer#147)
+- schema change 使用 partial sync 而不是 fullsync (selectdb/ccr-syncer#151)
+- partial sync 使用 rename 而不是直接修改 table，因此表的读写在同步过程中不受影响 (selectdb/ccr-syncer#148)
 - 支持 partial sync，减少需要同步的数据量 (selectdb/ccr-syncer#125)
 - 添加参数 `allowTableExists`，允许在下游 table 存在时，仍然创建 ccr job（如果 schema 不一致，会自动删表重建）(selectdb/ccr-syncer#136)
 
