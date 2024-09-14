@@ -39,6 +39,7 @@ var (
 	featureSchemaChangePartialSync bool
 	featureCleanTableAndPartitions bool
 	featureAtomicRestore           bool
+	featureCreateViewDropExists    bool
 )
 
 func init() {
@@ -50,6 +51,8 @@ func init() {
 		"clean non restored tables and partitions during fullsync")
 	flag.BoolVar(&featureAtomicRestore, "feature_atomic_restore", false,
 		"replace tables in atomic during fullsync (otherwise the dest table will not be able to read).")
+	flag.BoolVar(&featureCreateViewDropExists, "feature_create_view_drop_exists", true,
+		"drop the exists view if exists, when sync the creating view binlog")
 }
 
 type SyncType int
@@ -1253,7 +1256,21 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	if err := j.IDest.CreateTableOrView(createTable, j.Src.Database); err != nil {
+	if featureCreateViewDropExists {
+		viewRegex := regexp.MustCompile(`(?i)^CREATE(\s+)VIEW`)
+		isCreateView := viewRegex.MatchString(createTable.Sql)
+		tableName := strings.TrimSpace(createTable.TableName)
+		if isCreateView && len(tableName) > 0 {
+			// drop view if exists
+			log.Infof("feature_create_view_drop_exists is enabled, try drop view %s before creating", tableName)
+			if err = j.IDest.DropView(tableName); err != nil {
+				return xerror.Wrapf(err, xerror.Normal, "drop view before create view %s, table id=%d",
+					tableName, createTable.TableId)
+			}
+		}
+	}
+
+	if err = j.IDest.CreateTableOrView(createTable, j.Src.Database); err != nil {
 		return xerror.Wrapf(err, xerror.Normal, "create table %d", createTable.TableId)
 	}
 
@@ -1265,7 +1282,9 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 	if err != nil {
 		return err
 	}
-	destTableId, err := j.destMeta.GetTableId(srcTableName)
+
+	var destTableId int64
+	destTableId, err = j.destMeta.GetTableId(srcTableName)
 	if err != nil {
 		return err
 	}
