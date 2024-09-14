@@ -458,7 +458,7 @@ func (s *Spec) CreateTableOrView(createTable *record.CreateTable, srcDatabase st
 	}
 
 	sql := createTable.Sql
-	log.Infof("createTableSql: %s", sql)
+	log.Infof("create table or view sql: %s", sql)
 	// HACK: for drop table
 	return s.DbExec(sql)
 }
