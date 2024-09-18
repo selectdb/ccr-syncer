@@ -16,8 +16,9 @@
 // under the License.
 
 suite("test_sync_view_drop_create") {
-    def syncerAddress = "127.0.0.1:9190"
-    def sync_gap_time = 5000
+    def helper = new GroovyShell(new Binding(['suite': delegate]))
+            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
+
     def createDuplicateTable = { tableName ->
        sql """
             CREATE TABLE if NOT EXISTS ${tableName}
@@ -34,122 +35,6 @@ suite("test_sync_view_drop_create") {
                 "binlog.enable" = "true"
             )
         """
-    }
-
-    def checkShowTimesOf = { sqlString, checkFunc, times, func = "sql" -> Boolean
-        List<List<Object>> res
-        while (times > 0) {
-            try {
-                if (func == "sql") {
-                    res = sql "${sqlString}"
-                } else {
-                    res = target_sql "${sqlString}"
-                }
-
-                if (checkFunc.call(res)) {
-                    return true
-                }
-            } catch (Exception e) {
-                logger.warn("Exception: ${e}")
-            }
-
-            if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return false
-    }
-
-    def checkSelectTimesOf = { sqlString, rowSize, times -> Boolean
-        def tmpRes = target_sql "${sqlString}"
-        while (tmpRes.size() != rowSize) {
-            sleep(sync_gap_time)
-            if (--times > 0) {
-                tmpRes = target_sql "${sqlString}"
-            } else {
-                break
-            }
-        }
-        return tmpRes.size() == rowSize
-    }
-
-    def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
-        Boolean ret = false
-        while (times > 0) {
-            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            for (List<Object> row : sqlInfo) {
-                if ((row[10] as String).contains(checkTable)) {
-                    ret = (row[4] as String) == "FINISHED"
-                }
-            }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
-
-    def checkBackupFinishTimesOf = { checkTable, times -> Boolean
-        Boolean ret = false
-        while (times > 0) {
-            def sqlInfo = sql "SHOW BACKUP FROM ${context.dbName}"
-            for (List<Object> row : sqlInfo) {
-                if ((row[4] as String).contains(checkTable)) {
-                    ret = row[3] == "FINISHED"
-                }
-            }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
-
-    def checkRestoreAllFinishTimesOf = { checkTable, times -> Boolean
-        Boolean ret = true
-        while (times > 0) {
-            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            for (List<Object> row : sqlInfo) {
-                if ((row[10] as String).contains(checkTable)) {
-                    if ((row[4] as String) != "FINISHED") {
-                        ret = false
-                    }
-                }
-            }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-
-        }
-        
-        return ret
-    }
-
-    def checkRestoreRowsTimesOf = {rowSize, times -> Boolean
-        Boolean ret = false
-        while (times > 0) {
-            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            if (sqlInfo.size() >= rowSize) {
-                ret = true
-                break
-            } else if (--times > 0 && sqlInfo.size() < rowSize) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
     }
 
     def exist = { res -> Boolean
@@ -182,27 +67,11 @@ suite("test_sync_view_drop_create") {
         GROUP BY k1,name;
         """
 
-    String response
+    helper.ccrJobDelete()
+    helper.ccrJobCreate()
 
-    httpTest {
-        uri "/delete"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body ""
-        body "${bodyJson}"
-        op "post"
-    }
-
-    httpTest {
-        uri "/create_ccr"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body ""
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
-
-    assertTrue(checkRestoreFinishTimesOf("${tableDuplicate0}", 30))
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableDuplicate0}", 6, 30))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableDuplicate0}", 30))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate0}", 6, 30))
 
     // drop the view, and create it again.
     // Must be incremental sync.
@@ -225,7 +94,7 @@ suite("test_sync_view_drop_create") {
         """
     sql "sync"
 
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableDuplicate0}", 8, 50))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate0}", 8, 50))
     def view_size = target_sql "SHOW VIEW FROM ${tableDuplicate0}"
     assertTrue(view_size.size() == 1);
 }

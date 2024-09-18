@@ -18,60 +18,16 @@ suite("usercases_cir_8537") {
     // Case description
     // Insert data and drop a partition, then the ccr syncer wouldn't get the partition ids from the source cluster.
 
+    def helper = new GroovyShell(new Binding(['suite': delegate]))
+            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
+
     def caseName = "usercases_cir_8537"
-    def tableName = "${caseName}_sales" + UUID.randomUUID().toString().replace("-", "")
+    def tableName = "${caseName}_sales_" + helper.randomSuffix()
     def syncerAddress = "127.0.0.1:9190"
     def test_num = 0
     def insert_num = 5
     def sync_gap_time = 5000
     String response
-
-    def checkSelectTimesOf = { sqlString, rowSize, times -> Boolean
-        def tmpRes = target_sql "${sqlString}"
-        while (tmpRes.size() != rowSize) {
-            sleep(sync_gap_time)
-            if (--times > 0) {
-                tmpRes = target_sql "${sqlString}"
-            } else {
-                break
-            }
-        }
-        return tmpRes.size() == rowSize
-    }
-
-    def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
-        Boolean ret = false
-        while (times > 0) {
-            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            for (List<Object> row : sqlInfo) {
-                if ((row[10] as String).contains(checkTable)) {
-                    ret = row[4] == "FINISHED"
-                }
-            }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
-
-    def checkData = { data, beginCol, value -> Boolean
-        if (data.size() < beginCol + value.size()) {
-            return false
-        }
-
-        for (int i = 0; i < value.size(); ++i) {
-            if ((data[beginCol + i] as int) != value[i]) {
-                return false
-            }
-        }
-
-        return true
-    }
 
     sql """
     CREATE TABLE ${tableName} (
@@ -103,27 +59,13 @@ suite("usercases_cir_8537") {
     sql "sync"
 
     logger.info("=== 1. create ccr ===")
-    httpTest {
-        uri "/create_ccr"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body "${tableName}"
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
-    assertTrue(checkRestoreFinishTimesOf("${tableName}", 60))
+    helper.ccrJobCreate(tableName)
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 60))
     qt_sql "SELECT * FROM ${tableName} ORDER BY id"
     qt_target_sql "SELECT * FROM ${tableName} ORDER BY id"
 
     logger.info("=== 2. pause ccr ===")
-    httpTest {
-        uri "/pause"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body "${tableName}"
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
+    helper.ccrJobPause(tableName)
 
     sql """
     INSERT INTO ${tableName} (id, product_id, sale_date, quantity, revenue)
@@ -141,14 +83,7 @@ suite("usercases_cir_8537") {
     qt_target_sql "SELECT * FROM ${tableName} ORDER BY id"
 
     logger.info("=== 3. resume ccr ===")
-    httpTest {
-        uri "/resume"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body "${tableName}"
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
+    helper.ccrJobResume(tableName)
 
     qt_sql "SELECT * FROM ${tableName} ORDER BY id"
     qt_target_sql "SELECT * FROM ${tableName} ORDER BY id"
@@ -161,7 +96,7 @@ suite("usercases_cir_8537") {
     """
 
     // FIXME(walter) sync drop partition via backup/restore
-    // assertTrue(checkSelectTimesOf("SELECT * FROM ${tableName}", 1, 30))
+    // assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", 1, 30))
 
     qt_sql "SELECT * FROM ${tableName} ORDER BY id"
     qt_target_sql "SELECT * FROM ${tableName} ORDER BY id"
