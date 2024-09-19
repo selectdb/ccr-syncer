@@ -440,14 +440,15 @@ func (j *Job) partialSync() error {
 
 		// ATTN: The table name of the alias is from the source cluster.
 		if aliasName, ok := j.progress.TableAliases[table]; ok {
+			log.Infof("partial sync with table alias, table: %s, alias: %s", table, aliasName)
 			tableRefs = make([]*festruct.TTableRef, 0)
 			tableRef := &festruct.TTableRef{
-				Table:     &j.Src.Table,
+				Table:     &table,
 				AliasName: &aliasName,
 			}
 			tableRefs = append(tableRefs, tableRef)
 		} else if j.isTableSyncWithAlias() {
-			log.Debugf("table sync snapshot not same name, table: %s, dest table: %s", j.Src.Table, j.Dest.Table)
+			log.Infof("table sync snapshot not same name, table: %s, dest table: %s", j.Src.Table, j.Dest.Table)
 			tableRefs = make([]*festruct.TTableRef, 0)
 			tableRef := &festruct.TTableRef{
 				Table:     &j.Src.Table,
