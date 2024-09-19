@@ -93,6 +93,7 @@ suite("test_db_sync_schema_change") {
         """
     sql "sync"
 
+    helper.ccrJobDelete()
     def bodyJson = get_ccr_body ""
     ccr_name = get_ccr_name(bodyJson)
     helper.ccrJobCreate()
