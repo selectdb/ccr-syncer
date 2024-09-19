@@ -15,11 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_replace_partial_partition") {
+suite("test_db_sync_replace_partition") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
-    def baseTableName = "test_replace_partial_p_" + UUID.randomUUID().toString().replace("-", "")
+    def baseTableName = "test_replace_partition_" + UUID.randomUUID().toString().replace("-", "")
     def test_num = 0
     def insert_num = 5
     def opPartitonName = "less0"
@@ -54,35 +54,33 @@ suite("test_replace_partial_partition") {
             "binlog.enable" = "true"
         )
     """
-
-    // insert into p2,p3,p4
     sql """
-        INSERT INTO ${tableName} VALUES
-            (1, 10),
-            (1, 11),
-            (1, 12),
-            (1, 13),
-            (1, 14),
-            (2, 100),
-            (2, 110),
-            (2, 120),
-            (2, 130),
-            (2, 140),
-            (3, 200),
-            (3, 210),
-            (3, 220),
-            (3, 230),
-            (3, 240)
+        CREATE TABLE if NOT EXISTS ${tableName}_1
+        (
+            `test` INT,
+            `id` INT
+        )
+        ENGINE=OLAP
+        UNIQUE KEY(`test`, `id`)
+        PARTITION BY RANGE(`id`)
+        (
+            PARTITION `p1` VALUES LESS THAN ("0"),
+            PARTITION `p2` VALUES LESS THAN ("100"),
+            PARTITION `p3` VALUES LESS THAN ("200"),
+            PARTITION `p4` VALUES LESS THAN ("300")
+        )
+        DISTRIBUTED BY HASH(id) BUCKETS AUTO
+        PROPERTIES (
+            "replication_allocation" = "tag.location.default: 1",
+            "binlog.enable" = "true"
+        )
     """
-    sql "sync"
 
-    helper.ccrJobCreate(tableName)
+    helper.enableDbBinlog()
+    helper.ccrJobDelete()
+    helper.ccrJobCreate()
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 60))
-    // p2,p3,p4 all has 5 rows
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=1", 5, 60))
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=2", 5, 60))
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=3", 5, 60))
 
     logger.info("=== Add temp partition p5 ===")
 
@@ -125,11 +123,6 @@ suite("test_replace_partial_partition") {
                                 """,
                                 exist, 60, "target"))
 
-    // p3,p4 all has 5 rows, p2 has 1 row
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=1", 1, 60))
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=2", 5, 60))
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=3", 5, 60))
-
     // The last restore should contains only partition p2
     def show_restore_result = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
     def restore_num = show_restore_result.size()
@@ -158,7 +151,5 @@ suite("test_replace_partial_partition") {
     def jsonSlurper = new groovy.json.JsonSlurper()
     def object = jsonSlurper.parseText "${restore_objects}"
     assertTrue(object.olap_table_list[0].partition_names.size() == 1)
-    assertTrue(object.olap_table_list[0].partition_names[0] == "p2")
+    assertTrue(object.olap_table_list[0].partition_names[0] == "p2");
 }
-
-
