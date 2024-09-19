@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -645,6 +647,40 @@ func (s *HttpService) forceFullsyncHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+func (s *HttpService) featuresHandler(w http.ResponseWriter, r *http.Request) {
+	type flagValue struct {
+		Feature  string `json:"feature"`
+		Value    bool   `json:"value"`
+		DefValue string `json:"default"`
+	}
+	type flagListResult struct {
+		*defaultResult
+		Flags []flagValue
+	}
+
+	var result flagListResult
+	result.defaultResult = newSuccessResult()
+	defer func() { writeJson(w, &result) }()
+
+	flag.VisitAll(func(flag *flag.Flag) {
+		fmt.Printf("Flag %s\n", flag.Name)
+		if !strings.HasPrefix(flag.Name, "feature") {
+			return
+		}
+
+		valueStr := flag.Value.String()
+		value, err := strconv.ParseBool(valueStr)
+		if err != nil {
+			// ignore any non-bool flags
+			return
+		}
+
+		result.Flags = append(result.Flags, flagValue{
+			Feature: flag.Name, Value: value, DefValue: flag.DefValue,
+		})
+	})
+}
+
 func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/version", s.versionHandler)
 	s.mux.HandleFunc("/create_ccr", s.createHandler)
@@ -659,6 +695,7 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/job_detail", s.jobDetailHandler)
 	s.mux.HandleFunc("/job_progress", s.jobProgressHandler)
 	s.mux.HandleFunc("/force_fullsync", s.forceFullsyncHandler)
+	s.mux.HandleFunc("/features", s.featuresHandler)
 	s.mux.Handle("/metrics", promhttp.Handler())
 }
 
