@@ -17,10 +17,12 @@
 
 suite("test_db_sync") {
 
-    def syncerAddress = "127.0.0.1:9190"
+    def helper = new GroovyShell(new Binding(['suite': delegate]))
+            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
+
     def test_num = 0
     def insert_num = 5
-    def sync_gap_time = 5000
+    def date_num = "2021-01-02"
 
     def createUniqueTable = { tableName ->
         sql """
@@ -75,64 +77,6 @@ suite("test_db_sync") {
         """
     }
 
-    def checkShowTimesOf = { sqlString, checkFunc, times, func = "sql" -> Boolean
-        List<List<Object>> res
-        while (times > 0) {
-            try {
-                if (func == "sql") {
-                    res = sql "${sqlString}"
-                } else {
-                    res = target_sql "${sqlString}"
-                }
-
-                if (checkFunc.call(res)) {
-                    return true
-                }
-            } catch (Exception e) {
-                logger.warn("Exception: ${e}")
-            }
-
-            if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return false
-    }
-
-    def checkSelectTimesOf = { sqlString, rowSize, times -> Boolean
-        def tmpRes = target_sql "${sqlString}"
-        while (tmpRes.size() != rowSize) {
-            sleep(sync_gap_time)
-            if (--times > 0) {
-                tmpRes = target_sql "${sqlString}"
-            } else {
-                break
-            }
-        }
-        return tmpRes.size() == rowSize
-    }
-
-    def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
-        Boolean ret = false
-        while (times > 0) {
-            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            for (List<Object> row : sqlInfo) {
-                if ((row[10] as String).contains(checkTable)) {
-                    ret = (row[4] as String) == "FINISHED"
-                }
-            }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
-
     def exist = { res -> Boolean
         return res.size() != 0
     }
@@ -140,9 +84,10 @@ suite("test_db_sync") {
         return res.size() == 0
     }
 
-    def tableUnique0 = "tbl_common_0_" + UUID.randomUUID().toString().replace("-", "")
-    def tableAggregate0 = "tbl_aggregate_0_" + UUID.randomUUID().toString().replace("-", "")
-    def tableDuplicate0 = "tbl_duplicate_0_" + UUID.randomUUID().toString().replace("-", "")
+    def suffix = helper.randomSuffix()
+    def tableUnique0 = "tbl_common_0_${suffix}"
+    def tableAggregate0 = "tbl_aggregate_0_${suffix}"
+    def tableDuplicate0 = "tbl_duplicate_0_${suffix}"
 
     createUniqueTable(tableUnique0)
     for (int index = 0; index < insert_num; index++) {
@@ -165,29 +110,20 @@ suite("test_db_sync") {
             """
     }
 
-    sql "ALTER DATABASE ${context.dbName} SET properties (\"binlog.enable\" = \"true\")"
-    sql "sync"
+    helper.enableDbBinlog()
+    helper.ccrJobDelete()
+    helper.ccrJobCreate()
 
-    String response
-    httpTest {
-        uri "/create_ccr"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body ""
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
-
-    assertTrue(checkRestoreFinishTimesOf("${tableUnique0}", 130))
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableUnique0}", 130))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
                                    insert_num, 50))
 
-    assertTrue(checkRestoreFinishTimesOf("${tableAggregate0}", 30))
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableAggregate0} WHERE test=${test_num}",
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableAggregate0}", 30))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableAggregate0} WHERE test=${test_num}",
                                    1, 30))
 
-    assertTrue(checkRestoreFinishTimesOf("${tableDuplicate0}", 30))
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableDuplicate0} WHERE test=${test_num}",
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableDuplicate0}", 30))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate0} WHERE test=${test_num}",
                                    insert_num, 30))
 
     logger.info("=== Test 1: dest cluster follow source cluster case ===")
@@ -209,20 +145,20 @@ suite("test_db_sync") {
     }
 
     sql "sync"
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
                                    insert_num, 30))
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableAggregate0} WHERE test=${test_num}",
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableAggregate0} WHERE test=${test_num}",
                                    1, 30))
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableDuplicate0} WHERE test=0",
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate0} WHERE test=0",
                                    insert_num * (test_num + 1), 30))
 
 
 
     logger.info("=== Test 2: create table case ===")
     test_num = 2
-    def tableUnique1 = "tbl_common_1_" + UUID.randomUUID().toString().replace("-", "")
-    def tableAggregate1 = "tbl_aggregate_1_" + UUID.randomUUID().toString().replace("-", "")
-    def tableDuplicate1 = "tbl_duplicate_1_" + UUID.randomUUID().toString().replace("-", "")
+    def tableUnique1 = "tbl_common_1_${suffix}"
+    def tableAggregate1 = "tbl_aggregate_1_${suffix}"
+    def tableDuplicate1 = "tbl_duplicate_1_${suffix}"
     def keywordTableName = "`roles`"
 
     createUniqueTable(tableUnique1)
@@ -252,24 +188,24 @@ suite("test_db_sync") {
     }
 
     sql "sync"
-    assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableUnique1}",
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableUnique1}",
                                 exist, 30, "target"))
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableUnique1} WHERE test=${test_num}",
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableUnique1} WHERE test=${test_num}",
                                    insert_num, 30))
 
-    assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableAggregate1}",
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableAggregate1}",
                                 exist, 30, "target"))
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableAggregate1} WHERE test=${test_num}",
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableAggregate1} WHERE test=${test_num}",
                                    1, 30))
 
-    assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableDuplicate1}",
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableDuplicate1}",
                                 exist, 30, "target"))
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableDuplicate1} WHERE test=0",
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate1} WHERE test=0",
                                    insert_num, 30))
 
-    assertTrue(checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${keywordTableName}",
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${keywordTableName}",
                                 exist, 30, "target"))
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${keywordTableName} WHERE test=${test_num}",
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${keywordTableName} WHERE test=${test_num}",
                                    insert_num, 30))
 
     logger.info("=== Test 3: drop table case ===")
@@ -279,24 +215,17 @@ suite("test_db_sync") {
     sql "DROP TABLE ${keywordTableName}"
 
     sql "sync"
-    assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${tableUnique1}'", 
+    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE '${tableUnique1}'", 
                                 notExist, 30, "target"))
-    assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${tableAggregate1}'",
+    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE '${tableAggregate1}'",
                                 notExist, 30, "target"))
-    assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${tableDuplicate1}'", 
+    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE '${tableDuplicate1}'", 
                                 notExist, 30, "target"))
-    assertTrue(checkShowTimesOf("SHOW TABLES LIKE '${keywordTableName}'", 
+    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE '${keywordTableName}'", 
                                 notExist, 30, "target"))
 
     logger.info("=== Test 4: pause and resume ===")
-    httpTest {
-        uri "/pause"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body ""
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
+    helper.ccrJobPause()
 
     test_num = 4
     for (int index = 0; index < insert_num; index++) {
@@ -306,35 +235,20 @@ suite("test_db_sync") {
     }
 
     sql "sync"
-    assertTrue(!checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
+    assertTrue(!helper.checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
                                    insert_num, 3))
 
-    httpTest {
-        uri "/resume"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body ""
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
-    sql "sync"
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
+    helper.ccrJobResume()
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
                                    insert_num, 30))
 
 
     logger.info("=== Test 5: desync job ===")
     test_num = 5
-    httpTest {
-        uri "/desync"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body ""
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
+    helper.ccrJobDesync()
 
-    sleep(sync_gap_time)
-    
+    sleep(helper.sync_gap_time)
+
     def checkDesynced = {tableName -> 
         def res = target_sql "SHOW CREATE TABLE TEST_${context.dbName}.${tableName}"
         def desynced = false
@@ -353,16 +267,9 @@ suite("test_db_sync") {
     checkDesynced(tableDuplicate0)
 
 
-     logger.info("=== Test 5: delete job ===")
-     test_num = 5
-     httpTest {
-        uri "/delete"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body ""
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
+    logger.info("=== Test 5: delete job ===")
+    test_num = 5
+    helper.ccrJobDelete()
 
     for (int index = 0; index < insert_num; index++) {
         sql """
@@ -371,6 +278,6 @@ suite("test_db_sync") {
     }
 
     sql "sync"
-    assertTrue(!checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
+    assertTrue(!helper.checkSelectTimesOf("SELECT * FROM ${tableUnique0} WHERE test=${test_num}",
                                    insert_num, 5))
 }

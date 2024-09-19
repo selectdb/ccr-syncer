@@ -16,45 +16,13 @@
 // under the License.
 
 suite("test_mow") {
+    def helper = new GroovyShell(new Binding(['suite': delegate]))
+            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
+
     def tableName = "tbl_mow_" + UUID.randomUUID().toString().replace("-", "")
-    def syncerAddress = "127.0.0.1:9190"
     def test_num = 0
     def insert_num = 5
-    def sync_gap_time = 5000
     String response
-
-    def checkSelectTimesOf = { sqlString, rowSize, times, func = null -> Boolean
-        def tmpRes = target_sql "${sqlString}"
-        while (tmpRes.size() != rowSize || (func != null && !func(tmpRes))) {
-            sleep(sync_gap_time)
-            if (--times > 0) {
-                tmpRes = target_sql "${sqlString}"
-            } else {
-                break
-            }
-        }
-        return tmpRes.size() == rowSize && (func == null || func(tmpRes))
-    }
-
-    def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
-        Boolean ret = false
-        while (times > 0) {
-            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            for (List<Object> row : sqlInfo) {
-                if ((row[10] as String).contains(checkTable)) {
-                    ret = (row[4] as String) == "FINISHED"
-                }
-            }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
 
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
@@ -81,16 +49,9 @@ suite("test_mow") {
     sql "sync"
 
     logger.info("=== Test 1: full update mow ===")
-    httpTest {
-        uri "/create_ccr"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body "${tableName}"
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
+    helper.ccrJobCreate(tableName)
 
-    assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
 
     // show create table regression_test_p0.tbl_mow_sync;
     def res = target_sql "SHOW CREATE TABLE ${tableName}"
@@ -119,9 +80,10 @@ suite("test_mow") {
         }
         return true
     }
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
-                                   1, 30, checkSeq1))
-    
+    assertTrue(helper.checkShowTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
+            checkSeq1, 30, "target"))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
+                                   1, 30))
 
     logger.info("=== Test 3: sequence value ===")
     test_num = 3
@@ -139,6 +101,8 @@ suite("test_mow") {
         }
         return true
     }
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
-                                   1, 30, checkSeq2))
+    assertTrue(helper.checkShowTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
+            checkSeq2, 60, "target"))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
+                                   1, 30))
 }

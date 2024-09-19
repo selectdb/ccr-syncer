@@ -19,72 +19,13 @@ suite("test_db_sync_clean_restore") {
     // FIXME(walter) fix clean tables.
     return
 
-    def tableName = "tbl_db_sync_clean_restore_" + UUID.randomUUID().toString().replace("-", "")
-    def syncerAddress = "127.0.0.1:9190"
+    def helper = new GroovyShell(new Binding(['suite': delegate]))
+            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
+
+    def tableName = "tbl_db_sync_clean_restore_" + helper.randomSuffix()
     def test_num = 0
     def insert_num = 20
-    def sync_gap_time = 5000
     def opPartitonName = "less"
-    String response
-
-    def checkSelectTimesOf = { sqlString, rowSize, times -> Boolean
-        def tmpRes = target_sql "${sqlString}"
-        while (tmpRes.size() != rowSize) {
-            sleep(sync_gap_time)
-            if (--times > 0) {
-                tmpRes = target_sql "${sqlString}"
-            } else {
-                break
-            }
-        }
-        return tmpRes.size() == rowSize
-    }
-
-    def checkShowTimesOf = { sqlString, myClosure, times, func = "sql" -> Boolean
-        Boolean ret = false
-        List<List<Object>> res
-        while (times > 0) {
-            try {
-                if (func == "sql") {
-                    res = sql "${sqlString}"
-                } else {
-                    res = target_sql "${sqlString}"
-                }
-                if (myClosure.call(res)) {
-                    ret = true
-                }
-            } catch (Exception e) { }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
-
-    def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
-        Boolean ret = false
-        while (times > 0) {
-            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            logger.info("SHOW RESTORE RESULT: ${sqlInfo}")
-            for (List<Object> row : sqlInfo) {
-                if ((row[10] as String).contains(checkTable)) {
-                    ret = (row[4] as String) == "FINISHED"
-                }
-            }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
 
     def exist = { res -> Boolean
         return res.size() != 0
@@ -93,7 +34,7 @@ suite("test_db_sync_clean_restore") {
         return res.size() == 0
     }
 
-    sql "ALTER DATABASE ${context.dbName} SET properties (\"binlog.enable\" = \"true\")"
+    helper.enableDbBinlog()
 
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}_1
@@ -243,16 +184,9 @@ suite("test_db_sync_clean_restore") {
     sql "ALTER TABLE ${tableName}_2 DROP PARTITION ${opPartitonName}_1 FORCE"
     sql "sync"
 
-    httpTest {
-        uri "/create_ccr"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body ""
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
-
-    assertTrue(checkRestoreFinishTimesOf("${tableName}_3", 60))
+    helper.ccrJobDelete()
+    helper.ccrJobCreate()
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_3", 60))
 
     v = target_sql "SELECT * FROM ${tableName}_3"
     assertTrue(v.size() == insert_num);
