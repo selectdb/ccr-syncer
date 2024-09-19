@@ -15,84 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 suite("test_row_storage") {
+    def helper = new GroovyShell(new Binding(['suite': delegate]))
+            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
     def tableName = "tbl_row_storage_" + UUID.randomUUID().toString().replace("-", "")
-    def syncerAddress = "127.0.0.1:9190"
     def test_num = 0
     def insert_num = 5
-    def sync_gap_time = 5000
-    String response
-
-    def checkShowTimesOf = { sqlString, myClosure, times, func = "sql" -> Boolean
-        Boolean ret = false
-        List<List<Object>> res
-        while (times > 0) {
-            try {
-                if (func == "sql") {
-                    res = sql "${sqlString}"
-                } else {
-                    res = target_sql "${sqlString}"
-                }
-                if (myClosure.call(res)) {
-                    ret = true
-                }
-            } catch (Exception e) {}
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
-
-    def checkSelectRowTimesOf = { sqlString, rowSize, times -> Boolean
-        def tmpRes = target_sql "${sqlString}"
-        while (tmpRes.size() != rowSize) {
-            sleep(sync_gap_time)
-            if (--times > 0) {
-                tmpRes = target_sql "${sqlString}"
-            } else {
-                break
-            }
-        }
-        return tmpRes.size() == rowSize
-    }
-
-    def checkSelectColTimesOf = { sqlString, colSize, times -> Boolean
-        def tmpRes = target_sql "${sqlString}"
-        while (tmpRes.size() == 0 || tmpRes[0].size() != colSize) {
-            sleep(sync_gap_time)
-            if (--times > 0) {
-                tmpRes = target_sql "${sqlString}"
-            } else {
-                break
-            }
-        }
-        return tmpRes.size() > 0 && tmpRes[0].size() == colSize
-    }
-
-    def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
-        Boolean ret = false
-        while (times > 0) {
-            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            for (List<Object> row : sqlInfo) {
-                if ((row[10] as String).contains(checkTable)) {
-                    ret = (row[4] as String) == "FINISHED"
-                }
-            }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
 
     def exist = { res -> Boolean
         return res.size() != 0
@@ -122,16 +50,9 @@ suite("test_row_storage") {
     }
     sql "sync"
 
-    httpTest {
-        uri "/create_ccr"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body "${tableName}"
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
+    helper.ccrJobCreate(tableName)
 
-    assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
     def res = target_sql "SHOW CREATE TABLE TEST_${context.dbName}.${tableName}"
     def rowStorage = false
     for (List<Object> row : res) {
@@ -149,14 +70,14 @@ suite("test_row_storage") {
         ADD COLUMN (`cost` VARCHAR(256) DEFAULT "add")
         """
     
-    assertTrue(checkShowTimesOf("""
+    assertTrue(helper.checkShowTimesOf("""
                                 SHOW ALTER TABLE COLUMN
                                 FROM ${context.dbName}
                                 WHERE TableName = "${tableName}" AND State = "FINISHED"
                                 """,
                                 exist, 30))
 
-    assertTrue(checkSelectColTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
+    assertTrue(helper.checkSelectColTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
                                       3, 30))
 
 
@@ -166,7 +87,7 @@ suite("test_row_storage") {
         INSERT INTO ${tableName} VALUES (${test_num}, 0, "addadd")
         """
     sql "sync"
-    assertTrue(checkSelectRowTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
                                    1, 30))
     res = target_sql "SELECT cost FROM TEST_${context.dbName}.${tableName} WHERE test=${test_num}"
     assertTrue((res[0][0] as String) == "addadd")

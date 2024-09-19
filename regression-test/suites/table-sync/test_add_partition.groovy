@@ -16,72 +16,13 @@
 // under the License.
 
 suite("test_add_partition") {
+    def helper = new GroovyShell(new Binding(['suite': delegate]))
+            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
-    def baseTableName = "test_add_partition_" + UUID.randomUUID().toString().replace("-", "")
-    def syncerAddress = "127.0.0.1:9190"
+    def baseTableName = "test_add_partition_" + helper.randomSuffix()
     def test_num = 0
     def insert_num = 5
-    def sync_gap_time = 5000
     def opPartitonName = "less0"
-    String response
-
-    def checkSelectTimesOf = { sqlString, rowSize, times -> Boolean
-        def tmpRes = target_sql "${sqlString}"
-        while (tmpRes.size() != rowSize) {
-            sleep(sync_gap_time)
-            if (--times > 0) {
-                tmpRes = target_sql "${sqlString}"
-            } else {
-                break
-            }
-        }
-        return tmpRes.size() == rowSize
-    }
-
-    def checkShowTimesOf = { sqlString, myClosure, times, func = "sql" -> Boolean
-        Boolean ret = false
-        List<List<Object>> res
-        while (times > 0) {
-            try {
-                if (func == "sql") {
-                    res = sql "${sqlString}"
-                } else {
-                    res = target_sql "${sqlString}"
-                }
-                if (myClosure.call(res)) {
-                    ret = true
-                }
-            } catch (Exception e) {}
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
-
-    def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
-        Boolean ret = false
-        while (times > 0) {
-            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            for (List<Object> row : sqlInfo) {
-                if ((row[10] as String).contains(checkTable)) {
-                    ret = (row[4] as String) == "FINISHED"
-                }
-            }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
 
     def exist = { res -> Boolean
         return res.size() != 0
@@ -112,22 +53,15 @@ suite("test_add_partition") {
         )
     """
 
-    httpTest {
-        uri "/create_ccr"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body "${tableName}"
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
+    helper.ccrJobCreate(tableName)
 
-    assertTrue(checkRestoreFinishTimesOf("${tableName}", 60))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 60))
 
     sql """
         ALTER TABLE ${tableName} ADD PARTITION p3 VALUES LESS THAN ("200")
         """
 
-    assertTrue(checkShowTimesOf("""
+    assertTrue(helper.checkShowTimesOf("""
                                 SHOW PARTITIONS
                                 FROM ${tableName}
                                 WHERE PartitionName = "p3"
@@ -162,22 +96,14 @@ suite("test_add_partition") {
         )
     """
 
-    httpTest {
-        uri "/create_ccr"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body "${tableName}"
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
-
-    assertTrue(checkRestoreFinishTimesOf("${tableName}", 60))
+    helper.ccrJobCreate(tableName)
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 60))
 
     sql """
         ALTER TABLE ${tableName} ADD PARTITION p3 VALUES IN ("500", "600", "700")
         """
 
-    assertTrue(checkShowTimesOf("""
+    assertTrue(helper.checkShowTimesOf("""
                                 SHOW PARTITIONS
                                 FROM ${tableName}
                                 WHERE PartitionName = "p3"
@@ -213,22 +139,15 @@ suite("test_add_partition") {
     //     )
     // """
 
-    // httpTest {
-    //     uri "/create_ccr"
-    //     endpoint syncerAddress
-    //     def bodyJson = get_ccr_body "${tableName}"
-    //     body "${bodyJson}"
-    //     op "post"
-    //     result response
-    // }
+    // helper.ccrJobCreate(tableName)
 
-    // assertTrue(checkRestoreFinishTimesOf("${tableName}", 60))
+    // assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 60))
 
     // sql """
     //     ALTER TABLE ${tableName} ADD TEMPORARY PARTITION p3 VALUES LESS THAN ("200")
     //     """
 
-    // assertTrue(checkShowTimesOf("""
+    // assertTrue(helper.checkShowTimesOf("""
     //                             SHOW TEMPORARY PARTITIONS
     //                             FROM ${tableName}
     //                             WHERE PartitionName = "p3"
@@ -237,7 +156,7 @@ suite("test_add_partition") {
 
     // sql "INSERT INTO ${tableName} TEMPORARY PARTITION (p3) VALUES (1, 150)"
 
-    // assertTrue(checkShowTimesOf("""
+    // assertTrue(helper.checkShowTimesOf("""
     //                             SELECT *
     //                             FROM ${tableName}
     //                             TEMPORARY PARTITION (p3)
@@ -262,16 +181,9 @@ suite("test_add_partition") {
         )
     """
 
-    httpTest {
-        uri "/create_ccr"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body "${tableName}"
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
+    helper.ccrJobCreate(tableName)
 
-    assertTrue(checkRestoreFinishTimesOf("${tableName}", 60))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 60))
 
     def versions = sql_return_maparray "show variables like 'version_comment'"
     if (versions[0].Value.contains('doris-2.0.')) {
@@ -283,7 +195,7 @@ suite("test_add_partition") {
         INSERT OVERWRITE TABLE ${tableName} VALUES (1, 100);
        """
 
-    assertTrue(checkShowTimesOf("""
+    assertTrue(helper.checkShowTimesOf("""
                                 SELECT * FROM ${tableName}
                                 WHERE id = 100
                                 """,

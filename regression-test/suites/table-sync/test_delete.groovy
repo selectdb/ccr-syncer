@@ -16,45 +16,12 @@
 // under the License.
 
 suite("test_delete") {
-    def tableName = "tbl_rename_" + UUID.randomUUID().toString().replace("-", "")
-    def syncerAddress = "127.0.0.1:9190"
+    def helper = new GroovyShell(new Binding(['suite': delegate]))
+            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
+
+    def tableName = "tbl_delete_" + helper.randomSuffix()
     def test_num = 0
     def insert_num = 29
-    def sync_gap_time = 5000
-    String response
-
-    def checkSelectTimesOf = { sqlString, rowSize, times -> Boolean
-        def tmpRes = target_sql "${sqlString}"
-        while (tmpRes.size() != rowSize) {
-            sleep(sync_gap_time)
-            if (--times > 0) {
-                tmpRes = target_sql "${sqlString}"
-            } else {
-                break
-            }
-        }
-        return tmpRes.size() == rowSize
-    }
-
-    def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
-        Boolean ret = false
-        while (times > 0) {
-            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            for (List<Object> row : sqlInfo) {
-                if ((row[10] as String).contains(checkTable)) {
-                    ret = (row[4] as String) == "FINISHED"
-                }
-            }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
 
     sql """
         CREATE TABLE if NOT EXISTS ${tableName} 
@@ -81,16 +48,9 @@ suite("test_delete") {
     """
     sql """ALTER TABLE ${tableName} set ("binlog.enable" = "true")"""
 
-    httpTest {
-        uri "/create_ccr"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body "${tableName}"
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
+    helper.ccrJobCreate(tableName)
 
-    assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
 
 
     logger.info("=== Test 0: Common insert case ===")
@@ -129,7 +89,7 @@ suite("test_delete") {
 
         """
     sql "sync"
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableName}",
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}",
                                   insert_num, 30))
 
 
@@ -151,6 +111,6 @@ suite("test_delete") {
 
 
     // 'select test from TEST_${context.dbName}.${tableName}' should return 2 rows
-    assertTrue(checkSelectTimesOf("SELECT * FROM TEST_${context.dbName}.${tableName}", 2, 30))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM TEST_${context.dbName}.${tableName}", 2, 30))
 
 }
