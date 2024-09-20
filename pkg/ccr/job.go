@@ -1401,7 +1401,11 @@ func (j *Job) handleLightningSchemaChange(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	return j.IDest.LightningSchemaChange(j.Src.Database, lightningSchemaChange)
+	tableAlias := ""
+	if j.isTableSyncWithAlias() {
+		tableAlias = j.Dest.Table
+	}
+	return j.IDest.LightningSchemaChange(j.Src.Database, tableAlias, lightningSchemaChange)
 }
 
 func (j *Job) handleTruncateTable(binlog *festruct.TBinlog) error {
@@ -1486,6 +1490,7 @@ func (j *Job) handleRenameTable(binlog *festruct.TBinlog) error {
 	err = nil
 	if j.SyncType == TableSync {
 		log.Warnf("rename table is not supported when table sync")
+		return xerror.Errorf(xerror.Normal, "rename table is not supported when table sync")
 	} else if j.SyncType == DBSync {
 		destTableId, err := j.getDestTableIdBySrc(renameTable.TableId)
 		if err != nil {
