@@ -912,7 +912,7 @@ func (s *Spec) Update(event SpecEvent) {
 	}
 }
 
-func (s *Spec) LightningSchemaChange(srcDatabase string, lightningSchemaChange *record.ModifyTableAddOrDropColumns) error {
+func (s *Spec) LightningSchemaChange(srcDatabase, tableAlias string, lightningSchemaChange *record.ModifyTableAddOrDropColumns) error {
 	log.Debugf("lightningSchemaChange %v", lightningSchemaChange)
 
 	rawSql := lightningSchemaChange.RawSql
@@ -923,6 +923,10 @@ func (s *Spec) LightningSchemaChange(srcDatabase string, lightningSchemaChange *
 		sql = strings.Replace(rawSql, fmt.Sprintf("`default_cluster:%s`.", srcDatabase), "", 1)
 	} else {
 		sql = strings.Replace(rawSql, fmt.Sprintf("`%s`.", srcDatabase), "", 1)
+	}
+	if tableAlias != "" {
+		re := regexp.MustCompile("ALTER TABLE `[^`]*`")
+		sql = re.ReplaceAllString(sql, fmt.Sprintf("ALTER TABLE `%s`", tableAlias))
 	}
 	log.Infof("lighting schema change sql, rawSql: %s, sql: %s", rawSql, sql)
 	return s.DbExec(sql)
