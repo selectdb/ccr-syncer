@@ -16,6 +16,8 @@
 // under the License.
 
 suite("test_bitmap_index") {
+    logger.info("test bitmap index will be replaced by inverted index")
+    return
 
     def tableName = "tbl_bitmap_index_" + UUID.randomUUID().toString().replace("-", "")
     def syncerAddress = "127.0.0.1:9190"

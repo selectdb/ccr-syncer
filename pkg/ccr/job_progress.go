@@ -158,6 +158,9 @@ type JobProgress struct {
 	PersistData       string              `json:"data"` // this often for binlog or snapshot info
 	PartialSyncData   *JobPartialSyncData `json:"partial_sync_data,omitempty"`
 
+	// The tables need to be replaced rather than dropped during sync.
+	TableAliases map[string]string `json:"table_aliases,omitempty"`
+
 	// Some fields to save the unix epoch time of the key timepoint.
 	CreatedAt              int64 `json:"created_at,omitempty"`
 	FullSyncStartAt        int64 `json:"full_sync_start_at,omitempty"`
@@ -189,6 +192,8 @@ func NewJobProgress(jobName string, syncType SyncType, db storage.DB) *JobProgre
 		TableCommitSeqMap: nil,
 		InMemoryData:      nil,
 		PersistData:       "",
+		PartialSyncData:   nil,
+		TableAliases:      nil,
 
 		CreatedAt:              time.Now().Unix(),
 		FullSyncStartAt:        0,

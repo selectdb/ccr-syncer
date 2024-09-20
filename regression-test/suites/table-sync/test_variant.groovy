@@ -16,44 +16,17 @@
 // under the License.
 
 suite("test_variant_ccr") {
+    def versions = sql_return_maparray "show variables like 'version_comment'"
+    if (versions[0].Value.contains('doris-2.0.')) {
+        logger.info("2.0 not support variant case, current version is: ${versions[0].Value}")
+        return
+    }
+
+    def helper = new GroovyShell(new Binding(['suite': delegate]))
+            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
+
     def tableName = "test_variant_" + UUID.randomUUID().toString().replace("-", "")
-    def syncerAddress = "127.0.0.1:9190"
     def insert_num = 5
-    def sync_gap_time = 5000
-    String response
-
-    def checkSelectTimesOf = { sqlString, rowSize, times, func = null -> Boolean
-        def tmpRes = target_sql "${sqlString}"
-        while (tmpRes.size() != rowSize || (func != null && !func(tmpRes))) {
-            sleep(sync_gap_time)
-            if (--times > 0) {
-                tmpRes = target_sql "${sqlString}"
-            } else {
-                break
-            }
-        }
-        return tmpRes.size() == rowSize && (func == null || func(tmpRes))
-    }
-
-    def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
-        Boolean ret = false
-        while (times > 0) {
-            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            for (List<Object> row : sqlInfo) {
-                if ((row[10] as String).contains(checkTable)) {
-                    ret = (row[4] as String) == "FINISHED"
-                }
-            }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
 
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
@@ -72,16 +45,9 @@ suite("test_variant_ccr") {
     }
     sql """ALTER TABLE ${tableName} set ("binlog.enable" = "true")"""
     sql "sync"
-    httpTest {
-        uri "/create_ccr"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body "${tableName}"
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
+    helper.ccrJobCreate(tableName)
 
-    assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
     def res = target_sql "SHOW CREATE TABLE ${tableName}"
     def createSuccess = false
     for (List<Object> row : res) {

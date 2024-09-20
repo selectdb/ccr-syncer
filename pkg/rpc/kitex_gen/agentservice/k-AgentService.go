@@ -362,6 +362,20 @@ func (p *TTabletSchema) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 22:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField22(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -772,6 +786,20 @@ func (p *TTabletSchema) FastReadField21(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TTabletSchema) FastReadField22(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.VariantEnableFlattenNested = v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TTabletSchema) FastWrite(buf []byte) int {
 	return 0
@@ -795,6 +823,7 @@ func (p *TTabletSchema) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryW
 		offset += p.fastWriteField17(buf[offset:], binaryWriter)
 		offset += p.fastWriteField18(buf[offset:], binaryWriter)
 		offset += p.fastWriteField21(buf[offset:], binaryWriter)
+		offset += p.fastWriteField22(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
@@ -833,6 +862,7 @@ func (p *TTabletSchema) BLength() int {
 		l += p.field19Length()
 		l += p.field20Length()
 		l += p.field21Length()
+		l += p.field22Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -1090,6 +1120,17 @@ func (p *TTabletSchema) fastWriteField21(buf []byte, binaryWriter bthrift.Binary
 	return offset
 }
 
+func (p *TTabletSchema) fastWriteField22(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetVariantEnableFlattenNested() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "variant_enable_flatten_nested", thrift.BOOL, 22)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.VariantEnableFlattenNested)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TTabletSchema) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("short_key_column_count", thrift.I16, 1)
@@ -1315,6 +1356,17 @@ func (p *TTabletSchema) field21Length() int {
 	if p.IsSetRowStorePageSize() {
 		l += bthrift.Binary.FieldBeginLength("row_store_page_size", thrift.I64, 21)
 		l += bthrift.Binary.I64Length(p.RowStorePageSize)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TTabletSchema) field22Length() int {
+	l := 0
+	if p.IsSetVariantEnableFlattenNested() {
+		l += bthrift.Binary.FieldBeginLength("variant_enable_flatten_nested", thrift.BOOL, 22)
+		l += bthrift.Binary.BoolLength(p.VariantEnableFlattenNested)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -13005,6 +13057,20 @@ func (p *TSnapshotRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 14:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField14(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -13240,6 +13306,19 @@ func (p *TSnapshotRequest) FastReadField13(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TSnapshotRequest) FastReadField14(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.RefTabletId = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TSnapshotRequest) FastWrite(buf []byte) int {
 	return 0
@@ -13261,6 +13340,7 @@ func (p *TSnapshotRequest) FastWriteNocopy(buf []byte, binaryWriter bthrift.Bina
 		offset += p.fastWriteField11(buf[offset:], binaryWriter)
 		offset += p.fastWriteField12(buf[offset:], binaryWriter)
 		offset += p.fastWriteField13(buf[offset:], binaryWriter)
+		offset += p.fastWriteField14(buf[offset:], binaryWriter)
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
@@ -13285,6 +13365,7 @@ func (p *TSnapshotRequest) BLength() int {
 		l += p.field11Length()
 		l += p.field12Length()
 		l += p.field13Length()
+		l += p.field14Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -13438,6 +13519,17 @@ func (p *TSnapshotRequest) fastWriteField13(buf []byte, binaryWriter bthrift.Bin
 	return offset
 }
 
+func (p *TSnapshotRequest) fastWriteField14(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetRefTabletId() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "ref_tablet_id", thrift.I64, 14)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.RefTabletId)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TSnapshotRequest) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("tablet_id", thrift.I64, 1)
@@ -13573,6 +13665,17 @@ func (p *TSnapshotRequest) field13Length() int {
 	if p.IsSetIsCopyBinlog() {
 		l += bthrift.Binary.FieldBeginLength("is_copy_binlog", thrift.BOOL, 13)
 		l += bthrift.Binary.BoolLength(*p.IsCopyBinlog)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TSnapshotRequest) field14Length() int {
+	l := 0
+	if p.IsSetRefTabletId() {
+		l += bthrift.Binary.FieldBeginLength("ref_tablet_id", thrift.I64, 14)
+		l += bthrift.Binary.I64Length(*p.RefTabletId)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

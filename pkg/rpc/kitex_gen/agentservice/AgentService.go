@@ -493,6 +493,7 @@ type TTabletSchema struct {
 	ClusterKeyIdxes               []int32                        `thrift:"cluster_key_idxes,19,optional" frugal:"19,optional,list<i32>" json:"cluster_key_idxes,omitempty"`
 	RowStoreColCids               []int32                        `thrift:"row_store_col_cids,20,optional" frugal:"20,optional,list<i32>" json:"row_store_col_cids,omitempty"`
 	RowStorePageSize              int64                          `thrift:"row_store_page_size,21,optional" frugal:"21,optional,i64" json:"row_store_page_size,omitempty"`
+	VariantEnableFlattenNested    bool                           `thrift:"variant_enable_flatten_nested,22,optional" frugal:"22,optional,bool" json:"variant_enable_flatten_nested,omitempty"`
 }
 
 func NewTTabletSchema() *TTabletSchema {
@@ -506,6 +507,7 @@ func NewTTabletSchema() *TTabletSchema {
 		EnableSingleReplicaCompaction: false,
 		SkipWriteIndexOnLoad:          false,
 		RowStorePageSize:              16384,
+		VariantEnableFlattenNested:    false,
 	}
 }
 
@@ -518,6 +520,7 @@ func (p *TTabletSchema) InitDefault() {
 	p.EnableSingleReplicaCompaction = false
 	p.SkipWriteIndexOnLoad = false
 	p.RowStorePageSize = 16384
+	p.VariantEnableFlattenNested = false
 }
 
 func (p *TTabletSchema) GetShortKeyColumnCount() (v int16) {
@@ -683,6 +686,15 @@ func (p *TTabletSchema) GetRowStorePageSize() (v int64) {
 	}
 	return p.RowStorePageSize
 }
+
+var TTabletSchema_VariantEnableFlattenNested_DEFAULT bool = false
+
+func (p *TTabletSchema) GetVariantEnableFlattenNested() (v bool) {
+	if !p.IsSetVariantEnableFlattenNested() {
+		return TTabletSchema_VariantEnableFlattenNested_DEFAULT
+	}
+	return p.VariantEnableFlattenNested
+}
 func (p *TTabletSchema) SetShortKeyColumnCount(val int16) {
 	p.ShortKeyColumnCount = val
 }
@@ -746,6 +758,9 @@ func (p *TTabletSchema) SetRowStoreColCids(val []int32) {
 func (p *TTabletSchema) SetRowStorePageSize(val int64) {
 	p.RowStorePageSize = val
 }
+func (p *TTabletSchema) SetVariantEnableFlattenNested(val bool) {
+	p.VariantEnableFlattenNested = val
+}
 
 var fieldIDToName_TTabletSchema = map[int16]string{
 	1:  "short_key_column_count",
@@ -769,6 +784,7 @@ var fieldIDToName_TTabletSchema = map[int16]string{
 	19: "cluster_key_idxes",
 	20: "row_store_col_cids",
 	21: "row_store_page_size",
+	22: "variant_enable_flatten_nested",
 }
 
 func (p *TTabletSchema) IsSetBloomFilterFpp() bool {
@@ -833,6 +849,10 @@ func (p *TTabletSchema) IsSetRowStoreColCids() bool {
 
 func (p *TTabletSchema) IsSetRowStorePageSize() bool {
 	return p.RowStorePageSize != TTabletSchema_RowStorePageSize_DEFAULT
+}
+
+func (p *TTabletSchema) IsSetVariantEnableFlattenNested() bool {
+	return p.VariantEnableFlattenNested != TTabletSchema_VariantEnableFlattenNested_DEFAULT
 }
 
 func (p *TTabletSchema) Read(iprot thrift.TProtocol) (err error) {
@@ -1027,6 +1047,14 @@ func (p *TTabletSchema) Read(iprot thrift.TProtocol) (err error) {
 		case 21:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField21(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 22:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField22(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1367,6 +1395,17 @@ func (p *TTabletSchema) ReadField21(iprot thrift.TProtocol) error {
 	p.RowStorePageSize = _field
 	return nil
 }
+func (p *TTabletSchema) ReadField22(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.VariantEnableFlattenNested = _field
+	return nil
+}
 
 func (p *TTabletSchema) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1456,6 +1495,10 @@ func (p *TTabletSchema) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField21(oprot); err != nil {
 			fieldId = 21
+			goto WriteFieldError
+		}
+		if err = p.writeField22(oprot); err != nil {
+			fieldId = 22
 			goto WriteFieldError
 		}
 	}
@@ -1897,6 +1940,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
 }
 
+func (p *TTabletSchema) writeField22(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVariantEnableFlattenNested() {
+		if err = oprot.WriteFieldBegin("variant_enable_flatten_nested", thrift.BOOL, 22); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.VariantEnableFlattenNested); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
+}
+
 func (p *TTabletSchema) String() string {
 	if p == nil {
 		return "<nil>"
@@ -1972,6 +2034,9 @@ func (p *TTabletSchema) DeepEqual(ano *TTabletSchema) bool {
 		return false
 	}
 	if !p.Field21DeepEqual(ano.RowStorePageSize) {
+		return false
+	}
+	if !p.Field22DeepEqual(ano.VariantEnableFlattenNested) {
 		return false
 	}
 	return true
@@ -2169,6 +2234,13 @@ func (p *TTabletSchema) Field20DeepEqual(src []int32) bool {
 func (p *TTabletSchema) Field21DeepEqual(src int64) bool {
 
 	if p.RowStorePageSize != src {
+		return false
+	}
+	return true
+}
+func (p *TTabletSchema) Field22DeepEqual(src bool) bool {
+
+	if p.VariantEnableFlattenNested != src {
 		return false
 	}
 	return true
@@ -17583,6 +17655,7 @@ type TSnapshotRequest struct {
 	StartVersion             *types.TVersion     `thrift:"start_version,11,optional" frugal:"11,optional,i64" json:"start_version,omitempty"`
 	EndVersion               *types.TVersion     `thrift:"end_version,12,optional" frugal:"12,optional,i64" json:"end_version,omitempty"`
 	IsCopyBinlog             *bool               `thrift:"is_copy_binlog,13,optional" frugal:"13,optional,bool" json:"is_copy_binlog,omitempty"`
+	RefTabletId              *types.TTabletId    `thrift:"ref_tablet_id,14,optional" frugal:"14,optional,i64" json:"ref_tablet_id,omitempty"`
 }
 
 func NewTSnapshotRequest() *TSnapshotRequest {
@@ -17702,6 +17775,15 @@ func (p *TSnapshotRequest) GetIsCopyBinlog() (v bool) {
 	}
 	return *p.IsCopyBinlog
 }
+
+var TSnapshotRequest_RefTabletId_DEFAULT types.TTabletId
+
+func (p *TSnapshotRequest) GetRefTabletId() (v types.TTabletId) {
+	if !p.IsSetRefTabletId() {
+		return TSnapshotRequest_RefTabletId_DEFAULT
+	}
+	return *p.RefTabletId
+}
 func (p *TSnapshotRequest) SetTabletId(val types.TTabletId) {
 	p.TabletId = val
 }
@@ -17741,6 +17823,9 @@ func (p *TSnapshotRequest) SetEndVersion(val *types.TVersion) {
 func (p *TSnapshotRequest) SetIsCopyBinlog(val *bool) {
 	p.IsCopyBinlog = val
 }
+func (p *TSnapshotRequest) SetRefTabletId(val *types.TTabletId) {
+	p.RefTabletId = val
+}
 
 var fieldIDToName_TSnapshotRequest = map[int16]string{
 	1:  "tablet_id",
@@ -17756,6 +17841,7 @@ var fieldIDToName_TSnapshotRequest = map[int16]string{
 	11: "start_version",
 	12: "end_version",
 	13: "is_copy_binlog",
+	14: "ref_tablet_id",
 }
 
 func (p *TSnapshotRequest) IsSetVersion() bool {
@@ -17800,6 +17886,10 @@ func (p *TSnapshotRequest) IsSetEndVersion() bool {
 
 func (p *TSnapshotRequest) IsSetIsCopyBinlog() bool {
 	return p.IsCopyBinlog != nil
+}
+
+func (p *TSnapshotRequest) IsSetRefTabletId() bool {
+	return p.RefTabletId != nil
 }
 
 func (p *TSnapshotRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -17924,6 +18014,14 @@ func (p *TSnapshotRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 13:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField14(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -18124,6 +18222,17 @@ func (p *TSnapshotRequest) ReadField13(iprot thrift.TProtocol) error {
 	p.IsCopyBinlog = _field
 	return nil
 }
+func (p *TSnapshotRequest) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *types.TTabletId
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.RefTabletId = _field
+	return nil
+}
 
 func (p *TSnapshotRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -18181,6 +18290,10 @@ func (p *TSnapshotRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField13(oprot); err != nil {
 			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
 			goto WriteFieldError
 		}
 	}
@@ -18452,6 +18565,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
 
+func (p *TSnapshotRequest) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRefTabletId() {
+		if err = oprot.WriteFieldBegin("ref_tablet_id", thrift.I64, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.RefTabletId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
+
 func (p *TSnapshotRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -18503,6 +18635,9 @@ func (p *TSnapshotRequest) DeepEqual(ano *TSnapshotRequest) bool {
 		return false
 	}
 	if !p.Field13DeepEqual(ano.IsCopyBinlog) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.RefTabletId) {
 		return false
 	}
 	return true
@@ -18646,6 +18781,18 @@ func (p *TSnapshotRequest) Field13DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.IsCopyBinlog != *src {
+		return false
+	}
+	return true
+}
+func (p *TSnapshotRequest) Field14DeepEqual(src *types.TTabletId) bool {
+
+	if p.RefTabletId == src {
+		return true
+	} else if p.RefTabletId == nil || src == nil {
+		return false
+	}
+	if *p.RefTabletId != *src {
 		return false
 	}
 	return true

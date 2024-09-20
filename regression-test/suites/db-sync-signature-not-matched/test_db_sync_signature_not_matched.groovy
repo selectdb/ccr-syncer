@@ -16,72 +16,13 @@
 // under the License.
 
 suite("test_db_sync_signature_not_matched") {
+    def helper = new GroovyShell(new Binding(['suite': delegate]))
+            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
-    def tableName = "tbl_db_sync_sig_not_matched_" + UUID.randomUUID().toString().replace("-", "")
-    def syncerAddress = "127.0.0.1:9190"
+    def tableName = "tbl_db_sync_sig_not_matched_" + helper.randomSuffix()
     def test_num = 0
     def insert_num = 20
-    def sync_gap_time = 5000
     def opPartitonName = "less"
-    String response
-
-    def checkSelectTimesOf = { sqlString, rowSize, times -> Boolean
-        def tmpRes = target_sql "${sqlString}"
-        while (tmpRes.size() != rowSize) {
-            sleep(sync_gap_time)
-            if (--times > 0) {
-                tmpRes = target_sql "${sqlString}"
-            } else {
-                break
-            }
-        }
-        return tmpRes.size() == rowSize
-    }
-
-    def checkShowTimesOf = { sqlString, myClosure, times, func = "sql" -> Boolean
-        Boolean ret = false
-        List<List<Object>> res
-        while (times > 0) {
-            try {
-                if (func == "sql") {
-                    res = sql "${sqlString}"
-                } else {
-                    res = target_sql "${sqlString}"
-                }
-                if (myClosure.call(res)) {
-                    ret = true
-                }
-            } catch (Exception e) { }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
-
-    def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
-        Boolean ret = false
-        while (times > 0) {
-            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            for (List<Object> row : sqlInfo) {
-                if ((row[10] as String).contains(checkTable)) {
-                    ret = (row[4] as String) == "FINISHED"
-                }
-            }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
 
     def exist = { res -> Boolean
         return res.size() != 0
@@ -90,7 +31,7 @@ suite("test_db_sync_signature_not_matched") {
         return res.size() == 0
     }
 
-    sql "ALTER DATABASE ${context.dbName} SET properties (\"binlog.enable\" = \"true\")"
+    helper.enableDbBinlog()
 
     logger.info("create table with different schema")
 
@@ -151,17 +92,11 @@ suite("test_db_sync_signature_not_matched") {
     def v = sql "SELECT * FROM ${tableName}"
     assertEquals(v.size(), insert_num);
 
-    httpTest {
-        uri "/create_ccr"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body ""
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
+    helper.ccrJobDelete()
+    helper.ccrJobCreate()
 
     logger.info("dest cluster drop unmatched tables")
-    assertTrue(checkRestoreFinishTimesOf("${tableName}", 60))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 60))
 
     v = target_sql "SELECT * FROM ${tableName}"
     assertTrue(v.size() == insert_num);
@@ -175,7 +110,7 @@ suite("test_db_sync_signature_not_matched") {
 
     sql """ INSERT INTO ${tableName} VALUES ${values.join(",")} """
     sql "sync"
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableName}", insert_num * 2, 60))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", insert_num * 2, 60))
 }
 
 

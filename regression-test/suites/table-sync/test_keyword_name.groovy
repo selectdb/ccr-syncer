@@ -16,72 +16,15 @@
 // under the License.
 
 suite("test_keyword_name") {
+    def helper = new GroovyShell(new Binding(['suite': delegate]))
+            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
     def tableName = "roles"
+    def newTableName = "test-hyphen"
     def syncerAddress = "127.0.0.1:9190"
     def test_num = 0
     def insert_num = 5
-    def sync_gap_time = 5000
     def opPartitonName = "less0"
-    String response
-
-    def checkSelectTimesOf = { sqlString, rowSize, times -> Boolean
-        def tmpRes = target_sql "${sqlString}"
-        while (tmpRes.size() != rowSize) {
-            sleep(sync_gap_time)
-            if (--times > 0) {
-                tmpRes = target_sql "${sqlString}"
-            } else {
-                break
-            }
-        }
-        return tmpRes.size() == rowSize
-    }
-
-    def checkShowTimesOf = { sqlString, myClosure, times, func = "sql" -> Boolean
-        Boolean ret = false
-        List<List<Object>> res
-        while (times > 0) {
-            try {
-                if (func == "sql") {
-                    res = sql "${sqlString}"
-                } else {
-                    res = target_sql "${sqlString}"
-                }
-                if (myClosure.call(res)) {
-                    ret = true
-                }
-            } catch (Exception e) {}
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
-
-    def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
-        Boolean ret = false
-        while (times > 0) {
-            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            for (List<Object> row : sqlInfo) {
-                if ((row[10] as String).contains(checkTable)) {
-                    ret = (row[4] as String) == "FINISHED"
-                }
-            }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
 
     def exist = { res -> Boolean
         return res.size() != 0
@@ -110,6 +53,21 @@ suite("test_keyword_name") {
             "binlog.enable" = "true"
         );
     """
+
+    sql "DROP TABLE IF EXISTS `${newTableName}` FORCE"
+    target_sql "DROP TABLE IF EXISTS `${newTableName}` FORCE"
+    sql """
+        CREATE TABLE `${newTableName}` (
+            id       INT,
+            name    VARCHAR(10)
+        )
+        UNIQUE KEY(id)
+        DISTRIBUTED BY HASH(id) BUCKETS 1
+        PROPERTIES (
+            "replication_allocation" = "tag.location.default: 1",
+            "binlog.enable" = "true"
+        );
+    """ 
     // sql """ALTER TABLE ${tableName} set ("binlog.enable" = "true")"""
 
     sql """
@@ -124,24 +82,40 @@ suite("test_keyword_name") {
         (7, 'warlock', 'horde', '2018-12-04 16:11:28'),
         (8, 'hunter', 'horde', NULL);
      """
+    sql """
+        INSERT INTO `${newTableName}` VALUES
+        (1, 'a'),
+        (2, 'b'),
+        (3, 'c');
+     """   
+
+    // delete the exists ccr job first.
+    helper.ccrJobDelete(tableName)
+    helper.ccrJobCreate(tableName)
+
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
 
     httpTest {
         uri "/create_ccr"
         endpoint syncerAddress
-        def bodyJson = get_ccr_body "${tableName}"
+        def bodyJson = get_ccr_body "${newTableName}"
         body "${bodyJson}"
         op "post"
         result response
     }
-
-    assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
+    assertTrue(checkRestoreFinishTimesOf("${newTableName}", 30))
 
     logger.info("=== Test 1: Check keyword name table ===")
     // def checkShowTimesOf = { sqlString, myClosure, times, func = "sql" -> Boolean
-    assertTrue(checkShowTimesOf("""
+    assertTrue(helper.checkShowTimesOf("""
                                 SHOW CREATE TABLE `TEST_${context.dbName}`.`${tableName}`
                                 """,
                                 exist, 30, "target"))
+
+    assertTrue(checkShowTimesOf("""
+                                SHOW CREATE TABLE `TEST_${context.dbName}`.`${newTableName}`
+                                """,
+                                exist, 30, "target"))                                
 
     logger.info("=== Test 2: Add new partition ===")
     sql """
@@ -163,7 +137,7 @@ suite("test_keyword_name") {
         }
         return false
     }
-    assertTrue(checkShowTimesOf("""
+    assertTrue(helper.checkShowTimesOf("""
                                 SHOW CREATE TABLE `TEST_${context.dbName}`.`${tableName}`
                                 """,
                                 checkNewPartition, 30, "target"))
@@ -171,7 +145,7 @@ suite("test_keyword_name") {
     logger.info("=== Test 3: Truncate table ===")
     sql "TRUNCATE TABLE `${tableName}`"
 
-    assertTrue(checkShowTimesOf("""
+    assertTrue(helper.checkShowTimesOf("""
                                 SELECT * FROM `TEST_${context.dbName}`.`${tableName}`
                                 """,
                                 notExist, 30, "target"))

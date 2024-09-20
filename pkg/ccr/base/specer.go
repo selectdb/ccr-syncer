@@ -24,16 +24,19 @@ type Specer interface {
 	CreateTableOrView(createTable *record.CreateTable, srcDatabase string) error
 	CheckDatabaseExists() (bool, error)
 	CheckTableExists() (bool, error)
+	CheckTableExistsByName(tableName string) (bool, error)
 	CreatePartialSnapshotAndWaitForDone(table string, partitions []string) (string, error)
 	CreateSnapshotAndWaitForDone(tables []string) (string, error)
 	CheckRestoreFinished(snapshotName string) (bool, error)
-	GetRestoreSignatureNotMatchedTable(snapshotName string) (string, error)
+	GetRestoreSignatureNotMatchedTableOrView(snapshotName string) (string, bool, error)
 	WaitTransactionDone(txnId int64) // busy wait
 
-	LightningSchemaChange(srcDatabase string, changes *record.ModifyTableAddOrDropColumns) error
+	LightningSchemaChange(srcDatabase string, tableAlias string, changes *record.ModifyTableAddOrDropColumns) error
 	RenameColumn(destTableName string, renameColumn *record.RenameColumn) error
+	RenameTable(destTableName string, renameTable *record.RenameTable) error
 	TruncateTable(destTableName string, truncateTable *record.TruncateTable) error
-	DropTable(tableName string) error
+	ReplaceTable(fromName, toName string, swap bool) error
+	DropTable(tableName string, force bool) error
 	DropView(viewName string) error
 
 	AddPartition(destTableName string, addPartition *record.AddPartition) error

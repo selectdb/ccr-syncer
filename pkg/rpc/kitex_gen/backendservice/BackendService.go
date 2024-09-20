@@ -556,6 +556,7 @@ type TTabletStat struct {
 	TotalVersionCount   *int64 `thrift:"total_version_count,4,optional" frugal:"4,optional,i64" json:"total_version_count,omitempty"`
 	RemoteDataSize      *int64 `thrift:"remote_data_size,5,optional" frugal:"5,optional,i64" json:"remote_data_size,omitempty"`
 	VisibleVersionCount *int64 `thrift:"visible_version_count,6,optional" frugal:"6,optional,i64" json:"visible_version_count,omitempty"`
+	VisibleVersion      *int64 `thrift:"visible_version,7,optional" frugal:"7,optional,i64" json:"visible_version,omitempty"`
 }
 
 func NewTTabletStat() *TTabletStat {
@@ -613,6 +614,15 @@ func (p *TTabletStat) GetVisibleVersionCount() (v int64) {
 	}
 	return *p.VisibleVersionCount
 }
+
+var TTabletStat_VisibleVersion_DEFAULT int64
+
+func (p *TTabletStat) GetVisibleVersion() (v int64) {
+	if !p.IsSetVisibleVersion() {
+		return TTabletStat_VisibleVersion_DEFAULT
+	}
+	return *p.VisibleVersion
+}
 func (p *TTabletStat) SetTabletId(val int64) {
 	p.TabletId = val
 }
@@ -631,6 +641,9 @@ func (p *TTabletStat) SetRemoteDataSize(val *int64) {
 func (p *TTabletStat) SetVisibleVersionCount(val *int64) {
 	p.VisibleVersionCount = val
 }
+func (p *TTabletStat) SetVisibleVersion(val *int64) {
+	p.VisibleVersion = val
+}
 
 var fieldIDToName_TTabletStat = map[int16]string{
 	1: "tablet_id",
@@ -639,6 +652,7 @@ var fieldIDToName_TTabletStat = map[int16]string{
 	4: "total_version_count",
 	5: "remote_data_size",
 	6: "visible_version_count",
+	7: "visible_version",
 }
 
 func (p *TTabletStat) IsSetDataSize() bool {
@@ -659,6 +673,10 @@ func (p *TTabletStat) IsSetRemoteDataSize() bool {
 
 func (p *TTabletStat) IsSetVisibleVersionCount() bool {
 	return p.VisibleVersionCount != nil
+}
+
+func (p *TTabletStat) IsSetVisibleVersion() bool {
+	return p.VisibleVersion != nil
 }
 
 func (p *TTabletStat) Read(iprot thrift.TProtocol) (err error) {
@@ -725,6 +743,14 @@ func (p *TTabletStat) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -831,6 +857,17 @@ func (p *TTabletStat) ReadField6(iprot thrift.TProtocol) error {
 	p.VisibleVersionCount = _field
 	return nil
 }
+func (p *TTabletStat) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.VisibleVersion = _field
+	return nil
+}
 
 func (p *TTabletStat) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -860,6 +897,10 @@ func (p *TTabletStat) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 	}
@@ -992,6 +1033,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 
+func (p *TTabletStat) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVisibleVersion() {
+		if err = oprot.WriteFieldBegin("visible_version", thrift.I64, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.VisibleVersion); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
 func (p *TTabletStat) String() string {
 	if p == nil {
 		return "<nil>"
@@ -1022,6 +1082,9 @@ func (p *TTabletStat) DeepEqual(ano *TTabletStat) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.VisibleVersionCount) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.VisibleVersion) {
 		return false
 	}
 	return true
@@ -1090,6 +1153,18 @@ func (p *TTabletStat) Field6DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.VisibleVersionCount != *src {
+		return false
+	}
+	return true
+}
+func (p *TTabletStat) Field7DeepEqual(src *int64) bool {
+
+	if p.VisibleVersion == src {
+		return true
+	} else if p.VisibleVersion == nil || src == nil {
+		return false
+	}
+	if *p.VisibleVersion != *src {
 		return false
 	}
 	return true

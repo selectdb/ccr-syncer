@@ -2775,6 +2775,76 @@ func (p *TQueryOptions) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 127:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField127(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 128:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField128(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 129:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField129(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 130:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField130(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 131:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField131(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 1000:
 			if fieldTypeId == thrift.BOOL {
 				l, err = p.FastReadField1000(buf[offset:])
@@ -4347,7 +4417,7 @@ func (p *TQueryOptions) FastReadField119(buf []byte) (int, error) {
 	} else {
 		offset += l
 
-		p.EnableMatchWithoutInvertedIndex = v
+		p.KeepCarriageReturn = v
 
 	}
 	return offset, nil
@@ -4361,7 +4431,7 @@ func (p *TQueryOptions) FastReadField120(buf []byte) (int, error) {
 	} else {
 		offset += l
 
-		p.EnableFallbackOnMissingInvertedIndex = v
+		p.EnableMatchWithoutInvertedIndex = v
 
 	}
 	return offset, nil
@@ -4375,7 +4445,7 @@ func (p *TQueryOptions) FastReadField121(buf []byte) (int, error) {
 	} else {
 		offset += l
 
-		p.KeepCarriageReturn = v
+		p.EnableFallbackOnMissingInvertedIndex = v
 
 	}
 	return offset, nil
@@ -4446,6 +4516,76 @@ func (p *TQueryOptions) FastReadField126(buf []byte) (int, error) {
 		offset += l
 
 		p.RuntimeBloomFilterMaxSize = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField127(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.InListValueCountThreshold = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField128(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.EnableVerboseProfile = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField129(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.RpcVerboseProfileMaxInstanceCount = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField130(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.EnableAdaptivePipelineTaskSerialReadOnLimit = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField131(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.AdaptivePipelineTaskSerialReadOnLimit = v
 
 	}
 	return offset, nil
@@ -4586,6 +4726,11 @@ func (p *TQueryOptions) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryW
 		offset += p.fastWriteField124(buf[offset:], binaryWriter)
 		offset += p.fastWriteField125(buf[offset:], binaryWriter)
 		offset += p.fastWriteField126(buf[offset:], binaryWriter)
+		offset += p.fastWriteField127(buf[offset:], binaryWriter)
+		offset += p.fastWriteField128(buf[offset:], binaryWriter)
+		offset += p.fastWriteField129(buf[offset:], binaryWriter)
+		offset += p.fastWriteField130(buf[offset:], binaryWriter)
+		offset += p.fastWriteField131(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1000(buf[offset:], binaryWriter)
 		offset += p.fastWriteField18(buf[offset:], binaryWriter)
 		offset += p.fastWriteField42(buf[offset:], binaryWriter)
@@ -4719,6 +4864,11 @@ func (p *TQueryOptions) BLength() int {
 		l += p.field124Length()
 		l += p.field125Length()
 		l += p.field126Length()
+		l += p.field127Length()
+		l += p.field128Length()
+		l += p.field129Length()
+		l += p.field130Length()
+		l += p.field131Length()
 		l += p.field1000Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
@@ -5926,9 +6076,9 @@ func (p *TQueryOptions) fastWriteField118(buf []byte, binaryWriter bthrift.Binar
 
 func (p *TQueryOptions) fastWriteField119(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
-	if p.IsSetEnableMatchWithoutInvertedIndex() {
-		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_match_without_inverted_index", thrift.BOOL, 119)
-		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableMatchWithoutInvertedIndex)
+	if p.IsSetKeepCarriageReturn() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "keep_carriage_return", thrift.BOOL, 119)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.KeepCarriageReturn)
 
 		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
 	}
@@ -5937,9 +6087,9 @@ func (p *TQueryOptions) fastWriteField119(buf []byte, binaryWriter bthrift.Binar
 
 func (p *TQueryOptions) fastWriteField120(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
-	if p.IsSetEnableFallbackOnMissingInvertedIndex() {
-		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_fallback_on_missing_inverted_index", thrift.BOOL, 120)
-		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableFallbackOnMissingInvertedIndex)
+	if p.IsSetEnableMatchWithoutInvertedIndex() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_match_without_inverted_index", thrift.BOOL, 120)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableMatchWithoutInvertedIndex)
 
 		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
 	}
@@ -5948,9 +6098,9 @@ func (p *TQueryOptions) fastWriteField120(buf []byte, binaryWriter bthrift.Binar
 
 func (p *TQueryOptions) fastWriteField121(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
-	if p.IsSetKeepCarriageReturn() {
-		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "keep_carriage_return", thrift.BOOL, 121)
-		offset += bthrift.Binary.WriteBool(buf[offset:], p.KeepCarriageReturn)
+	if p.IsSetEnableFallbackOnMissingInvertedIndex() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_fallback_on_missing_inverted_index", thrift.BOOL, 121)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableFallbackOnMissingInvertedIndex)
 
 		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
 	}
@@ -6006,6 +6156,61 @@ func (p *TQueryOptions) fastWriteField126(buf []byte, binaryWriter bthrift.Binar
 	if p.IsSetRuntimeBloomFilterMaxSize() {
 		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "runtime_bloom_filter_max_size", thrift.I32, 126)
 		offset += bthrift.Binary.WriteI32(buf[offset:], p.RuntimeBloomFilterMaxSize)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField127(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetInListValueCountThreshold() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "in_list_value_count_threshold", thrift.I32, 127)
+		offset += bthrift.Binary.WriteI32(buf[offset:], p.InListValueCountThreshold)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField128(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetEnableVerboseProfile() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_verbose_profile", thrift.BOOL, 128)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableVerboseProfile)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField129(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetRpcVerboseProfileMaxInstanceCount() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "rpc_verbose_profile_max_instance_count", thrift.I32, 129)
+		offset += bthrift.Binary.WriteI32(buf[offset:], p.RpcVerboseProfileMaxInstanceCount)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField130(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetEnableAdaptivePipelineTaskSerialReadOnLimit() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_adaptive_pipeline_task_serial_read_on_limit", thrift.BOOL, 130)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableAdaptivePipelineTaskSerialReadOnLimit)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField131(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetAdaptivePipelineTaskSerialReadOnLimit() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "adaptive_pipeline_task_serial_read_on_limit", thrift.I32, 131)
+		offset += bthrift.Binary.WriteI32(buf[offset:], p.AdaptivePipelineTaskSerialReadOnLimit)
 
 		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
 	}
@@ -7223,9 +7428,9 @@ func (p *TQueryOptions) field118Length() int {
 
 func (p *TQueryOptions) field119Length() int {
 	l := 0
-	if p.IsSetEnableMatchWithoutInvertedIndex() {
-		l += bthrift.Binary.FieldBeginLength("enable_match_without_inverted_index", thrift.BOOL, 119)
-		l += bthrift.Binary.BoolLength(p.EnableMatchWithoutInvertedIndex)
+	if p.IsSetKeepCarriageReturn() {
+		l += bthrift.Binary.FieldBeginLength("keep_carriage_return", thrift.BOOL, 119)
+		l += bthrift.Binary.BoolLength(p.KeepCarriageReturn)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -7234,9 +7439,9 @@ func (p *TQueryOptions) field119Length() int {
 
 func (p *TQueryOptions) field120Length() int {
 	l := 0
-	if p.IsSetEnableFallbackOnMissingInvertedIndex() {
-		l += bthrift.Binary.FieldBeginLength("enable_fallback_on_missing_inverted_index", thrift.BOOL, 120)
-		l += bthrift.Binary.BoolLength(p.EnableFallbackOnMissingInvertedIndex)
+	if p.IsSetEnableMatchWithoutInvertedIndex() {
+		l += bthrift.Binary.FieldBeginLength("enable_match_without_inverted_index", thrift.BOOL, 120)
+		l += bthrift.Binary.BoolLength(p.EnableMatchWithoutInvertedIndex)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -7245,9 +7450,9 @@ func (p *TQueryOptions) field120Length() int {
 
 func (p *TQueryOptions) field121Length() int {
 	l := 0
-	if p.IsSetKeepCarriageReturn() {
-		l += bthrift.Binary.FieldBeginLength("keep_carriage_return", thrift.BOOL, 121)
-		l += bthrift.Binary.BoolLength(p.KeepCarriageReturn)
+	if p.IsSetEnableFallbackOnMissingInvertedIndex() {
+		l += bthrift.Binary.FieldBeginLength("enable_fallback_on_missing_inverted_index", thrift.BOOL, 121)
+		l += bthrift.Binary.BoolLength(p.EnableFallbackOnMissingInvertedIndex)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -7303,6 +7508,61 @@ func (p *TQueryOptions) field126Length() int {
 	if p.IsSetRuntimeBloomFilterMaxSize() {
 		l += bthrift.Binary.FieldBeginLength("runtime_bloom_filter_max_size", thrift.I32, 126)
 		l += bthrift.Binary.I32Length(p.RuntimeBloomFilterMaxSize)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field127Length() int {
+	l := 0
+	if p.IsSetInListValueCountThreshold() {
+		l += bthrift.Binary.FieldBeginLength("in_list_value_count_threshold", thrift.I32, 127)
+		l += bthrift.Binary.I32Length(p.InListValueCountThreshold)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field128Length() int {
+	l := 0
+	if p.IsSetEnableVerboseProfile() {
+		l += bthrift.Binary.FieldBeginLength("enable_verbose_profile", thrift.BOOL, 128)
+		l += bthrift.Binary.BoolLength(p.EnableVerboseProfile)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field129Length() int {
+	l := 0
+	if p.IsSetRpcVerboseProfileMaxInstanceCount() {
+		l += bthrift.Binary.FieldBeginLength("rpc_verbose_profile_max_instance_count", thrift.I32, 129)
+		l += bthrift.Binary.I32Length(p.RpcVerboseProfileMaxInstanceCount)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field130Length() int {
+	l := 0
+	if p.IsSetEnableAdaptivePipelineTaskSerialReadOnLimit() {
+		l += bthrift.Binary.FieldBeginLength("enable_adaptive_pipeline_task_serial_read_on_limit", thrift.BOOL, 130)
+		l += bthrift.Binary.BoolLength(p.EnableAdaptivePipelineTaskSerialReadOnLimit)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field131Length() int {
+	l := 0
+	if p.IsSetAdaptivePipelineTaskSerialReadOnLimit() {
+		l += bthrift.Binary.FieldBeginLength("adaptive_pipeline_task_serial_read_on_limit", thrift.I32, 131)
+		l += bthrift.Binary.I32Length(p.AdaptivePipelineTaskSerialReadOnLimit)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

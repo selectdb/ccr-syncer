@@ -16,10 +16,9 @@
 // under the License.
 
 suite("test_view_and_mv") {
+    def helper = new GroovyShell(new Binding(['suite': delegate]))
+            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
-    def syncerAddress = "127.0.0.1:9190"
-
-    def sync_gap_time = 5000
     def createDuplicateTable = { tableName ->
        sql """
             CREATE TABLE if NOT EXISTS ${tableName}
@@ -36,107 +35,6 @@ suite("test_view_and_mv") {
                 "binlog.enable" = "true"
             )
         """
-    }
-
-    def checkShowTimesOf = { sqlString, checkFunc, times, func = "sql" -> Boolean
-        List<List<Object>> res
-        while (times > 0) {
-            try {
-                if (func == "sql") {
-                    res = sql "${sqlString}"
-                } else {
-                    res = target_sql "${sqlString}"
-                }
-
-                if (checkFunc.call(res)) {
-                    return true
-                }
-            } catch (Exception e) {
-                logger.warn("Exception: ${e}")
-            }
-
-            if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return false
-    }
-
-    def checkSelectTimesOf = { sqlString, rowSize, times -> Boolean
-        def tmpRes = target_sql "${sqlString}"
-        while (tmpRes.size() != rowSize) {
-            sleep(sync_gap_time)
-            if (--times > 0) {
-                tmpRes = target_sql "${sqlString}"
-            } else {
-                break
-            }
-        }
-        return tmpRes.size() == rowSize
-    }
-
-    def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
-        Boolean ret = false
-        while (times > 0) {
-            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            for (List<Object> row : sqlInfo) {
-                if ((row[10] as String).contains(checkTable)) {
-                    ret = (row[4] as String) == "FINISHED"
-                }
-            }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
-
-    def checkBackupFinishTimesOf = { checkTable, times -> Boolean
-        Boolean ret = false
-        while (times > 0) {
-            def sqlInfo = sql "SHOW BACKUP FROM ${context.dbName}"
-            for (List<Object> row : sqlInfo) {
-                if ((row[4] as String).contains(checkTable)) {
-                    ret = row[3] == "FINISHED"
-                }
-            }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
-
-    def checkRestoreAllFinishTimesOf = { checkTable, times -> Boolean
-        Boolean ret = true
-        while (times > 0) {
-            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            for (List<Object> row : sqlInfo) {
-                if ((row[10] as String).contains(checkTable)) {
-                    if ((row[4] as String) != "FINISHED") {
-                        ret = false
-                    }
-                }
-            }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-
-        }
-        
-        return ret
     }
 
     def checkRestoreRowsTimesOf = {rowSize, times -> Boolean
@@ -161,10 +59,11 @@ suite("test_view_and_mv") {
         return res.size() == 0
     }
 
-    def tableDuplicate0 = "tbl_duplicate_0_" + UUID.randomUUID().toString().replace("-", "")
+    def suffix = UUID.randomUUID().toString().replace("-", "")
+    def tableDuplicate0 = "tbl_duplicate_0_${suffix}"
     createDuplicateTable(tableDuplicate0)
     sql """
-        INSERT INTO ${tableDuplicate0} VALUES 
+        INSERT INTO ${tableDuplicate0} VALUES
         (1, "Emily", 25),
         (2, "Benjamin", 35),
         (3, "Olivia", 28),
@@ -174,42 +73,26 @@ suite("test_view_and_mv") {
 
     sql "ALTER DATABASE ${context.dbName} SET properties (\"binlog.enable\" = \"true\")"
 
-    String response
-    httpTest {
-        uri "/create_ccr"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body ""
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
+    helper.ccrJobDelete()
+    helper.ccrJobCreate()
 
-    assertTrue(checkRestoreFinishTimesOf("${tableDuplicate0}", 30))
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableDuplicate0}", 5, 30))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableDuplicate0}", 30))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate0}", 5, 30))
 
     logger.info("=== Test1: create view and materialized view ===")
     sql """
-        CREATE VIEW view_test (k1, name,  v1)
+        CREATE VIEW view_test_${suffix} (k1, name,  v1)
         AS
         SELECT user_id as k1, name,  SUM(age) FROM ${tableDuplicate0}
         GROUP BY k1,name;
         """
 
     sql """
-        create materialized view user_id_name as
+        create materialized view user_id_name_${suffix} as
         select user_id, name from ${tableDuplicate0};
         """
-    // when create materialized view, source cluster will backup again firstly.
-    // so we check the backup and restore status
 
-    // first, check backup
-    sleep(15000)
-    assertTrue(checkBackupFinishTimesOf("${tableDuplicate0}", 60))
-
-    // then, check retore
-    sleep(15000)
-    assertTrue(checkRestoreRowsTimesOf(2, 30))
-    assertTrue(checkRestoreFinishTimesOf("${tableDuplicate0}", 30))
+    assertTrue(helper.checkRestoreFinishTimesOf("view_test_${suffix}", 30))
 
     explain {
         sql("select user_id, name from ${tableDuplicate0}")
@@ -218,18 +101,11 @@ suite("test_view_and_mv") {
 
      logger.info("=== Test 2: delete job ===")
      test_num = 5
-     httpTest {
-        uri "/delete"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body ""
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
+     helper.ccrJobDelete()
 
    sql """
         INSERT INTO ${tableDuplicate0} VALUES (6, "Zhangsan", 31)
         """
 
-    assertTrue(checkSelectTimesOf("SELECT * FROM ${tableDuplicate0}", 5, 5))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate0}", 5, 5))
 }

@@ -17,8 +17,7 @@ var (
 	DB     = newErrorCategory("db")
 	FE     = newErrorCategory("fe")
 	BE     = newErrorCategory("be")
-	// The error is related to meta, so a new snapshot will be created.
-	Meta   = newErrorCategory("meta")
+	Meta   = newErrorCategory("meta") // The error is related to meta, so a new snapshot will be created.
 )
 
 type xErrorCategory struct {

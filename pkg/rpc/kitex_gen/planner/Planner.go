@@ -9,16 +9,18 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/exprs"
 	"github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/partitions"
 	"github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/plannodes"
+	"github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/querycache"
 	"github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/types"
 )
 
 type TPlanFragment struct {
-	Plan                          *plannodes.TPlan           `thrift:"plan,2,optional" frugal:"2,optional,plannodes.TPlan" json:"plan,omitempty"`
-	OutputExprs                   []*exprs.TExpr             `thrift:"output_exprs,4,optional" frugal:"4,optional,list<exprs.TExpr>" json:"output_exprs,omitempty"`
-	OutputSink                    *datasinks.TDataSink       `thrift:"output_sink,5,optional" frugal:"5,optional,datasinks.TDataSink" json:"output_sink,omitempty"`
-	Partition                     *partitions.TDataPartition `thrift:"partition,6,required" frugal:"6,required,partitions.TDataPartition" json:"partition"`
-	MinReservationBytes           *int64                     `thrift:"min_reservation_bytes,7,optional" frugal:"7,optional,i64" json:"min_reservation_bytes,omitempty"`
-	InitialReservationTotalClaims *int64                     `thrift:"initial_reservation_total_claims,8,optional" frugal:"8,optional,i64" json:"initial_reservation_total_claims,omitempty"`
+	Plan                          *plannodes.TPlan             `thrift:"plan,2,optional" frugal:"2,optional,plannodes.TPlan" json:"plan,omitempty"`
+	OutputExprs                   []*exprs.TExpr               `thrift:"output_exprs,4,optional" frugal:"4,optional,list<exprs.TExpr>" json:"output_exprs,omitempty"`
+	OutputSink                    *datasinks.TDataSink         `thrift:"output_sink,5,optional" frugal:"5,optional,datasinks.TDataSink" json:"output_sink,omitempty"`
+	Partition                     *partitions.TDataPartition   `thrift:"partition,6,required" frugal:"6,required,partitions.TDataPartition" json:"partition"`
+	MinReservationBytes           *int64                       `thrift:"min_reservation_bytes,7,optional" frugal:"7,optional,i64" json:"min_reservation_bytes,omitempty"`
+	InitialReservationTotalClaims *int64                       `thrift:"initial_reservation_total_claims,8,optional" frugal:"8,optional,i64" json:"initial_reservation_total_claims,omitempty"`
+	QueryCacheParam               *querycache.TQueryCacheParam `thrift:"query_cache_param,9,optional" frugal:"9,optional,querycache.TQueryCacheParam" json:"query_cache_param,omitempty"`
 }
 
 func NewTPlanFragment() *TPlanFragment {
@@ -81,6 +83,15 @@ func (p *TPlanFragment) GetInitialReservationTotalClaims() (v int64) {
 	}
 	return *p.InitialReservationTotalClaims
 }
+
+var TPlanFragment_QueryCacheParam_DEFAULT *querycache.TQueryCacheParam
+
+func (p *TPlanFragment) GetQueryCacheParam() (v *querycache.TQueryCacheParam) {
+	if !p.IsSetQueryCacheParam() {
+		return TPlanFragment_QueryCacheParam_DEFAULT
+	}
+	return p.QueryCacheParam
+}
 func (p *TPlanFragment) SetPlan(val *plannodes.TPlan) {
 	p.Plan = val
 }
@@ -99,6 +110,9 @@ func (p *TPlanFragment) SetMinReservationBytes(val *int64) {
 func (p *TPlanFragment) SetInitialReservationTotalClaims(val *int64) {
 	p.InitialReservationTotalClaims = val
 }
+func (p *TPlanFragment) SetQueryCacheParam(val *querycache.TQueryCacheParam) {
+	p.QueryCacheParam = val
+}
 
 var fieldIDToName_TPlanFragment = map[int16]string{
 	2: "plan",
@@ -107,6 +121,7 @@ var fieldIDToName_TPlanFragment = map[int16]string{
 	6: "partition",
 	7: "min_reservation_bytes",
 	8: "initial_reservation_total_claims",
+	9: "query_cache_param",
 }
 
 func (p *TPlanFragment) IsSetPlan() bool {
@@ -131,6 +146,10 @@ func (p *TPlanFragment) IsSetMinReservationBytes() bool {
 
 func (p *TPlanFragment) IsSetInitialReservationTotalClaims() bool {
 	return p.InitialReservationTotalClaims != nil
+}
+
+func (p *TPlanFragment) IsSetQueryCacheParam() bool {
+	return p.QueryCacheParam != nil
 }
 
 func (p *TPlanFragment) Read(iprot thrift.TProtocol) (err error) {
@@ -197,6 +216,14 @@ func (p *TPlanFragment) Read(iprot thrift.TProtocol) (err error) {
 		case 8:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField9(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -306,6 +333,14 @@ func (p *TPlanFragment) ReadField8(iprot thrift.TProtocol) error {
 	p.InitialReservationTotalClaims = _field
 	return nil
 }
+func (p *TPlanFragment) ReadField9(iprot thrift.TProtocol) error {
+	_field := querycache.NewTQueryCacheParam()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.QueryCacheParam = _field
+	return nil
+}
 
 func (p *TPlanFragment) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -335,6 +370,10 @@ func (p *TPlanFragment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
 			goto WriteFieldError
 		}
 	}
@@ -475,6 +514,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
 
+func (p *TPlanFragment) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetQueryCacheParam() {
+		if err = oprot.WriteFieldBegin("query_cache_param", thrift.STRUCT, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.QueryCacheParam.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+
 func (p *TPlanFragment) String() string {
 	if p == nil {
 		return "<nil>"
@@ -505,6 +563,9 @@ func (p *TPlanFragment) DeepEqual(ano *TPlanFragment) bool {
 		return false
 	}
 	if !p.Field8DeepEqual(ano.InitialReservationTotalClaims) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.QueryCacheParam) {
 		return false
 	}
 	return true
@@ -564,6 +625,13 @@ func (p *TPlanFragment) Field8DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.InitialReservationTotalClaims != *src {
+		return false
+	}
+	return true
+}
+func (p *TPlanFragment) Field9DeepEqual(src *querycache.TQueryCacheParam) bool {
+
+	if !p.QueryCacheParam.DeepEqual(src) {
 		return false
 	}
 	return true

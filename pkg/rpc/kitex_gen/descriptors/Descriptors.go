@@ -138,6 +138,10 @@ const (
 	TSchemaTableType_SCH_WORKLOAD_POLICY                       TSchemaTableType = 46
 	TSchemaTableType_SCH_TABLE_OPTIONS                         TSchemaTableType = 47
 	TSchemaTableType_SCH_WORKLOAD_GROUP_PRIVILEGES             TSchemaTableType = 48
+	TSchemaTableType_SCH_WORKLOAD_GROUP_RESOURCE_USAGE         TSchemaTableType = 49
+	TSchemaTableType_SCH_TABLE_PROPERTIES                      TSchemaTableType = 50
+	TSchemaTableType_SCH_FILE_CACHE_STATISTICS                 TSchemaTableType = 51
+	TSchemaTableType_SCH_CATALOG_META_CACHE_STATISTICS         TSchemaTableType = 52
 )
 
 func (p TSchemaTableType) String() string {
@@ -240,6 +244,14 @@ func (p TSchemaTableType) String() string {
 		return "SCH_TABLE_OPTIONS"
 	case TSchemaTableType_SCH_WORKLOAD_GROUP_PRIVILEGES:
 		return "SCH_WORKLOAD_GROUP_PRIVILEGES"
+	case TSchemaTableType_SCH_WORKLOAD_GROUP_RESOURCE_USAGE:
+		return "SCH_WORKLOAD_GROUP_RESOURCE_USAGE"
+	case TSchemaTableType_SCH_TABLE_PROPERTIES:
+		return "SCH_TABLE_PROPERTIES"
+	case TSchemaTableType_SCH_FILE_CACHE_STATISTICS:
+		return "SCH_FILE_CACHE_STATISTICS"
+	case TSchemaTableType_SCH_CATALOG_META_CACHE_STATISTICS:
+		return "SCH_CATALOG_META_CACHE_STATISTICS"
 	}
 	return "<UNSET>"
 }
@@ -344,6 +356,14 @@ func TSchemaTableTypeFromString(s string) (TSchemaTableType, error) {
 		return TSchemaTableType_SCH_TABLE_OPTIONS, nil
 	case "SCH_WORKLOAD_GROUP_PRIVILEGES":
 		return TSchemaTableType_SCH_WORKLOAD_GROUP_PRIVILEGES, nil
+	case "SCH_WORKLOAD_GROUP_RESOURCE_USAGE":
+		return TSchemaTableType_SCH_WORKLOAD_GROUP_RESOURCE_USAGE, nil
+	case "SCH_TABLE_PROPERTIES":
+		return TSchemaTableType_SCH_TABLE_PROPERTIES, nil
+	case "SCH_FILE_CACHE_STATISTICS":
+		return TSchemaTableType_SCH_FILE_CACHE_STATISTICS, nil
+	case "SCH_CATALOG_META_CACHE_STATISTICS":
+		return TSchemaTableType_SCH_CATALOG_META_CACHE_STATISTICS, nil
 	}
 	return TSchemaTableType(0), fmt.Errorf("not a valid TSchemaTableType string")
 }

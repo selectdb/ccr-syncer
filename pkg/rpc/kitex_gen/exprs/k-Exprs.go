@@ -2020,6 +2020,34 @@ func (p *TMatchPredicate) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -2134,6 +2162,34 @@ func (p *TMatchPredicate) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TMatchPredicate) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.ParserLowercase = v
+
+	}
+	return offset, nil
+}
+
+func (p *TMatchPredicate) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.ParserStopwords = v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TMatchPredicate) FastWrite(buf []byte) int {
 	return 0
@@ -2143,9 +2199,11 @@ func (p *TMatchPredicate) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binar
 	offset := 0
 	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "TMatchPredicate")
 	if p != nil {
+		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
+		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -2159,6 +2217,8 @@ func (p *TMatchPredicate) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
+		l += p.field5Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -2205,6 +2265,28 @@ func (p *TMatchPredicate) fastWriteField3(buf []byte, binaryWriter bthrift.Binar
 	return offset
 }
 
+func (p *TMatchPredicate) fastWriteField4(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetParserLowercase() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "parser_lowercase", thrift.BOOL, 4)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.ParserLowercase)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TMatchPredicate) fastWriteField5(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetParserStopwords() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "parser_stopwords", thrift.STRING, 5)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, p.ParserStopwords)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TMatchPredicate) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("parser_type", thrift.STRING, 1)
@@ -2236,6 +2318,28 @@ func (p *TMatchPredicate) field3Length() int {
 
 		}
 		l += bthrift.Binary.MapEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TMatchPredicate) field4Length() int {
+	l := 0
+	if p.IsSetParserLowercase() {
+		l += bthrift.Binary.FieldBeginLength("parser_lowercase", thrift.BOOL, 4)
+		l += bthrift.Binary.BoolLength(p.ParserLowercase)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TMatchPredicate) field5Length() int {
+	l := 0
+	if p.IsSetParserStopwords() {
+		l += bthrift.Binary.FieldBeginLength("parser_stopwords", thrift.STRING, 5)
+		l += bthrift.Binary.StringLengthNocopy(p.ParserStopwords)
+
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l
