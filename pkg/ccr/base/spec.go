@@ -1038,4 +1038,3 @@ func correctAddPartitionSql(addPartitionSql string, addPartition *record.AddPart
 	}
 	return addPartitionSql
 }
-
