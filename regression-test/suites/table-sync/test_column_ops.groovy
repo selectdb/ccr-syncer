@@ -53,7 +53,7 @@ suite("test_column_ops") {
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
 
 
-    logger.info("=== Test 2: add column case ===")
+    logger.info("=== Test 1: add column case ===")
     sql """
         ALTER TABLE ${tableName}
         ADD COLUMN (`cost` VARCHAR(3) DEFAULT "123")
@@ -74,8 +74,8 @@ suite("test_column_ops") {
     assertTrue(helper.checkShowTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
                                       has_column(3), 30))
 
-    logger.info("=== Test 3: modify column length case ===")
-    test_num = 3
+    logger.info("=== Test 2: modify column length case ===")
+    test_num = 2
     sql """
         ALTER TABLE ${tableName}
         MODIFY COLUMN `cost` VARCHAR(4) DEFAULT "123"
@@ -88,8 +88,8 @@ suite("test_column_ops") {
                                       1, 30))
 
 
-//     logger.info("=== Test 4: modify column type case ===")
-//     test_num = 4
+//     logger.info("=== Test 3: modify column type case ===")
+//     test_num = 3
 //     sql """
 //         ALTER TABLE ${tableName}
 //         MODIFY COLUMN `cost` INT DEFAULT "123"
@@ -103,10 +103,26 @@ suite("test_column_ops") {
 //                                       1, 30))
 
 
+    logger.info("=== Test 4: rename column case ===")
+    test_num = 4
+    sql """
+        ALTER TABLE ${tableName}
+        RENAME COLUMN `cost` `_cost`
+        """
+    sql """
+        INSERT INTO ${tableName} VALUES (${test_num}, 0, "666")
+        """
+    sql "sync"
+    assertTrue(checkSelectRowTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
+        1, 30))
+    assertTrue(checkSelectRowTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num} AND _cost='666'",
+        1, 1))
+
+
     logger.info("=== Test 5: drop column case ===")
     sql """
         ALTER TABLE ${tableName}
-        DROP COLUMN `cost`
+        DROP COLUMN `_cost`
         """
     assertTrue(helper.checkShowTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
                                       has_column(2), 30))

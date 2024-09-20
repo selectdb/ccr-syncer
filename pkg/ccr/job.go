@@ -1442,6 +1442,32 @@ func (j *Job) handleLightningSchemaChange(binlog *festruct.TBinlog) error {
 	return j.IDest.LightningSchemaChange(j.Src.Database, tableAlias, lightningSchemaChange)
 }
 
+// handle rename column
+func (j *Job) handleRenameColumn(binlog *festruct.TBinlog) error {
+	log.Infof("handle rename column binlog")
+
+	data := binlog.GetData()
+	renameColumn, err := record.NewRenameColumnFromJson(data)
+	if err != nil {
+		return err
+	}
+
+	destTableId, err := j.getDestTableIdBySrc(renameColumn.TableId)
+	if err != nil {
+		return err
+	}
+
+	destTableName, err := j.destMeta.GetTableNameById(destTableId)
+	if err != nil {
+		return err
+	} else if destTableName == "" {
+		return xerror.Errorf(xerror.Normal, "tableId %d not found in destMeta", destTableId)
+	}
+
+	err = j.IDest.RenameColumn(destTableName, renameColumn)
+	return err
+}
+
 func (j *Job) handleTruncateTable(binlog *festruct.TBinlog) error {
 	log.Infof("handle truncate table binlog, prevCommitSeq: %d, commitSeq: %d",
 		j.progress.PrevCommitSeq, j.progress.CommitSeq)
@@ -1616,6 +1642,8 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		return j.handleAlterJob(binlog)
 	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS:
 		return j.handleLightningSchemaChange(binlog)
+	case festruct.TBinlogType_RENAME_COLUMN:
+		return j.handleRenameColumn(binlog)
 	case festruct.TBinlogType_DUMMY:
 		return j.handleDummy(binlog)
 	case festruct.TBinlogType_ALTER_DATABASE_PROPERTY:
