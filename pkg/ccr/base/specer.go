@@ -32,6 +32,7 @@ type Specer interface {
 	WaitTransactionDone(txnId int64) // busy wait
 
 	LightningSchemaChange(srcDatabase string, tableAlias string, changes *record.ModifyTableAddOrDropColumns) error
+	RenameColumn(destTableName string, renameColumn *record.RenameColumn) error
 	RenameTable(destTableName string, renameTable *record.RenameTable) error
 	TruncateTable(destTableName string, truncateTable *record.TruncateTable) error
 	ReplaceTable(fromName, toName string, swap bool) error
