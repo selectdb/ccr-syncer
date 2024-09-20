@@ -570,7 +570,7 @@ func (s *Spec) CreateSnapshotAndWaitForDone(tables []string) (string, error) {
 		return "", err
 	}
 
-	backupSnapshotSql := fmt.Sprintf("BACKUP SNAPSHOT %s.%s TO `__keep_on_local__` ON ( %s ) PROPERTIES (\"type\" = \"full\")", utils.FormatKeywordName(s.Database), snapshotName, tableRefs)
+	backupSnapshotSql := fmt.Sprintf("BACKUP SNAPSHOT %s.%s TO `__keep_on_local__` ON ( %s ) PROPERTIES (\"type\" = \"full\")", utils.FormatKeywordName(s.Database), utils.FormatKeywordName(snapshotName), tableRefs)
 	log.Debugf("backup snapshot sql: %s", backupSnapshotSql)
 	_, err = db.Exec(backupSnapshotSql)
 	if err != nil {
