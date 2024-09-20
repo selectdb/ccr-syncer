@@ -31,7 +31,7 @@ type Specer interface {
 	GetRestoreSignatureNotMatchedTableOrView(snapshotName string) (string, bool, error)
 	WaitTransactionDone(txnId int64) // busy wait
 
-	LightningSchemaChange(srcDatabase string, changes *record.ModifyTableAddOrDropColumns) error
+	LightningSchemaChange(srcDatabase string, tableAlias string, changes *record.ModifyTableAddOrDropColumns) error
 	RenameTable(destTableName string, renameTable *record.RenameTable) error
 	TruncateTable(destTableName string, truncateTable *record.TruncateTable) error
 	ReplaceTable(fromName, toName string, swap bool) error
