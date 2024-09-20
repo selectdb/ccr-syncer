@@ -39,6 +39,7 @@ var (
 	featureSchemaChangePartialSync bool
 	featureCleanTableAndPartitions bool
 	featureAtomicRestore           bool
+	featureCreateViewDropExists    bool
 )
 
 func init() {
@@ -48,8 +49,10 @@ func init() {
 	// The default value is false, since clean tables will erase views unexpectedly.
 	flag.BoolVar(&featureCleanTableAndPartitions, "feature_clean_table_and_partitions", false,
 		"clean non restored tables and partitions during fullsync")
-	flag.BoolVar(&featureAtomicRestore, "feature_atomic_restore", true,
+	flag.BoolVar(&featureAtomicRestore, "feature_atomic_restore", false,
 		"replace tables in atomic during fullsync (otherwise the dest table will not be able to read).")
+	flag.BoolVar(&featureCreateViewDropExists, "feature_create_view_drop_exists", true,
+		"drop the exists view if exists, when sync the creating view binlog")
 }
 
 type SyncType int
@@ -112,6 +115,8 @@ type Job struct {
 	stop      chan struct{} `json:"-"`
 	isDeleted atomic.Bool   `json:"-"`
 
+	forceFullsync bool `json:"-"` // Force job step fullsync, for test only.
+
 	lock sync.Mutex `json:"-"`
 }
 
@@ -160,6 +165,7 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 
 		allowTableExists: jobContext.allowTableExists,
 		factory:          factory,
+		forceFullsync:    false,
 
 		progress: nil,
 		db:       jobContext.db,
@@ -434,14 +440,15 @@ func (j *Job) partialSync() error {
 
 		// ATTN: The table name of the alias is from the source cluster.
 		if aliasName, ok := j.progress.TableAliases[table]; ok {
+			log.Infof("partial sync with table alias, table: %s, alias: %s", table, aliasName)
 			tableRefs = make([]*festruct.TTableRef, 0)
 			tableRef := &festruct.TTableRef{
-				Table:     &j.Src.Table,
+				Table:     &table,
 				AliasName: &aliasName,
 			}
 			tableRefs = append(tableRefs, tableRef)
 		} else if j.isTableSyncWithAlias() {
-			log.Debugf("table sync snapshot not same name, table: %s, dest table: %s", j.Src.Table, j.Dest.Table)
+			log.Infof("table sync snapshot not same name, table: %s, dest table: %s", j.Src.Table, j.Dest.Table)
 			tableRefs = make([]*festruct.TTableRef, 0)
 			tableRef := &festruct.TTableRef{
 				Table:     &j.Src.Table,
@@ -1250,7 +1257,21 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	if err := j.IDest.CreateTableOrView(createTable, j.Src.Database); err != nil {
+	if featureCreateViewDropExists {
+		viewRegex := regexp.MustCompile(`(?i)^CREATE(\s+)VIEW`)
+		isCreateView := viewRegex.MatchString(createTable.Sql)
+		tableName := strings.TrimSpace(createTable.TableName)
+		if isCreateView && len(tableName) > 0 {
+			// drop view if exists
+			log.Infof("feature_create_view_drop_exists is enabled, try drop view %s before creating", tableName)
+			if err = j.IDest.DropView(tableName); err != nil {
+				return xerror.Wrapf(err, xerror.Normal, "drop view before create view %s, table id=%d",
+					tableName, createTable.TableId)
+			}
+		}
+	}
+
+	if err = j.IDest.CreateTableOrView(createTable, j.Src.Database); err != nil {
 		return xerror.Wrapf(err, xerror.Normal, "create table %d", createTable.TableId)
 	}
 
@@ -1262,7 +1283,9 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 	if err != nil {
 		return err
 	}
-	destTableId, err := j.destMeta.GetTableId(srcTableName)
+
+	var destTableId int64
+	destTableId, err = j.destMeta.GetTableId(srcTableName)
 	if err != nil {
 		return err
 	}
@@ -1303,7 +1326,14 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 	}
 
 	if err = j.IDest.DropTable(tableName, true); err != nil {
-		return xerror.Wrapf(err, xerror.Normal, "drop table %s", tableName)
+		// In apache/doris/common/ErrorCode.java
+		//
+		// ERR_WRONG_OBJECT(1347, new byte[]{'H', 'Y', '0', '0', '0'}, "'%s.%s' is not %s. %s.")
+		if !strings.Contains(err.Error(), "is not TABLE") {
+			return xerror.Wrapf(err, xerror.Normal, "drop table %s", tableName)
+		} else if err = j.IDest.DropView(tableName); err != nil { // retry with drop view.
+			return xerror.Wrapf(err, xerror.Normal, "drop view %s", tableName)
+		}
 	}
 
 	j.srcMeta.ClearTablesCache()
@@ -1621,6 +1651,13 @@ func (j *Job) incrementalSync() error {
 
 	// Step 2: handle all binlog
 	for {
+		if j.forceFullsync {
+			log.Warnf("job is forced to step fullsync by user")
+			j.forceFullsync = false
+			_ = j.newSnapshot(j.progress.CommitSeq)
+			return nil
+		}
+
 		// The CommitSeq is equals to PrevCommitSeq in here.
 		commitSeq := j.progress.CommitSeq
 		log.Debugf("src: %s, commitSeq: %v", src, commitSeq)
@@ -2150,6 +2187,14 @@ func (j *Job) Resume() error {
 	log.Infof("resume job %s", j.Name)
 
 	return j.changeJobState(JobRunning)
+}
+
+func (j *Job) ForceFullsync() {
+	log.Infof("force job %s step full sync", j.Name)
+
+	j.lock.Lock()
+	defer j.lock.Unlock()
+	j.forceFullsync = true
 }
 
 type JobStatus struct {

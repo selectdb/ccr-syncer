@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_view_and_mv") {
+suite("test_sync_view_drop_create") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -25,7 +25,7 @@ suite("test_view_and_mv") {
             (
                 user_id            BIGINT       NOT NULL COMMENT "用户 ID",
                 name               VARCHAR(20)           COMMENT "用户姓名",
-                age                INT                   COMMENT "用户年龄"            
+                age                INT                   COMMENT "用户年龄"
             )
             ENGINE=OLAP
             DUPLICATE KEY(user_id)
@@ -35,21 +35,6 @@ suite("test_view_and_mv") {
                 "binlog.enable" = "true"
             )
         """
-    }
-
-    def checkRestoreRowsTimesOf = {rowSize, times -> Boolean
-        Boolean ret = false
-        while (times > 0) {
-            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            if (sqlInfo.size() == rowSize) {
-                ret = true
-                break
-            } else if (--times > 0 && sqlInfo.size < rowSize) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
     }
 
     def exist = { res -> Boolean
@@ -68,44 +53,49 @@ suite("test_view_and_mv") {
         (2, "Benjamin", 35),
         (3, "Olivia", 28),
         (4, "Alexander", 60),
-        (5, "Ava", 17);
+        (5, "Ava", 17),
+        (5, "Ava", 18);
         """
 
     sql "ALTER DATABASE ${context.dbName} SET properties (\"binlog.enable\" = \"true\")"
+
+    logger.info("=== Test1: create view ===")
+    sql """
+        CREATE VIEW view_test_${suffix} (k1, name,  v1)
+        AS
+        SELECT user_id as k1, name, SUM(age) FROM ${tableDuplicate0}
+        GROUP BY k1,name;
+        """
 
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableDuplicate0}", 30))
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate0}", 5, 30))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate0}", 6, 30))
 
-    logger.info("=== Test1: create view and materialized view ===")
+    // drop the view, and create it again.
+    // Must be incremental sync.
+    sql """
+        DROP VIEW view_test_${suffix}
+    """
+
     sql """
         CREATE VIEW view_test_${suffix} (k1, name,  v1)
         AS
         SELECT user_id as k1, name,  SUM(age) FROM ${tableDuplicate0}
         GROUP BY k1,name;
-        """
+    """
 
+    // Since create view is synced to downstream, this insert will be sync too.
     sql """
-        create materialized view user_id_name_${suffix} as
-        select user_id, name from ${tableDuplicate0};
+        INSERT INTO ${tableDuplicate0} VALUES
+            (6, "Zhangsan", 31),
+            (5, "Ava", 20);
         """
+    sql "sync"
 
-    assertTrue(helper.checkRestoreFinishTimesOf("view_test_${suffix}", 30))
-
-    explain {
-        sql("select user_id, name from ${tableDuplicate0}")
-        contains "user_id_name"
-    }
-
-     logger.info("=== Test 2: delete job ===")
-     test_num = 5
-     helper.ccrJobDelete()
-
-   sql """
-        INSERT INTO ${tableDuplicate0} VALUES (6, "Zhangsan", 31)
-        """
-
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate0}", 5, 5))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate0}", 8, 50))
+    def view_size = target_sql "SHOW VIEW FROM ${tableDuplicate0}"
+    assertTrue(view_size.size() == 1);
 }
+

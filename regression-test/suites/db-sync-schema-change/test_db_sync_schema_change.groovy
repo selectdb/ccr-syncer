@@ -14,11 +14,11 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_add_agg_column") {
+suite("test_db_sync_schema_change") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
-    def tableName = "tbl_add_agg_column" + helper.randomSuffix()
+    def tableName = "tbl_add_column_" + UUID.randomUUID().toString().replace("-", "")
     def test_num = 0
     def insert_num = 5
 
@@ -32,16 +32,51 @@ suite("test_add_agg_column") {
         }
     }
 
+    def get_ccr_name = { ccr_body_json ->
+        def jsonSlurper = new groovy.json.JsonSlurper()
+        def object = jsonSlurper.parseText "${ccr_body_json}"
+        return object.name
+    }
+
+    def get_job_progress = { ccr_name ->
+        def request_body = """ {"name":"${ccr_name}"} """
+        def get_job_progress_uri = { check_func ->
+            httpTest {
+                uri "/job_progress"
+                endpoint helper.syncerAddress
+                body request_body
+                op "post"
+                check check_func
+            }
+        }
+
+        def result = null
+        get_job_progress_uri.call() { code, body ->
+            if (!"${code}".toString().equals("200")) {
+                throw "request failed, code: ${code}, body: ${body}"
+            }
+            def jsonSlurper = new groovy.json.JsonSlurper()
+            def object = jsonSlurper.parseText "${body}"
+            if (!object.success) {
+                throw "request failed, error msg: ${object.error_msg}"
+            }
+            logger.info("job progress: ${object.job_progress}")
+            result = jsonSlurper.parseText object.job_progress
+        }
+        return result
+    }
+
+    helper.enableDbBinlog()
     sql "DROP TABLE IF EXISTS ${tableName}"
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (
             `test` INT,
             `id` INT,
-            `value` INT SUM
+            `value` INT
         )
         ENGINE=OLAP
-        AGGREGATE KEY(`test`, `id`)
+        UNIQUE KEY(`test`, `id`)
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
@@ -58,10 +93,15 @@ suite("test_add_agg_column") {
         """
     sql "sync"
 
-    helper.ccrJobCreate(tableName)
+    helper.ccrJobDelete()
+    def bodyJson = get_ccr_body ""
+    ccr_name = get_ccr_name(bodyJson)
+    helper.ccrJobCreate()
+    logger.info("ccr job name: ${ccr_name}")
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
 
+    first_job_progress = get_job_progress(ccr_name)
 
     logger.info("=== Test 1: add first column case ===")
     // binlog type: ALTER_JOB, binlog data:
@@ -135,11 +175,11 @@ suite("test_add_agg_column") {
     //   },
     //   "indexes": [],
     //   "jobId": 11117,
-    //   "rawSql": "ALTER TABLE `regression_test_schema_change`.`tbl_add_column6ab3b514b63c4368aa0a0149da0acabd` ADD COLUMN `first_value` int SUM NULL DEFAULT \"0\" COMMENT \"\" AFTER `last`"
+    //   "rawSql": "ALTER TABLE `regression_test_schema_change`.`tbl_add_column6ab3b514b63c4368aa0a0149da0acabd` ADD COLUMN `first_value` int NULL DEFAULT \"0\" COMMENT \"\" AFTER `last`"
     //   }
     sql """
         ALTER TABLE ${tableName}
-        ADD COLUMN `first_value` INT SUM DEFAULT "0" AFTER `last`
+        ADD COLUMN `first_value` INT DEFAULT "0" AFTER `last`
         """
     sql "sync"
 
@@ -167,11 +207,11 @@ suite("test_add_agg_column") {
     //   },
     //   "indexes": [],
     //   "jobId": 11197,
-    //   "rawSql": "ALTER TABLE `regression_test_schema_change`.`tbl_add_column5f9a63de97fc4b5fb7a001f778dd180d` ADD COLUMN `last_value` int SUM NULL DEFAULT \"0\" COMMENT \"\" AFTER `value`"
+    //   "rawSql": "ALTER TABLE `regression_test_schema_change`.`tbl_add_column5f9a63de97fc4b5fb7a001f778dd180d` ADD COLUMN `last_value` int NULL DEFAULT \"0\" COMMENT \"\" AFTER `value`"
     // }
     sql """
         ALTER TABLE ${tableName}
-        ADD COLUMN `last_value` INT SUM DEFAULT "0" AFTER `value`
+        ADD COLUMN `last_value` INT DEFAULT "0" AFTER `value`
         """
     sql "sync"
 
@@ -188,4 +228,9 @@ suite("test_add_agg_column") {
     }
 
     assertTrue(helper.checkShowTimesOf("SHOW COLUMNS FROM `${tableName}`", has_column_last_value, 60, "target_sql"))
+
+    // no full sync triggered.
+    last_job_progress = get_job_progress(ccr_name)
+    assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
 }
+

@@ -16,33 +16,12 @@
 // under the License.
 
 suite("test_inverted_index") {
+    def helper = new GroovyShell(new Binding(['suite': delegate]))
+            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
-    def tableName = "tbl_inverted_index_dup_" + UUID.randomUUID().toString().replace("-", "")
-    def syncerAddress = "127.0.0.1:9190"
+    def tableName = "tbl_inverted_index_dup_" + helper.randomSuffix()
     def test_num = 0
     def insert_num = 5
-    def sync_gap_time = 5000
-    String response
-
-    def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
-        Boolean ret = false
-        while (times > 0) {
-            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            for (List<Object> row : sqlInfo) {
-                if ((row[10] as String).contains(checkTable)) {
-                    ret = row[4] == "FINISHED"
-                }
-            }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
 
     def checkSyncFinishTimesOf = { count, times -> Boolean
         Boolean ret = false
@@ -52,7 +31,7 @@ suite("test_inverted_index") {
                 ret = true
                 break
             } else if (--times > 0) {
-                sleep(sync_gap_time)
+                sleep(helper.sync_gap_time)
             }
         }
 
@@ -97,16 +76,9 @@ suite("test_inverted_index") {
         sql """ALTER TABLE ${tableName} set ("binlog.enable" = "true")"""
         sql "sync"
 
-        httpTest {
-            uri "/create_ccr"
-            endpoint syncerAddress
-            def bodyJson = get_ccr_body "${tableName}"
-            body "${bodyJson}"
-            op "post"
-            result response
-        }
+        helper.ccrJobCreate(tableName)
 
-        assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
+        assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
 
         def show_result = target_sql "SHOW INDEXES FROM TEST_${context.dbName}.${tableName}"
         logger.info("show index from TEST_${context.dbName}.${tableName} result: " + show_result)
@@ -156,7 +128,7 @@ suite("test_inverted_index") {
     /**
     * test for unique key table with mow
     */
-    tableName = "tbl_inverted_index_unique_mow_" + UUID.randomUUID().toString().replace("-", "")
+    tableName = "tbl_inverted_index_unique_mow_" + helper.randomSuffix()
 
     sql """ DROP TABLE IF EXISTS ${tableName}; """
     sql """
@@ -189,7 +161,7 @@ suite("test_inverted_index") {
     /**
     * test for unique key table with mor
     */
-    tableName = "tbl_inverted_index_unique_mor_" + UUID.randomUUID().toString().replace("-", "")
+    tableName = "tbl_inverted_index_unique_mor_" + helper.randomSuffix()
 
     sql """ DROP TABLE IF EXISTS ${tableName}; """
     sql """
