@@ -492,8 +492,8 @@ func (j *Job) partialSync() error {
 	case PersistRestoreInfo:
 		// Step 5: Update job progress && dest table id
 		// update job info, only for dest table id
+		var targetName = table
 		if alias, ok := j.progress.TableAliases[table]; ok {
-			targetName := table
 			if j.isTableSyncWithAlias() {
 				targetName = j.Dest.Table
 			}
@@ -519,10 +519,21 @@ func (j *Job) partialSync() error {
 		}
 
 		log.Infof("partial sync status: persist restore info")
+		destTable, err := j.destMeta.UpdateTable(targetName, 0)
+		if err != nil {
+			return err
+		}
 		switch j.SyncType {
 		case DBSync:
+			srcTableId, err := j.srcMeta.GetTableId(table)
+			if err != nil {
+				return err
+			}
+			j.progress.TableMapping[srcTableId] = destTable.Id
 			j.progress.NextWithPersist(j.progress.CommitSeq, DBTablesIncrementalSync, Done, "")
 		case TableSync:
+			j.Dest.TableId = destTable.Id
+			j.progress.TableMapping = nil
 			j.progress.NextWithPersist(j.progress.CommitSeq, TableIncrementalSync, Done, "")
 		default:
 			return xerror.Errorf(xerror.Normal, "invalid sync type %d", j.SyncType)
