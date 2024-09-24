@@ -33,7 +33,7 @@ func InitLog() {
 	log.SetLevel(level)
 	log.SetFormatter(&prefixed.TextFormatter{
 		FullTimestamp:   true,
-		TimestampFormat: "2006-01-02 15:04:05",
+		TimestampFormat: "2006-01-02 15:04:05.000",
 		ForceFormatting: true,
 	})
 
