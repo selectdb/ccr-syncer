@@ -803,7 +803,7 @@ func (j *Job) fullSync() error {
 			log.Infof("fullsync swap %d tables with aliases", len(j.progress.TableAliases))
 
 			var tables []string
-			for table, _ := range j.progress.TableAliases {
+			for table := range j.progress.TableAliases {
 				tables = append(tables, table)
 			}
 			for _, table := range tables {
