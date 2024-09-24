@@ -916,6 +916,8 @@ func (s *Spec) LightningSchemaChange(srcDatabase, tableAlias string, lightningSc
 	log.Debugf("lightningSchemaChange %v", lightningSchemaChange)
 
 	rawSql := lightningSchemaChange.RawSql
+
+	// 1. remove database prefix
 	//   "rawSql": "ALTER TABLE `default_cluster:ccr`.`test_ddl` ADD COLUMN `nid1` int(11) NULL COMMENT \"\""
 	// replace `default_cluster:${Src.Database}`.`test_ddl` to `test_ddl`
 	var sql string
@@ -924,10 +926,18 @@ func (s *Spec) LightningSchemaChange(srcDatabase, tableAlias string, lightningSc
 	} else {
 		sql = strings.Replace(rawSql, fmt.Sprintf("`%s`.", srcDatabase), "", 1)
 	}
+
+	// 2. handle alias
 	if tableAlias != "" {
 		re := regexp.MustCompile("ALTER TABLE `[^`]*`")
 		sql = re.ReplaceAllString(sql, fmt.Sprintf("ALTER TABLE `%s`", tableAlias))
 	}
+
+	// 3. compatible REPLACE_IF_NOT_NULL NULL DEFAULT "null"
+	// 	See https://github.com/apache/doris/pull/41205 for details
+	sql = strings.Replace(sql, "REPLACE_IF_NOT_NULL NULL DEFAULT \"null\"",
+		"REPLACE_IF_NOT_NULL NULL DEFAULT NULL", 1)
+
 	log.Infof("lighting schema change sql, rawSql: %s, sql: %s", rawSql, sql)
 	return s.DbExec(sql)
 }
