@@ -978,7 +978,7 @@ func (s *Spec) DropView(viewName string) error {
 
 func (s *Spec) AlterViewDef(viewName string, alterView *record.AlterView) error {
 	alterView := fmt.Sprintf("ALTER VIEW %s AS %s", viewName, alterView.InlineViewDef)
-    log.Infof("alter view sql: %s", alterView)
+	log.Infof("alter view sql: %s", alterView)
 	return s.DbExec(alterView)
 	}
 }
