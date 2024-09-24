@@ -2318,9 +2318,14 @@ type JobStatus struct {
 }
 
 func (j *Job) Status() *JobStatus {
-	// No lock is taken here since we don't depend on the accurate state of the underlying progress.
+	j.lock.Lock()
+	defer j.lock.Unlock()
+
 	state := j.State.String()
-	progress_state := j.progress.SyncState.String()
+	progress_state := "unknown"
+	if j.progress != nil {
+		j.progress.SyncState.String()
+	}
 
 	return &JobStatus{
 		Name:          j.Name,
