@@ -133,7 +133,15 @@ func main() {
 	}
 	metrics.NewGlobal(metrics.DefaultConfig("ccr-metrics"), sink)
 
-	// Step 8: start signal mux
+	// Step 8: start monitor
+	monitor := NewMonitor(jobManager)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		monitor.Start()
+	}()
+
+	// Step 9: start signal mux
 	// use closure to capture httpService, checker, jobManager
 	signalHandler := func(signal os.Signal) bool {
 		switch signal {
@@ -143,6 +151,7 @@ func main() {
 			httpService.Stop()
 			checker.Stop()
 			jobManager.Stop()
+			monitor.Stop()
 			log.Info("all service stop")
 			return true
 		case syscall.SIGHUP:
@@ -160,7 +169,7 @@ func main() {
 		signalMux.Serve()
 	}()
 
-	// Step 9: start pprof
+	// Step 10: start pprof
 	if syncer.Pprof == true {
 		wg.Add(1)
 		go func() {
@@ -172,6 +181,6 @@ func main() {
 		}()
 	}
 
-	// Step 9: wait for all task done
+	// Step 11: wait for all task done
 	wg.Wait()
 }
