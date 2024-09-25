@@ -2144,6 +2144,20 @@ func (p *TDataStreamSink) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 13:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField13(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -2389,6 +2403,33 @@ func (p *TDataStreamSink) FastReadField12(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TDataStreamSink) FastReadField13(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := bthrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.TabletSinkExprs = make([]*exprs.TExpr, 0, size)
+	for i := 0; i < size; i++ {
+		_elem := exprs.NewTExpr()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		p.TabletSinkExprs = append(p.TabletSinkExprs, _elem)
+	}
+	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TDataStreamSink) FastWrite(buf []byte) int {
 	return 0
@@ -2410,6 +2451,7 @@ func (p *TDataStreamSink) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binar
 		offset += p.fastWriteField8(buf[offset:], binaryWriter)
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
 		offset += p.fastWriteField10(buf[offset:], binaryWriter)
+		offset += p.fastWriteField13(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -2432,6 +2474,7 @@ func (p *TDataStreamSink) BLength() int {
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field12Length()
+		l += p.field13Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -2583,6 +2626,24 @@ func (p *TDataStreamSink) fastWriteField12(buf []byte, binaryWriter bthrift.Bina
 	return offset
 }
 
+func (p *TDataStreamSink) fastWriteField13(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTabletSinkExprs() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "tablet_sink_exprs", thrift.LIST, 13)
+		listBeginOffset := offset
+		offset += bthrift.Binary.ListBeginLength(thrift.STRUCT, 0)
+		var length int
+		for _, v := range p.TabletSinkExprs {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], binaryWriter)
+		}
+		bthrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+		offset += bthrift.Binary.WriteListEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TDataStreamSink) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("dest_node_id", thrift.I32, 1)
@@ -2711,6 +2772,20 @@ func (p *TDataStreamSink) field12Length() int {
 		l += bthrift.Binary.FieldBeginLength("tablet_sink_tuple_id", thrift.I32, 12)
 		l += bthrift.Binary.I32Length(*p.TabletSinkTupleId)
 
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TDataStreamSink) field13Length() int {
+	l := 0
+	if p.IsSetTabletSinkExprs() {
+		l += bthrift.Binary.FieldBeginLength("tablet_sink_exprs", thrift.LIST, 13)
+		l += bthrift.Binary.ListBeginLength(thrift.STRUCT, len(p.TabletSinkExprs))
+		for _, v := range p.TabletSinkExprs {
+			l += v.BLength()
+		}
+		l += bthrift.Binary.ListEndLength()
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l

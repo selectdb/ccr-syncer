@@ -137,11 +137,16 @@ func NewThriftMeta(spec *base.Spec, rpcFactory rpc.IRpcFactory, tableIds []int64
 	for _, table := range dbMeta.GetDroppedTables() {
 		droppedTables[table] = struct{}{}
 	}
+	droppedIndexes := make(map[int64]struct{})
+	for _, index := range dbMeta.GetDroppedIndexes() {
+		droppedIndexes[index] = struct{}{}
+	}
 
 	return &ThriftMeta{
 		meta:              meta,
 		droppedPartitions: droppedPartitions,
 		droppedTables:     droppedTables,
+		droppedIndexes:    droppedIndexes,
 	}, nil
 }
 
@@ -149,6 +154,7 @@ type ThriftMeta struct {
 	meta              *Meta
 	droppedPartitions map[int64]struct{}
 	droppedTables     map[int64]struct{}
+	droppedIndexes    map[int64]struct{}
 }
 
 func (tm *ThriftMeta) GetTablets(tableId, partitionId, indexId int64) (*btree.Map[int64, *TabletMeta], error) {
@@ -244,5 +250,11 @@ func (tm *ThriftMeta) IsPartitionDropped(partitionId int64) bool {
 // Whether the target table are dropped
 func (tm *ThriftMeta) IsTableDropped(tableId int64) bool {
 	_, ok := tm.droppedTables[tableId]
+	return ok
+}
+
+// Whether the target index are dropped
+func (tm *ThriftMeta) IsIndexDropped(tableId int64) bool {
+	_, ok := tm.droppedIndexes[tableId]
 	return ok
 }

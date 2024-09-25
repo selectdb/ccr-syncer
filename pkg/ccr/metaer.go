@@ -77,6 +77,7 @@ type IngestBinlogMetaer interface {
 	GetBackendMap() (map[int64]*base.Backend, error)
 	IsPartitionDropped(partitionId int64) bool
 	IsTableDropped(tableId int64) bool
+	IsIndexDropped(indexId int64) bool
 }
 
 type Metaer interface {

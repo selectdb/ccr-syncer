@@ -366,6 +366,34 @@ func (p *TMasterInfo) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 11:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField11(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -550,6 +578,32 @@ func (p *TMasterInfo) FastReadField9(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TMasterInfo) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.MetaServiceEndpoint = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TMasterInfo) FastReadField11(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.CloudUniqueId = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TMasterInfo) FastWrite(buf []byte) int {
 	return 0
@@ -568,6 +622,8 @@ func (p *TMasterInfo) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWri
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
+		offset += p.fastWriteField10(buf[offset:], binaryWriter)
+		offset += p.fastWriteField11(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -587,6 +643,8 @@ func (p *TMasterInfo) BLength() int {
 		l += p.field7Length()
 		l += p.field8Length()
 		l += p.field9Length()
+		l += p.field10Length()
+		l += p.field11Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -692,6 +750,28 @@ func (p *TMasterInfo) fastWriteField9(buf []byte, binaryWriter bthrift.BinaryWri
 	return offset
 }
 
+func (p *TMasterInfo) fastWriteField10(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetMetaServiceEndpoint() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "meta_service_endpoint", thrift.STRING, 10)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.MetaServiceEndpoint)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TMasterInfo) fastWriteField11(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetCloudUniqueId() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "cloud_unique_id", thrift.STRING, 11)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.CloudUniqueId)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TMasterInfo) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("network_address", thrift.STRUCT, 1)
@@ -782,6 +862,28 @@ func (p *TMasterInfo) field9Length() int {
 			l += v.BLength()
 		}
 		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TMasterInfo) field10Length() int {
+	l := 0
+	if p.IsSetMetaServiceEndpoint() {
+		l += bthrift.Binary.FieldBeginLength("meta_service_endpoint", thrift.STRING, 10)
+		l += bthrift.Binary.StringLengthNocopy(*p.MetaServiceEndpoint)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TMasterInfo) field11Length() int {
+	l := 0
+	if p.IsSetCloudUniqueId() {
+		l += bthrift.Binary.FieldBeginLength("cloud_unique_id", thrift.STRING, 11)
+		l += bthrift.Binary.StringLengthNocopy(*p.CloudUniqueId)
+
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l
