@@ -3269,6 +3269,7 @@ type TDataStreamSink struct {
 	TabletSinkLocation  *descriptors.TOlapTableLocationParam  `thrift:"tablet_sink_location,10,optional" frugal:"10,optional,descriptors.TOlapTableLocationParam" json:"tablet_sink_location,omitempty"`
 	TabletSinkTxnId     *int64                                `thrift:"tablet_sink_txn_id,11,optional" frugal:"11,optional,i64" json:"tablet_sink_txn_id,omitempty"`
 	TabletSinkTupleId   *types.TTupleId                       `thrift:"tablet_sink_tuple_id,12,optional" frugal:"12,optional,i32" json:"tablet_sink_tuple_id,omitempty"`
+	TabletSinkExprs     []*exprs.TExpr                        `thrift:"tablet_sink_exprs,13,optional" frugal:"13,optional,list<exprs.TExpr>" json:"tablet_sink_exprs,omitempty"`
 }
 
 func NewTDataStreamSink() *TDataStreamSink {
@@ -3380,6 +3381,15 @@ func (p *TDataStreamSink) GetTabletSinkTupleId() (v types.TTupleId) {
 	}
 	return *p.TabletSinkTupleId
 }
+
+var TDataStreamSink_TabletSinkExprs_DEFAULT []*exprs.TExpr
+
+func (p *TDataStreamSink) GetTabletSinkExprs() (v []*exprs.TExpr) {
+	if !p.IsSetTabletSinkExprs() {
+		return TDataStreamSink_TabletSinkExprs_DEFAULT
+	}
+	return p.TabletSinkExprs
+}
 func (p *TDataStreamSink) SetDestNodeId(val types.TPlanNodeId) {
 	p.DestNodeId = val
 }
@@ -3416,6 +3426,9 @@ func (p *TDataStreamSink) SetTabletSinkTxnId(val *int64) {
 func (p *TDataStreamSink) SetTabletSinkTupleId(val *types.TTupleId) {
 	p.TabletSinkTupleId = val
 }
+func (p *TDataStreamSink) SetTabletSinkExprs(val []*exprs.TExpr) {
+	p.TabletSinkExprs = val
+}
 
 var fieldIDToName_TDataStreamSink = map[int16]string{
 	1:  "dest_node_id",
@@ -3430,6 +3443,7 @@ var fieldIDToName_TDataStreamSink = map[int16]string{
 	10: "tablet_sink_location",
 	11: "tablet_sink_txn_id",
 	12: "tablet_sink_tuple_id",
+	13: "tablet_sink_exprs",
 }
 
 func (p *TDataStreamSink) IsSetOutputPartition() bool {
@@ -3474,6 +3488,10 @@ func (p *TDataStreamSink) IsSetTabletSinkTxnId() bool {
 
 func (p *TDataStreamSink) IsSetTabletSinkTupleId() bool {
 	return p.TabletSinkTupleId != nil
+}
+
+func (p *TDataStreamSink) IsSetTabletSinkExprs() bool {
+	return p.TabletSinkExprs != nil
 }
 
 func (p *TDataStreamSink) Read(iprot thrift.TProtocol) (err error) {
@@ -3590,6 +3608,14 @@ func (p *TDataStreamSink) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3791,6 +3817,29 @@ func (p *TDataStreamSink) ReadField12(iprot thrift.TProtocol) error {
 	p.TabletSinkTupleId = _field
 	return nil
 }
+func (p *TDataStreamSink) ReadField13(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*exprs.TExpr, 0, size)
+	values := make([]exprs.TExpr, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.TabletSinkExprs = _field
+	return nil
+}
 
 func (p *TDataStreamSink) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3844,6 +3893,10 @@ func (p *TDataStreamSink) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 	}
@@ -4112,6 +4165,33 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
 
+func (p *TDataStreamSink) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTabletSinkExprs() {
+		if err = oprot.WriteFieldBegin("tablet_sink_exprs", thrift.LIST, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.TabletSinkExprs)); err != nil {
+			return err
+		}
+		for _, v := range p.TabletSinkExprs {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
+
 func (p *TDataStreamSink) String() string {
 	if p == nil {
 		return "<nil>"
@@ -4160,6 +4240,9 @@ func (p *TDataStreamSink) DeepEqual(ano *TDataStreamSink) bool {
 		return false
 	}
 	if !p.Field12DeepEqual(ano.TabletSinkTupleId) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.TabletSinkExprs) {
 		return false
 	}
 	return true
@@ -4284,6 +4367,19 @@ func (p *TDataStreamSink) Field12DeepEqual(src *types.TTupleId) bool {
 	}
 	if *p.TabletSinkTupleId != *src {
 		return false
+	}
+	return true
+}
+func (p *TDataStreamSink) Field13DeepEqual(src []*exprs.TExpr) bool {
+
+	if len(p.TabletSinkExprs) != len(src) {
+		return false
+	}
+	for i, v := range p.TabletSinkExprs {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }

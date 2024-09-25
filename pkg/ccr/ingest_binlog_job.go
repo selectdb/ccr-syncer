@@ -378,6 +378,9 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 	}
 
 	for _, indexId := range indexIds {
+		if j.srcMeta.IsIndexDropped(indexId) {
+			continue
+		}
 		srcIndexMeta, ok := srcIndexIdMap[indexId]
 		if !ok {
 			j.setError(xerror.Errorf(xerror.Meta, "index id %v not found in src meta", indexId))
@@ -400,6 +403,11 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 		destPartitionId: destPartitionId,
 	}
 	for _, indexId := range indexIds {
+		if j.srcMeta.IsIndexDropped(indexId) {
+			log.Infof("skip the dropped index %d", indexId)
+			continue
+		}
+
 		srcIndexMeta := srcIndexIdMap[indexId]
 		destIndexMeta := destIndexNameMap[getSrcIndexName(job, srcIndexMeta)]
 		prepareIndexArg.srcIndexMeta = srcIndexMeta

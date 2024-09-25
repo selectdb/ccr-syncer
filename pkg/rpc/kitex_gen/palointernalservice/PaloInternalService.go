@@ -1753,6 +1753,9 @@ type TQueryOptions struct {
 	RpcVerboseProfileMaxInstanceCount           int32           `thrift:"rpc_verbose_profile_max_instance_count,129,optional" frugal:"129,optional,i32" json:"rpc_verbose_profile_max_instance_count,omitempty"`
 	EnableAdaptivePipelineTaskSerialReadOnLimit bool            `thrift:"enable_adaptive_pipeline_task_serial_read_on_limit,130,optional" frugal:"130,optional,bool" json:"enable_adaptive_pipeline_task_serial_read_on_limit,omitempty"`
 	AdaptivePipelineTaskSerialReadOnLimit       int32           `thrift:"adaptive_pipeline_task_serial_read_on_limit,131,optional" frugal:"131,optional,i32" json:"adaptive_pipeline_task_serial_read_on_limit,omitempty"`
+	ParallelPrepareThreshold                    int32           `thrift:"parallel_prepare_threshold,132,optional" frugal:"132,optional,i32" json:"parallel_prepare_threshold,omitempty"`
+	PartitionTopnMaxPartitions                  int32           `thrift:"partition_topn_max_partitions,133,optional" frugal:"133,optional,i32" json:"partition_topn_max_partitions,omitempty"`
+	PartitionTopnPrePartitionRows               int32           `thrift:"partition_topn_pre_partition_rows,134,optional" frugal:"134,optional,i32" json:"partition_topn_pre_partition_rows,omitempty"`
 	DisableFileCache                            bool            `thrift:"disable_file_cache,1000,optional" frugal:"1000,optional,bool" json:"disable_file_cache,omitempty"`
 }
 
@@ -1870,6 +1873,9 @@ func NewTQueryOptions() *TQueryOptions {
 		RpcVerboseProfileMaxInstanceCount:           0,
 		EnableAdaptivePipelineTaskSerialReadOnLimit: true,
 		AdaptivePipelineTaskSerialReadOnLimit:       10000,
+		ParallelPrepareThreshold:                    0,
+		PartitionTopnMaxPartitions:                  1024,
+		PartitionTopnPrePartitionRows:               1000,
 		DisableFileCache:                            false,
 	}
 }
@@ -1986,6 +1992,9 @@ func (p *TQueryOptions) InitDefault() {
 	p.RpcVerboseProfileMaxInstanceCount = 0
 	p.EnableAdaptivePipelineTaskSerialReadOnLimit = true
 	p.AdaptivePipelineTaskSerialReadOnLimit = 10000
+	p.ParallelPrepareThreshold = 0
+	p.PartitionTopnMaxPartitions = 1024
+	p.PartitionTopnPrePartitionRows = 1000
 	p.DisableFileCache = false
 }
 
@@ -3087,6 +3096,33 @@ func (p *TQueryOptions) GetAdaptivePipelineTaskSerialReadOnLimit() (v int32) {
 	return p.AdaptivePipelineTaskSerialReadOnLimit
 }
 
+var TQueryOptions_ParallelPrepareThreshold_DEFAULT int32 = 0
+
+func (p *TQueryOptions) GetParallelPrepareThreshold() (v int32) {
+	if !p.IsSetParallelPrepareThreshold() {
+		return TQueryOptions_ParallelPrepareThreshold_DEFAULT
+	}
+	return p.ParallelPrepareThreshold
+}
+
+var TQueryOptions_PartitionTopnMaxPartitions_DEFAULT int32 = 1024
+
+func (p *TQueryOptions) GetPartitionTopnMaxPartitions() (v int32) {
+	if !p.IsSetPartitionTopnMaxPartitions() {
+		return TQueryOptions_PartitionTopnMaxPartitions_DEFAULT
+	}
+	return p.PartitionTopnMaxPartitions
+}
+
+var TQueryOptions_PartitionTopnPrePartitionRows_DEFAULT int32 = 1000
+
+func (p *TQueryOptions) GetPartitionTopnPrePartitionRows() (v int32) {
+	if !p.IsSetPartitionTopnPrePartitionRows() {
+		return TQueryOptions_PartitionTopnPrePartitionRows_DEFAULT
+	}
+	return p.PartitionTopnPrePartitionRows
+}
+
 var TQueryOptions_DisableFileCache_DEFAULT bool = false
 
 func (p *TQueryOptions) GetDisableFileCache() (v bool) {
@@ -3461,6 +3497,15 @@ func (p *TQueryOptions) SetEnableAdaptivePipelineTaskSerialReadOnLimit(val bool)
 func (p *TQueryOptions) SetAdaptivePipelineTaskSerialReadOnLimit(val int32) {
 	p.AdaptivePipelineTaskSerialReadOnLimit = val
 }
+func (p *TQueryOptions) SetParallelPrepareThreshold(val int32) {
+	p.ParallelPrepareThreshold = val
+}
+func (p *TQueryOptions) SetPartitionTopnMaxPartitions(val int32) {
+	p.PartitionTopnMaxPartitions = val
+}
+func (p *TQueryOptions) SetPartitionTopnPrePartitionRows(val int32) {
+	p.PartitionTopnPrePartitionRows = val
+}
 func (p *TQueryOptions) SetDisableFileCache(val bool) {
 	p.DisableFileCache = val
 }
@@ -3588,6 +3633,9 @@ var fieldIDToName_TQueryOptions = map[int16]string{
 	129:  "rpc_verbose_profile_max_instance_count",
 	130:  "enable_adaptive_pipeline_task_serial_read_on_limit",
 	131:  "adaptive_pipeline_task_serial_read_on_limit",
+	132:  "parallel_prepare_threshold",
+	133:  "partition_topn_max_partitions",
+	134:  "partition_topn_pre_partition_rows",
 	1000: "disable_file_cache",
 }
 
@@ -4077,6 +4125,18 @@ func (p *TQueryOptions) IsSetEnableAdaptivePipelineTaskSerialReadOnLimit() bool 
 
 func (p *TQueryOptions) IsSetAdaptivePipelineTaskSerialReadOnLimit() bool {
 	return p.AdaptivePipelineTaskSerialReadOnLimit != TQueryOptions_AdaptivePipelineTaskSerialReadOnLimit_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetParallelPrepareThreshold() bool {
+	return p.ParallelPrepareThreshold != TQueryOptions_ParallelPrepareThreshold_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetPartitionTopnMaxPartitions() bool {
+	return p.PartitionTopnMaxPartitions != TQueryOptions_PartitionTopnMaxPartitions_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetPartitionTopnPrePartitionRows() bool {
+	return p.PartitionTopnPrePartitionRows != TQueryOptions_PartitionTopnPrePartitionRows_DEFAULT
 }
 
 func (p *TQueryOptions) IsSetDisableFileCache() bool {
@@ -5073,6 +5133,30 @@ func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
 		case 131:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField131(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 132:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField132(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 133:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField133(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 134:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField134(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6454,6 +6538,39 @@ func (p *TQueryOptions) ReadField131(iprot thrift.TProtocol) error {
 	p.AdaptivePipelineTaskSerialReadOnLimit = _field
 	return nil
 }
+func (p *TQueryOptions) ReadField132(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.ParallelPrepareThreshold = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField133(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.PartitionTopnMaxPartitions = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField134(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.PartitionTopnPrePartitionRows = _field
+	return nil
+}
 func (p *TQueryOptions) ReadField1000(iprot thrift.TProtocol) error {
 
 	var _field bool
@@ -6958,6 +7075,18 @@ func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField131(oprot); err != nil {
 			fieldId = 131
+			goto WriteFieldError
+		}
+		if err = p.writeField132(oprot); err != nil {
+			fieldId = 132
+			goto WriteFieldError
+		}
+		if err = p.writeField133(oprot); err != nil {
+			fieldId = 133
+			goto WriteFieldError
+		}
+		if err = p.writeField134(oprot); err != nil {
+			fieldId = 134
 			goto WriteFieldError
 		}
 		if err = p.writeField1000(oprot); err != nil {
@@ -9300,6 +9429,63 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 131 end error: ", p), err)
 }
 
+func (p *TQueryOptions) writeField132(oprot thrift.TProtocol) (err error) {
+	if p.IsSetParallelPrepareThreshold() {
+		if err = oprot.WriteFieldBegin("parallel_prepare_threshold", thrift.I32, 132); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.ParallelPrepareThreshold); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 132 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 132 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField133(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPartitionTopnMaxPartitions() {
+		if err = oprot.WriteFieldBegin("partition_topn_max_partitions", thrift.I32, 133); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.PartitionTopnMaxPartitions); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 133 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 133 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField134(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPartitionTopnPrePartitionRows() {
+		if err = oprot.WriteFieldBegin("partition_topn_pre_partition_rows", thrift.I32, 134); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.PartitionTopnPrePartitionRows); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 134 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 134 end error: ", p), err)
+}
+
 func (p *TQueryOptions) writeField1000(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDisableFileCache() {
 		if err = oprot.WriteFieldBegin("disable_file_cache", thrift.BOOL, 1000); err != nil {
@@ -9697,6 +9883,15 @@ func (p *TQueryOptions) DeepEqual(ano *TQueryOptions) bool {
 		return false
 	}
 	if !p.Field131DeepEqual(ano.AdaptivePipelineTaskSerialReadOnLimit) {
+		return false
+	}
+	if !p.Field132DeepEqual(ano.ParallelPrepareThreshold) {
+		return false
+	}
+	if !p.Field133DeepEqual(ano.PartitionTopnMaxPartitions) {
+		return false
+	}
+	if !p.Field134DeepEqual(ano.PartitionTopnPrePartitionRows) {
 		return false
 	}
 	if !p.Field1000DeepEqual(ano.DisableFileCache) {
@@ -10605,6 +10800,27 @@ func (p *TQueryOptions) Field130DeepEqual(src bool) bool {
 func (p *TQueryOptions) Field131DeepEqual(src int32) bool {
 
 	if p.AdaptivePipelineTaskSerialReadOnLimit != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field132DeepEqual(src int32) bool {
+
+	if p.ParallelPrepareThreshold != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field133DeepEqual(src int32) bool {
+
+	if p.PartitionTopnMaxPartitions != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field134DeepEqual(src int32) bool {
+
+	if p.PartitionTopnPrePartitionRows != src {
 		return false
 	}
 	return true
@@ -25652,6 +25868,7 @@ type TPipelineFragmentParams struct {
 	WalId                             *int64                                                `thrift:"wal_id,41,optional" frugal:"41,optional,i64" json:"wal_id,omitempty"`
 	ContentLength                     *int64                                                `thrift:"content_length,42,optional" frugal:"42,optional,i64" json:"content_length,omitempty"`
 	CurrentConnectFe                  *types.TNetworkAddress                                `thrift:"current_connect_fe,43,optional" frugal:"43,optional,types.TNetworkAddress" json:"current_connect_fe,omitempty"`
+	TopnFilterSourceNodeIds           []int32                                               `thrift:"topn_filter_source_node_ids,44,optional" frugal:"44,optional,list<i32>" json:"topn_filter_source_node_ids,omitempty"`
 	IsMowTable                        *bool                                                 `thrift:"is_mow_table,1000,optional" frugal:"1000,optional,bool" json:"is_mow_table,omitempty"`
 }
 
@@ -26030,6 +26247,15 @@ func (p *TPipelineFragmentParams) GetCurrentConnectFe() (v *types.TNetworkAddres
 	return p.CurrentConnectFe
 }
 
+var TPipelineFragmentParams_TopnFilterSourceNodeIds_DEFAULT []int32
+
+func (p *TPipelineFragmentParams) GetTopnFilterSourceNodeIds() (v []int32) {
+	if !p.IsSetTopnFilterSourceNodeIds() {
+		return TPipelineFragmentParams_TopnFilterSourceNodeIds_DEFAULT
+	}
+	return p.TopnFilterSourceNodeIds
+}
+
 var TPipelineFragmentParams_IsMowTable_DEFAULT bool
 
 func (p *TPipelineFragmentParams) GetIsMowTable() (v bool) {
@@ -26164,6 +26390,9 @@ func (p *TPipelineFragmentParams) SetContentLength(val *int64) {
 func (p *TPipelineFragmentParams) SetCurrentConnectFe(val *types.TNetworkAddress) {
 	p.CurrentConnectFe = val
 }
+func (p *TPipelineFragmentParams) SetTopnFilterSourceNodeIds(val []int32) {
+	p.TopnFilterSourceNodeIds = val
+}
 func (p *TPipelineFragmentParams) SetIsMowTable(val *bool) {
 	p.IsMowTable = val
 }
@@ -26211,6 +26440,7 @@ var fieldIDToName_TPipelineFragmentParams = map[int16]string{
 	41:   "wal_id",
 	42:   "content_length",
 	43:   "current_connect_fe",
+	44:   "topn_filter_source_node_ids",
 	1000: "is_mow_table",
 }
 
@@ -26364,6 +26594,10 @@ func (p *TPipelineFragmentParams) IsSetContentLength() bool {
 
 func (p *TPipelineFragmentParams) IsSetCurrentConnectFe() bool {
 	return p.CurrentConnectFe != nil
+}
+
+func (p *TPipelineFragmentParams) IsSetTopnFilterSourceNodeIds() bool {
+	return p.TopnFilterSourceNodeIds != nil
 }
 
 func (p *TPipelineFragmentParams) IsSetIsMowTable() bool {
@@ -26726,6 +26960,14 @@ func (p *TPipelineFragmentParams) Read(iprot thrift.TProtocol) (err error) {
 		case 43:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField43(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 44:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField44(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -27351,6 +27593,29 @@ func (p *TPipelineFragmentParams) ReadField43(iprot thrift.TProtocol) error {
 	p.CurrentConnectFe = _field
 	return nil
 }
+func (p *TPipelineFragmentParams) ReadField44(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int32, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int32
+		if v, err := iprot.ReadI32(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.TopnFilterSourceNodeIds = _field
+	return nil
+}
 func (p *TPipelineFragmentParams) ReadField1000(iprot thrift.TProtocol) error {
 
 	var _field *bool
@@ -27535,6 +27800,10 @@ func (p *TPipelineFragmentParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField43(oprot); err != nil {
 			fieldId = 43
+			goto WriteFieldError
+		}
+		if err = p.writeField44(oprot); err != nil {
+			fieldId = 44
 			goto WriteFieldError
 		}
 		if err = p.writeField1000(oprot); err != nil {
@@ -28434,6 +28703,33 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 43 end error: ", p), err)
 }
 
+func (p *TPipelineFragmentParams) writeField44(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTopnFilterSourceNodeIds() {
+		if err = oprot.WriteFieldBegin("topn_filter_source_node_ids", thrift.LIST, 44); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.I32, len(p.TopnFilterSourceNodeIds)); err != nil {
+			return err
+		}
+		for _, v := range p.TopnFilterSourceNodeIds {
+			if err := oprot.WriteI32(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 44 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 44 end error: ", p), err)
+}
+
 func (p *TPipelineFragmentParams) writeField1000(oprot thrift.TProtocol) (err error) {
 	if p.IsSetIsMowTable() {
 		if err = oprot.WriteFieldBegin("is_mow_table", thrift.BOOL, 1000); err != nil {
@@ -28591,6 +28887,9 @@ func (p *TPipelineFragmentParams) DeepEqual(ano *TPipelineFragmentParams) bool {
 		return false
 	}
 	if !p.Field43DeepEqual(ano.CurrentConnectFe) {
+		return false
+	}
+	if !p.Field44DeepEqual(ano.TopnFilterSourceNodeIds) {
 		return false
 	}
 	if !p.Field1000DeepEqual(ano.IsMowTable) {
@@ -29032,6 +29331,19 @@ func (p *TPipelineFragmentParams) Field43DeepEqual(src *types.TNetworkAddress) b
 	}
 	return true
 }
+func (p *TPipelineFragmentParams) Field44DeepEqual(src []int32) bool {
+
+	if len(p.TopnFilterSourceNodeIds) != len(src) {
+		return false
+	}
+	for i, v := range p.TopnFilterSourceNodeIds {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
 func (p *TPipelineFragmentParams) Field1000DeepEqual(src *bool) bool {
 
 	if p.IsMowTable == src {
@@ -29046,14 +29358,30 @@ func (p *TPipelineFragmentParams) Field1000DeepEqual(src *bool) bool {
 }
 
 type TPipelineFragmentParamsList struct {
-	ParamsList []*TPipelineFragmentParams `thrift:"params_list,1,optional" frugal:"1,optional,list<TPipelineFragmentParams>" json:"params_list,omitempty"`
+	ParamsList              []*TPipelineFragmentParams                            `thrift:"params_list,1,optional" frugal:"1,optional,list<TPipelineFragmentParams>" json:"params_list,omitempty"`
+	DescTbl                 *descriptors.TDescriptorTable                         `thrift:"desc_tbl,2,optional" frugal:"2,optional,descriptors.TDescriptorTable" json:"desc_tbl,omitempty"`
+	FileScanParams          map[types.TPlanNodeId]*plannodes.TFileScanRangeParams `thrift:"file_scan_params,3,optional" frugal:"3,optional,map<i32:plannodes.TFileScanRangeParams>" json:"file_scan_params,omitempty"`
+	Coord                   *types.TNetworkAddress                                `thrift:"coord,4,optional" frugal:"4,optional,types.TNetworkAddress" json:"coord,omitempty"`
+	QueryGlobals            *TQueryGlobals                                        `thrift:"query_globals,5,optional" frugal:"5,optional,TQueryGlobals" json:"query_globals,omitempty"`
+	ResourceInfo            *types.TResourceInfo                                  `thrift:"resource_info,6,optional" frugal:"6,optional,types.TResourceInfo" json:"resource_info,omitempty"`
+	FragmentNumOnHost       *int32                                                `thrift:"fragment_num_on_host,7,optional" frugal:"7,optional,i32" json:"fragment_num_on_host,omitempty"`
+	QueryOptions            *TQueryOptions                                        `thrift:"query_options,8,optional" frugal:"8,optional,TQueryOptions" json:"query_options,omitempty"`
+	IsNereids               bool                                                  `thrift:"is_nereids,9,optional" frugal:"9,optional,bool" json:"is_nereids,omitempty"`
+	WorkloadGroups          []*TPipelineWorkloadGroup                             `thrift:"workload_groups,10,optional" frugal:"10,optional,list<TPipelineWorkloadGroup>" json:"workload_groups,omitempty"`
+	QueryId                 *types.TUniqueId                                      `thrift:"query_id,11,optional" frugal:"11,optional,types.TUniqueId" json:"query_id,omitempty"`
+	TopnFilterSourceNodeIds []int32                                               `thrift:"topn_filter_source_node_ids,12,optional" frugal:"12,optional,list<i32>" json:"topn_filter_source_node_ids,omitempty"`
+	RuntimeFilterMergeAddr  *types.TNetworkAddress                                `thrift:"runtime_filter_merge_addr,13,optional" frugal:"13,optional,types.TNetworkAddress" json:"runtime_filter_merge_addr,omitempty"`
 }
 
 func NewTPipelineFragmentParamsList() *TPipelineFragmentParamsList {
-	return &TPipelineFragmentParamsList{}
+	return &TPipelineFragmentParamsList{
+
+		IsNereids: true,
+	}
 }
 
 func (p *TPipelineFragmentParamsList) InitDefault() {
+	p.IsNereids = true
 }
 
 var TPipelineFragmentParamsList_ParamsList_DEFAULT []*TPipelineFragmentParams
@@ -29064,16 +29392,220 @@ func (p *TPipelineFragmentParamsList) GetParamsList() (v []*TPipelineFragmentPar
 	}
 	return p.ParamsList
 }
+
+var TPipelineFragmentParamsList_DescTbl_DEFAULT *descriptors.TDescriptorTable
+
+func (p *TPipelineFragmentParamsList) GetDescTbl() (v *descriptors.TDescriptorTable) {
+	if !p.IsSetDescTbl() {
+		return TPipelineFragmentParamsList_DescTbl_DEFAULT
+	}
+	return p.DescTbl
+}
+
+var TPipelineFragmentParamsList_FileScanParams_DEFAULT map[types.TPlanNodeId]*plannodes.TFileScanRangeParams
+
+func (p *TPipelineFragmentParamsList) GetFileScanParams() (v map[types.TPlanNodeId]*plannodes.TFileScanRangeParams) {
+	if !p.IsSetFileScanParams() {
+		return TPipelineFragmentParamsList_FileScanParams_DEFAULT
+	}
+	return p.FileScanParams
+}
+
+var TPipelineFragmentParamsList_Coord_DEFAULT *types.TNetworkAddress
+
+func (p *TPipelineFragmentParamsList) GetCoord() (v *types.TNetworkAddress) {
+	if !p.IsSetCoord() {
+		return TPipelineFragmentParamsList_Coord_DEFAULT
+	}
+	return p.Coord
+}
+
+var TPipelineFragmentParamsList_QueryGlobals_DEFAULT *TQueryGlobals
+
+func (p *TPipelineFragmentParamsList) GetQueryGlobals() (v *TQueryGlobals) {
+	if !p.IsSetQueryGlobals() {
+		return TPipelineFragmentParamsList_QueryGlobals_DEFAULT
+	}
+	return p.QueryGlobals
+}
+
+var TPipelineFragmentParamsList_ResourceInfo_DEFAULT *types.TResourceInfo
+
+func (p *TPipelineFragmentParamsList) GetResourceInfo() (v *types.TResourceInfo) {
+	if !p.IsSetResourceInfo() {
+		return TPipelineFragmentParamsList_ResourceInfo_DEFAULT
+	}
+	return p.ResourceInfo
+}
+
+var TPipelineFragmentParamsList_FragmentNumOnHost_DEFAULT int32
+
+func (p *TPipelineFragmentParamsList) GetFragmentNumOnHost() (v int32) {
+	if !p.IsSetFragmentNumOnHost() {
+		return TPipelineFragmentParamsList_FragmentNumOnHost_DEFAULT
+	}
+	return *p.FragmentNumOnHost
+}
+
+var TPipelineFragmentParamsList_QueryOptions_DEFAULT *TQueryOptions
+
+func (p *TPipelineFragmentParamsList) GetQueryOptions() (v *TQueryOptions) {
+	if !p.IsSetQueryOptions() {
+		return TPipelineFragmentParamsList_QueryOptions_DEFAULT
+	}
+	return p.QueryOptions
+}
+
+var TPipelineFragmentParamsList_IsNereids_DEFAULT bool = true
+
+func (p *TPipelineFragmentParamsList) GetIsNereids() (v bool) {
+	if !p.IsSetIsNereids() {
+		return TPipelineFragmentParamsList_IsNereids_DEFAULT
+	}
+	return p.IsNereids
+}
+
+var TPipelineFragmentParamsList_WorkloadGroups_DEFAULT []*TPipelineWorkloadGroup
+
+func (p *TPipelineFragmentParamsList) GetWorkloadGroups() (v []*TPipelineWorkloadGroup) {
+	if !p.IsSetWorkloadGroups() {
+		return TPipelineFragmentParamsList_WorkloadGroups_DEFAULT
+	}
+	return p.WorkloadGroups
+}
+
+var TPipelineFragmentParamsList_QueryId_DEFAULT *types.TUniqueId
+
+func (p *TPipelineFragmentParamsList) GetQueryId() (v *types.TUniqueId) {
+	if !p.IsSetQueryId() {
+		return TPipelineFragmentParamsList_QueryId_DEFAULT
+	}
+	return p.QueryId
+}
+
+var TPipelineFragmentParamsList_TopnFilterSourceNodeIds_DEFAULT []int32
+
+func (p *TPipelineFragmentParamsList) GetTopnFilterSourceNodeIds() (v []int32) {
+	if !p.IsSetTopnFilterSourceNodeIds() {
+		return TPipelineFragmentParamsList_TopnFilterSourceNodeIds_DEFAULT
+	}
+	return p.TopnFilterSourceNodeIds
+}
+
+var TPipelineFragmentParamsList_RuntimeFilterMergeAddr_DEFAULT *types.TNetworkAddress
+
+func (p *TPipelineFragmentParamsList) GetRuntimeFilterMergeAddr() (v *types.TNetworkAddress) {
+	if !p.IsSetRuntimeFilterMergeAddr() {
+		return TPipelineFragmentParamsList_RuntimeFilterMergeAddr_DEFAULT
+	}
+	return p.RuntimeFilterMergeAddr
+}
 func (p *TPipelineFragmentParamsList) SetParamsList(val []*TPipelineFragmentParams) {
 	p.ParamsList = val
 }
+func (p *TPipelineFragmentParamsList) SetDescTbl(val *descriptors.TDescriptorTable) {
+	p.DescTbl = val
+}
+func (p *TPipelineFragmentParamsList) SetFileScanParams(val map[types.TPlanNodeId]*plannodes.TFileScanRangeParams) {
+	p.FileScanParams = val
+}
+func (p *TPipelineFragmentParamsList) SetCoord(val *types.TNetworkAddress) {
+	p.Coord = val
+}
+func (p *TPipelineFragmentParamsList) SetQueryGlobals(val *TQueryGlobals) {
+	p.QueryGlobals = val
+}
+func (p *TPipelineFragmentParamsList) SetResourceInfo(val *types.TResourceInfo) {
+	p.ResourceInfo = val
+}
+func (p *TPipelineFragmentParamsList) SetFragmentNumOnHost(val *int32) {
+	p.FragmentNumOnHost = val
+}
+func (p *TPipelineFragmentParamsList) SetQueryOptions(val *TQueryOptions) {
+	p.QueryOptions = val
+}
+func (p *TPipelineFragmentParamsList) SetIsNereids(val bool) {
+	p.IsNereids = val
+}
+func (p *TPipelineFragmentParamsList) SetWorkloadGroups(val []*TPipelineWorkloadGroup) {
+	p.WorkloadGroups = val
+}
+func (p *TPipelineFragmentParamsList) SetQueryId(val *types.TUniqueId) {
+	p.QueryId = val
+}
+func (p *TPipelineFragmentParamsList) SetTopnFilterSourceNodeIds(val []int32) {
+	p.TopnFilterSourceNodeIds = val
+}
+func (p *TPipelineFragmentParamsList) SetRuntimeFilterMergeAddr(val *types.TNetworkAddress) {
+	p.RuntimeFilterMergeAddr = val
+}
 
 var fieldIDToName_TPipelineFragmentParamsList = map[int16]string{
-	1: "params_list",
+	1:  "params_list",
+	2:  "desc_tbl",
+	3:  "file_scan_params",
+	4:  "coord",
+	5:  "query_globals",
+	6:  "resource_info",
+	7:  "fragment_num_on_host",
+	8:  "query_options",
+	9:  "is_nereids",
+	10: "workload_groups",
+	11: "query_id",
+	12: "topn_filter_source_node_ids",
+	13: "runtime_filter_merge_addr",
 }
 
 func (p *TPipelineFragmentParamsList) IsSetParamsList() bool {
 	return p.ParamsList != nil
+}
+
+func (p *TPipelineFragmentParamsList) IsSetDescTbl() bool {
+	return p.DescTbl != nil
+}
+
+func (p *TPipelineFragmentParamsList) IsSetFileScanParams() bool {
+	return p.FileScanParams != nil
+}
+
+func (p *TPipelineFragmentParamsList) IsSetCoord() bool {
+	return p.Coord != nil
+}
+
+func (p *TPipelineFragmentParamsList) IsSetQueryGlobals() bool {
+	return p.QueryGlobals != nil
+}
+
+func (p *TPipelineFragmentParamsList) IsSetResourceInfo() bool {
+	return p.ResourceInfo != nil
+}
+
+func (p *TPipelineFragmentParamsList) IsSetFragmentNumOnHost() bool {
+	return p.FragmentNumOnHost != nil
+}
+
+func (p *TPipelineFragmentParamsList) IsSetQueryOptions() bool {
+	return p.QueryOptions != nil
+}
+
+func (p *TPipelineFragmentParamsList) IsSetIsNereids() bool {
+	return p.IsNereids != TPipelineFragmentParamsList_IsNereids_DEFAULT
+}
+
+func (p *TPipelineFragmentParamsList) IsSetWorkloadGroups() bool {
+	return p.WorkloadGroups != nil
+}
+
+func (p *TPipelineFragmentParamsList) IsSetQueryId() bool {
+	return p.QueryId != nil
+}
+
+func (p *TPipelineFragmentParamsList) IsSetTopnFilterSourceNodeIds() bool {
+	return p.TopnFilterSourceNodeIds != nil
+}
+
+func (p *TPipelineFragmentParamsList) IsSetRuntimeFilterMergeAddr() bool {
+	return p.RuntimeFilterMergeAddr != nil
 }
 
 func (p *TPipelineFragmentParamsList) Read(iprot thrift.TProtocol) (err error) {
@@ -29098,6 +29630,102 @@ func (p *TPipelineFragmentParamsList) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -29155,6 +29783,159 @@ func (p *TPipelineFragmentParamsList) ReadField1(iprot thrift.TProtocol) error {
 	p.ParamsList = _field
 	return nil
 }
+func (p *TPipelineFragmentParamsList) ReadField2(iprot thrift.TProtocol) error {
+	_field := descriptors.NewTDescriptorTable()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.DescTbl = _field
+	return nil
+}
+func (p *TPipelineFragmentParamsList) ReadField3(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[types.TPlanNodeId]*plannodes.TFileScanRangeParams, size)
+	values := make([]plannodes.TFileScanRangeParams, size)
+	for i := 0; i < size; i++ {
+		var _key types.TPlanNodeId
+		if v, err := iprot.ReadI32(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		_val := &values[i]
+		_val.InitDefault()
+		if err := _val.Read(iprot); err != nil {
+			return err
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.FileScanParams = _field
+	return nil
+}
+func (p *TPipelineFragmentParamsList) ReadField4(iprot thrift.TProtocol) error {
+	_field := types.NewTNetworkAddress()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Coord = _field
+	return nil
+}
+func (p *TPipelineFragmentParamsList) ReadField5(iprot thrift.TProtocol) error {
+	_field := NewTQueryGlobals()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.QueryGlobals = _field
+	return nil
+}
+func (p *TPipelineFragmentParamsList) ReadField6(iprot thrift.TProtocol) error {
+	_field := types.NewTResourceInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ResourceInfo = _field
+	return nil
+}
+func (p *TPipelineFragmentParamsList) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FragmentNumOnHost = _field
+	return nil
+}
+func (p *TPipelineFragmentParamsList) ReadField8(iprot thrift.TProtocol) error {
+	_field := NewTQueryOptions()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.QueryOptions = _field
+	return nil
+}
+func (p *TPipelineFragmentParamsList) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.IsNereids = _field
+	return nil
+}
+func (p *TPipelineFragmentParamsList) ReadField10(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*TPipelineWorkloadGroup, 0, size)
+	values := make([]TPipelineWorkloadGroup, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.WorkloadGroups = _field
+	return nil
+}
+func (p *TPipelineFragmentParamsList) ReadField11(iprot thrift.TProtocol) error {
+	_field := types.NewTUniqueId()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.QueryId = _field
+	return nil
+}
+func (p *TPipelineFragmentParamsList) ReadField12(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int32, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int32
+		if v, err := iprot.ReadI32(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.TopnFilterSourceNodeIds = _field
+	return nil
+}
+func (p *TPipelineFragmentParamsList) ReadField13(iprot thrift.TProtocol) error {
+	_field := types.NewTNetworkAddress()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.RuntimeFilterMergeAddr = _field
+	return nil
+}
 
 func (p *TPipelineFragmentParamsList) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -29164,6 +29945,54 @@ func (p *TPipelineFragmentParamsList) Write(oprot thrift.TProtocol) (err error) 
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 	}
@@ -29211,6 +30040,261 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
+func (p *TPipelineFragmentParamsList) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDescTbl() {
+		if err = oprot.WriteFieldBegin("desc_tbl", thrift.STRUCT, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.DescTbl.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TPipelineFragmentParamsList) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFileScanParams() {
+		if err = oprot.WriteFieldBegin("file_scan_params", thrift.MAP, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.I32, thrift.STRUCT, len(p.FileScanParams)); err != nil {
+			return err
+		}
+		for k, v := range p.FileScanParams {
+			if err := oprot.WriteI32(k); err != nil {
+				return err
+			}
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *TPipelineFragmentParamsList) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCoord() {
+		if err = oprot.WriteFieldBegin("coord", thrift.STRUCT, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Coord.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *TPipelineFragmentParamsList) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetQueryGlobals() {
+		if err = oprot.WriteFieldBegin("query_globals", thrift.STRUCT, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.QueryGlobals.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *TPipelineFragmentParamsList) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetResourceInfo() {
+		if err = oprot.WriteFieldBegin("resource_info", thrift.STRUCT, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ResourceInfo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *TPipelineFragmentParamsList) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFragmentNumOnHost() {
+		if err = oprot.WriteFieldBegin("fragment_num_on_host", thrift.I32, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.FragmentNumOnHost); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
+func (p *TPipelineFragmentParamsList) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetQueryOptions() {
+		if err = oprot.WriteFieldBegin("query_options", thrift.STRUCT, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.QueryOptions.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
+func (p *TPipelineFragmentParamsList) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsNereids() {
+		if err = oprot.WriteFieldBegin("is_nereids", thrift.BOOL, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.IsNereids); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+
+func (p *TPipelineFragmentParamsList) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkloadGroups() {
+		if err = oprot.WriteFieldBegin("workload_groups", thrift.LIST, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.WorkloadGroups)); err != nil {
+			return err
+		}
+		for _, v := range p.WorkloadGroups {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
+func (p *TPipelineFragmentParamsList) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetQueryId() {
+		if err = oprot.WriteFieldBegin("query_id", thrift.STRUCT, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.QueryId.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+
+func (p *TPipelineFragmentParamsList) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTopnFilterSourceNodeIds() {
+		if err = oprot.WriteFieldBegin("topn_filter_source_node_ids", thrift.LIST, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.I32, len(p.TopnFilterSourceNodeIds)); err != nil {
+			return err
+		}
+		for _, v := range p.TopnFilterSourceNodeIds {
+			if err := oprot.WriteI32(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
+
+func (p *TPipelineFragmentParamsList) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRuntimeFilterMergeAddr() {
+		if err = oprot.WriteFieldBegin("runtime_filter_merge_addr", thrift.STRUCT, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.RuntimeFilterMergeAddr.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
+
 func (p *TPipelineFragmentParamsList) String() string {
 	if p == nil {
 		return "<nil>"
@@ -29228,6 +30312,42 @@ func (p *TPipelineFragmentParamsList) DeepEqual(ano *TPipelineFragmentParamsList
 	if !p.Field1DeepEqual(ano.ParamsList) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.DescTbl) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.FileScanParams) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.Coord) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.QueryGlobals) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.ResourceInfo) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.FragmentNumOnHost) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.QueryOptions) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.IsNereids) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.WorkloadGroups) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.QueryId) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.TopnFilterSourceNodeIds) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.RuntimeFilterMergeAddr) {
+		return false
+	}
 	return true
 }
 
@@ -29241,6 +30361,113 @@ func (p *TPipelineFragmentParamsList) Field1DeepEqual(src []*TPipelineFragmentPa
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *TPipelineFragmentParamsList) Field2DeepEqual(src *descriptors.TDescriptorTable) bool {
+
+	if !p.DescTbl.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TPipelineFragmentParamsList) Field3DeepEqual(src map[types.TPlanNodeId]*plannodes.TFileScanRangeParams) bool {
+
+	if len(p.FileScanParams) != len(src) {
+		return false
+	}
+	for k, v := range p.FileScanParams {
+		_src := src[k]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *TPipelineFragmentParamsList) Field4DeepEqual(src *types.TNetworkAddress) bool {
+
+	if !p.Coord.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TPipelineFragmentParamsList) Field5DeepEqual(src *TQueryGlobals) bool {
+
+	if !p.QueryGlobals.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TPipelineFragmentParamsList) Field6DeepEqual(src *types.TResourceInfo) bool {
+
+	if !p.ResourceInfo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TPipelineFragmentParamsList) Field7DeepEqual(src *int32) bool {
+
+	if p.FragmentNumOnHost == src {
+		return true
+	} else if p.FragmentNumOnHost == nil || src == nil {
+		return false
+	}
+	if *p.FragmentNumOnHost != *src {
+		return false
+	}
+	return true
+}
+func (p *TPipelineFragmentParamsList) Field8DeepEqual(src *TQueryOptions) bool {
+
+	if !p.QueryOptions.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TPipelineFragmentParamsList) Field9DeepEqual(src bool) bool {
+
+	if p.IsNereids != src {
+		return false
+	}
+	return true
+}
+func (p *TPipelineFragmentParamsList) Field10DeepEqual(src []*TPipelineWorkloadGroup) bool {
+
+	if len(p.WorkloadGroups) != len(src) {
+		return false
+	}
+	for i, v := range p.WorkloadGroups {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *TPipelineFragmentParamsList) Field11DeepEqual(src *types.TUniqueId) bool {
+
+	if !p.QueryId.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TPipelineFragmentParamsList) Field12DeepEqual(src []int32) bool {
+
+	if len(p.TopnFilterSourceNodeIds) != len(src) {
+		return false
+	}
+	for i, v := range p.TopnFilterSourceNodeIds {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+func (p *TPipelineFragmentParamsList) Field13DeepEqual(src *types.TNetworkAddress) bool {
+
+	if !p.RuntimeFilterMergeAddr.DeepEqual(src) {
+		return false
 	}
 	return true
 }

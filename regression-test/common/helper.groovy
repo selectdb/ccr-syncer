@@ -217,7 +217,7 @@ class Helper {
 
         return false
     }
-
+    
     // test whether the ccr syncer has set a feature flag?
     Boolean has_feature(name) {
         def features_uri = { check_func ->
@@ -250,6 +250,34 @@ class Helper {
             }
         }
         return false
+    }
+
+    Object get_job_progress(tableName = "") {
+        def request_body = suite.get_ccr_body(tableName)
+        def get_job_progress_uri = { check_func ->
+            suite.httpTest {
+                uri "/job_progress"
+                endpoint syncerAddress
+                body request_body
+                op "post"
+                check check_func
+            }
+        }
+
+        def result = null
+        get_job_progress_uri.call() { code, body ->
+            if (!"${code}".toString().equals("200")) {
+                throw "request failed, code: ${code}, body: ${body}"
+            }
+            def jsonSlurper = new groovy.json.JsonSlurper()
+            def object = jsonSlurper.parseText "${body}"
+            if (!object.success) {
+                throw "request failed, error msg: ${object.error_msg}"
+            }
+            suite.logger.info("job progress: ${object.job_progress}")
+            result = jsonSlurper.parseText object.job_progress
+        }
+        return result
     }
 }
 

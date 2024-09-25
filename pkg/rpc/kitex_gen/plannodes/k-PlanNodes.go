@@ -8198,6 +8198,34 @@ func (p *TMaxComputeFileDesc) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -8246,6 +8274,32 @@ func (p *TMaxComputeFileDesc) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TMaxComputeFileDesc) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.SessionId = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TMaxComputeFileDesc) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.TableBatchReadSession = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TMaxComputeFileDesc) FastWrite(buf []byte) int {
 	return 0
@@ -8256,6 +8310,8 @@ func (p *TMaxComputeFileDesc) FastWriteNocopy(buf []byte, binaryWriter bthrift.B
 	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "TMaxComputeFileDesc")
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
+		offset += p.fastWriteField2(buf[offset:], binaryWriter)
+		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -8267,6 +8323,8 @@ func (p *TMaxComputeFileDesc) BLength() int {
 	l += bthrift.Binary.StructBeginLength("TMaxComputeFileDesc")
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -8284,11 +8342,55 @@ func (p *TMaxComputeFileDesc) fastWriteField1(buf []byte, binaryWriter bthrift.B
 	return offset
 }
 
+func (p *TMaxComputeFileDesc) fastWriteField2(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetSessionId() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "session_id", thrift.STRING, 2)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.SessionId)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TMaxComputeFileDesc) fastWriteField3(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTableBatchReadSession() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "table_batch_read_session", thrift.STRING, 3)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.TableBatchReadSession)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TMaxComputeFileDesc) field1Length() int {
 	l := 0
 	if p.IsSetPartitionSpec() {
 		l += bthrift.Binary.FieldBeginLength("partition_spec", thrift.STRING, 1)
 		l += bthrift.Binary.StringLengthNocopy(*p.PartitionSpec)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TMaxComputeFileDesc) field2Length() int {
+	l := 0
+	if p.IsSetSessionId() {
+		l += bthrift.Binary.FieldBeginLength("session_id", thrift.STRING, 2)
+		l += bthrift.Binary.StringLengthNocopy(*p.SessionId)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TMaxComputeFileDesc) field3Length() int {
+	l := 0
+	if p.IsSetTableBatchReadSession() {
+		l += bthrift.Binary.FieldBeginLength("table_batch_read_session", thrift.STRING, 3)
+		l += bthrift.Binary.StringLengthNocopy(*p.TableBatchReadSession)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

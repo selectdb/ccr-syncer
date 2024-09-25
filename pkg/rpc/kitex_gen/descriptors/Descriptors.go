@@ -13822,6 +13822,8 @@ type TMCTable struct {
 	PublicAccess *string `thrift:"public_access,6,optional" frugal:"6,optional,string" json:"public_access,omitempty"`
 	OdpsUrl      *string `thrift:"odps_url,7,optional" frugal:"7,optional,string" json:"odps_url,omitempty"`
 	TunnelUrl    *string `thrift:"tunnel_url,8,optional" frugal:"8,optional,string" json:"tunnel_url,omitempty"`
+	Endpoint     *string `thrift:"endpoint,9,optional" frugal:"9,optional,string" json:"endpoint,omitempty"`
+	Quota        *string `thrift:"quota,10,optional" frugal:"10,optional,string" json:"quota,omitempty"`
 }
 
 func NewTMCTable() *TMCTable {
@@ -13902,6 +13904,24 @@ func (p *TMCTable) GetTunnelUrl() (v string) {
 	}
 	return *p.TunnelUrl
 }
+
+var TMCTable_Endpoint_DEFAULT string
+
+func (p *TMCTable) GetEndpoint() (v string) {
+	if !p.IsSetEndpoint() {
+		return TMCTable_Endpoint_DEFAULT
+	}
+	return *p.Endpoint
+}
+
+var TMCTable_Quota_DEFAULT string
+
+func (p *TMCTable) GetQuota() (v string) {
+	if !p.IsSetQuota() {
+		return TMCTable_Quota_DEFAULT
+	}
+	return *p.Quota
+}
 func (p *TMCTable) SetRegion(val *string) {
 	p.Region = val
 }
@@ -13926,16 +13946,24 @@ func (p *TMCTable) SetOdpsUrl(val *string) {
 func (p *TMCTable) SetTunnelUrl(val *string) {
 	p.TunnelUrl = val
 }
+func (p *TMCTable) SetEndpoint(val *string) {
+	p.Endpoint = val
+}
+func (p *TMCTable) SetQuota(val *string) {
+	p.Quota = val
+}
 
 var fieldIDToName_TMCTable = map[int16]string{
-	1: "region",
-	2: "project",
-	3: "table",
-	4: "access_key",
-	5: "secret_key",
-	6: "public_access",
-	7: "odps_url",
-	8: "tunnel_url",
+	1:  "region",
+	2:  "project",
+	3:  "table",
+	4:  "access_key",
+	5:  "secret_key",
+	6:  "public_access",
+	7:  "odps_url",
+	8:  "tunnel_url",
+	9:  "endpoint",
+	10: "quota",
 }
 
 func (p *TMCTable) IsSetRegion() bool {
@@ -13968,6 +13996,14 @@ func (p *TMCTable) IsSetOdpsUrl() bool {
 
 func (p *TMCTable) IsSetTunnelUrl() bool {
 	return p.TunnelUrl != nil
+}
+
+func (p *TMCTable) IsSetEndpoint() bool {
+	return p.Endpoint != nil
+}
+
+func (p *TMCTable) IsSetQuota() bool {
+	return p.Quota != nil
 }
 
 func (p *TMCTable) Read(iprot thrift.TProtocol) (err error) {
@@ -14048,6 +14084,22 @@ func (p *TMCTable) Read(iprot thrift.TProtocol) (err error) {
 		case 8:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -14170,6 +14222,28 @@ func (p *TMCTable) ReadField8(iprot thrift.TProtocol) error {
 	p.TunnelUrl = _field
 	return nil
 }
+func (p *TMCTable) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Endpoint = _field
+	return nil
+}
+func (p *TMCTable) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Quota = _field
+	return nil
+}
 
 func (p *TMCTable) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -14207,6 +14281,14 @@ func (p *TMCTable) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 	}
@@ -14379,6 +14461,44 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
 
+func (p *TMCTable) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEndpoint() {
+		if err = oprot.WriteFieldBegin("endpoint", thrift.STRING, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Endpoint); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+
+func (p *TMCTable) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetQuota() {
+		if err = oprot.WriteFieldBegin("quota", thrift.STRING, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Quota); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
 func (p *TMCTable) String() string {
 	if p == nil {
 		return "<nil>"
@@ -14415,6 +14535,12 @@ func (p *TMCTable) DeepEqual(ano *TMCTable) bool {
 		return false
 	}
 	if !p.Field8DeepEqual(ano.TunnelUrl) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.Endpoint) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.Quota) {
 		return false
 	}
 	return true
@@ -14512,6 +14638,30 @@ func (p *TMCTable) Field8DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.TunnelUrl, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TMCTable) Field9DeepEqual(src *string) bool {
+
+	if p.Endpoint == src {
+		return true
+	} else if p.Endpoint == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Endpoint, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TMCTable) Field10DeepEqual(src *string) bool {
+
+	if p.Quota == src {
+		return true
+	} else if p.Quota == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Quota, *src) != 0 {
 		return false
 	}
 	return true

@@ -12240,7 +12240,9 @@ func (p *TTrinoConnectorFileDesc) Field11DeepEqual(src *string) bool {
 }
 
 type TMaxComputeFileDesc struct {
-	PartitionSpec *string `thrift:"partition_spec,1,optional" frugal:"1,optional,string" json:"partition_spec,omitempty"`
+	PartitionSpec         *string `thrift:"partition_spec,1,optional" frugal:"1,optional,string" json:"partition_spec,omitempty"`
+	SessionId             *string `thrift:"session_id,2,optional" frugal:"2,optional,string" json:"session_id,omitempty"`
+	TableBatchReadSession *string `thrift:"table_batch_read_session,3,optional" frugal:"3,optional,string" json:"table_batch_read_session,omitempty"`
 }
 
 func NewTMaxComputeFileDesc() *TMaxComputeFileDesc {
@@ -12258,16 +12260,50 @@ func (p *TMaxComputeFileDesc) GetPartitionSpec() (v string) {
 	}
 	return *p.PartitionSpec
 }
+
+var TMaxComputeFileDesc_SessionId_DEFAULT string
+
+func (p *TMaxComputeFileDesc) GetSessionId() (v string) {
+	if !p.IsSetSessionId() {
+		return TMaxComputeFileDesc_SessionId_DEFAULT
+	}
+	return *p.SessionId
+}
+
+var TMaxComputeFileDesc_TableBatchReadSession_DEFAULT string
+
+func (p *TMaxComputeFileDesc) GetTableBatchReadSession() (v string) {
+	if !p.IsSetTableBatchReadSession() {
+		return TMaxComputeFileDesc_TableBatchReadSession_DEFAULT
+	}
+	return *p.TableBatchReadSession
+}
 func (p *TMaxComputeFileDesc) SetPartitionSpec(val *string) {
 	p.PartitionSpec = val
+}
+func (p *TMaxComputeFileDesc) SetSessionId(val *string) {
+	p.SessionId = val
+}
+func (p *TMaxComputeFileDesc) SetTableBatchReadSession(val *string) {
+	p.TableBatchReadSession = val
 }
 
 var fieldIDToName_TMaxComputeFileDesc = map[int16]string{
 	1: "partition_spec",
+	2: "session_id",
+	3: "table_batch_read_session",
 }
 
 func (p *TMaxComputeFileDesc) IsSetPartitionSpec() bool {
 	return p.PartitionSpec != nil
+}
+
+func (p *TMaxComputeFileDesc) IsSetSessionId() bool {
+	return p.SessionId != nil
+}
+
+func (p *TMaxComputeFileDesc) IsSetTableBatchReadSession() bool {
+	return p.TableBatchReadSession != nil
 }
 
 func (p *TMaxComputeFileDesc) Read(iprot thrift.TProtocol) (err error) {
@@ -12292,6 +12328,22 @@ func (p *TMaxComputeFileDesc) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -12337,6 +12389,28 @@ func (p *TMaxComputeFileDesc) ReadField1(iprot thrift.TProtocol) error {
 	p.PartitionSpec = _field
 	return nil
 }
+func (p *TMaxComputeFileDesc) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SessionId = _field
+	return nil
+}
+func (p *TMaxComputeFileDesc) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TableBatchReadSession = _field
+	return nil
+}
 
 func (p *TMaxComputeFileDesc) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -12346,6 +12420,14 @@ func (p *TMaxComputeFileDesc) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -12385,6 +12467,44 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
+func (p *TMaxComputeFileDesc) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSessionId() {
+		if err = oprot.WriteFieldBegin("session_id", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SessionId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TMaxComputeFileDesc) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTableBatchReadSession() {
+		if err = oprot.WriteFieldBegin("table_batch_read_session", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TableBatchReadSession); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
 func (p *TMaxComputeFileDesc) String() string {
 	if p == nil {
 		return "<nil>"
@@ -12402,6 +12522,12 @@ func (p *TMaxComputeFileDesc) DeepEqual(ano *TMaxComputeFileDesc) bool {
 	if !p.Field1DeepEqual(ano.PartitionSpec) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.SessionId) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.TableBatchReadSession) {
+		return false
+	}
 	return true
 }
 
@@ -12413,6 +12539,30 @@ func (p *TMaxComputeFileDesc) Field1DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.PartitionSpec, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TMaxComputeFileDesc) Field2DeepEqual(src *string) bool {
+
+	if p.SessionId == src {
+		return true
+	} else if p.SessionId == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SessionId, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TMaxComputeFileDesc) Field3DeepEqual(src *string) bool {
+
+	if p.TableBatchReadSession == src {
+		return true
+	} else if p.TableBatchReadSession == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TableBatchReadSession, *src) != 0 {
 		return false
 	}
 	return true

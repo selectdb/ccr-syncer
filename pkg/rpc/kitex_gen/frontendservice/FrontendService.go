@@ -69968,6 +69968,7 @@ type TGetMetaDBMeta struct {
 	Tables            []*TGetMetaTableMeta `thrift:"tables,3,optional" frugal:"3,optional,list<TGetMetaTableMeta>" json:"tables,omitempty"`
 	DroppedPartitions []int64              `thrift:"dropped_partitions,4,optional" frugal:"4,optional,list<i64>" json:"dropped_partitions,omitempty"`
 	DroppedTables     []int64              `thrift:"dropped_tables,5,optional" frugal:"5,optional,list<i64>" json:"dropped_tables,omitempty"`
+	DroppedIndexes    []int64              `thrift:"dropped_indexes,6,optional" frugal:"6,optional,list<i64>" json:"dropped_indexes,omitempty"`
 }
 
 func NewTGetMetaDBMeta() *TGetMetaDBMeta {
@@ -70021,6 +70022,15 @@ func (p *TGetMetaDBMeta) GetDroppedTables() (v []int64) {
 	}
 	return p.DroppedTables
 }
+
+var TGetMetaDBMeta_DroppedIndexes_DEFAULT []int64
+
+func (p *TGetMetaDBMeta) GetDroppedIndexes() (v []int64) {
+	if !p.IsSetDroppedIndexes() {
+		return TGetMetaDBMeta_DroppedIndexes_DEFAULT
+	}
+	return p.DroppedIndexes
+}
 func (p *TGetMetaDBMeta) SetId(val *int64) {
 	p.Id = val
 }
@@ -70036,6 +70046,9 @@ func (p *TGetMetaDBMeta) SetDroppedPartitions(val []int64) {
 func (p *TGetMetaDBMeta) SetDroppedTables(val []int64) {
 	p.DroppedTables = val
 }
+func (p *TGetMetaDBMeta) SetDroppedIndexes(val []int64) {
+	p.DroppedIndexes = val
+}
 
 var fieldIDToName_TGetMetaDBMeta = map[int16]string{
 	1: "id",
@@ -70043,6 +70056,7 @@ var fieldIDToName_TGetMetaDBMeta = map[int16]string{
 	3: "tables",
 	4: "dropped_partitions",
 	5: "dropped_tables",
+	6: "dropped_indexes",
 }
 
 func (p *TGetMetaDBMeta) IsSetId() bool {
@@ -70063,6 +70077,10 @@ func (p *TGetMetaDBMeta) IsSetDroppedPartitions() bool {
 
 func (p *TGetMetaDBMeta) IsSetDroppedTables() bool {
 	return p.DroppedTables != nil
+}
+
+func (p *TGetMetaDBMeta) IsSetDroppedIndexes() bool {
+	return p.DroppedIndexes != nil
 }
 
 func (p *TGetMetaDBMeta) Read(iprot thrift.TProtocol) (err error) {
@@ -70119,6 +70137,14 @@ func (p *TGetMetaDBMeta) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -70244,6 +70270,29 @@ func (p *TGetMetaDBMeta) ReadField5(iprot thrift.TProtocol) error {
 	p.DroppedTables = _field
 	return nil
 }
+func (p *TGetMetaDBMeta) ReadField6(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.DroppedIndexes = _field
+	return nil
+}
 
 func (p *TGetMetaDBMeta) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -70269,6 +70318,10 @@ func (p *TGetMetaDBMeta) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 	}
@@ -70408,6 +70461,33 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 
+func (p *TGetMetaDBMeta) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDroppedIndexes() {
+		if err = oprot.WriteFieldBegin("dropped_indexes", thrift.LIST, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.I64, len(p.DroppedIndexes)); err != nil {
+			return err
+		}
+		for _, v := range p.DroppedIndexes {
+			if err := oprot.WriteI64(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
 func (p *TGetMetaDBMeta) String() string {
 	if p == nil {
 		return "<nil>"
@@ -70435,6 +70515,9 @@ func (p *TGetMetaDBMeta) DeepEqual(ano *TGetMetaDBMeta) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.DroppedTables) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.DroppedIndexes) {
 		return false
 	}
 	return true
@@ -70496,6 +70579,19 @@ func (p *TGetMetaDBMeta) Field5DeepEqual(src []int64) bool {
 		return false
 	}
 	for i, v := range p.DroppedTables {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+func (p *TGetMetaDBMeta) Field6DeepEqual(src []int64) bool {
+
+	if len(p.DroppedIndexes) != len(src) {
+		return false
+	}
+	for i, v := range p.DroppedIndexes {
 		_src := src[i]
 		if v != _src {
 			return false

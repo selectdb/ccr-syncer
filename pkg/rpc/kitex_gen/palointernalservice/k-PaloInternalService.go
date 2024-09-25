@@ -2845,6 +2845,48 @@ func (p *TQueryOptions) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 132:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField132(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 133:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField133(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 134:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField134(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 1000:
 			if fieldTypeId == thrift.BOOL {
 				l, err = p.FastReadField1000(buf[offset:])
@@ -4591,6 +4633,48 @@ func (p *TQueryOptions) FastReadField131(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TQueryOptions) FastReadField132(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.ParallelPrepareThreshold = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField133(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.PartitionTopnMaxPartitions = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField134(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.PartitionTopnPrePartitionRows = v
+
+	}
+	return offset, nil
+}
+
 func (p *TQueryOptions) FastReadField1000(buf []byte) (int, error) {
 	offset := 0
 
@@ -4731,6 +4815,9 @@ func (p *TQueryOptions) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryW
 		offset += p.fastWriteField129(buf[offset:], binaryWriter)
 		offset += p.fastWriteField130(buf[offset:], binaryWriter)
 		offset += p.fastWriteField131(buf[offset:], binaryWriter)
+		offset += p.fastWriteField132(buf[offset:], binaryWriter)
+		offset += p.fastWriteField133(buf[offset:], binaryWriter)
+		offset += p.fastWriteField134(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1000(buf[offset:], binaryWriter)
 		offset += p.fastWriteField18(buf[offset:], binaryWriter)
 		offset += p.fastWriteField42(buf[offset:], binaryWriter)
@@ -4869,6 +4956,9 @@ func (p *TQueryOptions) BLength() int {
 		l += p.field129Length()
 		l += p.field130Length()
 		l += p.field131Length()
+		l += p.field132Length()
+		l += p.field133Length()
+		l += p.field134Length()
 		l += p.field1000Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
@@ -6211,6 +6301,39 @@ func (p *TQueryOptions) fastWriteField131(buf []byte, binaryWriter bthrift.Binar
 	if p.IsSetAdaptivePipelineTaskSerialReadOnLimit() {
 		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "adaptive_pipeline_task_serial_read_on_limit", thrift.I32, 131)
 		offset += bthrift.Binary.WriteI32(buf[offset:], p.AdaptivePipelineTaskSerialReadOnLimit)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField132(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetParallelPrepareThreshold() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "parallel_prepare_threshold", thrift.I32, 132)
+		offset += bthrift.Binary.WriteI32(buf[offset:], p.ParallelPrepareThreshold)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField133(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetPartitionTopnMaxPartitions() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "partition_topn_max_partitions", thrift.I32, 133)
+		offset += bthrift.Binary.WriteI32(buf[offset:], p.PartitionTopnMaxPartitions)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField134(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetPartitionTopnPrePartitionRows() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "partition_topn_pre_partition_rows", thrift.I32, 134)
+		offset += bthrift.Binary.WriteI32(buf[offset:], p.PartitionTopnPrePartitionRows)
 
 		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
 	}
@@ -7563,6 +7686,39 @@ func (p *TQueryOptions) field131Length() int {
 	if p.IsSetAdaptivePipelineTaskSerialReadOnLimit() {
 		l += bthrift.Binary.FieldBeginLength("adaptive_pipeline_task_serial_read_on_limit", thrift.I32, 131)
 		l += bthrift.Binary.I32Length(p.AdaptivePipelineTaskSerialReadOnLimit)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field132Length() int {
+	l := 0
+	if p.IsSetParallelPrepareThreshold() {
+		l += bthrift.Binary.FieldBeginLength("parallel_prepare_threshold", thrift.I32, 132)
+		l += bthrift.Binary.I32Length(p.ParallelPrepareThreshold)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field133Length() int {
+	l := 0
+	if p.IsSetPartitionTopnMaxPartitions() {
+		l += bthrift.Binary.FieldBeginLength("partition_topn_max_partitions", thrift.I32, 133)
+		l += bthrift.Binary.I32Length(p.PartitionTopnMaxPartitions)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field134Length() int {
+	l := 0
+	if p.IsSetPartitionTopnPrePartitionRows() {
+		l += bthrift.Binary.FieldBeginLength("partition_topn_pre_partition_rows", thrift.I32, 134)
+		l += bthrift.Binary.I32Length(p.PartitionTopnPrePartitionRows)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -19710,6 +19866,20 @@ func (p *TPipelineFragmentParams) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 44:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField44(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 1000:
 			if fieldTypeId == thrift.BOOL {
 				l, err = p.FastReadField1000(buf[offset:])
@@ -20513,6 +20683,36 @@ func (p *TPipelineFragmentParams) FastReadField43(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TPipelineFragmentParams) FastReadField44(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := bthrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.TopnFilterSourceNodeIds = make([]int32, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem int32
+		if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_elem = v
+
+		}
+
+		p.TopnFilterSourceNodeIds = append(p.TopnFilterSourceNodeIds, _elem)
+	}
+	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
 func (p *TPipelineFragmentParams) FastReadField1000(buf []byte) (int, error) {
 	offset := 0
 
@@ -20578,6 +20778,7 @@ func (p *TPipelineFragmentParams) FastWriteNocopy(buf []byte, binaryWriter bthri
 		offset += p.fastWriteField36(buf[offset:], binaryWriter)
 		offset += p.fastWriteField39(buf[offset:], binaryWriter)
 		offset += p.fastWriteField43(buf[offset:], binaryWriter)
+		offset += p.fastWriteField44(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -20630,6 +20831,7 @@ func (p *TPipelineFragmentParams) BLength() int {
 		l += p.field41Length()
 		l += p.field42Length()
 		l += p.field43Length()
+		l += p.field44Length()
 		l += p.field1000Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
@@ -21160,6 +21362,25 @@ func (p *TPipelineFragmentParams) fastWriteField43(buf []byte, binaryWriter bthr
 	return offset
 }
 
+func (p *TPipelineFragmentParams) fastWriteField44(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTopnFilterSourceNodeIds() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "topn_filter_source_node_ids", thrift.LIST, 44)
+		listBeginOffset := offset
+		offset += bthrift.Binary.ListBeginLength(thrift.I32, 0)
+		var length int
+		for _, v := range p.TopnFilterSourceNodeIds {
+			length++
+			offset += bthrift.Binary.WriteI32(buf[offset:], v)
+
+		}
+		bthrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I32, length)
+		offset += bthrift.Binary.WriteListEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TPipelineFragmentParams) fastWriteField1000(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
 	if p.IsSetIsMowTable() {
@@ -21642,6 +21863,19 @@ func (p *TPipelineFragmentParams) field43Length() int {
 	return l
 }
 
+func (p *TPipelineFragmentParams) field44Length() int {
+	l := 0
+	if p.IsSetTopnFilterSourceNodeIds() {
+		l += bthrift.Binary.FieldBeginLength("topn_filter_source_node_ids", thrift.LIST, 44)
+		l += bthrift.Binary.ListBeginLength(thrift.I32, len(p.TopnFilterSourceNodeIds))
+		var tmpV int32
+		l += bthrift.Binary.I32Length(int32(tmpV)) * len(p.TopnFilterSourceNodeIds)
+		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
 func (p *TPipelineFragmentParams) field1000Length() int {
 	l := 0
 	if p.IsSetIsMowTable() {
@@ -21678,6 +21912,174 @@ func (p *TPipelineFragmentParamsList) FastRead(buf []byte) (int, error) {
 		case 1:
 			if fieldTypeId == thrift.LIST {
 				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 8:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField8(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 9:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField9(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 10:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 11:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField11(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 12:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField12(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 13:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField13(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -21751,6 +22153,217 @@ func (p *TPipelineFragmentParamsList) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TPipelineFragmentParamsList) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	tmp := descriptors.NewTDescriptorTable()
+	if l, err := tmp.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.DescTbl = tmp
+	return offset, nil
+}
+
+func (p *TPipelineFragmentParamsList) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := bthrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.FileScanParams = make(map[types.TPlanNodeId]*plannodes.TFileScanRangeParams, size)
+	for i := 0; i < size; i++ {
+		var _key types.TPlanNodeId
+		if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_key = v
+
+		}
+		_val := plannodes.NewTFileScanRangeParams()
+		if l, err := _val.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		p.FileScanParams[_key] = _val
+	}
+	if l, err := bthrift.Binary.ReadMapEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
+func (p *TPipelineFragmentParamsList) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	tmp := types.NewTNetworkAddress()
+	if l, err := tmp.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Coord = tmp
+	return offset, nil
+}
+
+func (p *TPipelineFragmentParamsList) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	tmp := NewTQueryGlobals()
+	if l, err := tmp.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.QueryGlobals = tmp
+	return offset, nil
+}
+
+func (p *TPipelineFragmentParamsList) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	tmp := types.NewTResourceInfo()
+	if l, err := tmp.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.ResourceInfo = tmp
+	return offset, nil
+}
+
+func (p *TPipelineFragmentParamsList) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.FragmentNumOnHost = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TPipelineFragmentParamsList) FastReadField8(buf []byte) (int, error) {
+	offset := 0
+
+	tmp := NewTQueryOptions()
+	if l, err := tmp.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.QueryOptions = tmp
+	return offset, nil
+}
+
+func (p *TPipelineFragmentParamsList) FastReadField9(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.IsNereids = v
+
+	}
+	return offset, nil
+}
+
+func (p *TPipelineFragmentParamsList) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := bthrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.WorkloadGroups = make([]*TPipelineWorkloadGroup, 0, size)
+	for i := 0; i < size; i++ {
+		_elem := NewTPipelineWorkloadGroup()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		p.WorkloadGroups = append(p.WorkloadGroups, _elem)
+	}
+	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
+func (p *TPipelineFragmentParamsList) FastReadField11(buf []byte) (int, error) {
+	offset := 0
+
+	tmp := types.NewTUniqueId()
+	if l, err := tmp.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.QueryId = tmp
+	return offset, nil
+}
+
+func (p *TPipelineFragmentParamsList) FastReadField12(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := bthrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.TopnFilterSourceNodeIds = make([]int32, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem int32
+		if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_elem = v
+
+		}
+
+		p.TopnFilterSourceNodeIds = append(p.TopnFilterSourceNodeIds, _elem)
+	}
+	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
+func (p *TPipelineFragmentParamsList) FastReadField13(buf []byte) (int, error) {
+	offset := 0
+
+	tmp := types.NewTNetworkAddress()
+	if l, err := tmp.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.RuntimeFilterMergeAddr = tmp
+	return offset, nil
+}
+
 // for compatibility
 func (p *TPipelineFragmentParamsList) FastWrite(buf []byte) int {
 	return 0
@@ -21760,7 +22373,19 @@ func (p *TPipelineFragmentParamsList) FastWriteNocopy(buf []byte, binaryWriter b
 	offset := 0
 	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "TPipelineFragmentParamsList")
 	if p != nil {
+		offset += p.fastWriteField7(buf[offset:], binaryWriter)
+		offset += p.fastWriteField9(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
+		offset += p.fastWriteField2(buf[offset:], binaryWriter)
+		offset += p.fastWriteField3(buf[offset:], binaryWriter)
+		offset += p.fastWriteField4(buf[offset:], binaryWriter)
+		offset += p.fastWriteField5(buf[offset:], binaryWriter)
+		offset += p.fastWriteField6(buf[offset:], binaryWriter)
+		offset += p.fastWriteField8(buf[offset:], binaryWriter)
+		offset += p.fastWriteField10(buf[offset:], binaryWriter)
+		offset += p.fastWriteField11(buf[offset:], binaryWriter)
+		offset += p.fastWriteField12(buf[offset:], binaryWriter)
+		offset += p.fastWriteField13(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -21772,6 +22397,18 @@ func (p *TPipelineFragmentParamsList) BLength() int {
 	l += bthrift.Binary.StructBeginLength("TPipelineFragmentParamsList")
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field4Length()
+		l += p.field5Length()
+		l += p.field6Length()
+		l += p.field7Length()
+		l += p.field8Length()
+		l += p.field9Length()
+		l += p.field10Length()
+		l += p.field11Length()
+		l += p.field12Length()
+		l += p.field13Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -21796,6 +22433,156 @@ func (p *TPipelineFragmentParamsList) fastWriteField1(buf []byte, binaryWriter b
 	return offset
 }
 
+func (p *TPipelineFragmentParamsList) fastWriteField2(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetDescTbl() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "desc_tbl", thrift.STRUCT, 2)
+		offset += p.DescTbl.FastWriteNocopy(buf[offset:], binaryWriter)
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TPipelineFragmentParamsList) fastWriteField3(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetFileScanParams() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "file_scan_params", thrift.MAP, 3)
+		mapBeginOffset := offset
+		offset += bthrift.Binary.MapBeginLength(thrift.I32, thrift.STRUCT, 0)
+		var length int
+		for k, v := range p.FileScanParams {
+			length++
+
+			offset += bthrift.Binary.WriteI32(buf[offset:], k)
+
+			offset += v.FastWriteNocopy(buf[offset:], binaryWriter)
+		}
+		bthrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.I32, thrift.STRUCT, length)
+		offset += bthrift.Binary.WriteMapEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TPipelineFragmentParamsList) fastWriteField4(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetCoord() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "coord", thrift.STRUCT, 4)
+		offset += p.Coord.FastWriteNocopy(buf[offset:], binaryWriter)
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TPipelineFragmentParamsList) fastWriteField5(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetQueryGlobals() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "query_globals", thrift.STRUCT, 5)
+		offset += p.QueryGlobals.FastWriteNocopy(buf[offset:], binaryWriter)
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TPipelineFragmentParamsList) fastWriteField6(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetResourceInfo() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "resource_info", thrift.STRUCT, 6)
+		offset += p.ResourceInfo.FastWriteNocopy(buf[offset:], binaryWriter)
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TPipelineFragmentParamsList) fastWriteField7(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetFragmentNumOnHost() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "fragment_num_on_host", thrift.I32, 7)
+		offset += bthrift.Binary.WriteI32(buf[offset:], *p.FragmentNumOnHost)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TPipelineFragmentParamsList) fastWriteField8(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetQueryOptions() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "query_options", thrift.STRUCT, 8)
+		offset += p.QueryOptions.FastWriteNocopy(buf[offset:], binaryWriter)
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TPipelineFragmentParamsList) fastWriteField9(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetIsNereids() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "is_nereids", thrift.BOOL, 9)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.IsNereids)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TPipelineFragmentParamsList) fastWriteField10(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetWorkloadGroups() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "workload_groups", thrift.LIST, 10)
+		listBeginOffset := offset
+		offset += bthrift.Binary.ListBeginLength(thrift.STRUCT, 0)
+		var length int
+		for _, v := range p.WorkloadGroups {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], binaryWriter)
+		}
+		bthrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+		offset += bthrift.Binary.WriteListEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TPipelineFragmentParamsList) fastWriteField11(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetQueryId() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "query_id", thrift.STRUCT, 11)
+		offset += p.QueryId.FastWriteNocopy(buf[offset:], binaryWriter)
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TPipelineFragmentParamsList) fastWriteField12(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTopnFilterSourceNodeIds() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "topn_filter_source_node_ids", thrift.LIST, 12)
+		listBeginOffset := offset
+		offset += bthrift.Binary.ListBeginLength(thrift.I32, 0)
+		var length int
+		for _, v := range p.TopnFilterSourceNodeIds {
+			length++
+			offset += bthrift.Binary.WriteI32(buf[offset:], v)
+
+		}
+		bthrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I32, length)
+		offset += bthrift.Binary.WriteListEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TPipelineFragmentParamsList) fastWriteField13(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetRuntimeFilterMergeAddr() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "runtime_filter_merge_addr", thrift.STRUCT, 13)
+		offset += p.RuntimeFilterMergeAddr.FastWriteNocopy(buf[offset:], binaryWriter)
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TPipelineFragmentParamsList) field1Length() int {
 	l := 0
 	if p.IsSetParamsList() {
@@ -21805,6 +22592,142 @@ func (p *TPipelineFragmentParamsList) field1Length() int {
 			l += v.BLength()
 		}
 		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TPipelineFragmentParamsList) field2Length() int {
+	l := 0
+	if p.IsSetDescTbl() {
+		l += bthrift.Binary.FieldBeginLength("desc_tbl", thrift.STRUCT, 2)
+		l += p.DescTbl.BLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TPipelineFragmentParamsList) field3Length() int {
+	l := 0
+	if p.IsSetFileScanParams() {
+		l += bthrift.Binary.FieldBeginLength("file_scan_params", thrift.MAP, 3)
+		l += bthrift.Binary.MapBeginLength(thrift.I32, thrift.STRUCT, len(p.FileScanParams))
+		for k, v := range p.FileScanParams {
+
+			l += bthrift.Binary.I32Length(k)
+
+			l += v.BLength()
+		}
+		l += bthrift.Binary.MapEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TPipelineFragmentParamsList) field4Length() int {
+	l := 0
+	if p.IsSetCoord() {
+		l += bthrift.Binary.FieldBeginLength("coord", thrift.STRUCT, 4)
+		l += p.Coord.BLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TPipelineFragmentParamsList) field5Length() int {
+	l := 0
+	if p.IsSetQueryGlobals() {
+		l += bthrift.Binary.FieldBeginLength("query_globals", thrift.STRUCT, 5)
+		l += p.QueryGlobals.BLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TPipelineFragmentParamsList) field6Length() int {
+	l := 0
+	if p.IsSetResourceInfo() {
+		l += bthrift.Binary.FieldBeginLength("resource_info", thrift.STRUCT, 6)
+		l += p.ResourceInfo.BLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TPipelineFragmentParamsList) field7Length() int {
+	l := 0
+	if p.IsSetFragmentNumOnHost() {
+		l += bthrift.Binary.FieldBeginLength("fragment_num_on_host", thrift.I32, 7)
+		l += bthrift.Binary.I32Length(*p.FragmentNumOnHost)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TPipelineFragmentParamsList) field8Length() int {
+	l := 0
+	if p.IsSetQueryOptions() {
+		l += bthrift.Binary.FieldBeginLength("query_options", thrift.STRUCT, 8)
+		l += p.QueryOptions.BLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TPipelineFragmentParamsList) field9Length() int {
+	l := 0
+	if p.IsSetIsNereids() {
+		l += bthrift.Binary.FieldBeginLength("is_nereids", thrift.BOOL, 9)
+		l += bthrift.Binary.BoolLength(p.IsNereids)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TPipelineFragmentParamsList) field10Length() int {
+	l := 0
+	if p.IsSetWorkloadGroups() {
+		l += bthrift.Binary.FieldBeginLength("workload_groups", thrift.LIST, 10)
+		l += bthrift.Binary.ListBeginLength(thrift.STRUCT, len(p.WorkloadGroups))
+		for _, v := range p.WorkloadGroups {
+			l += v.BLength()
+		}
+		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TPipelineFragmentParamsList) field11Length() int {
+	l := 0
+	if p.IsSetQueryId() {
+		l += bthrift.Binary.FieldBeginLength("query_id", thrift.STRUCT, 11)
+		l += p.QueryId.BLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TPipelineFragmentParamsList) field12Length() int {
+	l := 0
+	if p.IsSetTopnFilterSourceNodeIds() {
+		l += bthrift.Binary.FieldBeginLength("topn_filter_source_node_ids", thrift.LIST, 12)
+		l += bthrift.Binary.ListBeginLength(thrift.I32, len(p.TopnFilterSourceNodeIds))
+		var tmpV int32
+		l += bthrift.Binary.I32Length(int32(tmpV)) * len(p.TopnFilterSourceNodeIds)
+		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TPipelineFragmentParamsList) field13Length() int {
+	l := 0
+	if p.IsSetRuntimeFilterMergeAddr() {
+		l += bthrift.Binary.FieldBeginLength("runtime_filter_merge_addr", thrift.STRUCT, 13)
+		l += p.RuntimeFilterMergeAddr.BLength()
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l
