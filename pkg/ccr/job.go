@@ -330,8 +330,9 @@ func (j *Job) addExtraInfo(jobInfo []byte) ([]byte, error) {
 // Like fullSync, but only backup and restore partial of the partitions of a table.
 func (j *Job) partialSync() error {
 	type inMemoryData struct {
-		SnapshotName string                        `json:"snapshot_name"`
-		SnapshotResp *festruct.TGetSnapshotResult_ `json:"snapshot_resp"`
+		SnapshotName      string                        `json:"snapshot_name"`
+		SnapshotResp      *festruct.TGetSnapshotResult_ `json:"snapshot_resp"`
+		TableCommitSeqMap map[int64]int64               `json:"table_commit_seq_map"`
 	}
 
 	if j.progress.PartialSyncData == nil {
@@ -385,9 +386,25 @@ func (j *Job) partialSync() error {
 		}
 
 		log.Tracef("job: %.128s", snapshotResp.GetJobInfo())
+		if !snapshotResp.IsSetJobInfo() {
+			return xerror.New(xerror.Normal, "jobInfo is not set")
+		}
+
+		tableCommitSeqMap, err := ExtractTableCommitSeqMap(snapshotResp.GetJobInfo())
+		if err != nil {
+			return err
+		}
+
+		if j.SyncType == TableSync {
+			if _, ok := tableCommitSeqMap[j.Src.TableId]; !ok {
+				return xerror.Errorf(xerror.Normal, "table id %d, commit seq not found", j.Src.TableId)
+			}
+		}
+
 		inMemoryData := &inMemoryData{
-			SnapshotName: snapshotName,
-			SnapshotResp: snapshotResp,
+			SnapshotName:      snapshotName,
+			SnapshotResp:      snapshotResp,
+			TableCommitSeqMap: tableCommitSeqMap,
 		}
 		j.progress.NextSubVolatile(AddExtraInfo, inMemoryData)
 
@@ -410,6 +427,8 @@ func (j *Job) partialSync() error {
 		log.Debugf("partial sync job info size: %d, bytes: %.128s", len(jobInfoBytes), string(jobInfoBytes))
 		snapshotResp.SetJobInfo(jobInfoBytes)
 
+		// save the entire commit seq map, this value will be used in PersistRestoreInfo.
+		j.progress.TableCommitSeqMap = inMemoryData.TableCommitSeqMap
 		j.progress.NextSubCheckpoint(RestoreSnapshot, inMemoryData)
 
 	case RestoreSnapshot:
@@ -535,9 +554,14 @@ func (j *Job) partialSync() error {
 			j.progress.TableMapping[srcTableId] = destTable.Id
 			j.progress.NextWithPersist(j.progress.CommitSeq, DBTablesIncrementalSync, Done, "")
 		case TableSync:
+			commitSeq, ok := j.progress.TableCommitSeqMap[j.Src.TableId]
+			if !ok {
+				return xerror.Errorf(xerror.Normal, "table id %d, commit seq not found", j.Src.TableId)
+			}
 			j.Dest.TableId = destTable.Id
 			j.progress.TableMapping = nil
-			j.progress.NextWithPersist(j.progress.CommitSeq, TableIncrementalSync, Done, "")
+			j.progress.TableCommitSeqMap = nil
+			j.progress.NextWithPersist(commitSeq, TableIncrementalSync, Done, "")
 		default:
 			return xerror.Errorf(xerror.Normal, "invalid sync type %d", j.SyncType)
 		}
@@ -959,7 +983,8 @@ func (j *Job) getDbSyncTableRecords(upsert *record.Upsert) ([]*record.TableRecor
 				tableRecords = append(tableRecords, tableRecord)
 			}
 		} else {
-			// TODO: check
+			// for db partial sync
+			tableRecords = append(tableRecords, tableRecord)
 		}
 	}
 
