@@ -14,11 +14,16 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_table_partial_sync_cache") {
+suite("test_table_partial_sync_incremental") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
-    def tableName = "tbl_partial_sync_cache_" + UUID.randomUUID().toString().replace("-", "")
+    if (!helper.has_feature("feature_schema_change_partial_sync")) {
+        logger.info("this suite require feature_schema_change_partial_sync set to true")
+        return
+    }
+
+    def tableName = "tbl_sync_incremental_" + UUID.randomUUID().toString().replace("-", "")
     def test_num = 0
     def insert_num = 5
 
@@ -32,50 +37,16 @@ suite("test_table_partial_sync_cache") {
         }
     }
 
-    def get_ccr_name = { ccr_body_json ->
-        def jsonSlurper = new groovy.json.JsonSlurper()
-        def object = jsonSlurper.parseText "${ccr_body_json}"
-        return object.name
-    }
-
-    def get_job_progress = { ccr_name ->
-        def request_body = """ {"name":"${ccr_name}"} """
-        def get_job_progress_uri = { check_func ->
-            httpTest {
-                uri "/job_progress"
-                endpoint helper.syncerAddress
-                body request_body
-                op "post"
-                check check_func
-            }
-        }
-
-        def result = null
-        get_job_progress_uri.call() { code, body ->
-            if (!"${code}".toString().equals("200")) {
-                throw "request failed, code: ${code}, body: ${body}"
-            }
-            def jsonSlurper = new groovy.json.JsonSlurper()
-            def object = jsonSlurper.parseText "${body}"
-            if (!object.success) {
-                throw "request failed, error msg: ${object.error_msg}"
-            }
-            logger.info("job progress: ${object.job_progress}")
-            result = jsonSlurper.parseText object.job_progress
-        }
-        return result
-    }
-
     sql "DROP TABLE IF EXISTS ${tableName}"
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (
             `test` INT,
             `id` INT,
-            `value` INT
+            `value` INT SUM
         )
         ENGINE=OLAP
-        UNIQUE KEY(`test`, `id`)
+        AGGREGATE KEY(`test`, `id`)
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
@@ -92,17 +63,16 @@ suite("test_table_partial_sync_cache") {
         """
     sql "sync"
 
-    def bodyJson = get_ccr_body "${tableName}"
-    ccr_name = get_ccr_name(bodyJson)
     helper.ccrJobCreate(tableName)
-    logger.info("ccr job name: ${ccr_name}")
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", insert_num, 60))
 
-    first_job_progress = get_job_progress(ccr_name)
+    def first_job_progress = helper.get_job_progress(tableName)
 
-    logger.info("=== Test 1: add first column case ===")
+    logger.info("=== pause job, add column and insert data")
+    helper.ccrJobPause(tableName)
+
     // binlog type: ALTER_JOB, binlog data:
     //  {
     //      "type":"SCHEMA_CHANGE",
@@ -126,6 +96,12 @@ suite("test_table_partial_sync_cache") {
                                 """,
                                 has_count(1), 30))
 
+    sql "INSERT INTO ${tableName} VALUES (123, 123, 123, 1)"
+    sql "INSERT INTO ${tableName} VALUES (123, 123, 123, 2)"
+    sql "INSERT INTO ${tableName} VALUES (123, 123, 123, 3)"
+
+    helper.ccrJobResume(tableName)
+
     def has_column_first = { res -> Boolean
         // Field == 'first' && 'Key' == 'YES'
         return res[0][0] == 'first' && (res[0][3] == 'YES' || res[0][3] == 'true')
@@ -133,14 +109,16 @@ suite("test_table_partial_sync_cache") {
 
     assertTrue(helper.checkShowTimesOf("SHOW COLUMNS FROM `${tableName}`", has_column_first, 60, "target_sql"))
 
-    sql "INSERT INTO ${tableName} VALUES (123, 123, 123, 123)"
-
-    // cache must be clear and reload.
+    logger.info("the aggregate keys inserted should be synced accurately")
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", insert_num + 1, 60))
+    def last_record = target_sql "SELECT value FROM ${tableName} WHERE id = 123 AND test = 123"
+    logger.info("last record is ${last_record}")
+    assertTrue(last_record.size() == 1 && last_record[0][0] == 6)
 
     // no full sync triggered.
-    last_job_progress = get_job_progress(ccr_name)
+    def last_job_progress = helper.get_job_progress(tableName)
     assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
 }
+
 
 

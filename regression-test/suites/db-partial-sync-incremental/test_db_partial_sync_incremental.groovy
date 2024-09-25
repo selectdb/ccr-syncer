@@ -14,11 +14,17 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_filter_dropped_indexes") {
+suite("test_db_partial_sync_incremental") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
-    def tableName = "tbl_filter_dropped_indexes_" + UUID.randomUUID().toString().replace("-", "")
+    if (!helper.has_feature("feature_schema_change_partial_sync")) {
+        logger.info("this suite require feature_schema_change_partial_sync set to true")
+        return
+    }
+
+    def tableName = "tbl_sync_incremental_" + UUID.randomUUID().toString().replace("-", "")
+    def tableName1 = "tbl_sync_incremental_1_" + UUID.randomUUID().toString().replace("-", "")
     def test_num = 0
     def insert_num = 5
 
@@ -32,16 +38,33 @@ suite("test_filter_dropped_indexes") {
         }
     }
 
+    helper.enableDbBinlog()
     sql "DROP TABLE IF EXISTS ${tableName}"
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (
             `test` INT,
             `id` INT,
-            `value` INT
+            `value` INT SUM
         )
         ENGINE=OLAP
-        UNIQUE KEY(`test`, `id`)
+        AGGREGATE KEY(`test`, `id`)
+        DISTRIBUTED BY HASH(id) BUCKETS 1
+        PROPERTIES (
+            "replication_allocation" = "tag.location.default: 1",
+            "binlog.enable" = "true"
+        )
+    """
+    sql "DROP TABLE IF EXISTS ${tableName1}"
+    sql """
+        CREATE TABLE if NOT EXISTS ${tableName1}
+        (
+            `test` INT,
+            `id` INT,
+            `value` INT SUM
+        )
+        ENGINE=OLAP
+        AGGREGATE KEY(`test`, `id`)
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
@@ -56,21 +79,22 @@ suite("test_filter_dropped_indexes") {
     sql """
         INSERT INTO ${tableName} VALUES ${values.join(",")}
         """
+    sql """
+        INSERT INTO ${tableName1} VALUES ${values.join(",")}
+        """
     sql "sync"
 
-    helper.ccrJobCreate(tableName)
+    helper.ccrJobCreate()
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", insert_num, 60))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName1}", insert_num, 60))
 
-    logger.info("=== pause job, insert data and issue schema change ===")
+    def first_job_progress = helper.get_job_progress()
 
-    helper.ccrJobPause(tableName)
-    sql "INSERT INTO ${tableName} VALUES (100, 100, 100)"
-    sql "INSERT INTO ${tableName} VALUES (101, 101, 101)"
-    sql "INSERT INTO ${tableName} VALUES (102, 102, 102)"
+    logger.info("=== pause job, add column and insert data")
+    helper.ccrJobPause()
 
-    logger.info("=== add first column ===")
     // binlog type: ALTER_JOB, binlog data:
     //  {
     //      "type":"SCHEMA_CHANGE",
@@ -94,10 +118,14 @@ suite("test_filter_dropped_indexes") {
                                 """,
                                 has_count(1), 30))
 
-    def first_job_progress = helper.get_job_progress(tableName)
+    sql "INSERT INTO ${tableName} VALUES (123, 123, 123, 1)"
+    sql "INSERT INTO ${tableName} VALUES (123, 123, 123, 2)"
+    sql "INSERT INTO ${tableName} VALUES (123, 123, 123, 3)"
+    sql "INSERT INTO ${tableName1} VALUES (123, 123, 1)"
+    sql "INSERT INTO ${tableName1} VALUES (123, 123, 2)"
+    sql "INSERT INTO ${tableName1} VALUES (123, 123, 3)"
 
-    logger.info("resume ccr job and wait sync job")
-    helper.ccrJobResume(tableName)
+    helper.ccrJobResume()
 
     def has_column_first = { res -> Boolean
         // Field == 'first' && 'Key' == 'YES'
@@ -106,15 +134,22 @@ suite("test_filter_dropped_indexes") {
 
     assertTrue(helper.checkShowTimesOf("SHOW COLUMNS FROM `${tableName}`", has_column_first, 60, "target_sql"))
 
-    sql "INSERT INTO ${tableName} VALUES (123, 123, 123, 123)"
+    logger.info("the aggregate keys inserted should be synced accurately")
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", insert_num + 1, 60))
+    def last_record = target_sql "SELECT value FROM ${tableName} WHERE id = 123 AND test = 123"
+    logger.info("last record is ${last_record}")
+    assertTrue(last_record.size() == 1 && last_record[0][0] == 6)
 
-    // cache must be clear and reload.
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", insert_num + 4, 60))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName1}", insert_num + 1, 60))
+    last_record = target_sql "SELECT value FROM ${tableName1} WHERE id = 123 AND test = 123"
+    logger.info("last record of table ${tableName1} is ${last_record}")
+    assertTrue(last_record.size() == 1 && last_record[0][0] == 6)
 
     // no full sync triggered.
-    def last_job_progress = helper.get_job_progress(tableName)
+    def last_job_progress = helper.get_job_progress()
     assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
 }
+
 
 
 
