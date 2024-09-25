@@ -51395,6 +51395,20 @@ func (p *TGetMetaDBMeta) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 6:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -51543,6 +51557,36 @@ func (p *TGetMetaDBMeta) FastReadField5(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TGetMetaDBMeta) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := bthrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.DroppedIndexes = make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem int64
+		if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_elem = v
+
+		}
+
+		p.DroppedIndexes = append(p.DroppedIndexes, _elem)
+	}
+	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TGetMetaDBMeta) FastWrite(buf []byte) int {
 	return 0
@@ -51557,6 +51601,7 @@ func (p *TGetMetaDBMeta) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binary
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
+		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -51572,6 +51617,7 @@ func (p *TGetMetaDBMeta) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field6Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -51656,6 +51702,25 @@ func (p *TGetMetaDBMeta) fastWriteField5(buf []byte, binaryWriter bthrift.Binary
 	return offset
 }
 
+func (p *TGetMetaDBMeta) fastWriteField6(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetDroppedIndexes() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "dropped_indexes", thrift.LIST, 6)
+		listBeginOffset := offset
+		offset += bthrift.Binary.ListBeginLength(thrift.I64, 0)
+		var length int
+		for _, v := range p.DroppedIndexes {
+			length++
+			offset += bthrift.Binary.WriteI64(buf[offset:], v)
+
+		}
+		bthrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I64, length)
+		offset += bthrift.Binary.WriteListEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TGetMetaDBMeta) field1Length() int {
 	l := 0
 	if p.IsSetId() {
@@ -51712,6 +51777,19 @@ func (p *TGetMetaDBMeta) field5Length() int {
 		l += bthrift.Binary.ListBeginLength(thrift.I64, len(p.DroppedTables))
 		var tmpV int64
 		l += bthrift.Binary.I64Length(int64(tmpV)) * len(p.DroppedTables)
+		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TGetMetaDBMeta) field6Length() int {
+	l := 0
+	if p.IsSetDroppedIndexes() {
+		l += bthrift.Binary.FieldBeginLength("dropped_indexes", thrift.LIST, 6)
+		l += bthrift.Binary.ListBeginLength(thrift.I64, len(p.DroppedIndexes))
+		var tmpV int64
+		l += bthrift.Binary.I64Length(int64(tmpV)) * len(p.DroppedIndexes)
 		l += bthrift.Binary.ListEndLength()
 		l += bthrift.Binary.FieldEndLength()
 	}

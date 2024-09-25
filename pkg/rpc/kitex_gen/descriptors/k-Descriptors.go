@@ -10436,6 +10436,34 @@ func (p *TMCTable) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 9:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField9(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -10575,6 +10603,32 @@ func (p *TMCTable) FastReadField8(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TMCTable) FastReadField9(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.Endpoint = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TMCTable) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.Quota = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TMCTable) FastWrite(buf []byte) int {
 	return 0
@@ -10592,6 +10646,8 @@ func (p *TMCTable) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWriter
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 		offset += p.fastWriteField7(buf[offset:], binaryWriter)
 		offset += p.fastWriteField8(buf[offset:], binaryWriter)
+		offset += p.fastWriteField9(buf[offset:], binaryWriter)
+		offset += p.fastWriteField10(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -10610,6 +10666,8 @@ func (p *TMCTable) BLength() int {
 		l += p.field6Length()
 		l += p.field7Length()
 		l += p.field8Length()
+		l += p.field9Length()
+		l += p.field10Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -10704,6 +10762,28 @@ func (p *TMCTable) fastWriteField8(buf []byte, binaryWriter bthrift.BinaryWriter
 	return offset
 }
 
+func (p *TMCTable) fastWriteField9(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetEndpoint() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "endpoint", thrift.STRING, 9)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.Endpoint)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TMCTable) fastWriteField10(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetQuota() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "quota", thrift.STRING, 10)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.Quota)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TMCTable) field1Length() int {
 	l := 0
 	if p.IsSetRegion() {
@@ -10786,6 +10866,28 @@ func (p *TMCTable) field8Length() int {
 	if p.IsSetTunnelUrl() {
 		l += bthrift.Binary.FieldBeginLength("tunnel_url", thrift.STRING, 8)
 		l += bthrift.Binary.StringLengthNocopy(*p.TunnelUrl)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TMCTable) field9Length() int {
+	l := 0
+	if p.IsSetEndpoint() {
+		l += bthrift.Binary.FieldBeginLength("endpoint", thrift.STRING, 9)
+		l += bthrift.Binary.StringLengthNocopy(*p.Endpoint)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TMCTable) field10Length() int {
+	l := 0
+	if p.IsSetQuota() {
+		l += bthrift.Binary.FieldBeginLength("quota", thrift.STRING, 10)
+		l += bthrift.Binary.StringLengthNocopy(*p.Quota)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
