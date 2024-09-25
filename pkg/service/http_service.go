@@ -655,7 +655,7 @@ func (s *HttpService) featuresHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	type flagListResult struct {
 		*defaultResult
-		Flags []flagValue
+		Flags []flagValue `json:"flags"`
 	}
 
 	var result flagListResult
@@ -663,7 +663,6 @@ func (s *HttpService) featuresHandler(w http.ResponseWriter, r *http.Request) {
 	defer func() { writeJson(w, &result) }()
 
 	flag.VisitAll(func(flag *flag.Flag) {
-		fmt.Printf("Flag %s\n", flag.Name)
 		if !strings.HasPrefix(flag.Name, "feature") {
 			return
 		}
