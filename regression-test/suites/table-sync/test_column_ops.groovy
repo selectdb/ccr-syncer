@@ -102,6 +102,11 @@ suite("test_column_ops") {
 //     assertTrue(checkSelectRowTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
 //                                       1, 30))
 
+    def versions = sql_return_maparray "show variables like 'version_comment'"
+    if (versions[0].Value.contains('doris-2.0.') || versions[0].Value.contains('doris-2.1')) {
+        logger.info("2.0/2.1 not support rename column, current version is: ${versions[0].Value}")
+        return
+    }
 
     logger.info("=== Test 4: rename column case ===")
     test_num = 4
@@ -113,10 +118,8 @@ suite("test_column_ops") {
         INSERT INTO ${tableName} VALUES (${test_num}, 0, "666")
         """
     sql "sync"
-    assertTrue(helper.checkSelectRowTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
-        1, 30))
-    assertTrue(helper.checkSelectRowTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num} AND _cost='666'",
-        1, 1))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}", 1, 30))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num} AND _cost='666'", 1, 1))
 
 
     logger.info("=== Test 5: drop column case ===")
