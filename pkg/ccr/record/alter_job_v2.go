@@ -10,16 +10,23 @@ import (
 const (
 	ALTER_JOB_SCHEMA_CHANGE = "SCHEMA_CHANGE"
 	ALTER_JOB_ROLLUP        = "ROLLUP"
+
+	ALTER_JOB_STATE_PENDING     = "PENDING"
+	ALTER_JOB_STATE_WAITING_TXN = "WAITING_TXN"
+	ALTER_JOB_STATE_RUNNING     = "RUNNING"
+	ALTER_JOB_STATE_FINISHED    = "FINISHED"
+	ALTER_JOB_STATE_CANCELLED   = "CANCELLED"
 )
 
 type AlterJobV2 struct {
-	Type      string `json:"type"`
-	DbId      int64  `json:"dbId"`
-	TableId   int64  `json:"tableId"`
-	TableName string `json:"tableName"`
-	JobId     int64  `json:"jobId"`
-	JobState  string `json:"jobState"`
-	RawSql    string `json:"rawSql"`
+	Type          string          `json:"type"`
+	DbId          int64           `json:"dbId"`
+	TableId       int64           `json:"tableId"`
+	TableName     string          `json:"tableName"`
+	JobId         int64           `json:"jobId"`
+	JobState      string          `json:"jobState"`
+	RawSql        string          `json:"rawSql"`
+	ShadowIndexes map[int64]int64 `json:"iim"`
 }
 
 func NewAlterJobV2FromJson(data string) (*AlterJobV2, error) {
@@ -47,7 +54,7 @@ func NewAlterJobV2FromJson(data string) (*AlterJobV2, error) {
 }
 
 func (a *AlterJobV2) IsFinished() bool {
-	return a.JobState == "FINISHED"
+	return a.JobState == ALTER_JOB_STATE_FINISHED
 }
 
 // Stringer
