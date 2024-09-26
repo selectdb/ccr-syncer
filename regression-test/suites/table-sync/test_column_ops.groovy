@@ -113,9 +113,9 @@ suite("test_column_ops") {
         INSERT INTO ${tableName} VALUES (${test_num}, 0, "666")
         """
     sql "sync"
-    assertTrue(checkSelectRowTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
+    assertTrue(helper.checkSelectRowTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}",
         1, 30))
-    assertTrue(checkSelectRowTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num} AND _cost='666'",
+    assertTrue(helper.checkSelectRowTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num} AND _cost='666'",
         1, 1))
 
 
