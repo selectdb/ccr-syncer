@@ -230,7 +230,10 @@ suite("test_db_sync_schema_change") {
     assertTrue(helper.checkShowTimesOf("SHOW COLUMNS FROM `${tableName}`", has_column_last_value, 60, "target_sql"))
 
     // no full sync triggered.
-    last_job_progress = get_job_progress(ccr_name)
-    assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
+    if (helper.has_feature("feature_schema_change_partial_sync")) {
+        // no full sync triggered.
+        last_job_progress = get_job_progress(ccr_name)
+        assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
+    }
 }
 
