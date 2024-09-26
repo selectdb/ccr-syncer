@@ -21,7 +21,6 @@ suite("test_keyword_name") {
 
     def tableName = "roles"
     def newTableName = "test-hyphen"
-    def syncerAddress = "127.0.0.1:9190"
     def test_num = 0
     def insert_num = 5
     def opPartitonName = "less0"
@@ -68,7 +67,6 @@ suite("test_keyword_name") {
             "binlog.enable" = "true"
         );
     """ 
-    // sql """ALTER TABLE ${tableName} set ("binlog.enable" = "true")"""
 
     sql """
         INSERT INTO `${tableName}` VALUES
@@ -95,15 +93,9 @@ suite("test_keyword_name") {
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
 
-    httpTest {
-        uri "/create_ccr"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body "${newTableName}"
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
-    assertTrue(checkRestoreFinishTimesOf("${newTableName}", 30))
+    helper.ccrJobDelete(newTableName)
+    helper.ccrJobCreate(newTableName)
+    assertTrue(helper.checkRestoreFinishTimesOf("${newTableName}", 30))
 
     logger.info("=== Test 1: Check keyword name table ===")
     // def checkShowTimesOf = { sqlString, myClosure, times, func = "sql" -> Boolean
@@ -112,10 +104,10 @@ suite("test_keyword_name") {
                                 """,
                                 exist, 30, "target"))
 
-    assertTrue(checkShowTimesOf("""
+    assertTrue(helper.checkShowTimesOf("""
                                 SHOW CREATE TABLE `TEST_${context.dbName}`.`${newTableName}`
                                 """,
-                                exist, 30, "target"))                                
+                                exist, 30, "target"))
 
     logger.info("=== Test 2: Add new partition ===")
     sql """
