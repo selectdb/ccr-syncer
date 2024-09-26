@@ -381,6 +381,11 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 		if j.srcMeta.IsIndexDropped(indexId) {
 			continue
 		}
+		if featureFilterShadowIndexesUpsert {
+			if _, ok := j.ccrJob.progress.ShadowIndexes[indexId]; ok {
+				continue
+			}
+		}
 		srcIndexMeta, ok := srcIndexIdMap[indexId]
 		if !ok {
 			j.setError(xerror.Errorf(xerror.Meta, "index id %v not found in src meta", indexId))
@@ -406,6 +411,12 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 		if j.srcMeta.IsIndexDropped(indexId) {
 			log.Infof("skip the dropped index %d", indexId)
 			continue
+		}
+		if featureFilterShadowIndexesUpsert {
+			if _, ok := j.ccrJob.progress.ShadowIndexes[indexId]; ok {
+				log.Infof("skip the shadow index %d", indexId)
+				continue
+			}
 		}
 
 		srcIndexMeta := srcIndexIdMap[indexId]

@@ -41,6 +41,7 @@ var (
 	featureAtomicRestore              bool
 	featureCreateViewDropExists       bool
 	featureReplaceNotMatchedWithAlias bool
+	featureFilterShadowIndexesUpsert  bool
 )
 
 func init() {
@@ -56,6 +57,8 @@ func init() {
 		"drop the exists view if exists, when sync the creating view binlog")
 	flag.BoolVar(&featureReplaceNotMatchedWithAlias, "feature_replace_not_matched_with_alias", false,
 		"replace signature not matched tables with table alias during the full sync")
+	flag.BoolVar(&featureFilterShadowIndexesUpsert, "feature_filter_shadow_indexes_upsert", false,
+		"filter the upsert to the shadow indexes")
 }
 
 type SyncType int
@@ -887,6 +890,7 @@ func (j *Job) fullSync() error {
 			}
 
 			j.progress.TableMapping = tableMapping
+			j.progress.ShadowIndexes = nil
 			j.progress.NextWithPersist(j.progress.CommitSeq, DBTablesIncrementalSync, Done, "")
 		case TableSync:
 			if destTable, err := j.destMeta.UpdateTable(j.Dest.Table, 0); err != nil {
@@ -901,6 +905,7 @@ func (j *Job) fullSync() error {
 
 			j.progress.TableCommitSeqMap = nil
 			j.progress.TableMapping = nil
+			j.progress.ShadowIndexes = nil
 			j.progress.NextWithPersist(j.progress.CommitSeq, TableIncrementalSync, Done, "")
 		default:
 			return xerror.Errorf(xerror.Normal, "invalid sync type %d", j.SyncType)
@@ -1459,6 +1464,24 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 	}
 
 	if !alterJob.IsFinished() {
+		switch alterJob.JobState {
+		case record.ALTER_JOB_STATE_PENDING:
+			// Once the schema change step to WAITING_TXN, the upsert to the shadow indexes is allowed,
+			// but the dest indexes of the downstream cluster hasn't been created.
+			//
+			// To filter the upsert to the shadow indexes, save the shadow index ids here.
+			if j.progress.ShadowIndexes == nil {
+				j.progress.ShadowIndexes = make(map[int64]int64)
+			}
+			for shadowIndexId, originIndexId := range alterJob.ShadowIndexes {
+				j.progress.ShadowIndexes[shadowIndexId] = originIndexId
+			}
+		case record.ALTER_JOB_STATE_CANCELLED:
+			// clear the shadow indexes
+			for shadowIndexId := range alterJob.ShadowIndexes {
+				delete(j.progress.ShadowIndexes, shadowIndexId)
+			}
+		}
 		return nil
 	}
 
@@ -1471,6 +1494,11 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 	}
 
 	if featureSchemaChangePartialSync && alterJob.Type == record.ALTER_JOB_SCHEMA_CHANGE {
+		// Once partial snapshot finished, the shadow indexes will be convert to normal indexes.
+		for shadowIndexId := range alterJob.ShadowIndexes {
+			delete(j.progress.ShadowIndexes, shadowIndexId)
+		}
+
 		replaceTable := true
 		return j.newPartialSnapshot(alterJob.TableName, nil, replaceTable)
 	}
