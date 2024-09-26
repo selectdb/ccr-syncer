@@ -1,10 +1,15 @@
 # 更新日志
 
-## dev
+## 2.0.15/2.1.6
 
 ### Fix
 
+- 修复 `REPLACE_IF_NOT_NULL` 语句的默认值语法不兼容问题 (selectdb/ccr-syncer#180)
+- 修复 table sync 下 partial snapshot 没有更新 dest table id 的问题 (selectdb/ccr-syncer#178)
+- **修复 table sync with alias 时，lightning schema change 找不到 table 的问题** (selectdb/ccr-syncer#176)
+- 修复 db sync 下 partial snapshot table 为空的问题 (selectdb/ccr-syncer#173)
 - 修复 create table 时下游 view 已经存在的问题（先删除 view），feature gate: `feature_create_view_drop_exists` (selectdb/ccr-syncer#170,selectdb/ccr-syncer#171)
+- 修复 table not found 时没有 rollback binlog 的问题
 - **修复下游删表后重做 snapshot 是 table mapping 过期的问题 (selectdb/ccr-syncer#162,selectdb/ccr-syncer#163,selectdb/ccr-syncer#164)**
 - 修复 full sync 期间 view already exists 的问题，如果 signature 不匹配会先删除 (selectdb/ccr-syncer#152)
 - 修复 2.0 中 get view 逻辑，兼容 default_cluster 语法 (selectdb/ccr-syncer#149)
@@ -16,6 +21,8 @@
 
 ### Feature
 
+- 增加 `/force_fullsync` 用于强制触发 fullsync (selectdb/ccr-syncer#167)
+- 增加 `/features` 接口，用于列出当前有哪些 feature 以及是否打开 (selectdb/ccr-syncer#175)
 - 支持同步 drop view（drop table 失败后使用 drop view 重试）(selectdb/ccr-syncer#169)
 - 支持 atomic restore (selectdb/ccr-syncer#166)
 - 支持同步 rename 操作 (selectdb/ccr-syncer#147)
@@ -26,6 +33,7 @@
 
 ### Improve
 
+- 日志输出 milliseconds (selectdb/ccr-syncer#182)
 - 如果下游表的 schema 不一致，则将表移动到 RecycleBin 中（之前是强制删除）(selectdb/ccr-syncer#137)
 
 ## 2.0.14/2.1.5
