@@ -41,7 +41,7 @@ var (
 )
 
 func init() {
-	flag.BoolVar(&featureSchemaChangePartialSync, "feature_schema_change_partial_sync", true,
+	flag.BoolVar(&featureSchemaChangePartialSync, "feature_schema_change_partial_sync", false,
 		"use partial sync when working with schema change")
 
 	// The default value is false, since clean tables will erase views unexpectedly.
