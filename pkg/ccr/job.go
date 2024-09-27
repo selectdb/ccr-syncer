@@ -1272,8 +1272,6 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	log.Infof("walter get table name by id %d name '%s'", createTable.TableId, srcTableName)
-
 	if len(srcTableName) == 0 {
 		// The table is not found in upstream, try read it from the binlog record,
 		// but it might failed because the `tableName` field is added after doris 2.0.3.
