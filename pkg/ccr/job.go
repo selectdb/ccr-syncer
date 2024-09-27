@@ -1272,6 +1272,20 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
+	log.Infof("walter get table name by id %d name '%s'", createTable.TableId, srcTableName)
+
+	if len(srcTableName) == 0 {
+		// The table is not found in upstream, try read it from the binlog record,
+		// but it might failed because the `tableName` field is added after doris 2.0.3.
+		srcTableName = strings.TrimSpace(createTable.TableName)
+		if len(srcTableName) == 0 {
+			return xerror.Errorf(xerror.Normal, "the table with id %d is not found in the upstream cluster, create table: %s",
+				createTable.TableId, createTable.String())
+		}
+		log.Infof("the table id %d is not found in the upstream, use the name %s from the binlog record",
+			createTable.TableId, srcTableName)
+	}
+
 	var destTableId int64
 	destTableId, err = j.destMeta.GetTableId(srcTableName)
 	if err != nil {

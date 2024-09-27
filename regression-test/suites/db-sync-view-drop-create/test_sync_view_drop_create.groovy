@@ -46,6 +46,8 @@ suite("test_sync_view_drop_create") {
 
     def suffix = UUID.randomUUID().toString().replace("-", "")
     def tableDuplicate0 = "tbl_duplicate_0_${suffix}"
+    sql """ DROP VIEW IF EXISTS view_test_${suffix} """
+    sql """ DROP VIEW IF EXISTS view_test_1_${suffix} """
     createDuplicateTable(tableDuplicate0)
     sql """
         INSERT INTO ${tableDuplicate0} VALUES
@@ -97,5 +99,31 @@ suite("test_sync_view_drop_create") {
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate0}", 8, 50))
     def view_size = target_sql "SHOW VIEW FROM ${tableDuplicate0}"
     assertTrue(view_size.size() == 1);
+
+    // pause and create again, so create view will query the upstream to found table name.
+    helper.ccrJobPause()
+
+    sql """
+        CREATE VIEW view_test_1_${suffix} (k1, name,  v1)
+        AS
+        SELECT user_id as k1, name,  SUM(age) FROM ${tableDuplicate0}
+        GROUP BY k1,name;
+    """
+    sql """ DROP VIEW view_test_1_${suffix} """
+
+    helper.ccrJobResume()
+
+    // insert will be sync.
+    sql """
+        INSERT INTO ${tableDuplicate0} VALUES
+            (6, "Zhangsan", 31),
+            (5, "Ava", 20);
+        """
+    sql "sync"
+
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate0}", 10, 50))
+    view_size = target_sql "SHOW VIEW FROM ${tableDuplicate0}"
+    assertTrue(view_size.size() == 1);
+
 }
 
