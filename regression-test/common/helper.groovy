@@ -279,40 +279,6 @@ class Helper {
         }
         return result
     }
-
-    // test whether the ccr syncer has set a feature flag?
-    Boolean has_feature(name) {
-        def features_uri = { check_func ->
-            suite.httpTest {
-                uri "/features"
-                endpoint syncerAddress
-                body ""
-                op "get"
-                check check_func
-            }
-        }
-
-        def result = null
-        features_uri.call() { code, body ->
-            if (!"${code}".toString().equals("200")) {
-                throw "request failed, code: ${code}, body: ${body}"
-            }
-            def jsonSlurper = new groovy.json.JsonSlurper()
-            def object = jsonSlurper.parseText "${body}"
-            if (!object.success) {
-                throw "request failed, error msg: ${object.error_msg}"
-            }
-            suite.logger.info("features: ${object.flags}")
-            result = object.flags
-        }
-
-        for (def flag in result) {
-            if (flag.feature == name && flag.value) {
-                return true
-            }
-        }
-        return false
-    }
 }
 
 new Helper(suite)
