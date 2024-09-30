@@ -1,5 +1,25 @@
 # 更新日志
 
+## dev
+
+### Fix
+
+- 修复 table name 中带 `-` 无法同步的问题 (selectdb/ccr-syncer#168)
+- 修复部分同步下可能同步多次增量数据的问题 (selectdb/ccr-syncer#186)
+- 修复 create 又立即 drop 的情况下无法找到 table 的问题 (selectdb/ccr-syncer#188)
+
+### Feature
+
+- 支持 atomic restore，全量同步期间下游仍然可读 (selectdb/ccr-syncer#166)
+
+### Improve
+
+- 支持同步 rename column，需要 doris xxxx (selectdb/ccr-syncer#139)
+- 支持在全量同步过程中，遇到 table signature 不匹配时，使用 alias 替代 drop (selectdb/ccr-syncer#179)
+- 增加 monitor，在日志中 dump 内存使用率 (selectdb/ccr-syncer#181)
+- 过滤 schema change 删除的 indexes，避免全量同步 (selectdb/ccr-syncer#185)
+- 过滤 schema change 创建的 shadow indexes 的更新，避免全量同步 (selectdb/ccr-syncer#187)
+
 ## 2.0.15/2.1.6
 
 ### Fix
@@ -24,7 +44,6 @@
 - 增加 `/force_fullsync` 用于强制触发 fullsync (selectdb/ccr-syncer#167)
 - 增加 `/features` 接口，用于列出当前有哪些 feature 以及是否打开 (selectdb/ccr-syncer#175)
 - 支持同步 drop view（drop table 失败后使用 drop view 重试）(selectdb/ccr-syncer#169)
-- 支持 atomic restore (selectdb/ccr-syncer#166)
 - 支持同步 rename 操作 (selectdb/ccr-syncer#147)
 - schema change 使用 partial sync 而不是 fullsync (selectdb/ccr-syncer#151)
 - partial sync 使用 rename 而不是直接修改 table，因此表的读写在同步过程中不受影响 (selectdb/ccr-syncer#148)
