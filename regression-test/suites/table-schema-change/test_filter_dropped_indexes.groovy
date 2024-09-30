@@ -111,9 +111,11 @@ suite("test_filter_dropped_indexes") {
     // cache must be clear and reload.
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", insert_num + 4, 60))
 
-    // no full sync triggered.
-    def last_job_progress = helper.get_job_progress(tableName)
-    assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
+    if (helper.has_feature("feature_schema_change_partial_sync")) {
+        // no full sync triggered.
+        def last_job_progress = helper.get_job_progress(tableName)
+        assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
+    }
 }
 
 
