@@ -51,7 +51,7 @@ func init() {
 	// The default value is false, since clean tables will erase views unexpectedly.
 	flag.BoolVar(&featureCleanTableAndPartitions, "feature_clean_table_and_partitions", false,
 		"clean non restored tables and partitions during fullsync")
-	flag.BoolVar(&featureAtomicRestore, "feature_atomic_restore", true,
+	flag.BoolVar(&featureAtomicRestore, "feature_atomic_restore", false,
 		"replace tables in atomic during fullsync (otherwise the dest table will not be able to read).")
 	flag.BoolVar(&featureCreateViewDropExists, "feature_create_view_drop_exists", true,
 		"drop the exists view if exists, when sync the creating view binlog")
