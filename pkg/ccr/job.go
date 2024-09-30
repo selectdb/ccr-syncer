@@ -51,13 +51,13 @@ func init() {
 	// The default value is false, since clean tables will erase views unexpectedly.
 	flag.BoolVar(&featureCleanTableAndPartitions, "feature_clean_table_and_partitions", false,
 		"clean non restored tables and partitions during fullsync")
-	flag.BoolVar(&featureAtomicRestore, "feature_atomic_restore", false,
+	flag.BoolVar(&featureAtomicRestore, "feature_atomic_restore", true,
 		"replace tables in atomic during fullsync (otherwise the dest table will not be able to read).")
 	flag.BoolVar(&featureCreateViewDropExists, "feature_create_view_drop_exists", true,
 		"drop the exists view if exists, when sync the creating view binlog")
-	flag.BoolVar(&featureReplaceNotMatchedWithAlias, "feature_replace_not_matched_with_alias", false,
+	flag.BoolVar(&featureReplaceNotMatchedWithAlias, "feature_replace_not_matched_with_alias", true,
 		"replace signature not matched tables with table alias during the full sync")
-	flag.BoolVar(&featureFilterShadowIndexesUpsert, "feature_filter_shadow_indexes_upsert", false,
+	flag.BoolVar(&featureFilterShadowIndexesUpsert, "feature_filter_shadow_indexes_upsert", true,
 		"filter the upsert to the shadow indexes")
 }
 
