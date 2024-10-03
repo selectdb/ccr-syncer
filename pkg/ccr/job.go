@@ -947,6 +947,47 @@ func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*
 	return ingestBinlogJob.CommitInfos(), nil
 }
 
+// Table ingestBinlog for txn insert
+func (j *Job) ingestBinlogForTxnInsert(txnId int64, tableRecords []*record.TableRecord, stidMap map[int64]int64, destTableId int64) ([]*festruct.TSubTxnInfo, error) {
+	log.Infof("ingestBinlogForTxnInsert, txnId: %d", txnId)
+
+	job, err := j.jobFactory.CreateJob(NewIngestContextForTxnInsert(txnId, tableRecords, j.progress.TableMapping, stidMap), j, "IngestBinlog")
+	if err != nil {
+		return nil, err
+	}
+
+	ingestBinlogJob, ok := job.(*IngestBinlogJob)
+	if !ok {
+		return nil, xerror.Errorf(xerror.Normal, "invalid job type, job: %+v", job)
+	}
+
+	job.Run()
+	if err := job.Error(); err != nil {
+		return nil, err
+	}
+
+	stidToCommitInfos := ingestBinlogJob.SubTxnToCommitInfos()
+	subTxnInfos := make([]*festruct.TSubTxnInfo, 0, len(stidMap))
+	for sourceStid, destStid := range stidMap {
+		destStid := destStid // if no this line, every element in subTxnInfos is the last tSubTxnInfo
+		commitInfos := stidToCommitInfos[destStid]
+		if commitInfos == nil {
+			noCommitInfoErr := xerror.Errorf(xerror.Normal, "no commit infos from source stid: %d; dest stid %d", sourceStid, destStid)
+			return nil, noCommitInfoErr
+		}
+
+		tSubTxnInfo := &festruct.TSubTxnInfo{
+			SubTxnId:          &destStid,
+			TableId:           &destTableId,
+			TabletCommitInfos: commitInfos,
+		}
+
+		subTxnInfos = append(subTxnInfos, tSubTxnInfo)
+	}
+
+	return subTxnInfos, nil
+}
+
 func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 	log.Infof("handle upsert binlog, sub sync state: %s, prevCommitSeq: %d, commitSeq: %d",
 		j.progress.SubSyncState, j.progress.PrevCommitSeq, j.progress.CommitSeq)
@@ -958,6 +999,10 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		DestTableIds []int64                     `json:"dest_table_ids"`
 		TableRecords []*record.TableRecord       `json:"table_records"`
 		CommitInfos  []*ttypes.TTabletCommitInfo `json:"commit_infos"`
+		IsTxnInsert  bool                        `json:"is_txn_insert"`
+		SourceStids  []int64                     `json:"source_stid"`
+		DestStids    []int64                     `json:"desc_stid"`
+		SubTxnInfos  []*festruct.TSubTxnInfo     `json:"sub_txn_infos"`
 	}
 
 	updateInMemory := func() error {
@@ -1016,6 +1061,11 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		log.Debugf("upsert: %v", upsert)
 
 		// Step 1: get related tableRecords
+		var isTxnInsert bool = false
+		if len(upsert.Stids) > 0 {
+			isTxnInsert = true
+		}
+
 		tableRecords, err := j.getReleatedTableRecords(upsert)
 		if err != nil {
 			log.Errorf("get related table records failed, err: %+v", err)
@@ -1042,6 +1092,8 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			CommitSeq:    upsert.CommitSeq,
 			DestTableIds: destTableIds,
 			TableRecords: tableRecords,
+			IsTxnInsert:  isTxnInsert,
+			SourceStids:  upsert.Stids,
 		}
 		j.progress.NextSubVolatile(BeginTransaction, inMemoryData)
 
@@ -1049,6 +1101,8 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		// Step 2: begin txn
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
 		commitSeq := inMemoryData.CommitSeq
+		sourceStids := inMemoryData.SourceStids
+		isTxnInsert := inMemoryData.IsTxnInsert
 		log.Debugf("begin txn, dest: %v, commitSeq: %d", dest, commitSeq)
 
 		destRpc, err := j.factory.NewFeRpc(dest)
@@ -1058,7 +1112,14 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 
 		label := j.newLabel(commitSeq)
 
-		beginTxnResp, err := destRpc.BeginTransaction(dest, label, inMemoryData.DestTableIds)
+		var beginTxnResp *festruct.TBeginTxnResult_
+		if isTxnInsert {
+			// when txn insert, give an array length in BeginTransaction, it will return a list of stid
+			beginTxnResp, err = destRpc.BeginTransactionForTxnInsert(dest, label, inMemoryData.DestTableIds, int64(len(sourceStids)))
+		} else {
+			beginTxnResp, err = destRpc.BeginTransaction(dest, label, inMemoryData.DestTableIds)
+		}
+
 		if err != nil {
 			return err
 		}
@@ -1075,7 +1136,13 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			return xerror.Errorf(xerror.Normal, "begin txn failed, status: %v", beginTxnResp.GetStatus())
 		}
 		txnId := beginTxnResp.GetTxnId()
-		log.Debugf("TxnId: %d, DbId: %d", txnId, beginTxnResp.GetDbId())
+		if isTxnInsert {
+			destStids := beginTxnResp.GetSubTxnIds()
+			inMemoryData.DestStids = destStids
+			log.Debugf("TxnId: %d, DbId: %d, destStids: %v", txnId, beginTxnResp.GetDbId(), destStids)
+		} else {
+			log.Debugf("TxnId: %d, DbId: %d", txnId, beginTxnResp.GetDbId())
+		}
 
 		inMemoryData.TxnId = txnId
 		j.progress.NextSubCheckpoint(IngestBinlog, inMemoryData)
@@ -1088,17 +1155,43 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
 		tableRecords := inMemoryData.TableRecords
 		txnId := inMemoryData.TxnId
+		isTxnInsert := inMemoryData.IsTxnInsert
+
+		// make stidMap, source_stid to dest_stid
+		stidMap := make(map[int64]int64)
+		if isTxnInsert {
+			sourceStids := inMemoryData.SourceStids
+			destStids := inMemoryData.DestStids
+			if len(sourceStids) == len(destStids) {
+				for i := 0; i < len(sourceStids); i++ {
+					stidMap[sourceStids[i]] = destStids[i]
+				}
+			}
+		}
 
 		// Step 3: ingest binlog
-		var commitInfos []*ttypes.TTabletCommitInfo
-		commitInfos, err := j.ingestBinlog(txnId, tableRecords)
-		if err != nil {
-			rollback(err, inMemoryData)
-			return err
+		if isTxnInsert {
+			// When txn insert, only one table can be inserted, so use the first DestTableId
+			destTableId := inMemoryData.DestTableIds[0]
+
+			// When txn insert, use subTxnInfos to commit rather than commitInfos.
+			subTxnInfos, err := j.ingestBinlogForTxnInsert(txnId, tableRecords, stidMap, destTableId)
+			if err != nil {
+				rollback(err, inMemoryData)
+				return err
+			} else {
+				inMemoryData.SubTxnInfos = subTxnInfos
+				j.progress.NextSubCheckpoint(CommitTransaction, inMemoryData)
+			}
 		} else {
-			log.Debugf("commitInfos: %v", commitInfos)
-			inMemoryData.CommitInfos = commitInfos
-			j.progress.NextSubCheckpoint(CommitTransaction, inMemoryData)
+			commitInfos, err := j.ingestBinlog(txnId, tableRecords)
+			if err != nil {
+				rollback(err, inMemoryData)
+				return err
+			} else {
+				inMemoryData.CommitInfos = commitInfos
+				j.progress.NextSubCheckpoint(CommitTransaction, inMemoryData)
+			}
 		}
 
 	case CommitTransaction:
@@ -1117,7 +1210,14 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			break
 		}
 
-		resp, err := destRpc.CommitTransaction(dest, txnId, commitInfos)
+		isTxnInsert := inMemoryData.IsTxnInsert
+		subTxnInfos := inMemoryData.SubTxnInfos
+		var resp *festruct.TCommitTxnResult_
+		if isTxnInsert {
+			resp, err = destRpc.CommitTransactionForTxnInsert(dest, txnId, true, subTxnInfos)
+		} else {
+			resp, err = destRpc.CommitTransaction(dest, txnId, commitInfos)
+		}
 		if err != nil {
 			rollback(err, inMemoryData)
 			break
