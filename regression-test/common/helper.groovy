@@ -18,6 +18,7 @@
 class Helper {
     def suite
     def context
+    def logger
 
     // the configurations about ccr syncer.
     def sync_gap_time = 5000
@@ -26,6 +27,7 @@ class Helper {
     Helper(suite) {
         this.suite = suite
         this.context = suite.context
+        this.logger = suite.logger
     }
 
     String randomSuffix() {
@@ -57,7 +59,7 @@ class Helper {
         def jsonSlurper = new groovy.json.JsonSlurper()
         def object = jsonSlurper.parseText "${bodyJson}"
         object['allow_table_exists'] = true
-        suite.logger.info("json object ${object}")
+        logger.info("json object ${object}")
 
         bodyJson = new groovy.json.JsonBuilder(object).toString()
         suite.httpTest {
@@ -136,7 +138,7 @@ class Helper {
             def sqlInfo = suite.target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
             for (List<Object> row : sqlInfo) {
                 if ((row[10] as String).contains(checkTable)) {
-                    suite.logger.info("SHOW RESTORE result: ${row}")
+                    logger.info("SHOW RESTORE result: ${row}")
                     ret = (row[4] as String) == "FINISHED"
                 }
             }
@@ -273,10 +275,29 @@ class Helper {
             if (!object.success) {
                 throw "request failed, error msg: ${object.error_msg}"
             }
-            suite.logger.info("job progress: ${object.job_progress}")
+            logger.info("job progress: ${object.job_progress}")
             result = jsonSlurper.parseText object.job_progress
         }
         return result
+    }
+
+    Boolean is_version_supported(versions) {
+        def version_variables = suite.sql_return_maparray "show variables like 'version_comment'"
+        def matcher = version_variables[0].Value =~ /doris-(\d+\.\d+\.\d+)/
+        if (matcher.find()) {
+            def parts = matcher.group(1).tokenize('.')
+            def major = parts[0].toLong()
+            def minor = parts[1].toLong()
+            def patch = parts[2].toLong()
+            def version = String.format("%d%02d%02d", major, minor, patch).toLong()
+            for (long expect : versions) {
+                logger.info("current version ${version}, expect version ${expect}")
+                if (expect % 100 == version % 100 && version < expect) {
+                    return false
+                }
+            }
+        }
+        return true
     }
 }
 
