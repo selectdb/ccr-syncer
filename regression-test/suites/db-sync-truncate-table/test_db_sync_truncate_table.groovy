@@ -81,8 +81,9 @@ suite("test_db_sync_truncate_table") {
     logger.info(" ==== truncate partitions ==== ")
 
     helper.ccrJobPause()
-    sql "INSERT INTO ${tableName} VALUES (3, 330)" // insert into p4
-    sql "INSERT INTO ${tableName} VALUES (2, 450)" // insert into p5
+    sql "INSERT INTO ${tableName} VALUES (3, 230)" // insert into p4
+    sql "INSERT INTO ${tableName} VALUES (4, 250)" // insert into p4
+    sql "INSERT INTO ${tableName} VALUES (2, 350)" // insert into p5
     sql "TRUNCATE TABLE ${tableName} PARTITIONS (p5)"
     helper.ccrJobResume()
 
