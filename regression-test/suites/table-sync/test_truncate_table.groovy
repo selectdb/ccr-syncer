@@ -51,6 +51,8 @@ suite("test_truncate") {
     helper.ccrJobCreate(tableName)
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
 
+    def first_job_progress = helper.get_job_progress()
+
     logger.info("=== Test 2: full partitions ===")
     test_num = 2
     for (int index = 0; index < insert_num; index++) {
@@ -114,4 +116,9 @@ suite("test_truncate") {
                                    0, 30))
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName} WHERE id=3",
                                    0, 30))
+
+    def last_job_progress = helper.get_job_progress()
+    if (helper.is_version_supported([20107, 20016])) {  // at least doris 2.1.7 and doris 2.0.16
+        assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
+    }
 }
