@@ -279,6 +279,24 @@ class Helper {
         }
         return false
     }
+
+    Boolean is_version_supported(versions) {
+        def versions = suite.sql_return_maparray "show variables like 'version_comment'"
+        def matcher = versions[0].Value =~ /doris-(\d+\.\d+\.\d+)/
+        if (matcher.find()) {
+            def parts = matcher.group(1).tokenize('.')
+            def major = parts[0].toLong()
+            def minor = parts[1].toLong()
+            def patch = parts[2].toLont()
+            def version = String.format("%d%02d%02d", major, minor, patch).toLong()
+            for (long expect : versions) {
+                logger.info("current version ${version}, expect version ${expect}")
+                if (expect % 100 == version % 100 && version < expect) {
+                    return false
+                }
+            }
+        }
+        return true
 }
 
 new Helper(suite)
