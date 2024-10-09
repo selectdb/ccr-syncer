@@ -45,7 +45,7 @@ var (
 )
 
 func init() {
-	flag.BoolVar(&featureSchemaChangePartialSync, "feature_schema_change_partial_sync", false,
+	flag.BoolVar(&featureSchemaChangePartialSync, "feature_schema_change_partial_sync", true,
 		"use partial sync when working with schema change")
 
 	// The default value is false, since clean tables will erase views unexpectedly.
@@ -55,9 +55,9 @@ func init() {
 		"replace tables in atomic during fullsync (otherwise the dest table will not be able to read).")
 	flag.BoolVar(&featureCreateViewDropExists, "feature_create_view_drop_exists", true,
 		"drop the exists view if exists, when sync the creating view binlog")
-	flag.BoolVar(&featureReplaceNotMatchedWithAlias, "feature_replace_not_matched_with_alias", false,
+	flag.BoolVar(&featureReplaceNotMatchedWithAlias, "feature_replace_not_matched_with_alias", true,
 		"replace signature not matched tables with table alias during the full sync")
-	flag.BoolVar(&featureFilterShadowIndexesUpsert, "feature_filter_shadow_indexes_upsert", false,
+	flag.BoolVar(&featureFilterShadowIndexesUpsert, "feature_filter_shadow_indexes_upsert", true,
 		"filter the upsert to the shadow indexes")
 }
 
