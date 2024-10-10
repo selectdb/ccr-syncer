@@ -14,7 +14,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_db_partial_sync_incremental") {
+suite("test_db_partial_sync_inc_add_partition") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -23,8 +23,8 @@ suite("test_db_partial_sync_incremental") {
         return
     }
 
-    def tableName = "tbl_sync_incremental_" + UUID.randomUUID().toString().replace("-", "")
-    def tableName1 = "tbl_sync_incremental_1_" + UUID.randomUUID().toString().replace("-", "")
+    def tableName = "tbl_" + UUID.randomUUID().toString().replace("-", "")
+    def tableName1 = "tbl_" + UUID.randomUUID().toString().replace("-", "")
     def test_num = 0
     def insert_num = 5
 
@@ -45,10 +45,16 @@ suite("test_db_partial_sync_incremental") {
         (
             `test` INT,
             `id` INT,
-            `value` INT SUM
+            `value` INT
         )
         ENGINE=OLAP
-        AGGREGATE KEY(`test`, `id`)
+        UNIQUE KEY(`test`, `id`)
+        PARTITION BY RANGE(`id`)
+        (
+            PARTITION p1 VALUES LESS THAN ("1000"),
+            PARTITION p2 VALUES LESS THAN ("2000"),
+            PARTITION p3 VALUES LESS THAN ("3000")
+        )
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
@@ -61,10 +67,10 @@ suite("test_db_partial_sync_incremental") {
         (
             `test` INT,
             `id` INT,
-            `value` INT SUM
+            `value` INT
         )
         ENGINE=OLAP
-        AGGREGATE KEY(`test`, `id`)
+        UNIQUE KEY(`test`, `id`)
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
@@ -84,6 +90,7 @@ suite("test_db_partial_sync_incremental") {
         """
     sql "sync"
 
+    helper.ccrJobDelete()
     helper.ccrJobCreate()
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
@@ -92,19 +99,9 @@ suite("test_db_partial_sync_incremental") {
 
     def first_job_progress = helper.get_job_progress()
 
-    logger.info("=== pause job, add column and insert data")
+    logger.info("=== pause job, add column and add new partition")
     helper.ccrJobPause()
 
-    // binlog type: ALTER_JOB, binlog data:
-    //  {
-    //      "type":"SCHEMA_CHANGE",
-    //      "dbId":11049,
-    //      "tableId":11058,
-    //      "tableName":"tbl_add_column6ab3b514b63c4368aa0a0149da0acabd",
-    //      "jobId":11076,
-    //      "jobState":"FINISHED",
-    //      "rawSql":"ALTER TABLE `regression_test_schema_change`.`tbl_add_column6ab3b514b63c4368aa0a0149da0acabd` ADD COLUMN `first` int NULL DEFAULT \"0\" COMMENT \"\" FIRST"
-    //  }
     sql """
         ALTER TABLE ${tableName}
         ADD COLUMN `first` INT KEY DEFAULT "0" FIRST
@@ -119,11 +116,15 @@ suite("test_db_partial_sync_incremental") {
                                 has_count(1), 30))
 
     sql "INSERT INTO ${tableName} VALUES (123, 123, 123, 1)"
-    sql "INSERT INTO ${tableName} VALUES (123, 123, 123, 2)"
-    sql "INSERT INTO ${tableName} VALUES (123, 123, 123, 3)"
+    sql "INSERT INTO ${tableName} VALUES (124, 124, 124, 2)"
+    sql "INSERT INTO ${tableName} VALUES (125, 125, 125, 3)"
     sql "INSERT INTO ${tableName1} VALUES (123, 123, 1)"
-    sql "INSERT INTO ${tableName1} VALUES (123, 123, 2)"
-    sql "INSERT INTO ${tableName1} VALUES (123, 123, 3)"
+    sql "INSERT INTO ${tableName1} VALUES (124, 124, 2)"
+    sql "INSERT INTO ${tableName1} VALUES (125, 125, 3)"
+
+    sql """
+        ALTER TABLE ${tableName} ADD PARTITION p4 VALUES LESS THAN("4000")
+        """
 
     helper.ccrJobResume()
 
@@ -133,23 +134,14 @@ suite("test_db_partial_sync_incremental") {
     }
 
     assertTrue(helper.checkShowTimesOf("SHOW COLUMNS FROM `${tableName}`", has_column_first, 60, "target_sql"))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", insert_num + 3, 60))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName1}", insert_num + 3, 60))
+    assertTrue(helper.checkShowTimesOf("SHOW PARTITIONS FROM ${tableName} WHERE PartitionName = \"p4\"", exist, 60, "target_sql"))
 
-    logger.info("the aggregate keys inserted should be synced accurately")
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", insert_num + 1, 60))
-    def last_record = target_sql "SELECT value FROM ${tableName} WHERE id = 123 AND test = 123"
-    logger.info("last record is ${last_record}")
-    assertTrue(last_record.size() == 1 && last_record[0][0] == 6)
-
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName1}", insert_num + 1, 60))
-    last_record = target_sql "SELECT value FROM ${tableName1} WHERE id = 123 AND test = 123"
-    logger.info("last record of table ${tableName1} is ${last_record}")
-    assertTrue(last_record.size() == 1 && last_record[0][0] == 6)
+    sql "INSERT INTO ${tableName} VALUES (126, 126, 126, 3)"
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", insert_num + 4, 60))
 
     // no full sync triggered.
     def last_job_progress = helper.get_job_progress()
     assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
 }
-
-
-
-

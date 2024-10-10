@@ -253,6 +253,16 @@ class Helper {
         return false
     }
 
+    void force_fullsync(tableName = "") {
+        def bodyJson = suite.get_ccr_body "${table}"
+        suite.httpTest {
+            uri "/force_fullsync"
+            endpoint syncerAddress
+            body "${bodyJson}"
+            op "post"
+        }
+    }
+
     Object get_job_progress(tableName = "") {
         def request_body = suite.get_ccr_body(tableName)
         def get_job_progress_uri = { check_func ->
