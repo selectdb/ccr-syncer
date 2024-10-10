@@ -398,6 +398,7 @@ func (j *Job) partialSync() error {
 			return err
 		}
 
+		log.Debugf("table commit seq map: %v", tableCommitSeqMap)
 		if j.SyncType == TableSync {
 			if _, ok := tableCommitSeqMap[j.Src.TableId]; !ok {
 				return xerror.Errorf(xerror.Normal, "table id %d, commit seq not found", j.Src.TableId)
@@ -431,7 +432,12 @@ func (j *Job) partialSync() error {
 		snapshotResp.SetJobInfo(jobInfoBytes)
 
 		// save the entire commit seq map, this value will be used in PersistRestoreInfo.
-		j.progress.TableCommitSeqMap = inMemoryData.TableCommitSeqMap
+		if len(j.progress.TableCommitSeqMap) == 0 {
+			j.progress.TableCommitSeqMap = make(map[int64]int64)
+		}
+		for tableId, commitSeq := range inMemoryData.TableCommitSeqMap {
+			j.progress.TableCommitSeqMap[tableId] = commitSeq
+		}
 		j.progress.NextSubCheckpoint(RestoreSnapshot, inMemoryData)
 
 	case RestoreSnapshot:
@@ -971,6 +977,18 @@ func (j *Job) getDestTableIdBySrc(srcTableId int64) (int64, error) {
 	}
 }
 
+func (j *Job) isBinlogCommitted(tableId int64, binlogCommitSeq int64) bool {
+	if j.progress.SyncState == DBTablesIncrementalSync {
+		tableCommitSeq, ok := j.progress.TableCommitSeqMap[tableId]
+		if ok && binlogCommitSeq <= tableCommitSeq {
+			log.Infof("filter the already committed binlog %d, table commit seq: %d, table: %d",
+				binlogCommitSeq, tableCommitSeq, tableId)
+			return true
+		}
+	}
+	return false
+}
+
 func (j *Job) getDbSyncTableRecords(upsert *record.Upsert) ([]*record.TableRecord, error) {
 	commitSeq := upsert.CommitSeq
 	tableCommitSeqMap := j.progress.TableCommitSeqMap
@@ -1289,6 +1307,10 @@ func (j *Job) handleAddPartition(binlog *festruct.TBinlog) error {
 		return err
 	}
 
+	if j.isBinlogCommitted(addPartition.TableId, binlog.GetCommitSeq()) {
+		return nil
+	}
+
 	if addPartition.IsTemp {
 		log.Infof("skip add temporary partition because backup/restore table with temporary partitions is not supported yet")
 		return nil
@@ -1321,6 +1343,10 @@ func (j *Job) handleDropPartition(binlog *festruct.TBinlog) error {
 	dropPartition, err := record.NewDropPartitionFromJson(data)
 	if err != nil {
 		return err
+	}
+
+	if j.isBinlogCommitted(dropPartition.TableId, binlog.GetCommitSeq()) {
+		return nil
 	}
 
 	var destTableName string
@@ -1558,6 +1584,10 @@ func (j *Job) handleLightningSchemaChange(binlog *festruct.TBinlog) error {
 		return err
 	}
 
+	if j.isBinlogCommitted(lightningSchemaChange.TableId, binlog.GetCommitSeq()) {
+		return nil
+	}
+
 	tableAlias := ""
 	if j.isTableSyncWithAlias() {
 		tableAlias = j.Dest.Table
@@ -1573,6 +1603,10 @@ func (j *Job) handleRenameColumn(binlog *festruct.TBinlog) error {
 	renameColumn, err := record.NewRenameColumnFromJson(data)
 	if err != nil {
 		return err
+	}
+
+	if j.isBinlogCommitted(renameColumn.TableId, binlog.GetCommitSeq()) {
+		return nil
 	}
 
 	destTableId, err := j.getDestTableIdBySrc(renameColumn.TableId)
@@ -1599,6 +1633,10 @@ func (j *Job) handleTruncateTable(binlog *festruct.TBinlog) error {
 	truncateTable, err := record.NewTruncateTableFromJson(data)
 	if err != nil {
 		return err
+	}
+
+	if j.isBinlogCommitted(truncateTable.TableId, binlog.GetCommitSeq()) {
+		return nil
 	}
 
 	var destTableName string
@@ -1631,6 +1669,10 @@ func (j *Job) handleReplacePartitions(binlog *festruct.TBinlog) error {
 	replacePartition, err := record.NewReplacePartitionFromJson(data)
 	if err != nil {
 		return err
+	}
+
+	if j.isBinlogCommitted(replacePartition.TableId, binlog.GetCommitSeq()) {
+		return nil
 	}
 
 	if !replacePartition.StrictRange {
