@@ -986,6 +986,13 @@ func (s *Spec) DropView(viewName string) error {
 	return s.DbExec(dropView)
 }
 
+func (s *Spec) AlterViewDef(viewName string, alterView *record.AlterView) error {
+	alterViewSql := fmt.Sprintf("ALTER VIEW %s AS %s", viewName, alterView.InlineViewDef)
+	log.Infof("alter view sql: %s", alterViewSql)
+	return s.DbExec(alterViewSql)
+	}
+}
+
 func (s *Spec) AddPartition(destTableName string, addPartition *record.AddPartition) error {
 	addPartitionSql := addPartition.GetSql(destTableName)
 	addPartitionSql = correctAddPartitionSql(addPartitionSql, addPartition)
