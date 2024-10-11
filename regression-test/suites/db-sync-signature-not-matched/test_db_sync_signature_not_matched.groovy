@@ -102,7 +102,9 @@ suite("test_db_sync_signature_not_matched") {
         def restore_finished = false;
         for (int j = 0; j < 10; j++) {
             def progress = helper.get_job_progress()
-            if (progress.sync_state == 3) {  // DBIncrementalSync
+
+            // sync_state == DBIncrementalSync or DBTablesIncrementalSync
+            if (progress.sync_state == 3 || progress.sync_state == 1) {
                 restore_finished = true
                 break
             }
