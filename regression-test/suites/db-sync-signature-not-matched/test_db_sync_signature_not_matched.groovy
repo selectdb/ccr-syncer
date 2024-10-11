@@ -98,6 +98,19 @@ suite("test_db_sync_signature_not_matched") {
     logger.info("dest cluster drop unmatched tables")
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 60))
 
+    if (helper.has_feature("feature_replace_not_matched_with_alias")) {
+        def restore_finished = false;
+        for (int j = 0; j < 10; j++) {
+            def progress = helper.get_job_progress()
+            if (progress.sync_state == 3) {  // DBIncrementalSync
+                restore_finished = true
+                break
+            }
+            sleep(3000)
+        }
+        assertTrue(restore_finished)
+    }
+
     v = target_sql "SELECT * FROM ${tableName}"
     assertTrue(v.size() == insert_num);
 
