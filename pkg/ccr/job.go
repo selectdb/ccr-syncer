@@ -123,6 +123,8 @@ type Job struct {
 
 	forceFullsync bool `json:"-"` // Force job step fullsync, for test only.
 
+	concurrencyManager *rpc.ConcurrencyManager `json:"-"`
+
 	lock sync.Mutex `json:"-"`
 }
 
@@ -176,6 +178,8 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 		progress: nil,
 		db:       jobContext.db,
 		stop:     make(chan struct{}),
+
+		concurrencyManager: rpc.NewConcurrencyManager(),
 	}
 
 	if err := job.valid(); err != nil {
@@ -210,6 +214,7 @@ func NewJobFromJson(jsonData string, db storage.DB, factory *Factory) (*Job, err
 	job.db = db
 	job.stop = make(chan struct{})
 	job.jobFactory = NewJobFactory()
+	job.concurrencyManager = rpc.NewConcurrencyManager()
 	return &job, nil
 }
 
