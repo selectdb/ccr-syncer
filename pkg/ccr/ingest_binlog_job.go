@@ -108,6 +108,7 @@ func (h *tabletIngestBinlogHandler) handleReplica(srcReplica, destReplica *Repli
 		TabletId:  destTabletId,
 		BackendId: destBackend.Id,
 	}
+	cwind := h.ingestJob.ccrJob.concurrencyManager.GetWindow(destBackend.Id)
 
 	h.wg.Add(1)
 	go func() {
@@ -116,6 +117,9 @@ func (h *tabletIngestBinlogHandler) handleReplica(srcReplica, destReplica *Repli
 		gls.ResetGls(gls.GoID(), map[interface{}]interface{}{})
 		gls.Set("job", j.ccrJob.Name)
 		defer gls.ResetGls(gls.GoID(), map[interface{}]interface{}{})
+
+		cwind.Acquire()
+		defer cwind.Release()
 
 		resp, err := destRpc.IngestBinlog(req)
 		if err != nil {
