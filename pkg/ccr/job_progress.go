@@ -162,7 +162,7 @@ type JobProgress struct {
 	TableAliases map[string]string `json:"table_aliases,omitempty"`
 
 	// The shadow indexes of the pending schema changes
-	ShadowIndexes map[int64]int64 `json:"shadow_index_map"`
+	ShadowIndexes map[int64]int64 `json:"shadow_index_map,omitempty"`
 
 	// Some fields to save the unix epoch time of the key timepoint.
 	CreatedAt              int64 `json:"created_at,omitempty"`
