@@ -12,6 +12,7 @@ type PartitionRecord struct {
 	Range   string `json:"range"`
 	Version int64  `json:"version"`
 	IsTemp  bool   `json:"isTempPartition"`
+	Stid    int64  `json:stid`
 }
 
 func (p PartitionRecord) String() string {
@@ -35,11 +36,12 @@ type Upsert struct {
 	Label        string                 `json:"label"`
 	DbID         int64                  `json:"dbId"`
 	TableRecords map[int64]*TableRecord `json:"tableRecords"`
+	Stids        []int64                `json:"stids"`
 }
 
 // Stringer
 func (u Upsert) String() string {
-	return fmt.Sprintf("Upsert{CommitSeq: %d, TxnID: %d, TimeStamp: %d, Label: %s, DbID: %d, TableRecords: %v}", u.CommitSeq, u.TxnID, u.TimeStamp, u.Label, u.DbID, u.TableRecords)
+	return fmt.Sprintf("Upsert{CommitSeq: %d, TxnID: %d, TimeStamp: %d, Label: %s, DbID: %d, TableRecords: %v, Stids: %v}", u.CommitSeq, u.TxnID, u.TimeStamp, u.Label, u.DbID, u.TableRecords, u.Stids)
 }
 
 //	{

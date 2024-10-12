@@ -82,7 +82,9 @@ type RestoreSnapshotRequest struct {
 
 type IFeRpc interface {
 	BeginTransaction(*base.Spec, string, []int64) (*festruct.TBeginTxnResult_, error)
+	BeginTransactionForTxnInsert(*base.Spec, string, []int64, int64) (*festruct.TBeginTxnResult_, error)
 	CommitTransaction(*base.Spec, int64, []*festruct_types.TTabletCommitInfo) (*festruct.TCommitTxnResult_, error)
+	CommitTransactionForTxnInsert(*base.Spec, int64, bool, []*festruct.TSubTxnInfo) (*festruct.TCommitTxnResult_, error)
 	RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.TRollbackTxnResult_, error)
 	GetBinlog(*base.Spec, int64) (*festruct.TGetBinlogResult_, error)
 	GetBinlogLag(*base.Spec, int64) (*festruct.TGetBinlogLagResult_, error)
@@ -348,10 +350,28 @@ func (rpc *FeRpc) BeginTransaction(spec *base.Spec, label string, tableIds []int
 	return convertResult[festruct.TBeginTxnResult_](result, err)
 }
 
+func (rpc *FeRpc) BeginTransactionForTxnInsert(spec *base.Spec, label string, tableIds []int64, stidNum int64) (*festruct.TBeginTxnResult_, error) {
+	// return rpc.masterClient.BeginTransactionForTxnInsert(spec, label, tableIds, stidNum)
+	caller := func(client IFeRpc) (resultType, error) {
+		return client.BeginTransactionForTxnInsert(spec, label, tableIds, stidNum)
+	}
+	result, err := rpc.callWithMasterRedirect(caller)
+	return convertResult[festruct.TBeginTxnResult_](result, err)
+}
+
 func (rpc *FeRpc) CommitTransaction(spec *base.Spec, txnId int64, commitInfos []*festruct_types.TTabletCommitInfo) (*festruct.TCommitTxnResult_, error) {
 	// return rpc.masterClient.CommitTransaction(spec, txnId, commitInfos)
 	caller := func(client IFeRpc) (resultType, error) {
 		return client.CommitTransaction(spec, txnId, commitInfos)
+	}
+	result, err := rpc.callWithMasterRedirect(caller)
+	return convertResult[festruct.TCommitTxnResult_](result, err)
+}
+
+func (rpc *FeRpc) CommitTransactionForTxnInsert(spec *base.Spec, txnId int64, isTxnInsert bool, subTxnInfos []*festruct.TSubTxnInfo) (*festruct.TCommitTxnResult_, error) {
+	// return rpc.masterClient.CommitTransactionForTxnInsert(spec, txnId, commitInfos, subTxnInfos)
+	caller := func(client IFeRpc) (resultType, error) {
+		return client.CommitTransactionForTxnInsert(spec, txnId, isTxnInsert, subTxnInfos)
 	}
 	result, err := rpc.callWithMasterRedirect(caller)
 	return convertResult[festruct.TCommitTxnResult_](result, err)
@@ -503,6 +523,25 @@ func (rpc *singleFeClient) BeginTransaction(spec *base.Spec, label string, table
 	}
 }
 
+func (rpc *singleFeClient) BeginTransactionForTxnInsert(spec *base.Spec, label string, tableIds []int64, stidNum int64) (*festruct.TBeginTxnResult_, error) {
+	log.Debugf("Call BeginTransactionForTxnInsert, addr: %s, spec: %s, label: %s, tableIds: %v", rpc.Address(), spec, label, tableIds)
+
+	client := rpc.client
+	req := &festruct.TBeginTxnRequest{
+		Label: &label,
+	}
+	setAuthInfo(req, spec)
+	req.TableIds = tableIds
+	req.SubTxnNum = stidNum
+
+	log.Debugf("BeginTransactionForTxnInsert user %s, label: %s, tableIds: %v", req.GetUser(), label, tableIds)
+	if result, err := client.BeginTxn(context.Background(), req); err != nil {
+		return nil, xerror.Wrapf(err, xerror.RPC, "BeginTransactionForTxnInsert error: %v, req: %+v", err, req)
+	} else {
+		return result, nil
+	}
+}
+
 //	struct TCommitTxnRequest {
 //	    1: optional string cluster
 //	    2: required string user
@@ -528,6 +567,23 @@ func (rpc *singleFeClient) CommitTransaction(spec *base.Spec, txnId int64, commi
 
 	if result, err := client.CommitTxn(context.Background(), req, callopt.WithRPCTimeout(commitTxnTimeout)); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "CommitTransaction error: %v, req: %+v", err, req)
+	} else {
+		return result, nil
+	}
+}
+
+func (rpc *singleFeClient) CommitTransactionForTxnInsert(spec *base.Spec, txnId int64, isTxnInsert bool, subTxnInfos []*festruct.TSubTxnInfo) (*festruct.TCommitTxnResult_, error) {
+	log.Debugf("Call CommitTransactionForTxnInsert, addr: %s spec: %s, txnId: %d, subTxnInfos: %v", rpc.Address(), spec, txnId, subTxnInfos)
+
+	client := rpc.client
+	req := &festruct.TCommitTxnRequest{}
+	setAuthInfo(req, spec)
+	req.TxnId = &txnId
+	req.TxnInsert = &isTxnInsert
+	req.SubTxnInfos = subTxnInfos
+
+	if result, err := client.CommitTxn(context.Background(), req, callopt.WithRPCTimeout(commitTxnTimeout)); err != nil {
+		return nil, xerror.Wrapf(err, xerror.RPC, "CommitTransactionForTxnInsert error: %v, req: %+v", err, req)
 	} else {
 		return result, nil
 	}
