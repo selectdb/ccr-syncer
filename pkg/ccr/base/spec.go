@@ -948,6 +948,30 @@ func (s *Spec) RenameColumn(destTableName string, renameColumn *record.RenameCol
 	return s.DbExec(renameSql)
 }
 
+func (s *Spec) ModifyComment(destTableName string, modifyComment *record.ModifyComment) error {
+	var modifySql string
+	if modifyComment.Type == "COLUMN" {
+		var sb strings.Builder
+		sb.WriteString(fmt.Sprintf("ALTER TABLE `%s` ", destTableName))
+		first := true
+		for col, comment := range modifyComment.ColToComment {
+			if !first {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(fmt.Sprintf("MODIFY COLUMN `%s` COMMENT '%s'", col, utils.EscapeStringValue(comment)))
+			first = false
+		}
+		modifySql = sb.String()
+	} else if modifyComment.Type == "TABLE" {
+		modifySql = fmt.Sprintf("ALTER TABLE `%s` MODIFY COMMENT '%s'", destTableName, utils.EscapeStringValue(modifyComment.TblComment))
+	} else {
+		return xerror.Errorf(xerror.Normal, "unsupported modify comment type: %s", modifyComment.Type)
+	}
+
+	log.Infof("modify comment sql: %s", modifySql)
+	return s.DbExec(modifySql)
+}
+
 func (s *Spec) TruncateTable(destTableName string, truncateTable *record.TruncateTable) error {
 	var sql string
 	if truncateTable.RawSql == "" {

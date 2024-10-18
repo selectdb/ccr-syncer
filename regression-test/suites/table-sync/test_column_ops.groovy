@@ -22,6 +22,31 @@ suite("test_column_ops") {
     def test_num = 0
     def insert_num = 5
 
+    def checkColumnCommentTimesOf = { checkTable, expectedColComments, times -> Boolean
+        def res = target_sql "SHOW FULL COLUMNS FROM ${checkTable}"
+        while (times > 0) {
+            Boolean allMatch = true
+            for (expected in expectedColComments.entrySet()) {
+                Boolean oneMatch = false
+                for (List<Object> row : res) {
+                    if (!oneMatch) {
+                        oneMatch =
+                            (row[0] as String).equals(expected.key) && (row[8] as String).equals(expected.value)
+                    }
+                }
+                allMatch = allMatch & oneMatch
+            }
+            if (allMatch) {
+                return true
+            } else if (--times > 0) {
+                sleep(sync_gap_time)
+                res = target_sql "SHOW FULL COLUMNS FROM ${checkTable}"
+            }
+        }
+
+        return false
+    }
+
     def exist = { res -> Boolean
         return res.size() != 0
     }
@@ -120,6 +145,16 @@ suite("test_column_ops") {
     sql "sync"
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}", 1, 30))
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num} AND _cost='666'", 1, 1))
+
+
+    logger.info("=== Test 4: modify column comment case ===")
+    sql """
+        ALTER TABLE ${tableName}
+        MODIFY COLUMN `test` COMMENT 'test number',
+        MODIFY COLUMN `id` COMMENT 'index of one test number'
+        """
+    assertTrue(checkColumnCommentTimesOf(tableName,
+        [test: "test number", id: "index of one test number", cost: ""], 30))
 
 
     logger.info("=== Test 5: drop column case ===")
