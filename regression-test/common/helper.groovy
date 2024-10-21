@@ -15,6 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import com.google.common.collect.Maps
+
+import java.util.Map
+
 class Helper {
     def suite
     def context
@@ -31,11 +35,40 @@ class Helper {
     }
 
     String randomSuffix() {
-        return UUID.randomUUID().toString().replace("-", "")
+        def hashCode = UUID.randomUUID().toString().replace("-", "").hashCode()
+        if (hashCode < 0) {
+            hashCode *= -1;
+        }
+        return Integer.toString(hashCode)
+    }
+
+    def get_ccr_body(String table, String db = null) {
+        if (db == null) {
+            db = context.dbName
+        }
+
+        def gson = new com.google.gson.Gson()
+
+        Map<String, String> srcSpec = context.getSrcSpec(db)
+        srcSpec.put("table", table)
+
+        Map<String, String> destSpec = context.getDestSpec(db)
+        destSpec.put("table", table)
+
+        Map<String, Object> body = Maps.newHashMap()
+        String name = context.suiteName
+        if (!table.equals("")) {
+            name = name + "_" + table
+        }
+        body.put("name", name)
+        body.put("src", srcSpec)
+        body.put("dest", destSpec)
+
+        return gson.toJson(body)
     }
 
     void ccrJobDelete(table = "") {
-        def bodyJson = suite.get_ccr_body "${table}"
+        def bodyJson = get_ccr_body "${table}"
         suite.httpTest {
             uri "/delete"
             endpoint syncerAddress
@@ -45,7 +78,7 @@ class Helper {
     }
 
     void ccrJobCreate(table = "") {
-        def bodyJson = suite.get_ccr_body "${table}"
+        def bodyJson = get_ccr_body "${table}"
         suite.httpTest {
             uri "/create_ccr"
             endpoint syncerAddress
@@ -55,7 +88,7 @@ class Helper {
     }
 
     void ccrJobCreateAllowTableExists(table = "") {
-        def bodyJson = suite.get_ccr_body "${table}"
+        def bodyJson = get_ccr_body "${table}"
         def jsonSlurper = new groovy.json.JsonSlurper()
         def object = jsonSlurper.parseText "${bodyJson}"
         object['allow_table_exists'] = true
@@ -71,7 +104,7 @@ class Helper {
     }
 
     void ccrJobPause(table = "") {
-        def bodyJson = suite.get_ccr_body "${table}"
+        def bodyJson = get_ccr_body "${table}"
         suite.httpTest {
             uri "/pause"
             endpoint syncerAddress
@@ -81,7 +114,7 @@ class Helper {
     }
 
     void ccrJobResume(table = "") {
-        def bodyJson = suite.get_ccr_body "${table}"
+        def bodyJson = get_ccr_body "${table}"
         suite.httpTest {
             uri "/resume"
             endpoint syncerAddress
@@ -91,7 +124,7 @@ class Helper {
     }
 
     void ccrJobDesync(table = "") {
-        def bodyJson = suite.get_ccr_body "${table}"
+        def bodyJson = get_ccr_body "${table}"
         suite.httpTest {
             uri "/desync"
             endpoint syncerAddress
@@ -221,7 +254,7 @@ class Helper {
     }
 
     void force_fullsync(tableName = "") {
-        def bodyJson = suite.get_ccr_body "${tableName}"
+        def bodyJson = get_ccr_body "${tableName}"
         suite.httpTest {
             uri "/force_fullsync"
             endpoint syncerAddress
@@ -231,7 +264,7 @@ class Helper {
     }
 
     Object get_job_progress(tableName = "") {
-        def request_body = suite.get_ccr_body(tableName)
+        def request_body = get_ccr_body(tableName)
         def get_job_progress_uri = { check_func ->
             suite.httpTest {
                 uri "/job_progress"
