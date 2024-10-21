@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/base64"
+	"flag"
 	"fmt"
 	"time"
 
@@ -12,8 +13,15 @@ import (
 )
 
 const (
-	maxAllowedPacket = 128 * 1024 * 1024
+	defaultMaxAllowedPacket = 1024 * 1024 * 1024
 )
+
+var maxAllowedPacket int64
+
+func init() {
+	flag.Int64Var(&maxAllowedPacket, "mysql_max_allowed_packet", defaultMaxAllowedPacket,
+		"Config the max allowed packet to send to mysql server, the upper limit is 1GB")
+}
 
 type MysqlDB struct {
 	db *sql.DB
