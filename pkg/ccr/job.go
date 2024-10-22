@@ -461,7 +461,7 @@ func (j *Job) partialSync() error {
 			}
 			j.progress.InMemoryData = inMemoryData
 		}
-		
+
 		// Step 4.1: cancel the running restore job which submitted by former progress, if exists
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
 		snapshotName := inMemoryData.SnapshotName
