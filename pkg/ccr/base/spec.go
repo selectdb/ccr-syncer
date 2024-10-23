@@ -803,6 +803,12 @@ func (s *Spec) CancelBackupIfExists() error {
 
 		log.Infof("check snapshot %s backup state [%v], create time: %s",
 			info.SnapshotName, info.StateStr, info.CreateTime)
+
+		// Only cancel the running backup job issued by syncer
+		if !isSyncerIssuedJob(info.SnapshotName, s.Database) {
+			continue
+		}
+
 		if info.State == BackupStateFinished || info.State == BackupStateCancelled {
 			continue
 		}
@@ -817,8 +823,8 @@ func (s *Spec) CancelBackupIfExists() error {
 	return nil
 }
 
-func (s *Spec) CancelRestoreIfExists() error {
-	log.Debugf("cancel restore job if exists")
+func (s *Spec) CancelRestoreIfExists(srcDbName string) error {
+	log.Debugf("cancel restore job if exists, src db: %s", srcDbName)
 
 	db, err := s.Connect()
 	if err != nil {
@@ -846,6 +852,11 @@ func (s *Spec) CancelRestoreIfExists() error {
 
 		log.Infof("check snapshot %s restore state: [%v], create time: %s",
 			info.Label, info.StateStr, info.CreateTime)
+
+		// Only cancel the running restore job issued by syncer
+		if !isSyncerIssuedJob(info.Label, srcDbName) {
+			continue
+		}
 
 		if info.State == RestoreStateCancelled || info.State == RestoreStateFinished {
 			continue
@@ -1225,4 +1236,10 @@ func correctAddPartitionSql(addPartitionSql string, addPartition *record.AddPart
 		addPartitionSql = strings.ReplaceAll(addPartitionSql, "ADD PARTITION", "ADD TEMPORARY PARTITION")
 	}
 	return addPartitionSql
+}
+
+func isSyncerIssuedJob(label, dbName string) bool {
+	fullSyncPrefix := fmt.Sprintf("ccrs_%s", dbName)
+	partialSyncPrefix := fmt.Sprintf("ccrp_%s", dbName)
+	return strings.HasPrefix(label, fullSyncPrefix) || strings.HasPrefix(label, partialSyncPrefix)
 }

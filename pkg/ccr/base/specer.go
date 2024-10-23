@@ -28,7 +28,7 @@ type Specer interface {
 	CreatePartialSnapshotAndWaitForDone(table string, partitions []string) (string, error)
 	CreateSnapshotAndWaitForDone(tables []string) (string, error)
 	CancelBackupIfExists() error
-	CancelRestoreIfExists() error
+	CancelRestoreIfExists(srcDbName string) error
 	CheckRestoreFinished(snapshotName string) (bool, error)
 	GetRestoreSignatureNotMatchedTableOrView(snapshotName string) (string, bool, error)
 	WaitTransactionDone(txnId int64) // busy wait

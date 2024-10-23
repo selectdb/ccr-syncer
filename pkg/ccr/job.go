@@ -463,13 +463,13 @@ func (j *Job) partialSync() error {
 		}
 
 		// Step 4.1: cancel the running restore job which submitted by former progress, if exists
-		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
-		snapshotName := inMemoryData.SnapshotName
-		if err := j.IDest.CancelRestoreIfExists(); err != nil {
+		if err := j.IDest.CancelRestoreIfExists(j.Src.Database); err != nil {
 			return err
 		}
 
 		// Step 4.2: start a new fullsync && persist
+		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
+		snapshotName := inMemoryData.SnapshotName
 		restoreSnapshotName := restoreSnapshotName(snapshotName)
 		snapshotResp := inMemoryData.SnapshotResp
 
@@ -733,13 +733,13 @@ func (j *Job) fullSync() error {
 		}
 
 		// Step 4.1: cancel the running restore job which by the former process, if exists
-		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
-		snapshotName := inMemoryData.SnapshotName
-		if err := j.IDest.CancelRestoreIfExists(); err != nil {
+		if err := j.IDest.CancelRestoreIfExists(j.Src.Database); err != nil {
 			return err
 		}
 
 		// Step 4.2: start a new fullsync && persist
+		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
+		snapshotName := inMemoryData.SnapshotName
 		restoreSnapshotName := restoreSnapshotName(snapshotName)
 		snapshotResp := inMemoryData.SnapshotResp
 
