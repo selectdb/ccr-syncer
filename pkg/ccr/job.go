@@ -113,15 +113,15 @@ type Job struct {
 	factory *Factory `json:"-"`
 
 	allowTableExists bool `json:"-"` // Only for FirstRun(), don't need to persist.
+	forceFullsync    bool `json:"-"` // Force job step fullsync, for test only.
 
 	progress   *JobProgress `json:"-"`
 	db         storage.DB   `json:"-"`
 	jobFactory *JobFactory  `json:"-"`
+	rawStatus  RawJobStatus `json:"-"`
 
 	stop      chan struct{} `json:"-"`
 	isDeleted atomic.Bool   `json:"-"`
-
-	forceFullsync bool `json:"-"` // Force job step fullsync, for test only.
 
 	concurrencyManager *rpc.ConcurrencyManager `json:"-"`
 
@@ -2065,6 +2065,8 @@ func (j *Job) run() {
 	var panicError error
 
 	for {
+		j.updateJobStatus()
+
 		// do maybeDeleted first to avoid mark job deleted after job stopped & before job run & close stop chan gap in Delete, so job will not run
 		if j.maybeDeleted() {
 			return
@@ -2458,6 +2460,18 @@ func (j *Job) ForceFullsync() {
 	j.forceFullsync = true
 }
 
+type RawJobStatus struct {
+	state         int32
+	progressState int32
+}
+
+func (j *Job) updateJobStatus() {
+	atomic.StoreInt32(&j.rawStatus.state, int32(j.State))
+	if j.progress != nil {
+		atomic.StoreInt32(&j.rawStatus.progressState, int32(j.progress.SyncState))
+	}
+}
+
 type JobStatus struct {
 	Name          string `json:"name"`
 	State         string `json:"state"`
@@ -2465,19 +2479,13 @@ type JobStatus struct {
 }
 
 func (j *Job) Status() *JobStatus {
-	j.lock.Lock()
-	defer j.lock.Unlock()
-
-	state := j.State.String()
-	progress_state := "unknown"
-	if j.progress != nil {
-		j.progress.SyncState.String()
-	}
+	state := JobState(atomic.LoadInt32(&j.rawStatus.state)).String()
+	progressState := SyncState(atomic.LoadInt32(&j.rawStatus.progressState)).String()
 
 	return &JobStatus{
 		Name:          j.Name,
 		State:         state,
-		ProgressState: progress_state,
+		ProgressState: progressState,
 	}
 }
 
