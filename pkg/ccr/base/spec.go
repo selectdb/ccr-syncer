@@ -99,6 +99,91 @@ func _parseRestoreState(state string) RestoreState {
 	}
 }
 
+type RestoreInfo struct {
+	State          RestoreState
+	StateStr       string
+	Label          string
+	Status         string
+	Timestamp      string
+	ReplicationNum int64
+	CreateTime     string // 2024-10-22 06:29:27
+}
+
+func parseRestoreInfo(parser *utils.RowParser) (*RestoreInfo, error) {
+	restoreStateStr, err := parser.GetString("State")
+	if err != nil {
+		return nil, xerror.Wrap(err, xerror.Normal, "parse restore State failed")
+	}
+
+	label, err := parser.GetString("Label")
+	if err != nil {
+		return nil, xerror.Wrap(err, xerror.Normal, "parse restore Label failed")
+	}
+
+	restoreStatus, err := parser.GetString("Status")
+	if err != nil {
+		return nil, xerror.Wrap(err, xerror.Normal, "parse restore Status failed")
+	}
+
+	timestamp, err := parser.GetString("Timestamp")
+	if err != nil {
+		return nil, xerror.Wrap(err, xerror.Normal, "parse restore Timestamp failed")
+	}
+
+	replicationNum, err := parser.GetInt64("ReplicationNum")
+	if err != nil {
+		return nil, xerror.Wrap(err, xerror.Normal, "parse restore ReplicationNum failed")
+	}
+
+	createTime, err := parser.GetString("CreateTime")
+	if err != nil {
+		return nil, xerror.Wrap(err, xerror.Normal, "parse restore CreateTime failed")
+	}
+
+	info := &RestoreInfo{
+		State:          _parseRestoreState(restoreStateStr),
+		StateStr:       restoreStateStr,
+		Label:          label,
+		Status:         restoreStatus,
+		Timestamp:      timestamp,
+		ReplicationNum: replicationNum,
+		CreateTime:     createTime,
+	}
+	return info, nil
+}
+
+type BackupInfo struct {
+	State        BackupState
+	StateStr     string
+	SnapshotName string
+	CreateTime   string // 2024-10-22 06:27:06
+}
+
+func parseBackupInfo(parser *utils.RowParser) (*BackupInfo, error) {
+	stateStr, err := parser.GetString("State")
+	if err != nil {
+		return nil, xerror.Wrap(err, xerror.Normal, "parse backup State failed")
+	}
+
+	snapshotName, err := parser.GetString("SnapshotName")
+	if err != nil {
+		return nil, xerror.Wrap(err, xerror.Normal, "parse backup SnapshotName failed")
+	}
+
+	createTime, err := parser.GetString("CreateTime")
+	if err != nil {
+		return nil, xerror.Wrap(err, xerror.Normal, "parse backup CreateTime failed")
+	}
+
+	info := &BackupInfo{
+		State:        ParseBackupState(stateStr),
+		StateStr:     stateStr,
+		SnapshotName: snapshotName,
+		CreateTime:   createTime,
+	}
+	return info, nil
+}
+
 type Frontend struct {
 	Host       string `json:"host"`
 	Port       string `json:"port"`
@@ -649,19 +734,19 @@ func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, error) {
 	}
 	defer rows.Close()
 
-	var backupStateStr string
 	if rows.Next() {
 		rowParser := utils.NewRowParser()
 		if err := rowParser.Parse(rows); err != nil {
 			return BackupStateUnknown, xerror.Wrap(err, xerror.Normal, sql)
 		}
-		backupStateStr, err = rowParser.GetString("State")
+
+		info, err := parseBackupInfo(rowParser)
 		if err != nil {
 			return BackupStateUnknown, xerror.Wrap(err, xerror.Normal, sql)
 		}
 
-		log.Infof("check snapshot %s backup state: [%v]", snapshotName, backupStateStr)
-		return ParseBackupState(backupStateStr), nil
+		log.Infof("check snapshot %s backup state: [%v]", snapshotName, info.StateStr)
+		return info.State, nil
 	}
 	return BackupStateUnknown, xerror.Errorf(xerror.Normal, "no backup state found, sql: %s", sql)
 }
@@ -689,6 +774,105 @@ func (s *Spec) CheckBackupFinished(snapshotName string) (bool, error) {
 	return false, xerror.Errorf(xerror.Normal, "check backup state timeout, max try times: %d", MAX_CHECK_RETRY_TIMES)
 }
 
+func (s *Spec) CancelBackupIfExists() error {
+	log.Debugf("cancel backup job if exists, database: %s", s.Database)
+
+	db, err := s.Connect()
+	if err != nil {
+		return err
+	}
+
+	query := fmt.Sprintf("SHOW BACKUP FROM %s", utils.FormatKeywordName(s.Database))
+	log.Infof("show backup state sql: %s", query)
+	rows, err := db.Query(query)
+	if err != nil {
+		return xerror.Wrap(err, xerror.Normal, "query backup state failed")
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return xerror.Wrap(err, xerror.Normal, "scan backup state failed")
+		}
+
+		info, err := parseBackupInfo(rowParser)
+		if err != nil {
+			return xerror.Wrap(err, xerror.Normal, "scan backup state failed")
+		}
+
+		log.Infof("check snapshot %s backup state [%v], create time: %s",
+			info.SnapshotName, info.StateStr, info.CreateTime)
+
+		// Only cancel the running backup job issued by syncer
+		if !isSyncerIssuedJob(info.SnapshotName, s.Database) {
+			continue
+		}
+
+		if info.State == BackupStateFinished || info.State == BackupStateCancelled {
+			continue
+		}
+
+		cancelSql := fmt.Sprintf("CANCEL BACKUP FROM %s", s.Database)
+		log.Infof("cancel backup sql: %s, snapshot: %s", cancelSql, info.SnapshotName)
+		if _, err = db.Exec(cancelSql); err != nil {
+			return xerror.Wrapf(err, xerror.Normal,
+				"cancel backup job %s failed, database: %s", info.SnapshotName, s.Database)
+		}
+	}
+	return nil
+}
+
+func (s *Spec) CancelRestoreIfExists(srcDbName string) error {
+	log.Debugf("cancel restore job if exists, src db: %s", srcDbName)
+
+	db, err := s.Connect()
+	if err != nil {
+		return err
+	}
+
+	query := fmt.Sprintf("SHOW RESTORE FROM %s", utils.FormatKeywordName(s.Database))
+	log.Debugf("show restore state sql: %s", query)
+	rows, err := db.Query(query)
+	if err != nil {
+		return xerror.Wrap(err, xerror.Normal, "query restore state failed")
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return xerror.Wrap(err, xerror.Normal, "scan restore state failed")
+		}
+
+		info, err := parseRestoreInfo(rowParser)
+		if err != nil {
+			return xerror.Wrap(err, xerror.Normal, "scan restore state failed")
+		}
+
+		log.Infof("check snapshot %s restore state: [%v], create time: %s",
+			info.Label, info.StateStr, info.CreateTime)
+
+		// Only cancel the running restore job issued by syncer
+		if !isSyncerIssuedJob(info.Label, srcDbName) {
+			continue
+		}
+
+		if info.State == RestoreStateCancelled || info.State == RestoreStateFinished {
+			continue
+		}
+
+		cancelSql := fmt.Sprintf("CANCEL RESTORE FROM %s", utils.FormatKeywordName(s.Database))
+		log.Infof("cancel restore sql: %s, running snapshot %s", cancelSql, info.Label)
+
+		_, err = db.Exec(cancelSql)
+		if err != nil {
+			return xerror.Wrapf(err, xerror.Normal, "cancel running restore failed, snapshot %s", info.Label)
+		}
+	}
+	return nil
+}
+
 // TODO: Add TaskErrMsg
 func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, string, error) {
 	log.Debugf("check restore state %s", snapshotName)
@@ -707,26 +891,21 @@ func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, string, 
 	}
 	defer rows.Close()
 
-	var restoreStateStr string
-	var restoreStatusStr string
 	if rows.Next() {
 		rowParser := utils.NewRowParser()
 		if err := rowParser.Parse(rows); err != nil {
 			return RestoreStateUnknown, "", xerror.Wrap(err, xerror.Normal, "scan restore state failed")
 		}
-		restoreStateStr, err = rowParser.GetString("State")
+
+		info, err := parseRestoreInfo(rowParser)
 		if err != nil {
 			return RestoreStateUnknown, "", xerror.Wrap(err, xerror.Normal, "scan restore state failed")
 		}
-		restoreStatusStr, err = rowParser.GetString("Status")
-		if err != nil {
-			return RestoreStateUnknown, "", xerror.Wrap(err, xerror.Normal, "scan restore status failed")
-		}
 
 		log.Infof("check snapshot %s restore state: [%v], restore status: %s",
-			snapshotName, restoreStateStr, restoreStatusStr)
+			snapshotName, info.StateStr, info.Status)
 
-		return _parseRestoreState(restoreStateStr), restoreStatusStr, nil
+		return info.State, info.Status, nil
 	}
 	return RestoreStateUnknown, "", xerror.Errorf(xerror.Normal, "no restore state found")
 }
@@ -1081,4 +1260,10 @@ func correctAddPartitionSql(addPartitionSql string, addPartition *record.AddPart
 		addPartitionSql = strings.ReplaceAll(addPartitionSql, "ADD PARTITION", "ADD TEMPORARY PARTITION")
 	}
 	return addPartitionSql
+}
+
+func isSyncerIssuedJob(label, dbName string) bool {
+	fullSyncPrefix := fmt.Sprintf("ccrs_%s", dbName)
+	partialSyncPrefix := fmt.Sprintf("ccrp_%s", dbName)
+	return strings.HasPrefix(label, fullSyncPrefix) || strings.HasPrefix(label, partialSyncPrefix)
 }

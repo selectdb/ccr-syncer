@@ -360,6 +360,10 @@ func (j *Job) partialSync() error {
 	case BeginCreateSnapshot:
 		// Step 1: Create snapshot
 		log.Infof("partial sync status: create snapshot")
+		if err := j.ISrc.CancelBackupIfExists(); err != nil {
+			return err
+		}
+
 		snapshotName, err := j.ISrc.CreatePartialSnapshotAndWaitForDone(table, partitions)
 		if err != nil {
 			return err
@@ -458,13 +462,18 @@ func (j *Job) partialSync() error {
 			j.progress.InMemoryData = inMemoryData
 		}
 
-		// Step 4.1: start a new fullsync && persist
+		// Step 4.1: cancel the running restore job which submitted by former progress, if exists
+		if err := j.IDest.CancelRestoreIfExists(j.Src.Database); err != nil {
+			return err
+		}
+
+		// Step 4.2: start a new fullsync && persist
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
 		snapshotName := inMemoryData.SnapshotName
 		restoreSnapshotName := restoreSnapshotName(snapshotName)
 		snapshotResp := inMemoryData.SnapshotResp
 
-		// Step 4.2: restore snapshot to dest
+		// Step 4.3: restore snapshot to dest
 		dest := &j.Dest
 		destRpc, err := j.factory.NewFeRpc(dest)
 		if err != nil {
@@ -622,6 +631,11 @@ func (j *Job) fullSync() error {
 		default:
 			return xerror.Errorf(xerror.Normal, "invalid sync type %s", j.SyncType)
 		}
+
+		if err := j.ISrc.CancelBackupIfExists(); err != nil {
+			return err
+		}
+
 		snapshotName, err := j.ISrc.CreateSnapshotAndWaitForDone(backupTableList)
 		if err != nil {
 			return err
@@ -718,13 +732,18 @@ func (j *Job) fullSync() error {
 			j.progress.InMemoryData = inMemoryData
 		}
 
-		// Step 4.1: start a new fullsync && persist
+		// Step 4.1: cancel the running restore job which by the former process, if exists
+		if err := j.IDest.CancelRestoreIfExists(j.Src.Database); err != nil {
+			return err
+		}
+
+		// Step 4.2: start a new fullsync && persist
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
 		snapshotName := inMemoryData.SnapshotName
 		restoreSnapshotName := restoreSnapshotName(snapshotName)
 		snapshotResp := inMemoryData.SnapshotResp
 
-		// Step 4.2: restore snapshot to dest
+		// Step 4.3: restore snapshot to dest
 		dest := &j.Dest
 		destRpc, err := j.factory.NewFeRpc(dest)
 		if err != nil {
