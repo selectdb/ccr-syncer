@@ -743,7 +743,7 @@ func (j *Job) fullSync() error {
 		restoreSnapshotName := restoreSnapshotName(snapshotName)
 		snapshotResp := inMemoryData.SnapshotResp
 
-		// Step 4.2: restore snapshot to dest
+		// Step 4.3: restore snapshot to dest
 		dest := &j.Dest
 		destRpc, err := j.factory.NewFeRpc(dest)
 		if err != nil {
