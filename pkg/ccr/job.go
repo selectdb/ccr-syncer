@@ -36,12 +36,13 @@ const (
 )
 
 var (
-	featureSchemaChangePartialSync    bool
-	featureCleanTableAndPartitions    bool
-	featureAtomicRestore              bool
-	featureCreateViewDropExists       bool
-	featureReplaceNotMatchedWithAlias bool
-	featureFilterShadowIndexesUpsert  bool
+	featureSchemaChangePartialSync        bool
+	featureCleanTableAndPartitions        bool
+	featureAtomicRestore                  bool
+	featureCreateViewDropExists           bool
+	featureReplaceNotMatchedWithAlias     bool
+	featureFilterShadowIndexesUpsert      bool
+	featureCancelConflictBackupRestoreJob bool
 )
 
 func init() {
@@ -59,6 +60,8 @@ func init() {
 		"replace signature not matched tables with table alias during the full sync")
 	flag.BoolVar(&featureFilterShadowIndexesUpsert, "feature_filter_shadow_indexes_upsert", true,
 		"filter the upsert to the shadow indexes")
+	flag.BoolVar(&featureCancelConflictBackupRestoreJob, "feature_cancel_conflict_backup_restore_job", false,
+		"cancel the conflict backup/restore job before issue new backup/restore job")
 }
 
 type SyncType int
@@ -360,8 +363,10 @@ func (j *Job) partialSync() error {
 	case BeginCreateSnapshot:
 		// Step 1: Create snapshot
 		log.Infof("partial sync status: create snapshot")
-		if err := j.ISrc.CancelBackupIfExists(); err != nil {
-			return err
+		if featureCancelConflictBackupRestoreJob {
+			if err := j.ISrc.CancelBackupIfExists(); err != nil {
+				return err
+			}
 		}
 
 		snapshotName, err := j.ISrc.CreatePartialSnapshotAndWaitForDone(table, partitions)
@@ -632,8 +637,10 @@ func (j *Job) fullSync() error {
 			return xerror.Errorf(xerror.Normal, "invalid sync type %s", j.SyncType)
 		}
 
-		if err := j.ISrc.CancelBackupIfExists(); err != nil {
-			return err
+		if featureCancelConflictBackupRestoreJob {
+			if err := j.ISrc.CancelBackupIfExists(); err != nil {
+				return err
+			}
 		}
 
 		snapshotName, err := j.ISrc.CreateSnapshotAndWaitForDone(backupTableList)
