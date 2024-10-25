@@ -468,8 +468,10 @@ func (j *Job) partialSync() error {
 		}
 
 		// Step 4.1: cancel the running restore job which submitted by former progress, if exists
-		if err := j.IDest.CancelRestoreIfExists(j.Src.Database); err != nil {
-			return err
+		if featureCancelConflictBackupRestoreJob {
+			if err := j.IDest.CancelRestoreIfExists(j.Src.Database); err != nil {
+				return err
+			}
 		}
 
 		// Step 4.2: start a new fullsync && persist
@@ -740,8 +742,10 @@ func (j *Job) fullSync() error {
 		}
 
 		// Step 4.1: cancel the running restore job which by the former process, if exists
-		if err := j.IDest.CancelRestoreIfExists(j.Src.Database); err != nil {
-			return err
+		if featureCancelConflictBackupRestoreJob {
+			if err := j.IDest.CancelRestoreIfExists(j.Src.Database); err != nil {
+				return err
+			}
 		}
 
 		// Step 4.2: start a new fullsync && persist
