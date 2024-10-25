@@ -344,6 +344,7 @@ func (j *Job) partialSync() error {
 		SnapshotName      string                        `json:"snapshot_name"`
 		SnapshotResp      *festruct.TGetSnapshotResult_ `json:"snapshot_resp"`
 		TableCommitSeqMap map[int64]int64               `json:"table_commit_seq_map"`
+		RestoreLabel      string                        `json:"restore_label"`
 	}
 
 	if j.progress.PartialSyncData == nil {
@@ -369,15 +370,30 @@ func (j *Job) partialSync() error {
 			}
 		}
 
-		snapshotName, err := j.ISrc.CreatePartialSnapshotAndWaitForDone(table, partitions)
+		snapshotName, err := j.ISrc.CreatePartialSnapshot(table, partitions)
 		if err != nil {
 			return err
+		}
+
+		j.progress.NextSubVolatile(WaitBackupDone, snapshotName)
+
+	case WaitBackupDone:
+		// Step 2: Wait backup job done
+		snapshotName := j.progress.InMemoryData.(string)
+		backupFinished, err := j.ISrc.CheckBackupFinished(snapshotName)
+		if err != nil {
+			return err
+		}
+
+		if !backupFinished {
+			log.Debugf("partial sync status: backup job %s is running, retry later", snapshotName)
+			return nil
 		}
 
 		j.progress.NextSubCheckpoint(GetSnapshotInfo, snapshotName)
 
 	case GetSnapshotInfo:
-		// Step 2: Get snapshot info
+		// Step 3: Get snapshot info
 		log.Infof("partial sync status: get snapshot info")
 
 		snapshotName := j.progress.PersistData
@@ -427,7 +443,7 @@ func (j *Job) partialSync() error {
 		j.progress.NextSubVolatile(AddExtraInfo, inMemoryData)
 
 	case AddExtraInfo:
-		// Step 3: Add extra info
+		// Step 4: Add extra info
 		log.Infof("partial sync status: add extra info")
 
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
@@ -455,7 +471,7 @@ func (j *Job) partialSync() error {
 		j.progress.NextSubCheckpoint(RestoreSnapshot, inMemoryData)
 
 	case RestoreSnapshot:
-		// Step 4: Restore snapshot
+		// Step 5: Restore snapshot
 		log.Infof("partial sync status: restore snapshot")
 
 		if j.progress.InMemoryData == nil {
@@ -467,20 +483,20 @@ func (j *Job) partialSync() error {
 			j.progress.InMemoryData = inMemoryData
 		}
 
-		// Step 4.1: cancel the running restore job which submitted by former progress, if exists
+		// Step 5.1: cancel the running restore job which submitted by former progress, if exists
 		if featureCancelConflictBackupRestoreJob {
 			if err := j.IDest.CancelRestoreIfExists(j.Src.Database); err != nil {
 				return err
 			}
 		}
 
-		// Step 4.2: start a new fullsync && persist
+		// Step 5.2: start a new fullsync && persist
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
 		snapshotName := inMemoryData.SnapshotName
 		restoreSnapshotName := restoreSnapshotName(snapshotName)
 		snapshotResp := inMemoryData.SnapshotResp
 
-		// Step 4.3: restore snapshot to dest
+		// Step 5.3: restore snapshot to dest
 		dest := &j.Dest
 		destRpc, err := j.factory.NewFeRpc(dest)
 		if err != nil {
@@ -527,22 +543,29 @@ func (j *Job) partialSync() error {
 			return xerror.Errorf(xerror.Normal, "restore snapshot failed, status: %v", restoreResp.Status)
 		}
 		log.Infof("partial sync restore snapshot resp: %v", restoreResp)
+		inMemoryData.RestoreLabel = restoreSnapshotName
 
-		for {
-			restoreFinished, err := j.IDest.CheckRestoreFinished(restoreSnapshotName)
-			if err != nil {
-				return err
-			}
+		j.progress.NextSubVolatile(WaitRestoreDone, inMemoryData)
 
-			if restoreFinished {
-				j.progress.NextSubCheckpoint(PersistRestoreInfo, restoreSnapshotName)
-				break
-			}
-			// retry for  MAX_CHECK_RETRY_TIMES, timeout, continue
+	case WaitRestoreDone:
+		// Step 6: Wait restore job done
+		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
+		restoreSnapshotName := inMemoryData.RestoreLabel
+
+		restoreFinished, err := j.IDest.CheckRestoreFinished(restoreSnapshotName)
+		if err != nil {
+			return err
 		}
 
+		if !restoreFinished {
+			log.Debugf("partial sync status: restore job %s is running", restoreSnapshotName)
+			return nil
+		}
+
+		j.progress.NextSubCheckpoint(PersistRestoreInfo, restoreSnapshotName)
+
 	case PersistRestoreInfo:
-		// Step 5: Update job progress && dest table id
+		// Step 7: Update job progress && dest table id
 		// update job info, only for dest table id
 		var targetName = table
 		if alias, ok := j.progress.TableAliases[table]; ok {
@@ -610,6 +633,7 @@ func (j *Job) fullSync() error {
 		SnapshotName      string                        `json:"snapshot_name"`
 		SnapshotResp      *festruct.TGetSnapshotResult_ `json:"snapshot_resp"`
 		TableCommitSeqMap map[int64]int64               `json:"table_commit_seq_map"`
+		RestoreLabel      string                        `json:"restore_label"`
 	}
 
 	switch j.progress.SubSyncState {
@@ -645,15 +669,28 @@ func (j *Job) fullSync() error {
 			}
 		}
 
-		snapshotName, err := j.ISrc.CreateSnapshotAndWaitForDone(backupTableList)
+		snapshotName, err := j.ISrc.CreateSnapshot(backupTableList)
 		if err != nil {
 			return err
+		}
+		j.progress.NextSubVolatile(WaitBackupDone, snapshotName)
+
+	case WaitBackupDone:
+		// Step 2: Wait backup job done
+		snapshotName := j.progress.InMemoryData.(string)
+		backupFinished, err := j.ISrc.CheckBackupFinished(snapshotName)
+		if err != nil {
+			return err
+		}
+		if !backupFinished {
+			log.Debugf("fullsync status: backup job %s is running, retry later", snapshotName)
+			return nil
 		}
 
 		j.progress.NextSubCheckpoint(GetSnapshotInfo, snapshotName)
 
 	case GetSnapshotInfo:
-		// Step 2: Get snapshot info
+		// Step 3: Get snapshot info
 		log.Infof("fullsync status: get snapshot info")
 
 		snapshotName := j.progress.PersistData
@@ -698,7 +735,7 @@ func (j *Job) fullSync() error {
 		j.progress.NextSubVolatile(AddExtraInfo, inMemoryData)
 
 	case AddExtraInfo:
-		// Step 3: Add extra info
+		// Step 4: Add extra info
 		log.Infof("fullsync status: add extra info")
 
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
@@ -729,7 +766,7 @@ func (j *Job) fullSync() error {
 		j.progress.CommitNextSubWithPersist(commitSeq, RestoreSnapshot, inMemoryData)
 
 	case RestoreSnapshot:
-		// Step 4: Restore snapshot
+		// Step 5: Restore snapshot
 		log.Infof("fullsync status: restore snapshot")
 
 		if j.progress.InMemoryData == nil {
@@ -741,20 +778,20 @@ func (j *Job) fullSync() error {
 			j.progress.InMemoryData = inMemoryData
 		}
 
-		// Step 4.1: cancel the running restore job which by the former process, if exists
+		// Step 5.1: cancel the running restore job which by the former process, if exists
 		if featureCancelConflictBackupRestoreJob {
 			if err := j.IDest.CancelRestoreIfExists(j.Src.Database); err != nil {
 				return err
 			}
 		}
 
-		// Step 4.2: start a new fullsync && persist
+		// Step 5.2: start a new fullsync && persist
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
 		snapshotName := inMemoryData.SnapshotName
 		restoreSnapshotName := restoreSnapshotName(snapshotName)
 		snapshotResp := inMemoryData.SnapshotResp
 
-		// Step 4.3: restore snapshot to dest
+		// Step 5.3: restore snapshot to dest
 		dest := &j.Dest
 		destRpc, err := j.factory.NewFeRpc(dest)
 		if err != nil {
@@ -811,6 +848,14 @@ func (j *Job) fullSync() error {
 		}
 		log.Infof("resp: %v", restoreResp)
 
+		inMemoryData.RestoreLabel = restoreSnapshotName
+		j.progress.NextSubVolatile(WaitRestoreDone, inMemoryData)
+
+	case WaitRestoreDone:
+		// Step 6: Wait restore job done
+		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
+		restoreSnapshotName := inMemoryData.RestoreLabel
+
 		for {
 			restoreFinished, err := j.IDest.CheckRestoreFinished(restoreSnapshotName)
 			if err != nil && errors.Is(err, base.ErrRestoreSignatureNotMatched) {
@@ -856,15 +901,17 @@ func (j *Job) fullSync() error {
 				return err
 			}
 
-			if restoreFinished {
-				j.progress.NextSubCheckpoint(PersistRestoreInfo, restoreSnapshotName)
-				break
+			if !restoreFinished {
+				log.Debugf("fullsync status: restore job %s is running, retry later", restoreSnapshotName)
+				return nil
 			}
-			// retry for  MAX_CHECK_RETRY_TIMES, timeout, continue
+
+			j.progress.NextSubCheckpoint(PersistRestoreInfo, restoreSnapshotName)
+			break
 		}
 
 	case PersistRestoreInfo:
-		// Step 5: Update job progress && dest table id
+		// Step 7: Update job progress && dest table id
 		// update job info, only for dest table id
 
 		if len(j.progress.TableAliases) > 0 {

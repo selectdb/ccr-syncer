@@ -95,6 +95,8 @@ var (
 	AddExtraInfo        SubSyncState = SubSyncState{State: 2, BinlogType: BinlogNone}
 	RestoreSnapshot     SubSyncState = SubSyncState{State: 3, BinlogType: BinlogNone}
 	PersistRestoreInfo  SubSyncState = SubSyncState{State: 4, BinlogType: BinlogNone}
+	WaitBackupDone      SubSyncState = SubSyncState{State: 5, BinlogType: BinlogNone}
+	WaitRestoreDone     SubSyncState = SubSyncState{State: 6, BinlogType: BinlogNone}
 
 	BeginTransaction    SubSyncState = SubSyncState{State: 11, BinlogType: BinlogUpsert}
 	IngestBinlog        SubSyncState = SubSyncState{State: 12, BinlogType: BinlogUpsert}

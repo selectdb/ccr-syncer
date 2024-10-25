@@ -25,8 +25,9 @@ type Specer interface {
 	CheckDatabaseExists() (bool, error)
 	CheckTableExists() (bool, error)
 	CheckTableExistsByName(tableName string) (bool, error)
-	CreatePartialSnapshotAndWaitForDone(table string, partitions []string) (string, error)
-	CreateSnapshotAndWaitForDone(tables []string) (string, error)
+	CreatePartialSnapshot(table string, partitions []string) (string, error)
+	CreateSnapshot(tables []string) (string, error)
+	CheckBackupFinished(snapshotName string) (bool, error)
 	CancelBackupIfExists() error
 	CancelRestoreIfExists(srcDbName string) error
 	CheckRestoreFinished(snapshotName string) (bool, error)

@@ -26,7 +26,8 @@ func (beRpc *BeRpc) IngestBinlog(req *bestruct.TIngestBinlogRequest) (*bestruct.
 
 	client := beRpc.client
 	if result, err := client.IngestBinlog(context.Background(), req); err != nil {
-		return nil, xerror.Wrapf(err, xerror.Normal, "IngestBinlog error: %v", err)
+		return nil, xerror.Wrapf(err, xerror.Normal,
+			"IngestBinlog error: %v, txnId: %d, be: %v", err, req.GetTxnId(), beRpc.backend)
 	} else {
 		return result, nil
 	}
