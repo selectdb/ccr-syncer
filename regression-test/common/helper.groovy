@@ -221,7 +221,7 @@ class Helper {
     }
 
     void force_fullsync(tableName = "") {
-        def bodyJson = suite.get_ccr_body "${table}"
+        def bodyJson = suite.get_ccr_body "${tableName}"
         suite.httpTest {
             uri "/force_fullsync"
             endpoint syncerAddress
