@@ -152,9 +152,12 @@ type JobProgress struct {
 	SubSyncState SubSyncState `json:"sub_sync_state"`
 
 	// The commit seq where the target cluster has synced.
-	PrevCommitSeq     int64               `json:"prev_commit_seq"`
-	CommitSeq         int64               `json:"commit_seq"`
-	TableMapping      map[int64]int64     `json:"table_mapping"`
+	PrevCommitSeq int64           `json:"prev_commit_seq"`
+	CommitSeq     int64           `json:"commit_seq"`
+	TableMapping  map[int64]int64 `json:"table_mapping"`
+	// the upstream table id to name mapping, build during the fullsync,
+	// keep snapshot to avoid rename. it might be staled.
+	TableNameMapping  map[int64]string    `json:"table_name_mapping"`
 	TableCommitSeqMap map[int64]int64     `json:"table_commit_seq_map"` // only for DBTablesIncrementalSync
 	InMemoryData      any                 `json:"-"`
 	PersistData       string              `json:"data"` // this often for binlog or snapshot info
