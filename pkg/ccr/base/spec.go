@@ -1102,7 +1102,8 @@ func (s *Spec) LightningSchemaChange(srcDatabase, tableAlias string, lightningSc
 }
 
 func (s *Spec) RenameColumn(destTableName string, renameColumn *record.RenameColumn) error {
-	renameSql := fmt.Sprintf("ALTER TABLE `%s` RENAME COLUMN `%s` `%s`", destTableName, renameColumn.ColName, renameColumn.NewColName)
+	renameSql := fmt.Sprintf("ALTER TABLE `%s` RENAME COLUMN `%s` `%s`",
+		destTableName, renameColumn.ColName, renameColumn.NewColName)
 	log.Infof("rename column sql: %s", renameSql)
 	return s.DbExec(renameSql)
 }

@@ -1715,7 +1715,8 @@ func (j *Job) handleLightningSchemaChange(binlog *festruct.TBinlog) error {
 
 // handle rename column
 func (j *Job) handleRenameColumn(binlog *festruct.TBinlog) error {
-	log.Infof("handle rename column binlog")
+	log.Infof("handle rename column binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
 
 	data := binlog.GetData()
 	renameColumn, err := record.NewRenameColumnFromJson(data)
@@ -1727,6 +1728,10 @@ func (j *Job) handleRenameColumn(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
+	return j.handleRenameColumnRecord(renameColumn)
+}
+
+func (j *Job) handleRenameColumnRecord(renameColumn *record.RenameColumn) error {
 	destTableId, err := j.getDestTableIdBySrc(renameColumn.TableId)
 	if err != nil {
 		return err
@@ -1745,7 +1750,8 @@ func (j *Job) handleRenameColumn(binlog *festruct.TBinlog) error {
 
 // handle modify comment
 func (j *Job) handleModifyComment(binlog *festruct.TBinlog) error {
-	log.Infof("handle modify comment binlog")
+	log.Infof("handle modify comment binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
 
 	data := binlog.GetData()
 	modifyComment, err := record.NewModifyCommentFromJson(data)
@@ -1844,7 +1850,8 @@ func (j *Job) handleReplacePartitions(binlog *festruct.TBinlog) error {
 
 // handle rename table
 func (j *Job) handleRenameTable(binlog *festruct.TBinlog) error {
-	log.Infof("handle rename table binlog")
+	log.Infof("handle rename table binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
 
 	data := binlog.GetData()
 	renameTable, err := record.NewRenameTableFromJson(data)
@@ -1909,6 +1916,9 @@ func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 	}
 
 	binlogType := festruct.TBinlogType(barrierLog.BinlogType)
+	log.Infof("handle barrier binlog with type %s, prevCommitSeq: %d, commitSeq: %d",
+		binlogType, j.progress.PrevCommitSeq, j.progress.CommitSeq)
+
 	switch binlogType {
 	case festruct.TBinlogType_RENAME_TABLE:
 		renameTable, err := record.NewRenameTableFromJson(barrierLog.Binlog)
@@ -1916,6 +1926,12 @@ func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 			return err
 		}
 		return j.handleRenameTableRecord(renameTable)
+	case festruct.TBinlogType_RENAME_COLUMN:
+		renameColumn, err := record.NewRenameColumnFromJson(barrierLog.Binlog)
+		if err != nil {
+			return err
+		}
+		return j.handleRenameColumnRecord(renameColumn)
 	case festruct.TBinlogType_BARRIER:
 		log.Info("handle barrier binlog, ignore it")
 	default:
