@@ -466,14 +466,14 @@ func (s *Spec) RenameTable(destTableName string, renameTable *record.RenameTable
 
 	// ALTER TABLE example_table RENAME PARTITION p1 p2;
 	// if rename partition, table name is unchanged
-	if renameTable.NewParitionName != "" && renameTable.OldParitionName != "" {
-		sql = fmt.Sprintf("ALTER TABLE %s RENAME PARTITION %s %s;", destTableName, renameTable.OldParitionName, renameTable.NewParitionName)
+	if renameTable.NewPartitionName != "" && renameTable.OldPartitionName != "" {
+		sql = fmt.Sprintf("ALTER TABLE %s RENAME PARTITION %s %s;", destTableName, renameTable.OldPartitionName, renameTable.NewPartitionName)
 	}
 	if sql == "" {
 		return xerror.Errorf(xerror.Normal, "rename sql is empty")
 	}
 
-	log.Infof("renam table sql: %s", sql)
+	log.Infof("rename table sql: %s", sql)
 	return s.DbExec(sql)
 }
 

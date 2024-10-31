@@ -1852,30 +1852,41 @@ func (j *Job) handleRenameTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
+	return j.handleRenameTableRecord(renameTable)
+}
+
+func (j *Job) handleRenameTableRecord(renameTable *record.RenameTable) error {
 	j.srcMeta.GetTables()
 
 	// don't support rename table when table sync
-	var destTableName string
-	err = nil
 	if j.SyncType == TableSync {
-		log.Warnf("rename table is not supported when table sync")
-		return xerror.Errorf(xerror.Normal, "rename table is not supported when table sync")
-	} else if j.SyncType == DBSync {
-		destTableId, err := j.getDestTableIdBySrc(renameTable.TableId)
-		if err != nil {
-			return err
-		}
+		log.Warnf("rename table is not supported when table sync, consider rebuilding this job instead")
+		return xerror.Errorf(xerror.Normal, "rename table is not supported when table sync, consider rebuilding this job instead")
+	}
 
-		if destTableName, err = j.destMeta.GetTableNameById(destTableId); err != nil {
-			return err
-		} else if destTableName == "" {
-			return xerror.Errorf(xerror.Normal, "tableId %d not found in destMeta", destTableId)
-		}
-		err = j.IDest.RenameTable(destTableName, renameTable)
+	destTableId, err := j.getDestTableIdBySrc(renameTable.TableId)
+	if err != nil {
+		return err
+	}
 
-		if err == nil {
-			j.destMeta.GetTables()
-		}
+	var destTableName string
+	if destTableName, err = j.destMeta.GetTableNameById(destTableId); err != nil {
+		return err
+	} else if destTableName == "" {
+		return xerror.Errorf(xerror.Normal, "tableId %d not found in destMeta", destTableId)
+	}
+
+	if renameTable.NewTableName != "" && renameTable.OldTableName == "" {
+		// for compatible with old doris version
+		//
+		// If we synchronize all operations accurately, then the old table name should be equal to
+		// the destination table name.
+		renameTable.OldTableName = destTableName
+	}
+
+	err = j.IDest.RenameTable(destTableName, renameTable)
+	if err == nil {
+		j.destMeta.GetTables()
 	}
 
 	return err
@@ -1888,13 +1899,23 @@ func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	if len(barrierLog.Binlog) == 0 {
+	if barrierLog.Binlog == "" {
 		log.Info("handle barrier binlog, ignore it")
+		return nil
+	}
+
+	if j.isBinlogCommitted(barrierLog.TableId, binlog.GetCommitSeq()) {
 		return nil
 	}
 
 	binlogType := festruct.TBinlogType(barrierLog.BinlogType)
 	switch binlogType {
+	case festruct.TBinlogType_RENAME_TABLE:
+		renameTable, err := record.NewRenameTableFromJson(barrierLog.Binlog)
+		if err != nil {
+			return err
+		}
+		return j.handleRenameTableRecord(renameTable)
 	case festruct.TBinlogType_BARRIER:
 		log.Info("handle barrier binlog, ignore it")
 	default:
