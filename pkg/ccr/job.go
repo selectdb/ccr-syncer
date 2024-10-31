@@ -1881,6 +1881,28 @@ func (j *Job) handleRenameTable(binlog *festruct.TBinlog) error {
 	return err
 }
 
+func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
+	data := binlog.GetData()
+	barrierLog, err := record.NewBarrierLogFromJson(data)
+	if err != nil {
+		return err
+	}
+
+	if len(barrierLog.Binlog) == 0 {
+		log.Info("handle barrier binlog, ignore it")
+		return nil
+	}
+
+	binlogType := festruct.TBinlogType(barrierLog.BinlogType)
+	switch binlogType {
+	case festruct.TBinlogType_BARRIER:
+		log.Info("handle barrier binlog, ignore it")
+	default:
+		return xerror.Errorf(xerror.Normal, "unknown binlog type wrapped by barrier: %d", barrierLog.BinlogType)
+	}
+	return nil
+}
+
 // return: error && bool backToRunLoop
 func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 	log.Infof("handle binlogs, binlogs size: %d", len(binlogs))
@@ -1962,7 +1984,7 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 	case festruct.TBinlogType_MODIFY_TABLE_PROPERTY:
 		log.Info("handle alter table property binlog, ignore it")
 	case festruct.TBinlogType_BARRIER:
-		log.Info("handle barrier binlog, ignore it")
+		return j.handleBarrier(binlog)
 	case festruct.TBinlogType_TRUNCATE_TABLE:
 		return j.handleTruncateTable(binlog)
 	case festruct.TBinlogType_RENAME_TABLE:
