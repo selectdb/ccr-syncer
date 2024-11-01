@@ -655,15 +655,13 @@ func (s *Spec) CreateSnapshot(tables []string) (string, error) {
 		return "", xerror.Errorf(xerror.Normal, "source db is empty! you should have at least one table")
 	}
 
-	log.Infof("create snapshot %s.%s", s.Database, snapshotName)
-
 	db, err := s.Connect()
 	if err != nil {
 		return "", err
 	}
 
 	backupSnapshotSql := fmt.Sprintf("BACKUP SNAPSHOT %s.%s TO `__keep_on_local__` ON ( %s ) PROPERTIES (\"type\" = \"full\")", utils.FormatKeywordName(s.Database), utils.FormatKeywordName(snapshotName), tableRefs)
-	log.Debugf("backup snapshot sql: %s", backupSnapshotSql)
+	log.Infof("create snapshot %s.%s, backup snapshot sql: %s", s.Database, snapshotName, backupSnapshotSql)
 	_, err = db.Exec(backupSnapshotSql)
 	if err != nil {
 		return "", xerror.Wrapf(err, xerror.Normal, "backup snapshot %s failed, sql: %s", snapshotName, backupSnapshotSql)

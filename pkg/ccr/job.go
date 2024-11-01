@@ -663,6 +663,10 @@ func (j *Job) fullSync() error {
 			for _, table := range tables {
 				backupTableList = append(backupTableList, table.Name)
 			}
+			if len(tables) == 0 {
+				log.Warnf("source db is empty! retry later")
+				return nil
+			}
 		case TableSync:
 			backupTableList = append(backupTableList, j.Src.Table)
 		default:
