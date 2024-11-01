@@ -31,22 +31,27 @@ suite("test_keyword_name") {
     def notExist = { res -> Boolean
         return res.size() == 0
     }
+    def has_count = { count ->
+        return { res -> Boolean
+            res.size() == count
+        }
+    }
 
     sql "DROP TABLE IF EXISTS `${tableName}` FORCE"
     target_sql "DROP TABLE IF EXISTS `${tableName}` FORCE"
     sql """
         CREATE TABLE `${tableName}` (
-            role_id       INT,
+            `role`       INT,
             occupation    VARCHAR(32),
             camp          VARCHAR(32),
             register_time DATE
         )
-        UNIQUE KEY(role_id)
-        PARTITION BY RANGE (role_id)
+        UNIQUE KEY(`role`)
+        PARTITION BY RANGE (`role`)
         (
             PARTITION p1 VALUES LESS THAN ("10")
         )
-        DISTRIBUTED BY HASH(role_id) BUCKETS 1
+        DISTRIBUTED BY HASH(`role`) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true"
@@ -141,4 +146,23 @@ suite("test_keyword_name") {
                                 SELECT * FROM `TEST_${context.dbName}`.`${tableName}`
                                 """,
                                 notExist, 30, "target"))
+
+    logger.info("=== Test 4: Add column with keyword name ===")
+    // index is a keyword
+    sql "ALTER TABLE `${tableName}` ADD COLUMN `index` INT DEFAULT \"0\""
+    sql "sync"
+
+    assertTrue(helper.checkShowTimesOf("""
+                                SHOW ALTER TABLE COLUMN
+                                FROM ${context.dbName}
+                                WHERE TableName = "${tableName}" AND State = "FINISHED"
+                                """,
+                                has_count(1), 30))
+
+    def has_column_index = { res -> Boolean
+        // Field == 'index' && 'Key' == 'NO'
+        return res[4][0] == 'index' && (res[4][3] == 'NO' || res[4][3] == 'false')
+    }
+
+    assertTrue(helper.checkShowTimesOf("SHOW COLUMNS FROM `${tableName}`", has_column_index, 60, "target_sql"))
 }

@@ -1171,7 +1171,7 @@ func (s *Spec) DropView(viewName string) error {
 func (s *Spec) AddPartition(destTableName string, addPartition *record.AddPartition) error {
 	addPartitionSql := addPartition.GetSql(destTableName)
 	addPartitionSql = correctAddPartitionSql(addPartitionSql, addPartition)
-	log.Infof("addPartitionSql: %s", addPartitionSql)
+	log.Infof("addPartitionSql: %s, original sql: %s", addPartitionSql, addPartition.Sql)
 	return s.DbExec(addPartitionSql)
 }
 
