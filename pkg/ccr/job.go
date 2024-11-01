@@ -1856,6 +1856,14 @@ func (j *Job) handleReplacePartitions(binlog *festruct.TBinlog) error {
 	return j.newPartialSnapshot(replacePartition.TableName, partitions, false)
 }
 
+func (j *Job) handleModifyPartitions(binlog *festruct.TBinlog) error {
+	log.Infof("handle modify partitions binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
+
+	log.Warnf("modify partitions is not supported now, binlog data: %s", binlog.GetData())
+	return nil
+}
+
 // handle rename table
 func (j *Job) handleRenameTable(binlog *festruct.TBinlog) error {
 	log.Infof("handle rename table binlog, prevCommitSeq: %d, commitSeq: %d",
@@ -2036,6 +2044,8 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		return j.handleRenameTable(binlog)
 	case festruct.TBinlogType_REPLACE_PARTITIONS:
 		return j.handleReplacePartitions(binlog)
+	case festruct.TBinlogType_MODIFY_PARTITIONS:
+		return j.handleModifyPartitions(binlog)
 	default:
 		return xerror.Errorf(xerror.Normal, "unknown binlog type: %v", binlog.GetType())
 	}
