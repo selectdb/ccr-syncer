@@ -1471,6 +1471,11 @@ func (j *Job) handleDropPartition(binlog *festruct.TBinlog) error {
 		return err
 	}
 
+	if dropPartition.IsTemp {
+		log.Infof("Since the temporary partition is not synchronized to the downstream, this binlog is skipped.")
+		return nil
+	}
+
 	if j.isBinlogCommitted(dropPartition.TableId, binlog.GetCommitSeq()) {
 		return nil
 	}

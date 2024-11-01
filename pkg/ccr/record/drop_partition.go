@@ -9,6 +9,7 @@ import (
 type DropPartition struct {
 	TableId int64  `json:"tableId"`
 	Sql     string `json:"sql"`
+	IsTemp  bool   `json:"isTempPartition"`
 }
 
 func NewDropPartitionFromJson(data string) (*DropPartition, error) {
