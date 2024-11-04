@@ -222,7 +222,6 @@ func (s *MysqlDB) RefreshSyncer(hostInfo string, lastStamp int64) (int64, error)
 func (s *MysqlDB) GetStampAndJobs(hostInfo string) (int64, []string, error) {
 	txn, err := s.db.BeginTx(context.Background(), &sql.TxOptions{
 		Isolation: sql.LevelRepeatableRead,
-		ReadOnly:  true,
 	})
 	if err != nil {
 		return -1, nil, xerror.Wrapf(err, xerror.DB, "mysql: begin IMMEDIATE transaction failed.")
