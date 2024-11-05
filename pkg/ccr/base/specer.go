@@ -25,11 +25,11 @@ type Specer interface {
 	CheckDatabaseExists() (bool, error)
 	CheckTableExists() (bool, error)
 	CheckTableExistsByName(tableName string) (bool, error)
-	CreatePartialSnapshot(table string, partitions []string) (string, error)
-	CreateSnapshot(tables []string) (string, error)
+	GetValidBackupJob(snapshotNamePrefix string) (string, error)
+	GetValidRestoreJob(snapshotNamePrefix string) (string, error)
+	CreatePartialSnapshot(snapshotName, table string, partitions []string) error
+	CreateSnapshot(snapshotName string, tables []string) error
 	CheckBackupFinished(snapshotName string) (bool, error)
-	CancelBackupIfExists() error
-	CancelRestoreIfExists(srcDbName string) error
 	CheckRestoreFinished(snapshotName string) (bool, error)
 	GetRestoreSignatureNotMatchedTableOrView(snapshotName string) (string, bool, error)
 	WaitTransactionDone(txnId int64) // busy wait

@@ -151,6 +151,8 @@ type JobProgress struct {
 	// Sub sync state machine states
 	SubSyncState SubSyncState `json:"sub_sync_state"`
 
+	// The sync id of full/partial snapshot
+	SyncId int64 `json:"job_sync_id"`
 	// The commit seq where the target cluster has synced.
 	PrevCommitSeq int64           `json:"prev_commit_seq"`
 	CommitSeq     int64           `json:"commit_seq"`

@@ -36,13 +36,13 @@ const (
 )
 
 var (
-	featureSchemaChangePartialSync        bool
-	featureCleanTableAndPartitions        bool
-	featureAtomicRestore                  bool
-	featureCreateViewDropExists           bool
-	featureReplaceNotMatchedWithAlias     bool
-	featureFilterShadowIndexesUpsert      bool
-	featureCancelConflictBackupRestoreJob bool
+	featureSchemaChangePartialSync      bool
+	featureCleanTableAndPartitions      bool
+	featureAtomicRestore                bool
+	featureCreateViewDropExists         bool
+	featureReplaceNotMatchedWithAlias   bool
+	featureFilterShadowIndexesUpsert    bool
+	featureReuseRunningBackupRestoreJob bool
 )
 
 func init() {
@@ -60,8 +60,8 @@ func init() {
 		"replace signature not matched tables with table alias during the full sync")
 	flag.BoolVar(&featureFilterShadowIndexesUpsert, "feature_filter_shadow_indexes_upsert", true,
 		"filter the upsert to the shadow indexes")
-	flag.BoolVar(&featureCancelConflictBackupRestoreJob, "feature_cancel_conflict_backup_restore_job", false,
-		"cancel the conflict backup/restore job before issue new backup/restore job")
+	flag.BoolVar(&featureReuseRunningBackupRestoreJob, "feature_reuse_running_backup_restore_job", false,
+		"reuse the running backup/restore issued by the job self")
 }
 
 type SyncType int
@@ -363,19 +363,28 @@ func (j *Job) partialSync() error {
 
 	case BeginCreateSnapshot:
 		// Step 1: Create snapshot
-		log.Infof("partial sync status: create snapshot")
-		if featureCancelConflictBackupRestoreJob {
-			if err := j.ISrc.CancelBackupIfExists(); err != nil {
+		prefix := NewPartialSnapshotLabelPrefix(j.Name, j.progress.SyncId)
+		log.Infof("partial sync status: create snapshot with prefix %s", prefix)
+
+		if featureReuseRunningBackupRestoreJob {
+			snapshotName, err := j.ISrc.GetValidBackupJob(prefix)
+			if err != nil {
 				return err
+			}
+			if snapshotName != "" {
+				log.Infof("partial sync status: find a valid backup job %s", snapshotName)
+				j.progress.NextSubVolatile(WaitBackupDone, snapshotName)
+				return nil
 			}
 		}
 
-		snapshotName, err := j.ISrc.CreatePartialSnapshot(table, partitions)
-		if err != nil {
+		snapshotName := NewLabelWithTs(prefix)
+		if err := j.ISrc.CreatePartialSnapshot(snapshotName, table, partitions); err != nil {
 			return err
 		}
 
 		j.progress.NextSubVolatile(WaitBackupDone, snapshotName)
+		return nil
 
 	case WaitBackupDone:
 		// Step 2: Wait backup job done
@@ -387,7 +396,7 @@ func (j *Job) partialSync() error {
 		}
 
 		if !backupFinished {
-			log.Debugf("partial sync status: backup job %s is running, retry later", snapshotName)
+			log.Infof("partial sync status: backup job %s is running", snapshotName)
 			return nil
 		}
 
@@ -479,20 +488,26 @@ func (j *Job) partialSync() error {
 			j.progress.InMemoryData = inMemoryData
 		}
 
-		// Step 5.1: cancel the running restore job which submitted by former progress, if exists
-		if featureCancelConflictBackupRestoreJob {
-			if err := j.IDest.CancelRestoreIfExists(j.Src.Database); err != nil {
-				return err
+		// Step 5.1: try reuse the exists restore job.
+		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
+		snapshotName := inMemoryData.SnapshotName
+		if featureReuseRunningBackupRestoreJob {
+			name, err := j.IDest.GetValidRestoreJob(snapshotName)
+			if err != nil {
+				return nil
+			}
+			if name != "" {
+				log.Infof("partial sync status: find a valid restore job %s", name)
+				inMemoryData.RestoreLabel = name
+				j.progress.NextSubVolatile(WaitRestoreDone, inMemoryData)
+				break
 			}
 		}
 
-		// Step 5.2: start a new fullsync && persist
-		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
-		snapshotName := inMemoryData.SnapshotName
-		restoreSnapshotName := restoreSnapshotName(snapshotName)
+		// Step 5.2: start a new fullsync & restore snapshot to dest
+		restoreSnapshotName := NewRestoreLabel(snapshotName)
 		snapshotResp := inMemoryData.SnapshotResp
 
-		// Step 5.3: restore snapshot to dest
 		dest := &j.Dest
 		destRpc, err := j.factory.NewFeRpc(dest)
 		if err != nil {
@@ -542,6 +557,7 @@ func (j *Job) partialSync() error {
 		inMemoryData.RestoreLabel = restoreSnapshotName
 
 		j.progress.NextSubVolatile(WaitRestoreDone, inMemoryData)
+		return nil
 
 	case WaitRestoreDone:
 		// Step 6: Wait restore job done
@@ -555,7 +571,7 @@ func (j *Job) partialSync() error {
 		}
 
 		if !restoreFinished {
-			log.Debugf("partial sync status: restore job %s is running", restoreSnapshotName)
+			log.Infof("partial sync status: restore job %s is running", restoreSnapshotName)
 			return nil
 		}
 
@@ -651,7 +667,20 @@ func (j *Job) fullSync() error {
 
 	case BeginCreateSnapshot:
 		// Step 1: Create snapshot
-		log.Infof("fullsync status: create snapshot")
+		prefix := NewSnapshotLabelPrefix(j.Name, j.progress.SyncId)
+		log.Infof("fullsync status: create snapshot with prefix %s", prefix)
+
+		if featureReuseRunningBackupRestoreJob {
+			snapshotName, err := j.ISrc.GetValidBackupJob(prefix)
+			if err != nil {
+				return err
+			}
+			if snapshotName != "" {
+				log.Infof("fullsync status: find a valid backup job %s", snapshotName)
+				j.progress.NextSubVolatile(WaitBackupDone, snapshotName)
+				return nil
+			}
+		}
 
 		backupTableList := make([]string, 0)
 		switch j.SyncType {
@@ -673,17 +702,12 @@ func (j *Job) fullSync() error {
 			return xerror.Errorf(xerror.Normal, "invalid sync type %s", j.SyncType)
 		}
 
-		if featureCancelConflictBackupRestoreJob {
-			if err := j.ISrc.CancelBackupIfExists(); err != nil {
-				return err
-			}
-		}
-
-		snapshotName, err := j.ISrc.CreateSnapshot(backupTableList)
-		if err != nil {
+		snapshotName := NewLabelWithTs(prefix)
+		if err := j.ISrc.CreateSnapshot(snapshotName, backupTableList); err != nil {
 			return err
 		}
 		j.progress.NextSubVolatile(WaitBackupDone, snapshotName)
+		return nil
 
 	case WaitBackupDone:
 		// Step 2: Wait backup job done
@@ -694,7 +718,7 @@ func (j *Job) fullSync() error {
 			return err
 		}
 		if !backupFinished {
-			log.Debugf("fullsync status: backup job %s is running, retry later", snapshotName)
+			log.Infof("fullsync status: backup job %s is running", snapshotName)
 			return nil
 		}
 
@@ -785,20 +809,26 @@ func (j *Job) fullSync() error {
 		}
 
 		// Step 5.1: cancel the running restore job which by the former process, if exists
-		if featureCancelConflictBackupRestoreJob {
-			if err := j.IDest.CancelRestoreIfExists(j.Src.Database); err != nil {
-				return err
+		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
+		snapshotName := inMemoryData.SnapshotName
+		if featureReuseRunningBackupRestoreJob {
+			restoreSnapshotName, err := j.IDest.GetValidRestoreJob(snapshotName)
+			if err != nil {
+				return nil
+			}
+			if restoreSnapshotName != "" {
+				log.Infof("fullsync status: find a valid restore job %s", restoreSnapshotName)
+				inMemoryData.RestoreLabel = restoreSnapshotName
+				j.progress.NextSubVolatile(WaitRestoreDone, inMemoryData)
+				break
 			}
 		}
 
-		// Step 5.2: start a new fullsync && persist
-		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
-		snapshotName := inMemoryData.SnapshotName
-		restoreSnapshotName := restoreSnapshotName(snapshotName)
+		// Step 5.2: start a new fullsync & restore snapshot to dest
+		restoreSnapshotName := NewRestoreLabel(snapshotName)
 		snapshotResp := inMemoryData.SnapshotResp
 		tableNameMapping := inMemoryData.TableNameMapping
 
-		// Step 5.3: restore snapshot to dest
 		dest := &j.Dest
 		destRpc, err := j.factory.NewFeRpc(dest)
 		if err != nil {
@@ -871,6 +901,7 @@ func (j *Job) fullSync() error {
 
 		inMemoryData.RestoreLabel = restoreSnapshotName
 		j.progress.NextSubVolatile(WaitRestoreDone, inMemoryData)
+		return nil
 
 	case WaitRestoreDone:
 		// Step 6: Wait restore job done
@@ -902,7 +933,7 @@ func (j *Job) fullSync() error {
 					if j.progress.TableAliases == nil {
 						j.progress.TableAliases = make(map[string]string)
 					}
-					j.progress.TableAliases[tableName] = tableAlias(tableName)
+					j.progress.TableAliases[tableName] = TableAlias(tableName)
 					j.progress.NextSubVolatile(RestoreSnapshot, inMemoryData)
 					break
 				}
@@ -925,7 +956,7 @@ func (j *Job) fullSync() error {
 			}
 
 			if !restoreFinished {
-				log.Debugf("fullsync status: restore job %s is running, retry later", restoreSnapshotName)
+				log.Info("fullsync status: restore job %s is running", restoreSnapshotName)
 				return nil
 			}
 
@@ -2281,6 +2312,7 @@ func (j *Job) newSnapshot(commitSeq int64) error {
 
 	j.progress.PartialSyncData = nil
 	j.progress.TableAliases = nil
+	j.progress.SyncId += 1
 	switch j.SyncType {
 	case TableSync:
 		j.progress.NextWithPersist(commitSeq, TableFullSync, BeginCreateSnapshot, "")
@@ -2320,8 +2352,9 @@ func (j *Job) newPartialSnapshot(table string, partitions []string, replace bool
 	}
 	j.progress.PartialSyncData = syncData
 	j.progress.TableAliases = nil
+	j.progress.SyncId += 1
 	if replace {
-		alias := tableAlias(table)
+		alias := TableAlias(table)
 		j.progress.TableAliases = make(map[string]string)
 		j.progress.TableAliases[table] = alias
 		log.Infof("new partial snapshot, commitSeq: %d, table: %s, alias: %s", commitSeq, table, alias)
@@ -2702,17 +2735,4 @@ func isStatusContainsAny(status *tstatus.TStatus, patterns ...string) bool {
 		}
 	}
 	return false
-}
-
-func restoreSnapshotName(snapshotName string) string {
-	if snapshotName == "" {
-		return ""
-	}
-
-	// use current seconds
-	return fmt.Sprintf("%s_r_%d", snapshotName, time.Now().Unix())
-}
-
-func tableAlias(tableName string) string {
-	return fmt.Sprintf("__ccr_%s_%d", tableName, time.Now().Unix())
 }

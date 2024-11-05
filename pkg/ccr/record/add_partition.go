@@ -95,7 +95,7 @@ func (addPartition *AddPartition) GetSql(destTableName string) string {
 	if !strings.Contains(strings.ToUpper(addPartitionSql), "DISTRIBUTED BY") {
 		if distributionInfo.Type == "HASH" {
 			addPartitionSql = fmt.Sprintf("%s DISTRIBUTED BY HASH(%s)", addPartitionSql,
-				"`" + strings.Join(addPartition.getDistributionColumns(), "`,`") + "`")
+				"`"+strings.Join(addPartition.getDistributionColumns(), "`,`")+"`")
 		} else {
 			addPartitionSql = fmt.Sprintf("%s DISTRIBUTED BY RANDOM", addPartitionSql)
 		}

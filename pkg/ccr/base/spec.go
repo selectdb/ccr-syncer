@@ -628,7 +628,7 @@ func (s *Spec) CheckTableExistsByName(tableName string) (bool, error) {
 }
 
 // mysql> BACKUP SNAPSHOT ccr.snapshot_20230605 TO `__keep_on_local__` ON (      src_1 ) PROPERTIES ("type" = "full");
-func (s *Spec) CreateSnapshot(tables []string) (string, error) {
+func (s *Spec) CreateSnapshot(snapshotName string, tables []string) error {
 	if tables == nil {
 		tables = make([]string, 0)
 	}
@@ -636,56 +636,49 @@ func (s *Spec) CreateSnapshot(tables []string) (string, error) {
 		tables = append(tables, s.Table)
 	}
 
-	var snapshotName string
 	var tableRefs string
 	if len(tables) == 1 {
-		// snapshot name format "ccrs_${table}_${timestamp}"
 		// table refs = table
-		snapshotName = fmt.Sprintf("ccrs_%s_%s_%d", s.Database, s.Table, time.Now().Unix())
 		tableRefs = utils.FormatKeywordName(tables[0])
 	} else {
-		// snapshot name format "ccrs_${db}_${timestamp}"
 		// table refs = tables.join(", ")
-		snapshotName = fmt.Sprintf("ccrs_%s_%d", s.Database, time.Now().Unix())
 		tableRefs = "`" + strings.Join(tables, "`,`") + "`"
 	}
 
 	// means source is a empty db, table number is 0
 	if tableRefs == "``" {
-		return "", xerror.Errorf(xerror.Normal, "source db is empty! you should have at least one table")
+		return xerror.Errorf(xerror.Normal, "source db is empty! you should have at least one table")
 	}
 
 	db, err := s.Connect()
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	backupSnapshotSql := fmt.Sprintf("BACKUP SNAPSHOT %s.%s TO `__keep_on_local__` ON ( %s ) PROPERTIES (\"type\" = \"full\")", utils.FormatKeywordName(s.Database), utils.FormatKeywordName(snapshotName), tableRefs)
 	log.Infof("create snapshot %s.%s, backup snapshot sql: %s", s.Database, snapshotName, backupSnapshotSql)
 	_, err = db.Exec(backupSnapshotSql)
 	if err != nil {
-		return "", xerror.Wrapf(err, xerror.Normal, "backup snapshot %s failed, sql: %s", snapshotName, backupSnapshotSql)
+		return xerror.Wrapf(err, xerror.Normal, "backup snapshot %s failed, sql: %s", snapshotName, backupSnapshotSql)
 	}
 
-	return snapshotName, nil
+	return nil
 }
 
 // mysql> BACKUP SNAPSHOT ccr.snapshot_20230605 TO `__keep_on_local__` ON (src_1 PARTITION (`p1`)) PROPERTIES ("type" = "full");
-func (s *Spec) CreatePartialSnapshot(table string, partitions []string) (string, error) {
+func (s *Spec) CreatePartialSnapshot(snapshotName, table string, partitions []string) error {
 	if len(table) == 0 {
-		return "", xerror.Errorf(xerror.Normal, "source db is empty! you should have at least one table")
+		return xerror.Errorf(xerror.Normal, "source db is empty! you should have at least one table")
 	}
 
-	// snapshot name format "ccrp_${table}_${timestamp}"
 	// table refs = table
-	snapshotName := fmt.Sprintf("ccrp_%s_%s_%d", s.Database, s.Table, time.Now().Unix())
 	tableRef := utils.FormatKeywordName(table)
 
 	log.Infof("create partial snapshot %s.%s", s.Database, snapshotName)
 
 	db, err := s.Connect()
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	partitionRefs := ""
@@ -698,10 +691,10 @@ func (s *Spec) CreatePartialSnapshot(table string, partitions []string) (string,
 	log.Debugf("backup partial snapshot sql: %s", backupSnapshotSql)
 	_, err = db.Exec(backupSnapshotSql)
 	if err != nil {
-		return "", xerror.Wrapf(err, xerror.Normal, "backup partial snapshot %s failed, sql: %s", snapshotName, backupSnapshotSql)
+		return xerror.Wrapf(err, xerror.Normal, "backup partial snapshot %s failed, sql: %s", snapshotName, backupSnapshotSql)
 	}
 
-	return snapshotName, nil
+	return nil
 }
 
 // TODO: Add TaskErrMsg
@@ -757,103 +750,102 @@ func (s *Spec) CheckBackupFinished(snapshotName string) (bool, error) {
 	}
 }
 
-func (s *Spec) CancelBackupIfExists() error {
-	log.Debugf("cancel backup job if exists, database: %s", s.Database)
+// Get the valid (running or finished) backup job with a unique prefix to indicate
+// if a backup job needs to be issued again.
+func (s *Spec) GetValidBackupJob(snapshotNamePrefix string) (string, error) {
+	log.Debugf("get valid backup job if exists, database: %s, label prefix: %s", s.Database, snapshotNamePrefix)
 
 	db, err := s.Connect()
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	query := fmt.Sprintf("SHOW BACKUP FROM %s", utils.FormatKeywordName(s.Database))
+	query := fmt.Sprintf("SHOW BACKUP FROM %s WHERE SnapshotName LIKE \"%s%%\"",
+		utils.FormatKeywordName(s.Database), snapshotNamePrefix)
 	log.Infof("show backup state sql: %s", query)
 	rows, err := db.Query(query)
 	if err != nil {
-		return xerror.Wrap(err, xerror.Normal, "query backup state failed")
+		return "", xerror.Wrap(err, xerror.Normal, "query backup state failed")
 	}
 	defer rows.Close()
 
+	labels := make([]string, 0)
 	for rows.Next() {
 		rowParser := utils.NewRowParser()
 		if err := rowParser.Parse(rows); err != nil {
-			return xerror.Wrap(err, xerror.Normal, "scan backup state failed")
+			return "", xerror.Wrap(err, xerror.Normal, "scan backup state failed")
 		}
 
 		info, err := parseBackupInfo(rowParser)
 		if err != nil {
-			return xerror.Wrap(err, xerror.Normal, "scan backup state failed")
+			return "", xerror.Wrap(err, xerror.Normal, "scan backup state failed")
 		}
 
 		log.Infof("check snapshot %s backup state [%v], create time: %s",
 			info.SnapshotName, info.StateStr, info.CreateTime)
 
-		// Only cancel the running backup job issued by syncer
-		if !isSyncerIssuedJob(info.SnapshotName, s.Database) {
+		if info.State == BackupStateCancelled {
 			continue
 		}
 
-		if info.State == BackupStateFinished || info.State == BackupStateCancelled {
-			continue
-		}
-
-		cancelSql := fmt.Sprintf("CANCEL BACKUP FROM %s", s.Database)
-		log.Infof("cancel backup sql: %s, snapshot: %s", cancelSql, info.SnapshotName)
-		if _, err = db.Exec(cancelSql); err != nil {
-			return xerror.Wrapf(err, xerror.Normal,
-				"cancel backup job %s failed, database: %s", info.SnapshotName, s.Database)
-		}
+		labels = append(labels, info.SnapshotName)
 	}
-	return nil
+
+	// Return the last one. Assume that the result of `SHOW BACKUP` is ordered by CreateTime in ascending order.
+	if len(labels) != 0 {
+		return labels[len(labels)-1], nil
+	}
+
+	return "", nil
 }
 
-func (s *Spec) CancelRestoreIfExists(srcDbName string) error {
-	log.Debugf("cancel restore job if exists, src db: %s", srcDbName)
+// Get the valid (running or finished) restore job with a unique prefix to indicate
+// if a restore job needs to be issued again.
+func (s *Spec) GetValidRestoreJob(snapshotNamePrefix string) (string, error) {
+	log.Debugf("get valid restore job if exists, label prefix: %s", snapshotNamePrefix)
 
 	db, err := s.Connect()
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	query := fmt.Sprintf("SHOW RESTORE FROM %s", utils.FormatKeywordName(s.Database))
-	log.Debugf("show restore state sql: %s", query)
+	query := fmt.Sprintf("SHOW RESTORE FROM %s WHERE Label LIKE \"%s%%\"",
+		utils.FormatKeywordName(s.Database), snapshotNamePrefix)
+	log.Infof("show restore state sql: %s", query)
 	rows, err := db.Query(query)
 	if err != nil {
-		return xerror.Wrap(err, xerror.Normal, "query restore state failed")
+		return "", xerror.Wrap(err, xerror.Normal, "query restore state failed")
 	}
 	defer rows.Close()
 
+	labels := make([]string, 0)
 	for rows.Next() {
 		rowParser := utils.NewRowParser()
 		if err := rowParser.Parse(rows); err != nil {
-			return xerror.Wrap(err, xerror.Normal, "scan restore state failed")
+			return "", xerror.Wrap(err, xerror.Normal, "scan restore state failed")
 		}
 
 		info, err := parseRestoreInfo(rowParser)
 		if err != nil {
-			return xerror.Wrap(err, xerror.Normal, "scan restore state failed")
+			return "", xerror.Wrap(err, xerror.Normal, "scan restore state failed")
 		}
 
 		log.Infof("check snapshot %s restore state: [%v], create time: %s",
 			info.Label, info.StateStr, info.CreateTime)
 
-		// Only cancel the running restore job issued by syncer
-		if !isSyncerIssuedJob(info.Label, srcDbName) {
+		if info.State == RestoreStateFinished {
 			continue
 		}
 
-		if info.State == RestoreStateCancelled || info.State == RestoreStateFinished {
-			continue
-		}
-
-		cancelSql := fmt.Sprintf("CANCEL RESTORE FROM %s", utils.FormatKeywordName(s.Database))
-		log.Infof("cancel restore sql: %s, running snapshot %s", cancelSql, info.Label)
-
-		_, err = db.Exec(cancelSql)
-		if err != nil {
-			return xerror.Wrapf(err, xerror.Normal, "cancel running restore failed, snapshot %s", info.Label)
-		}
+		labels = append(labels, info.Label)
 	}
-	return nil
+
+	// Return the last one. Assume that the result of `SHOW BACKUP` is ordered by CreateTime in ascending order.
+	if len(labels) != 0 {
+		return labels[len(labels)-1], nil
+	}
+
+	return "", nil
 }
 
 // TODO: Add TaskErrMsg
@@ -1239,10 +1231,4 @@ func correctAddPartitionSql(addPartitionSql string, addPartition *record.AddPart
 		addPartitionSql = strings.ReplaceAll(addPartitionSql, "ADD PARTITION", "ADD TEMPORARY PARTITION")
 	}
 	return addPartitionSql
-}
-
-func isSyncerIssuedJob(label, dbName string) bool {
-	fullSyncPrefix := fmt.Sprintf("ccrs_%s", dbName)
-	partialSyncPrefix := fmt.Sprintf("ccrp_%s", dbName)
-	return strings.HasPrefix(label, fullSyncPrefix) || strings.HasPrefix(label, partialSyncPrefix)
 }
