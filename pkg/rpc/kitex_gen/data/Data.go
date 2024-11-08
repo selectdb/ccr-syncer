@@ -600,6 +600,7 @@ type TCell struct {
 	LongVal   *int64   `thrift:"longVal,3,optional" frugal:"3,optional,i64" json:"longVal,omitempty"`
 	DoubleVal *float64 `thrift:"doubleVal,4,optional" frugal:"4,optional,double" json:"doubleVal,omitempty"`
 	StringVal *string  `thrift:"stringVal,5,optional" frugal:"5,optional,string" json:"stringVal,omitempty"`
+	IsNull    *bool    `thrift:"isNull,6,optional" frugal:"6,optional,bool" json:"isNull,omitempty"`
 }
 
 func NewTCell() *TCell {
@@ -653,6 +654,15 @@ func (p *TCell) GetStringVal() (v string) {
 	}
 	return *p.StringVal
 }
+
+var TCell_IsNull_DEFAULT bool
+
+func (p *TCell) GetIsNull() (v bool) {
+	if !p.IsSetIsNull() {
+		return TCell_IsNull_DEFAULT
+	}
+	return *p.IsNull
+}
 func (p *TCell) SetBoolVal(val *bool) {
 	p.BoolVal = val
 }
@@ -668,6 +678,9 @@ func (p *TCell) SetDoubleVal(val *float64) {
 func (p *TCell) SetStringVal(val *string) {
 	p.StringVal = val
 }
+func (p *TCell) SetIsNull(val *bool) {
+	p.IsNull = val
+}
 
 var fieldIDToName_TCell = map[int16]string{
 	1: "boolVal",
@@ -675,6 +688,7 @@ var fieldIDToName_TCell = map[int16]string{
 	3: "longVal",
 	4: "doubleVal",
 	5: "stringVal",
+	6: "isNull",
 }
 
 func (p *TCell) IsSetBoolVal() bool {
@@ -695,6 +709,10 @@ func (p *TCell) IsSetDoubleVal() bool {
 
 func (p *TCell) IsSetStringVal() bool {
 	return p.StringVal != nil
+}
+
+func (p *TCell) IsSetIsNull() bool {
+	return p.IsNull != nil
 }
 
 func (p *TCell) Read(iprot thrift.TProtocol) (err error) {
@@ -751,6 +769,14 @@ func (p *TCell) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -840,6 +866,17 @@ func (p *TCell) ReadField5(iprot thrift.TProtocol) error {
 	p.StringVal = _field
 	return nil
 }
+func (p *TCell) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsNull = _field
+	return nil
+}
 
 func (p *TCell) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -865,6 +902,10 @@ func (p *TCell) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 	}
@@ -980,6 +1021,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 
+func (p *TCell) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsNull() {
+		if err = oprot.WriteFieldBegin("isNull", thrift.BOOL, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsNull); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
 func (p *TCell) String() string {
 	if p == nil {
 		return "<nil>"
@@ -1007,6 +1067,9 @@ func (p *TCell) DeepEqual(ano *TCell) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.StringVal) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.IsNull) {
 		return false
 	}
 	return true
@@ -1068,6 +1131,18 @@ func (p *TCell) Field5DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.StringVal, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TCell) Field6DeepEqual(src *bool) bool {
+
+	if p.IsNull == src {
+		return true
+	} else if p.IsNull == nil || src == nil {
+		return false
+	}
+	if *p.IsNull != *src {
 		return false
 	}
 	return true

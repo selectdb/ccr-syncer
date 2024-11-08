@@ -17,6 +17,7 @@ type Specer interface {
 	Valid() error
 	IsDatabaseEnableBinlog() (bool, error)
 	IsTableEnableBinlog() (bool, error)
+	IsEnableRestoreSnapshotCompression() (bool, error)
 	GetAllTables() ([]string, error)
 	GetAllViewsFromTable(tableName string) ([]string, error)
 	ClearDB() error

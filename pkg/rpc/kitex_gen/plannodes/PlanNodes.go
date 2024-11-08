@@ -6956,6 +6956,7 @@ type TFileTextScanRangeParams struct {
 	MapkvDelimiter      *string `thrift:"mapkv_delimiter,4,optional" frugal:"4,optional,string" json:"mapkv_delimiter,omitempty"`
 	Enclose             *int8   `thrift:"enclose,5,optional" frugal:"5,optional,i8" json:"enclose,omitempty"`
 	Escape              *int8   `thrift:"escape,6,optional" frugal:"6,optional,i8" json:"escape,omitempty"`
+	NullFormat          *string `thrift:"null_format,7,optional" frugal:"7,optional,string" json:"null_format,omitempty"`
 }
 
 func NewTFileTextScanRangeParams() *TFileTextScanRangeParams {
@@ -7018,6 +7019,15 @@ func (p *TFileTextScanRangeParams) GetEscape() (v int8) {
 	}
 	return *p.Escape
 }
+
+var TFileTextScanRangeParams_NullFormat_DEFAULT string
+
+func (p *TFileTextScanRangeParams) GetNullFormat() (v string) {
+	if !p.IsSetNullFormat() {
+		return TFileTextScanRangeParams_NullFormat_DEFAULT
+	}
+	return *p.NullFormat
+}
 func (p *TFileTextScanRangeParams) SetColumnSeparator(val *string) {
 	p.ColumnSeparator = val
 }
@@ -7036,6 +7046,9 @@ func (p *TFileTextScanRangeParams) SetEnclose(val *int8) {
 func (p *TFileTextScanRangeParams) SetEscape(val *int8) {
 	p.Escape = val
 }
+func (p *TFileTextScanRangeParams) SetNullFormat(val *string) {
+	p.NullFormat = val
+}
 
 var fieldIDToName_TFileTextScanRangeParams = map[int16]string{
 	1: "column_separator",
@@ -7044,6 +7057,7 @@ var fieldIDToName_TFileTextScanRangeParams = map[int16]string{
 	4: "mapkv_delimiter",
 	5: "enclose",
 	6: "escape",
+	7: "null_format",
 }
 
 func (p *TFileTextScanRangeParams) IsSetColumnSeparator() bool {
@@ -7068,6 +7082,10 @@ func (p *TFileTextScanRangeParams) IsSetEnclose() bool {
 
 func (p *TFileTextScanRangeParams) IsSetEscape() bool {
 	return p.Escape != nil
+}
+
+func (p *TFileTextScanRangeParams) IsSetNullFormat() bool {
+	return p.NullFormat != nil
 }
 
 func (p *TFileTextScanRangeParams) Read(iprot thrift.TProtocol) (err error) {
@@ -7132,6 +7150,14 @@ func (p *TFileTextScanRangeParams) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.BYTE {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7232,6 +7258,17 @@ func (p *TFileTextScanRangeParams) ReadField6(iprot thrift.TProtocol) error {
 	p.Escape = _field
 	return nil
 }
+func (p *TFileTextScanRangeParams) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.NullFormat = _field
+	return nil
+}
 
 func (p *TFileTextScanRangeParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -7261,6 +7298,10 @@ func (p *TFileTextScanRangeParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 	}
@@ -7395,6 +7436,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 
+func (p *TFileTextScanRangeParams) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNullFormat() {
+		if err = oprot.WriteFieldBegin("null_format", thrift.STRING, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.NullFormat); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
 func (p *TFileTextScanRangeParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -7425,6 +7485,9 @@ func (p *TFileTextScanRangeParams) DeepEqual(ano *TFileTextScanRangeParams) bool
 		return false
 	}
 	if !p.Field6DeepEqual(ano.Escape) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.NullFormat) {
 		return false
 	}
 	return true
@@ -7498,6 +7561,18 @@ func (p *TFileTextScanRangeParams) Field6DeepEqual(src *int8) bool {
 		return false
 	}
 	if *p.Escape != *src {
+		return false
+	}
+	return true
+}
+func (p *TFileTextScanRangeParams) Field7DeepEqual(src *string) bool {
+
+	if p.NullFormat == src {
+		return true
+	} else if p.NullFormat == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.NullFormat, *src) != 0 {
 		return false
 	}
 	return true
@@ -9260,6 +9335,7 @@ type TIcebergFileDesc struct {
 	DeleteTableTupleId *types.TTupleId           `thrift:"delete_table_tuple_id,4,optional" frugal:"4,optional,i32" json:"delete_table_tuple_id,omitempty"`
 	FileSelectConjunct *exprs.TExpr              `thrift:"file_select_conjunct,5,optional" frugal:"5,optional,exprs.TExpr" json:"file_select_conjunct,omitempty"`
 	OriginalFilePath   *string                   `thrift:"original_file_path,6,optional" frugal:"6,optional,string" json:"original_file_path,omitempty"`
+	RowCount           *int64                    `thrift:"row_count,7,optional" frugal:"7,optional,i64" json:"row_count,omitempty"`
 }
 
 func NewTIcebergFileDesc() *TIcebergFileDesc {
@@ -9322,6 +9398,15 @@ func (p *TIcebergFileDesc) GetOriginalFilePath() (v string) {
 	}
 	return *p.OriginalFilePath
 }
+
+var TIcebergFileDesc_RowCount_DEFAULT int64
+
+func (p *TIcebergFileDesc) GetRowCount() (v int64) {
+	if !p.IsSetRowCount() {
+		return TIcebergFileDesc_RowCount_DEFAULT
+	}
+	return *p.RowCount
+}
 func (p *TIcebergFileDesc) SetFormatVersion(val *int32) {
 	p.FormatVersion = val
 }
@@ -9340,6 +9425,9 @@ func (p *TIcebergFileDesc) SetFileSelectConjunct(val *exprs.TExpr) {
 func (p *TIcebergFileDesc) SetOriginalFilePath(val *string) {
 	p.OriginalFilePath = val
 }
+func (p *TIcebergFileDesc) SetRowCount(val *int64) {
+	p.RowCount = val
+}
 
 var fieldIDToName_TIcebergFileDesc = map[int16]string{
 	1: "format_version",
@@ -9348,6 +9436,7 @@ var fieldIDToName_TIcebergFileDesc = map[int16]string{
 	4: "delete_table_tuple_id",
 	5: "file_select_conjunct",
 	6: "original_file_path",
+	7: "row_count",
 }
 
 func (p *TIcebergFileDesc) IsSetFormatVersion() bool {
@@ -9372,6 +9461,10 @@ func (p *TIcebergFileDesc) IsSetFileSelectConjunct() bool {
 
 func (p *TIcebergFileDesc) IsSetOriginalFilePath() bool {
 	return p.OriginalFilePath != nil
+}
+
+func (p *TIcebergFileDesc) IsSetRowCount() bool {
+	return p.RowCount != nil
 }
 
 func (p *TIcebergFileDesc) Read(iprot thrift.TProtocol) (err error) {
@@ -9436,6 +9529,14 @@ func (p *TIcebergFileDesc) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -9545,6 +9646,17 @@ func (p *TIcebergFileDesc) ReadField6(iprot thrift.TProtocol) error {
 	p.OriginalFilePath = _field
 	return nil
 }
+func (p *TIcebergFileDesc) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.RowCount = _field
+	return nil
+}
 
 func (p *TIcebergFileDesc) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -9574,6 +9686,10 @@ func (p *TIcebergFileDesc) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 	}
@@ -9716,6 +9832,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 
+func (p *TIcebergFileDesc) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRowCount() {
+		if err = oprot.WriteFieldBegin("row_count", thrift.I64, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.RowCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
 func (p *TIcebergFileDesc) String() string {
 	if p == nil {
 		return "<nil>"
@@ -9746,6 +9881,9 @@ func (p *TIcebergFileDesc) DeepEqual(ano *TIcebergFileDesc) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.OriginalFilePath) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.RowCount) {
 		return false
 	}
 	return true
@@ -9815,6 +9953,18 @@ func (p *TIcebergFileDesc) Field6DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.OriginalFilePath, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TIcebergFileDesc) Field7DeepEqual(src *int64) bool {
+
+	if p.RowCount == src {
+		return true
+	} else if p.RowCount == nil || src == nil {
+		return false
+	}
+	if *p.RowCount != *src {
 		return false
 	}
 	return true
@@ -15269,6 +15419,7 @@ type TFileScanRangeParams struct {
 	PreFilterExprsList          []*exprs.TExpr                  `thrift:"pre_filter_exprs_list,20,optional" frugal:"20,optional,list<exprs.TExpr>" json:"pre_filter_exprs_list,omitempty"`
 	LoadId                      *types.TUniqueId                `thrift:"load_id,21,optional" frugal:"21,optional,types.TUniqueId" json:"load_id,omitempty"`
 	TextSerdeType               *TTextSerdeType                 `thrift:"text_serde_type,22,optional" frugal:"22,optional,TTextSerdeType" json:"text_serde_type,omitempty"`
+	SequenceMapCol              *string                         `thrift:"sequence_map_col,23,optional" frugal:"23,optional,string" json:"sequence_map_col,omitempty"`
 }
 
 func NewTFileScanRangeParams() *TFileScanRangeParams {
@@ -15475,6 +15626,15 @@ func (p *TFileScanRangeParams) GetTextSerdeType() (v TTextSerdeType) {
 	}
 	return *p.TextSerdeType
 }
+
+var TFileScanRangeParams_SequenceMapCol_DEFAULT string
+
+func (p *TFileScanRangeParams) GetSequenceMapCol() (v string) {
+	if !p.IsSetSequenceMapCol() {
+		return TFileScanRangeParams_SequenceMapCol_DEFAULT
+	}
+	return *p.SequenceMapCol
+}
 func (p *TFileScanRangeParams) SetFileType(val *types.TFileType) {
 	p.FileType = val
 }
@@ -15541,6 +15701,9 @@ func (p *TFileScanRangeParams) SetLoadId(val *types.TUniqueId) {
 func (p *TFileScanRangeParams) SetTextSerdeType(val *TTextSerdeType) {
 	p.TextSerdeType = val
 }
+func (p *TFileScanRangeParams) SetSequenceMapCol(val *string) {
+	p.SequenceMapCol = val
+}
 
 var fieldIDToName_TFileScanRangeParams = map[int16]string{
 	1:  "file_type",
@@ -15565,6 +15728,7 @@ var fieldIDToName_TFileScanRangeParams = map[int16]string{
 	20: "pre_filter_exprs_list",
 	21: "load_id",
 	22: "text_serde_type",
+	23: "sequence_map_col",
 }
 
 func (p *TFileScanRangeParams) IsSetFileType() bool {
@@ -15653,6 +15817,10 @@ func (p *TFileScanRangeParams) IsSetLoadId() bool {
 
 func (p *TFileScanRangeParams) IsSetTextSerdeType() bool {
 	return p.TextSerdeType != nil
+}
+
+func (p *TFileScanRangeParams) IsSetSequenceMapCol() bool {
+	return p.SequenceMapCol != nil
 }
 
 func (p *TFileScanRangeParams) Read(iprot thrift.TProtocol) (err error) {
@@ -15845,6 +16013,14 @@ func (p *TFileScanRangeParams) Read(iprot thrift.TProtocol) (err error) {
 		case 22:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField22(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 23:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField23(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -16248,6 +16424,17 @@ func (p *TFileScanRangeParams) ReadField22(iprot thrift.TProtocol) error {
 	p.TextSerdeType = _field
 	return nil
 }
+func (p *TFileScanRangeParams) ReadField23(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SequenceMapCol = _field
+	return nil
+}
 
 func (p *TFileScanRangeParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -16341,6 +16528,10 @@ func (p *TFileScanRangeParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField22(oprot); err != nil {
 			fieldId = 22
+			goto WriteFieldError
+		}
+		if err = p.writeField23(oprot); err != nil {
+			fieldId = 23
 			goto WriteFieldError
 		}
 	}
@@ -16866,6 +17057,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
 }
 
+func (p *TFileScanRangeParams) writeField23(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSequenceMapCol() {
+		if err = oprot.WriteFieldBegin("sequence_map_col", thrift.STRING, 23); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SequenceMapCol); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
+}
+
 func (p *TFileScanRangeParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -16944,6 +17154,9 @@ func (p *TFileScanRangeParams) DeepEqual(ano *TFileScanRangeParams) bool {
 		return false
 	}
 	if !p.Field22DeepEqual(ano.TextSerdeType) {
+		return false
+	}
+	if !p.Field23DeepEqual(ano.SequenceMapCol) {
 		return false
 	}
 	return true
@@ -17193,6 +17406,18 @@ func (p *TFileScanRangeParams) Field22DeepEqual(src *TTextSerdeType) bool {
 		return false
 	}
 	if *p.TextSerdeType != *src {
+		return false
+	}
+	return true
+}
+func (p *TFileScanRangeParams) Field23DeepEqual(src *string) bool {
+
+	if p.SequenceMapCol == src {
+		return true
+	} else if p.SequenceMapCol == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SequenceMapCol, *src) != 0 {
 		return false
 	}
 	return true
@@ -20826,6 +21051,335 @@ func (p *TPartitionsMetadataParams) Field3DeepEqual(src *string) bool {
 	return true
 }
 
+type TPartitionValuesMetadataParams struct {
+	Catalog  *string `thrift:"catalog,1,optional" frugal:"1,optional,string" json:"catalog,omitempty"`
+	Database *string `thrift:"database,2,optional" frugal:"2,optional,string" json:"database,omitempty"`
+	Table    *string `thrift:"table,3,optional" frugal:"3,optional,string" json:"table,omitempty"`
+}
+
+func NewTPartitionValuesMetadataParams() *TPartitionValuesMetadataParams {
+	return &TPartitionValuesMetadataParams{}
+}
+
+func (p *TPartitionValuesMetadataParams) InitDefault() {
+}
+
+var TPartitionValuesMetadataParams_Catalog_DEFAULT string
+
+func (p *TPartitionValuesMetadataParams) GetCatalog() (v string) {
+	if !p.IsSetCatalog() {
+		return TPartitionValuesMetadataParams_Catalog_DEFAULT
+	}
+	return *p.Catalog
+}
+
+var TPartitionValuesMetadataParams_Database_DEFAULT string
+
+func (p *TPartitionValuesMetadataParams) GetDatabase() (v string) {
+	if !p.IsSetDatabase() {
+		return TPartitionValuesMetadataParams_Database_DEFAULT
+	}
+	return *p.Database
+}
+
+var TPartitionValuesMetadataParams_Table_DEFAULT string
+
+func (p *TPartitionValuesMetadataParams) GetTable() (v string) {
+	if !p.IsSetTable() {
+		return TPartitionValuesMetadataParams_Table_DEFAULT
+	}
+	return *p.Table
+}
+func (p *TPartitionValuesMetadataParams) SetCatalog(val *string) {
+	p.Catalog = val
+}
+func (p *TPartitionValuesMetadataParams) SetDatabase(val *string) {
+	p.Database = val
+}
+func (p *TPartitionValuesMetadataParams) SetTable(val *string) {
+	p.Table = val
+}
+
+var fieldIDToName_TPartitionValuesMetadataParams = map[int16]string{
+	1: "catalog",
+	2: "database",
+	3: "table",
+}
+
+func (p *TPartitionValuesMetadataParams) IsSetCatalog() bool {
+	return p.Catalog != nil
+}
+
+func (p *TPartitionValuesMetadataParams) IsSetDatabase() bool {
+	return p.Database != nil
+}
+
+func (p *TPartitionValuesMetadataParams) IsSetTable() bool {
+	return p.Table != nil
+}
+
+func (p *TPartitionValuesMetadataParams) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TPartitionValuesMetadataParams[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TPartitionValuesMetadataParams) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Catalog = _field
+	return nil
+}
+func (p *TPartitionValuesMetadataParams) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Database = _field
+	return nil
+}
+func (p *TPartitionValuesMetadataParams) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Table = _field
+	return nil
+}
+
+func (p *TPartitionValuesMetadataParams) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TPartitionValuesMetadataParams"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TPartitionValuesMetadataParams) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCatalog() {
+		if err = oprot.WriteFieldBegin("catalog", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Catalog); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TPartitionValuesMetadataParams) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDatabase() {
+		if err = oprot.WriteFieldBegin("database", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Database); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TPartitionValuesMetadataParams) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTable() {
+		if err = oprot.WriteFieldBegin("table", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Table); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *TPartitionValuesMetadataParams) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TPartitionValuesMetadataParams(%+v)", *p)
+
+}
+
+func (p *TPartitionValuesMetadataParams) DeepEqual(ano *TPartitionValuesMetadataParams) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Catalog) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Database) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Table) {
+		return false
+	}
+	return true
+}
+
+func (p *TPartitionValuesMetadataParams) Field1DeepEqual(src *string) bool {
+
+	if p.Catalog == src {
+		return true
+	} else if p.Catalog == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Catalog, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TPartitionValuesMetadataParams) Field2DeepEqual(src *string) bool {
+
+	if p.Database == src {
+		return true
+	} else if p.Database == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Database, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TPartitionValuesMetadataParams) Field3DeepEqual(src *string) bool {
+
+	if p.Table == src {
+		return true
+	} else if p.Table == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Table, *src) != 0 {
+		return false
+	}
+	return true
+}
+
 type TJobsMetadataParams struct {
 	Type             *string              `thrift:"type,1,optional" frugal:"1,optional,string" json:"type,omitempty"`
 	CurrentUserIdent *types.TUserIdentity `thrift:"current_user_ident,2,optional" frugal:"2,optional,types.TUserIdentity" json:"current_user_ident,omitempty"`
@@ -21325,6 +21879,7 @@ type TQueriesMetadataParams struct {
 	JobsParams              *TJobsMetadataParams              `thrift:"jobs_params,4,optional" frugal:"4,optional,TJobsMetadataParams" json:"jobs_params,omitempty"`
 	TasksParams             *TTasksMetadataParams             `thrift:"tasks_params,5,optional" frugal:"5,optional,TTasksMetadataParams" json:"tasks_params,omitempty"`
 	PartitionsParams        *TPartitionsMetadataParams        `thrift:"partitions_params,6,optional" frugal:"6,optional,TPartitionsMetadataParams" json:"partitions_params,omitempty"`
+	PartitionValuesParams   *TPartitionValuesMetadataParams   `thrift:"partition_values_params,7,optional" frugal:"7,optional,TPartitionValuesMetadataParams" json:"partition_values_params,omitempty"`
 }
 
 func NewTQueriesMetadataParams() *TQueriesMetadataParams {
@@ -21387,6 +21942,15 @@ func (p *TQueriesMetadataParams) GetPartitionsParams() (v *TPartitionsMetadataPa
 	}
 	return p.PartitionsParams
 }
+
+var TQueriesMetadataParams_PartitionValuesParams_DEFAULT *TPartitionValuesMetadataParams
+
+func (p *TQueriesMetadataParams) GetPartitionValuesParams() (v *TPartitionValuesMetadataParams) {
+	if !p.IsSetPartitionValuesParams() {
+		return TQueriesMetadataParams_PartitionValuesParams_DEFAULT
+	}
+	return p.PartitionValuesParams
+}
 func (p *TQueriesMetadataParams) SetClusterName(val *string) {
 	p.ClusterName = val
 }
@@ -21405,6 +21969,9 @@ func (p *TQueriesMetadataParams) SetTasksParams(val *TTasksMetadataParams) {
 func (p *TQueriesMetadataParams) SetPartitionsParams(val *TPartitionsMetadataParams) {
 	p.PartitionsParams = val
 }
+func (p *TQueriesMetadataParams) SetPartitionValuesParams(val *TPartitionValuesMetadataParams) {
+	p.PartitionValuesParams = val
+}
 
 var fieldIDToName_TQueriesMetadataParams = map[int16]string{
 	1: "cluster_name",
@@ -21413,6 +21980,7 @@ var fieldIDToName_TQueriesMetadataParams = map[int16]string{
 	4: "jobs_params",
 	5: "tasks_params",
 	6: "partitions_params",
+	7: "partition_values_params",
 }
 
 func (p *TQueriesMetadataParams) IsSetClusterName() bool {
@@ -21437,6 +22005,10 @@ func (p *TQueriesMetadataParams) IsSetTasksParams() bool {
 
 func (p *TQueriesMetadataParams) IsSetPartitionsParams() bool {
 	return p.PartitionsParams != nil
+}
+
+func (p *TQueriesMetadataParams) IsSetPartitionValuesParams() bool {
+	return p.PartitionValuesParams != nil
 }
 
 func (p *TQueriesMetadataParams) Read(iprot thrift.TProtocol) (err error) {
@@ -21501,6 +22073,14 @@ func (p *TQueriesMetadataParams) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -21589,6 +22169,14 @@ func (p *TQueriesMetadataParams) ReadField6(iprot thrift.TProtocol) error {
 	p.PartitionsParams = _field
 	return nil
 }
+func (p *TQueriesMetadataParams) ReadField7(iprot thrift.TProtocol) error {
+	_field := NewTPartitionValuesMetadataParams()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.PartitionValuesParams = _field
+	return nil
+}
 
 func (p *TQueriesMetadataParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -21618,6 +22206,10 @@ func (p *TQueriesMetadataParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 	}
@@ -21752,6 +22344,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 
+func (p *TQueriesMetadataParams) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPartitionValuesParams() {
+		if err = oprot.WriteFieldBegin("partition_values_params", thrift.STRUCT, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.PartitionValuesParams.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
 func (p *TQueriesMetadataParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -21782,6 +22393,9 @@ func (p *TQueriesMetadataParams) DeepEqual(ano *TQueriesMetadataParams) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.PartitionsParams) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.PartitionValuesParams) {
 		return false
 	}
 	return true
@@ -21835,6 +22449,13 @@ func (p *TQueriesMetadataParams) Field5DeepEqual(src *TTasksMetadataParams) bool
 func (p *TQueriesMetadataParams) Field6DeepEqual(src *TPartitionsMetadataParams) bool {
 
 	if !p.PartitionsParams.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TQueriesMetadataParams) Field7DeepEqual(src *TPartitionValuesMetadataParams) bool {
+
+	if !p.PartitionValuesParams.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -21943,6 +22564,7 @@ type TMetaScanRange struct {
 	TasksParams             *TTasksMetadataParams             `thrift:"tasks_params,8,optional" frugal:"8,optional,TTasksMetadataParams" json:"tasks_params,omitempty"`
 	PartitionsParams        *TPartitionsMetadataParams        `thrift:"partitions_params,9,optional" frugal:"9,optional,TPartitionsMetadataParams" json:"partitions_params,omitempty"`
 	MetaCacheStatsParams    *TMetaCacheStatsParams            `thrift:"meta_cache_stats_params,10,optional" frugal:"10,optional,TMetaCacheStatsParams" json:"meta_cache_stats_params,omitempty"`
+	PartitionValuesParams   *TPartitionValuesMetadataParams   `thrift:"partition_values_params,11,optional" frugal:"11,optional,TPartitionValuesMetadataParams" json:"partition_values_params,omitempty"`
 }
 
 func NewTMetaScanRange() *TMetaScanRange {
@@ -22041,6 +22663,15 @@ func (p *TMetaScanRange) GetMetaCacheStatsParams() (v *TMetaCacheStatsParams) {
 	}
 	return p.MetaCacheStatsParams
 }
+
+var TMetaScanRange_PartitionValuesParams_DEFAULT *TPartitionValuesMetadataParams
+
+func (p *TMetaScanRange) GetPartitionValuesParams() (v *TPartitionValuesMetadataParams) {
+	if !p.IsSetPartitionValuesParams() {
+		return TMetaScanRange_PartitionValuesParams_DEFAULT
+	}
+	return p.PartitionValuesParams
+}
 func (p *TMetaScanRange) SetMetadataType(val *types.TMetadataType) {
 	p.MetadataType = val
 }
@@ -22071,6 +22702,9 @@ func (p *TMetaScanRange) SetPartitionsParams(val *TPartitionsMetadataParams) {
 func (p *TMetaScanRange) SetMetaCacheStatsParams(val *TMetaCacheStatsParams) {
 	p.MetaCacheStatsParams = val
 }
+func (p *TMetaScanRange) SetPartitionValuesParams(val *TPartitionValuesMetadataParams) {
+	p.PartitionValuesParams = val
+}
 
 var fieldIDToName_TMetaScanRange = map[int16]string{
 	1:  "metadata_type",
@@ -22083,6 +22717,7 @@ var fieldIDToName_TMetaScanRange = map[int16]string{
 	8:  "tasks_params",
 	9:  "partitions_params",
 	10: "meta_cache_stats_params",
+	11: "partition_values_params",
 }
 
 func (p *TMetaScanRange) IsSetMetadataType() bool {
@@ -22123,6 +22758,10 @@ func (p *TMetaScanRange) IsSetPartitionsParams() bool {
 
 func (p *TMetaScanRange) IsSetMetaCacheStatsParams() bool {
 	return p.MetaCacheStatsParams != nil
+}
+
+func (p *TMetaScanRange) IsSetPartitionValuesParams() bool {
+	return p.PartitionValuesParams != nil
 }
 
 func (p *TMetaScanRange) Read(iprot thrift.TProtocol) (err error) {
@@ -22219,6 +22858,14 @@ func (p *TMetaScanRange) Read(iprot thrift.TProtocol) (err error) {
 		case 10:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -22337,6 +22984,14 @@ func (p *TMetaScanRange) ReadField10(iprot thrift.TProtocol) error {
 	p.MetaCacheStatsParams = _field
 	return nil
 }
+func (p *TMetaScanRange) ReadField11(iprot thrift.TProtocol) error {
+	_field := NewTPartitionValuesMetadataParams()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.PartitionValuesParams = _field
+	return nil
+}
 
 func (p *TMetaScanRange) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -22382,6 +23037,10 @@ func (p *TMetaScanRange) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 	}
@@ -22592,6 +23251,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
 
+func (p *TMetaScanRange) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPartitionValuesParams() {
+		if err = oprot.WriteFieldBegin("partition_values_params", thrift.STRUCT, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.PartitionValuesParams.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+
 func (p *TMetaScanRange) String() string {
 	if p == nil {
 		return "<nil>"
@@ -22634,6 +23312,9 @@ func (p *TMetaScanRange) DeepEqual(ano *TMetaScanRange) bool {
 		return false
 	}
 	if !p.Field10DeepEqual(ano.MetaCacheStatsParams) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.PartitionValuesParams) {
 		return false
 	}
 	return true
@@ -22710,6 +23391,13 @@ func (p *TMetaScanRange) Field9DeepEqual(src *TPartitionsMetadataParams) bool {
 func (p *TMetaScanRange) Field10DeepEqual(src *TMetaCacheStatsParams) bool {
 
 	if !p.MetaCacheStatsParams.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TMetaScanRange) Field11DeepEqual(src *TPartitionValuesMetadataParams) bool {
+
+	if !p.PartitionValuesParams.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -44713,6 +45401,7 @@ type TPlanNode struct {
 	PushDownAggTypeOpt            *TPushAggOp              `thrift:"push_down_agg_type_opt,48,optional" frugal:"48,optional,TPushAggOp" json:"push_down_agg_type_opt,omitempty"`
 	PushDownCount                 *int64                   `thrift:"push_down_count,49,optional" frugal:"49,optional,i64" json:"push_down_count,omitempty"`
 	DistributeExprLists           [][]*exprs.TExpr         `thrift:"distribute_expr_lists,50,optional" frugal:"50,optional,list<list<exprs.TExpr>>" json:"distribute_expr_lists,omitempty"`
+	IsSerialOperator              *bool                    `thrift:"is_serial_operator,51,optional" frugal:"51,optional,bool" json:"is_serial_operator,omitempty"`
 	Projections                   []*exprs.TExpr           `thrift:"projections,101,optional" frugal:"101,optional,list<exprs.TExpr>" json:"projections,omitempty"`
 	OutputTupleId                 *types.TTupleId          `thrift:"output_tuple_id,102,optional" frugal:"102,optional,i32" json:"output_tuple_id,omitempty"`
 	PartitionSortNode             *TPartitionSortNode      `thrift:"partition_sort_node,103,optional" frugal:"103,optional,TPartitionSortNode" json:"partition_sort_node,omitempty"`
@@ -45090,6 +45779,15 @@ func (p *TPlanNode) GetDistributeExprLists() (v [][]*exprs.TExpr) {
 	return p.DistributeExprLists
 }
 
+var TPlanNode_IsSerialOperator_DEFAULT bool
+
+func (p *TPlanNode) GetIsSerialOperator() (v bool) {
+	if !p.IsSetIsSerialOperator() {
+		return TPlanNode_IsSerialOperator_DEFAULT
+	}
+	return *p.IsSerialOperator
+}
+
 var TPlanNode_Projections_DEFAULT []*exprs.TExpr
 
 func (p *TPlanNode) GetProjections() (v []*exprs.TExpr) {
@@ -45284,6 +45982,9 @@ func (p *TPlanNode) SetPushDownCount(val *int64) {
 func (p *TPlanNode) SetDistributeExprLists(val [][]*exprs.TExpr) {
 	p.DistributeExprLists = val
 }
+func (p *TPlanNode) SetIsSerialOperator(val *bool) {
+	p.IsSerialOperator = val
+}
 func (p *TPlanNode) SetProjections(val []*exprs.TExpr) {
 	p.Projections = val
 }
@@ -45351,6 +46052,7 @@ var fieldIDToName_TPlanNode = map[int16]string{
 	48:  "push_down_agg_type_opt",
 	49:  "push_down_count",
 	50:  "distribute_expr_lists",
+	51:  "is_serial_operator",
 	101: "projections",
 	102: "output_tuple_id",
 	103: "partition_sort_node",
@@ -45506,6 +46208,10 @@ func (p *TPlanNode) IsSetPushDownCount() bool {
 
 func (p *TPlanNode) IsSetDistributeExprLists() bool {
 	return p.DistributeExprLists != nil
+}
+
+func (p *TPlanNode) IsSetIsSerialOperator() bool {
+	return p.IsSerialOperator != nil
 }
 
 func (p *TPlanNode) IsSetProjections() bool {
@@ -45916,6 +46622,14 @@ func (p *TPlanNode) Read(iprot thrift.TProtocol) (err error) {
 		case 50:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField50(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 51:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField51(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -46518,6 +47232,17 @@ func (p *TPlanNode) ReadField50(iprot thrift.TProtocol) error {
 	p.DistributeExprLists = _field
 	return nil
 }
+func (p *TPlanNode) ReadField51(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsSerialOperator = _field
+	return nil
+}
 func (p *TPlanNode) ReadField101(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
@@ -46833,6 +47558,10 @@ func (p *TPlanNode) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField50(oprot); err != nil {
 			fieldId = 50
+			goto WriteFieldError
+		}
+		if err = p.writeField51(oprot); err != nil {
+			fieldId = 51
 			goto WriteFieldError
 		}
 		if err = p.writeField101(oprot); err != nil {
@@ -47759,6 +48488,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 50 end error: ", p), err)
 }
 
+func (p *TPlanNode) writeField51(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsSerialOperator() {
+		if err = oprot.WriteFieldBegin("is_serial_operator", thrift.BOOL, 51); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsSerialOperator); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 51 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 51 end error: ", p), err)
+}
+
 func (p *TPlanNode) writeField101(oprot thrift.TProtocol) (err error) {
 	if p.IsSetProjections() {
 		if err = oprot.WriteFieldBegin("projections", thrift.LIST, 101); err != nil {
@@ -48076,6 +48824,9 @@ func (p *TPlanNode) DeepEqual(ano *TPlanNode) bool {
 		return false
 	}
 	if !p.Field50DeepEqual(ano.DistributeExprLists) {
+		return false
+	}
+	if !p.Field51DeepEqual(ano.IsSerialOperator) {
 		return false
 	}
 	if !p.Field101DeepEqual(ano.Projections) {
@@ -48459,6 +49210,18 @@ func (p *TPlanNode) Field50DeepEqual(src [][]*exprs.TExpr) bool {
 				return false
 			}
 		}
+	}
+	return true
+}
+func (p *TPlanNode) Field51DeepEqual(src *bool) bool {
+
+	if p.IsSerialOperator == src {
+		return true
+	} else if p.IsSerialOperator == nil || src == nil {
+		return false
+	}
+	if *p.IsSerialOperator != *src {
+		return false
 	}
 	return true
 }

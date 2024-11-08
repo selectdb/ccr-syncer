@@ -394,6 +394,20 @@ func (p *TMasterInfo) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 12:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField12(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -604,6 +618,19 @@ func (p *TMasterInfo) FastReadField11(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TMasterInfo) FastReadField12(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.TabletReportInactiveDurationMs = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TMasterInfo) FastWrite(buf []byte) int {
 	return 0
@@ -618,6 +645,7 @@ func (p *TMasterInfo) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWri
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 		offset += p.fastWriteField7(buf[offset:], binaryWriter)
 		offset += p.fastWriteField8(buf[offset:], binaryWriter)
+		offset += p.fastWriteField12(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
@@ -645,6 +673,7 @@ func (p *TMasterInfo) BLength() int {
 		l += p.field9Length()
 		l += p.field10Length()
 		l += p.field11Length()
+		l += p.field12Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -772,6 +801,17 @@ func (p *TMasterInfo) fastWriteField11(buf []byte, binaryWriter bthrift.BinaryWr
 	return offset
 }
 
+func (p *TMasterInfo) fastWriteField12(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTabletReportInactiveDurationMs() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "tablet_report_inactive_duration_ms", thrift.I64, 12)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.TabletReportInactiveDurationMs)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TMasterInfo) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("network_address", thrift.STRUCT, 1)
@@ -883,6 +923,17 @@ func (p *TMasterInfo) field11Length() int {
 	if p.IsSetCloudUniqueId() {
 		l += bthrift.Binary.FieldBeginLength("cloud_unique_id", thrift.STRING, 11)
 		l += bthrift.Binary.StringLengthNocopy(*p.CloudUniqueId)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TMasterInfo) field12Length() int {
+	l := 0
+	if p.IsSetTabletReportInactiveDurationMs() {
+		l += bthrift.Binary.FieldBeginLength("tablet_report_inactive_duration_ms", thrift.I64, 12)
+		l += bthrift.Binary.I64Length(*p.TabletReportInactiveDurationMs)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

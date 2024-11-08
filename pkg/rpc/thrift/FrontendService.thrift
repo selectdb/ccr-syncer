@@ -437,6 +437,8 @@ struct TQueryProfile {
 struct TFragmentInstanceReport {
   1: optional Types.TUniqueId fragment_instance_id;
   2: optional i32 num_finished_range;
+  3: optional i64 loaded_rows
+  4: optional i64 loaded_bytes
 }
 
 
@@ -759,6 +761,7 @@ struct TStreamLoadPutRequest {
     54: optional bool group_commit // deprecated
     55: optional i32 stream_per_node;
     56: optional string group_commit_mode
+    57: optional Types.TUniqueKeyUpdateMode unique_key_update_mode
 
     // For cloud
     1000: optional string cloud_cluster
@@ -1029,6 +1032,7 @@ struct TMetadataTableRequestParams {
   10: optional PlanNodes.TTasksMetadataParams tasks_metadata_params
   11: optional PlanNodes.TPartitionsMetadataParams partitions_metadata_params
   12: optional PlanNodes.TMetaCacheStatsParams meta_cache_stats_params
+  13: optional PlanNodes.TPartitionValuesMetadataParams partition_values_metadata_params
 }
 
 struct TSchemaTableRequestParams {
@@ -1233,6 +1237,7 @@ struct TGetSnapshotRequest {
     7: optional string label_name
     8: optional string snapshot_name
     9: optional TSnapshotType snapshot_type
+    10: optional bool enable_compress;
 }
 
 struct TGetSnapshotResult {
@@ -1240,6 +1245,7 @@ struct TGetSnapshotResult {
     2: optional binary meta
     3: optional binary job_info
     4: optional Types.TNetworkAddress master_address
+    5: optional bool compressed;
 }
 
 struct TTableRef {
@@ -1263,6 +1269,7 @@ struct TRestoreSnapshotRequest {
     13: optional bool clean_tables
     14: optional bool clean_partitions
     15: optional bool atomic_restore
+    16: optional bool compressed;
 }
 
 struct TRestoreSnapshotResult {

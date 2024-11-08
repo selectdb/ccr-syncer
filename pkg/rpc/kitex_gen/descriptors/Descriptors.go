@@ -6245,12 +6245,13 @@ func (p *TOlapTablePartitionParam) Field13DeepEqual(src bool) bool {
 }
 
 type TOlapTableIndex struct {
-	IndexName  *string           `thrift:"index_name,1,optional" frugal:"1,optional,string" json:"index_name,omitempty"`
-	Columns    []string          `thrift:"columns,2,optional" frugal:"2,optional,list<string>" json:"columns,omitempty"`
-	IndexType  *TIndexType       `thrift:"index_type,3,optional" frugal:"3,optional,TIndexType" json:"index_type,omitempty"`
-	Comment    *string           `thrift:"comment,4,optional" frugal:"4,optional,string" json:"comment,omitempty"`
-	IndexId    *int64            `thrift:"index_id,5,optional" frugal:"5,optional,i64" json:"index_id,omitempty"`
-	Properties map[string]string `thrift:"properties,6,optional" frugal:"6,optional,map<string:string>" json:"properties,omitempty"`
+	IndexName       *string           `thrift:"index_name,1,optional" frugal:"1,optional,string" json:"index_name,omitempty"`
+	Columns         []string          `thrift:"columns,2,optional" frugal:"2,optional,list<string>" json:"columns,omitempty"`
+	IndexType       *TIndexType       `thrift:"index_type,3,optional" frugal:"3,optional,TIndexType" json:"index_type,omitempty"`
+	Comment         *string           `thrift:"comment,4,optional" frugal:"4,optional,string" json:"comment,omitempty"`
+	IndexId         *int64            `thrift:"index_id,5,optional" frugal:"5,optional,i64" json:"index_id,omitempty"`
+	Properties      map[string]string `thrift:"properties,6,optional" frugal:"6,optional,map<string:string>" json:"properties,omitempty"`
+	ColumnUniqueIds []int32           `thrift:"column_unique_ids,7,optional" frugal:"7,optional,list<i32>" json:"column_unique_ids,omitempty"`
 }
 
 func NewTOlapTableIndex() *TOlapTableIndex {
@@ -6313,6 +6314,15 @@ func (p *TOlapTableIndex) GetProperties() (v map[string]string) {
 	}
 	return p.Properties
 }
+
+var TOlapTableIndex_ColumnUniqueIds_DEFAULT []int32
+
+func (p *TOlapTableIndex) GetColumnUniqueIds() (v []int32) {
+	if !p.IsSetColumnUniqueIds() {
+		return TOlapTableIndex_ColumnUniqueIds_DEFAULT
+	}
+	return p.ColumnUniqueIds
+}
 func (p *TOlapTableIndex) SetIndexName(val *string) {
 	p.IndexName = val
 }
@@ -6331,6 +6341,9 @@ func (p *TOlapTableIndex) SetIndexId(val *int64) {
 func (p *TOlapTableIndex) SetProperties(val map[string]string) {
 	p.Properties = val
 }
+func (p *TOlapTableIndex) SetColumnUniqueIds(val []int32) {
+	p.ColumnUniqueIds = val
+}
 
 var fieldIDToName_TOlapTableIndex = map[int16]string{
 	1: "index_name",
@@ -6339,6 +6352,7 @@ var fieldIDToName_TOlapTableIndex = map[int16]string{
 	4: "comment",
 	5: "index_id",
 	6: "properties",
+	7: "column_unique_ids",
 }
 
 func (p *TOlapTableIndex) IsSetIndexName() bool {
@@ -6363,6 +6377,10 @@ func (p *TOlapTableIndex) IsSetIndexId() bool {
 
 func (p *TOlapTableIndex) IsSetProperties() bool {
 	return p.Properties != nil
+}
+
+func (p *TOlapTableIndex) IsSetColumnUniqueIds() bool {
+	return p.ColumnUniqueIds != nil
 }
 
 func (p *TOlapTableIndex) Read(iprot thrift.TProtocol) (err error) {
@@ -6427,6 +6445,14 @@ func (p *TOlapTableIndex) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6558,6 +6584,29 @@ func (p *TOlapTableIndex) ReadField6(iprot thrift.TProtocol) error {
 	p.Properties = _field
 	return nil
 }
+func (p *TOlapTableIndex) ReadField7(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int32, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int32
+		if v, err := iprot.ReadI32(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.ColumnUniqueIds = _field
+	return nil
+}
 
 func (p *TOlapTableIndex) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -6587,6 +6636,10 @@ func (p *TOlapTableIndex) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 	}
@@ -6740,6 +6793,33 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 
+func (p *TOlapTableIndex) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetColumnUniqueIds() {
+		if err = oprot.WriteFieldBegin("column_unique_ids", thrift.LIST, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.I32, len(p.ColumnUniqueIds)); err != nil {
+			return err
+		}
+		for _, v := range p.ColumnUniqueIds {
+			if err := oprot.WriteI32(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
 func (p *TOlapTableIndex) String() string {
 	if p == nil {
 		return "<nil>"
@@ -6770,6 +6850,9 @@ func (p *TOlapTableIndex) DeepEqual(ano *TOlapTableIndex) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.Properties) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.ColumnUniqueIds) {
 		return false
 	}
 	return true
@@ -6844,6 +6927,19 @@ func (p *TOlapTableIndex) Field6DeepEqual(src map[string]string) bool {
 	for k, v := range p.Properties {
 		_src := src[k]
 		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *TOlapTableIndex) Field7DeepEqual(src []int32) bool {
+
+	if len(p.ColumnUniqueIds) != len(src) {
+		return false
+	}
+	for i, v := range p.ColumnUniqueIds {
+		_src := src[i]
+		if v != _src {
 			return false
 		}
 	}
@@ -7452,6 +7548,8 @@ type TOlapTableSchemaParam struct {
 	AutoIncrementColumn            *string                               `thrift:"auto_increment_column,11,optional" frugal:"11,optional,string" json:"auto_increment_column,omitempty"`
 	AutoIncrementColumnUniqueId    int32                                 `thrift:"auto_increment_column_unique_id,12,optional" frugal:"12,optional,i32" json:"auto_increment_column_unique_id,omitempty"`
 	InvertedIndexFileStorageFormat types.TInvertedIndexFileStorageFormat `thrift:"inverted_index_file_storage_format,13,optional" frugal:"13,optional,TInvertedIndexFileStorageFormat" json:"inverted_index_file_storage_format,omitempty"`
+	UniqueKeyUpdateMode            *types.TUniqueKeyUpdateMode           `thrift:"unique_key_update_mode,14,optional" frugal:"14,optional,TUniqueKeyUpdateMode" json:"unique_key_update_mode,omitempty"`
+	SequenceMapColUniqueId         int32                                 `thrift:"sequence_map_col_unique_id,15,optional" frugal:"15,optional,i32" json:"sequence_map_col_unique_id,omitempty"`
 }
 
 func NewTOlapTableSchemaParam() *TOlapTableSchemaParam {
@@ -7460,6 +7558,7 @@ func NewTOlapTableSchemaParam() *TOlapTableSchemaParam {
 		IsStrictMode:                   false,
 		AutoIncrementColumnUniqueId:    -1,
 		InvertedIndexFileStorageFormat: types.TInvertedIndexFileStorageFormat_V1,
+		SequenceMapColUniqueId:         -1,
 	}
 }
 
@@ -7467,6 +7566,7 @@ func (p *TOlapTableSchemaParam) InitDefault() {
 	p.IsStrictMode = false
 	p.AutoIncrementColumnUniqueId = -1
 	p.InvertedIndexFileStorageFormat = types.TInvertedIndexFileStorageFormat_V1
+	p.SequenceMapColUniqueId = -1
 }
 
 func (p *TOlapTableSchemaParam) GetDbId() (v int64) {
@@ -7560,6 +7660,24 @@ func (p *TOlapTableSchemaParam) GetInvertedIndexFileStorageFormat() (v types.TIn
 	}
 	return p.InvertedIndexFileStorageFormat
 }
+
+var TOlapTableSchemaParam_UniqueKeyUpdateMode_DEFAULT types.TUniqueKeyUpdateMode
+
+func (p *TOlapTableSchemaParam) GetUniqueKeyUpdateMode() (v types.TUniqueKeyUpdateMode) {
+	if !p.IsSetUniqueKeyUpdateMode() {
+		return TOlapTableSchemaParam_UniqueKeyUpdateMode_DEFAULT
+	}
+	return *p.UniqueKeyUpdateMode
+}
+
+var TOlapTableSchemaParam_SequenceMapColUniqueId_DEFAULT int32 = -1
+
+func (p *TOlapTableSchemaParam) GetSequenceMapColUniqueId() (v int32) {
+	if !p.IsSetSequenceMapColUniqueId() {
+		return TOlapTableSchemaParam_SequenceMapColUniqueId_DEFAULT
+	}
+	return p.SequenceMapColUniqueId
+}
 func (p *TOlapTableSchemaParam) SetDbId(val int64) {
 	p.DbId = val
 }
@@ -7599,6 +7717,12 @@ func (p *TOlapTableSchemaParam) SetAutoIncrementColumnUniqueId(val int32) {
 func (p *TOlapTableSchemaParam) SetInvertedIndexFileStorageFormat(val types.TInvertedIndexFileStorageFormat) {
 	p.InvertedIndexFileStorageFormat = val
 }
+func (p *TOlapTableSchemaParam) SetUniqueKeyUpdateMode(val *types.TUniqueKeyUpdateMode) {
+	p.UniqueKeyUpdateMode = val
+}
+func (p *TOlapTableSchemaParam) SetSequenceMapColUniqueId(val int32) {
+	p.SequenceMapColUniqueId = val
+}
 
 var fieldIDToName_TOlapTableSchemaParam = map[int16]string{
 	1:  "db_id",
@@ -7614,6 +7738,8 @@ var fieldIDToName_TOlapTableSchemaParam = map[int16]string{
 	11: "auto_increment_column",
 	12: "auto_increment_column_unique_id",
 	13: "inverted_index_file_storage_format",
+	14: "unique_key_update_mode",
+	15: "sequence_map_col_unique_id",
 }
 
 func (p *TOlapTableSchemaParam) IsSetTupleDesc() bool {
@@ -7646,6 +7772,14 @@ func (p *TOlapTableSchemaParam) IsSetAutoIncrementColumnUniqueId() bool {
 
 func (p *TOlapTableSchemaParam) IsSetInvertedIndexFileStorageFormat() bool {
 	return p.InvertedIndexFileStorageFormat != TOlapTableSchemaParam_InvertedIndexFileStorageFormat_DEFAULT
+}
+
+func (p *TOlapTableSchemaParam) IsSetUniqueKeyUpdateMode() bool {
+	return p.UniqueKeyUpdateMode != nil
+}
+
+func (p *TOlapTableSchemaParam) IsSetSequenceMapColUniqueId() bool {
+	return p.SequenceMapColUniqueId != TOlapTableSchemaParam_SequenceMapColUniqueId_DEFAULT
 }
 
 func (p *TOlapTableSchemaParam) Read(iprot thrift.TProtocol) (err error) {
@@ -7778,6 +7912,22 @@ func (p *TOlapTableSchemaParam) Read(iprot thrift.TProtocol) (err error) {
 		case 13:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField14(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 15:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField15(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -8019,6 +8169,29 @@ func (p *TOlapTableSchemaParam) ReadField13(iprot thrift.TProtocol) error {
 	p.InvertedIndexFileStorageFormat = _field
 	return nil
 }
+func (p *TOlapTableSchemaParam) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *types.TUniqueKeyUpdateMode
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := types.TUniqueKeyUpdateMode(v)
+		_field = &tmp
+	}
+	p.UniqueKeyUpdateMode = _field
+	return nil
+}
+func (p *TOlapTableSchemaParam) ReadField15(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.SequenceMapColUniqueId = _field
+	return nil
+}
 
 func (p *TOlapTableSchemaParam) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -8076,6 +8249,14 @@ func (p *TOlapTableSchemaParam) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField13(oprot); err != nil {
 			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
+			goto WriteFieldError
+		}
+		if err = p.writeField15(oprot); err != nil {
+			fieldId = 15
 			goto WriteFieldError
 		}
 	}
@@ -8355,6 +8536,44 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
 
+func (p *TOlapTableSchemaParam) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetUniqueKeyUpdateMode() {
+		if err = oprot.WriteFieldBegin("unique_key_update_mode", thrift.I32, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.UniqueKeyUpdateMode)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
+
+func (p *TOlapTableSchemaParam) writeField15(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSequenceMapColUniqueId() {
+		if err = oprot.WriteFieldBegin("sequence_map_col_unique_id", thrift.I32, 15); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.SequenceMapColUniqueId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
+}
+
 func (p *TOlapTableSchemaParam) String() string {
 	if p == nil {
 		return "<nil>"
@@ -8406,6 +8625,12 @@ func (p *TOlapTableSchemaParam) DeepEqual(ano *TOlapTableSchemaParam) bool {
 		return false
 	}
 	if !p.Field13DeepEqual(ano.InvertedIndexFileStorageFormat) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.UniqueKeyUpdateMode) {
+		return false
+	}
+	if !p.Field15DeepEqual(ano.SequenceMapColUniqueId) {
 		return false
 	}
 	return true
@@ -8531,6 +8756,25 @@ func (p *TOlapTableSchemaParam) Field12DeepEqual(src int32) bool {
 func (p *TOlapTableSchemaParam) Field13DeepEqual(src types.TInvertedIndexFileStorageFormat) bool {
 
 	if p.InvertedIndexFileStorageFormat != src {
+		return false
+	}
+	return true
+}
+func (p *TOlapTableSchemaParam) Field14DeepEqual(src *types.TUniqueKeyUpdateMode) bool {
+
+	if p.UniqueKeyUpdateMode == src {
+		return true
+	} else if p.UniqueKeyUpdateMode == nil || src == nil {
+		return false
+	}
+	if *p.UniqueKeyUpdateMode != *src {
+		return false
+	}
+	return true
+}
+func (p *TOlapTableSchemaParam) Field15DeepEqual(src int32) bool {
+
+	if p.SequenceMapColUniqueId != src {
 		return false
 	}
 	return true

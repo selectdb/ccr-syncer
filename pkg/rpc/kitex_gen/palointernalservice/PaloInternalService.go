@@ -1740,9 +1740,9 @@ type TQueryOptions struct {
 	EnableNoNeedReadDataOpt                     bool            `thrift:"enable_no_need_read_data_opt,116,optional" frugal:"116,optional,bool" json:"enable_no_need_read_data_opt,omitempty"`
 	ReadCsvEmptyLineAsNull                      bool            `thrift:"read_csv_empty_line_as_null,117,optional" frugal:"117,optional,bool" json:"read_csv_empty_line_as_null,omitempty"`
 	SerdeDialect                                TSerdeDialect   `thrift:"serde_dialect,118,optional" frugal:"118,optional,TSerdeDialect" json:"serde_dialect,omitempty"`
-	KeepCarriageReturn                          bool            `thrift:"keep_carriage_return,119,optional" frugal:"119,optional,bool" json:"keep_carriage_return,omitempty"`
-	EnableMatchWithoutInvertedIndex             bool            `thrift:"enable_match_without_inverted_index,120,optional" frugal:"120,optional,bool" json:"enable_match_without_inverted_index,omitempty"`
-	EnableFallbackOnMissingInvertedIndex        bool            `thrift:"enable_fallback_on_missing_inverted_index,121,optional" frugal:"121,optional,bool" json:"enable_fallback_on_missing_inverted_index,omitempty"`
+	EnableMatchWithoutInvertedIndex             bool            `thrift:"enable_match_without_inverted_index,119,optional" frugal:"119,optional,bool" json:"enable_match_without_inverted_index,omitempty"`
+	EnableFallbackOnMissingInvertedIndex        bool            `thrift:"enable_fallback_on_missing_inverted_index,120,optional" frugal:"120,optional,bool" json:"enable_fallback_on_missing_inverted_index,omitempty"`
+	KeepCarriageReturn                          bool            `thrift:"keep_carriage_return,121,optional" frugal:"121,optional,bool" json:"keep_carriage_return,omitempty"`
 	RuntimeBloomFilterMinSize                   int32           `thrift:"runtime_bloom_filter_min_size,122,optional" frugal:"122,optional,i32" json:"runtime_bloom_filter_min_size,omitempty"`
 	HiveParquetUseColumnNames                   bool            `thrift:"hive_parquet_use_column_names,123,optional" frugal:"123,optional,bool" json:"hive_parquet_use_column_names,omitempty"`
 	HiveOrcUseColumnNames                       bool            `thrift:"hive_orc_use_column_names,124,optional" frugal:"124,optional,bool" json:"hive_orc_use_column_names,omitempty"`
@@ -1756,6 +1756,9 @@ type TQueryOptions struct {
 	ParallelPrepareThreshold                    int32           `thrift:"parallel_prepare_threshold,132,optional" frugal:"132,optional,i32" json:"parallel_prepare_threshold,omitempty"`
 	PartitionTopnMaxPartitions                  int32           `thrift:"partition_topn_max_partitions,133,optional" frugal:"133,optional,i32" json:"partition_topn_max_partitions,omitempty"`
 	PartitionTopnPrePartitionRows               int32           `thrift:"partition_topn_pre_partition_rows,134,optional" frugal:"134,optional,i32" json:"partition_topn_pre_partition_rows,omitempty"`
+	EnableParallelOutfile                       bool            `thrift:"enable_parallel_outfile,135,optional" frugal:"135,optional,bool" json:"enable_parallel_outfile,omitempty"`
+	EnablePhraseQuerySequentialOpt              bool            `thrift:"enable_phrase_query_sequential_opt,136,optional" frugal:"136,optional,bool" json:"enable_phrase_query_sequential_opt,omitempty"`
+	EnableAutoCreateWhenOverwrite               bool            `thrift:"enable_auto_create_when_overwrite,137,optional" frugal:"137,optional,bool" json:"enable_auto_create_when_overwrite,omitempty"`
 	DisableFileCache                            bool            `thrift:"disable_file_cache,1000,optional" frugal:"1000,optional,bool" json:"disable_file_cache,omitempty"`
 }
 
@@ -1860,9 +1863,9 @@ func NewTQueryOptions() *TQueryOptions {
 		EnableNoNeedReadDataOpt:                     true,
 		ReadCsvEmptyLineAsNull:                      false,
 		SerdeDialect:                                TSerdeDialect_DORIS,
-		KeepCarriageReturn:                          false,
 		EnableMatchWithoutInvertedIndex:             true,
 		EnableFallbackOnMissingInvertedIndex:        true,
+		KeepCarriageReturn:                          false,
 		RuntimeBloomFilterMinSize:                   1048576,
 		HiveParquetUseColumnNames:                   true,
 		HiveOrcUseColumnNames:                       true,
@@ -1876,6 +1879,9 @@ func NewTQueryOptions() *TQueryOptions {
 		ParallelPrepareThreshold:                    0,
 		PartitionTopnMaxPartitions:                  1024,
 		PartitionTopnPrePartitionRows:               1000,
+		EnableParallelOutfile:                       false,
+		EnablePhraseQuerySequentialOpt:              true,
+		EnableAutoCreateWhenOverwrite:               false,
 		DisableFileCache:                            false,
 	}
 }
@@ -1979,9 +1985,9 @@ func (p *TQueryOptions) InitDefault() {
 	p.EnableNoNeedReadDataOpt = true
 	p.ReadCsvEmptyLineAsNull = false
 	p.SerdeDialect = TSerdeDialect_DORIS
-	p.KeepCarriageReturn = false
 	p.EnableMatchWithoutInvertedIndex = true
 	p.EnableFallbackOnMissingInvertedIndex = true
+	p.KeepCarriageReturn = false
 	p.RuntimeBloomFilterMinSize = 1048576
 	p.HiveParquetUseColumnNames = true
 	p.HiveOrcUseColumnNames = true
@@ -1995,6 +2001,9 @@ func (p *TQueryOptions) InitDefault() {
 	p.ParallelPrepareThreshold = 0
 	p.PartitionTopnMaxPartitions = 1024
 	p.PartitionTopnPrePartitionRows = 1000
+	p.EnableParallelOutfile = false
+	p.EnablePhraseQuerySequentialOpt = true
+	p.EnableAutoCreateWhenOverwrite = false
 	p.DisableFileCache = false
 }
 
@@ -2979,15 +2988,6 @@ func (p *TQueryOptions) GetSerdeDialect() (v TSerdeDialect) {
 	return p.SerdeDialect
 }
 
-var TQueryOptions_KeepCarriageReturn_DEFAULT bool = false
-
-func (p *TQueryOptions) GetKeepCarriageReturn() (v bool) {
-	if !p.IsSetKeepCarriageReturn() {
-		return TQueryOptions_KeepCarriageReturn_DEFAULT
-	}
-	return p.KeepCarriageReturn
-}
-
 var TQueryOptions_EnableMatchWithoutInvertedIndex_DEFAULT bool = true
 
 func (p *TQueryOptions) GetEnableMatchWithoutInvertedIndex() (v bool) {
@@ -3004,6 +3004,15 @@ func (p *TQueryOptions) GetEnableFallbackOnMissingInvertedIndex() (v bool) {
 		return TQueryOptions_EnableFallbackOnMissingInvertedIndex_DEFAULT
 	}
 	return p.EnableFallbackOnMissingInvertedIndex
+}
+
+var TQueryOptions_KeepCarriageReturn_DEFAULT bool = false
+
+func (p *TQueryOptions) GetKeepCarriageReturn() (v bool) {
+	if !p.IsSetKeepCarriageReturn() {
+		return TQueryOptions_KeepCarriageReturn_DEFAULT
+	}
+	return p.KeepCarriageReturn
 }
 
 var TQueryOptions_RuntimeBloomFilterMinSize_DEFAULT int32 = 1048576
@@ -3121,6 +3130,33 @@ func (p *TQueryOptions) GetPartitionTopnPrePartitionRows() (v int32) {
 		return TQueryOptions_PartitionTopnPrePartitionRows_DEFAULT
 	}
 	return p.PartitionTopnPrePartitionRows
+}
+
+var TQueryOptions_EnableParallelOutfile_DEFAULT bool = false
+
+func (p *TQueryOptions) GetEnableParallelOutfile() (v bool) {
+	if !p.IsSetEnableParallelOutfile() {
+		return TQueryOptions_EnableParallelOutfile_DEFAULT
+	}
+	return p.EnableParallelOutfile
+}
+
+var TQueryOptions_EnablePhraseQuerySequentialOpt_DEFAULT bool = true
+
+func (p *TQueryOptions) GetEnablePhraseQuerySequentialOpt() (v bool) {
+	if !p.IsSetEnablePhraseQuerySequentialOpt() {
+		return TQueryOptions_EnablePhraseQuerySequentialOpt_DEFAULT
+	}
+	return p.EnablePhraseQuerySequentialOpt
+}
+
+var TQueryOptions_EnableAutoCreateWhenOverwrite_DEFAULT bool = false
+
+func (p *TQueryOptions) GetEnableAutoCreateWhenOverwrite() (v bool) {
+	if !p.IsSetEnableAutoCreateWhenOverwrite() {
+		return TQueryOptions_EnableAutoCreateWhenOverwrite_DEFAULT
+	}
+	return p.EnableAutoCreateWhenOverwrite
 }
 
 var TQueryOptions_DisableFileCache_DEFAULT bool = false
@@ -3458,14 +3494,14 @@ func (p *TQueryOptions) SetReadCsvEmptyLineAsNull(val bool) {
 func (p *TQueryOptions) SetSerdeDialect(val TSerdeDialect) {
 	p.SerdeDialect = val
 }
-func (p *TQueryOptions) SetKeepCarriageReturn(val bool) {
-	p.KeepCarriageReturn = val
-}
 func (p *TQueryOptions) SetEnableMatchWithoutInvertedIndex(val bool) {
 	p.EnableMatchWithoutInvertedIndex = val
 }
 func (p *TQueryOptions) SetEnableFallbackOnMissingInvertedIndex(val bool) {
 	p.EnableFallbackOnMissingInvertedIndex = val
+}
+func (p *TQueryOptions) SetKeepCarriageReturn(val bool) {
+	p.KeepCarriageReturn = val
 }
 func (p *TQueryOptions) SetRuntimeBloomFilterMinSize(val int32) {
 	p.RuntimeBloomFilterMinSize = val
@@ -3505,6 +3541,15 @@ func (p *TQueryOptions) SetPartitionTopnMaxPartitions(val int32) {
 }
 func (p *TQueryOptions) SetPartitionTopnPrePartitionRows(val int32) {
 	p.PartitionTopnPrePartitionRows = val
+}
+func (p *TQueryOptions) SetEnableParallelOutfile(val bool) {
+	p.EnableParallelOutfile = val
+}
+func (p *TQueryOptions) SetEnablePhraseQuerySequentialOpt(val bool) {
+	p.EnablePhraseQuerySequentialOpt = val
+}
+func (p *TQueryOptions) SetEnableAutoCreateWhenOverwrite(val bool) {
+	p.EnableAutoCreateWhenOverwrite = val
 }
 func (p *TQueryOptions) SetDisableFileCache(val bool) {
 	p.DisableFileCache = val
@@ -3620,9 +3665,9 @@ var fieldIDToName_TQueryOptions = map[int16]string{
 	116:  "enable_no_need_read_data_opt",
 	117:  "read_csv_empty_line_as_null",
 	118:  "serde_dialect",
-	119:  "keep_carriage_return",
-	120:  "enable_match_without_inverted_index",
-	121:  "enable_fallback_on_missing_inverted_index",
+	119:  "enable_match_without_inverted_index",
+	120:  "enable_fallback_on_missing_inverted_index",
+	121:  "keep_carriage_return",
 	122:  "runtime_bloom_filter_min_size",
 	123:  "hive_parquet_use_column_names",
 	124:  "hive_orc_use_column_names",
@@ -3636,6 +3681,9 @@ var fieldIDToName_TQueryOptions = map[int16]string{
 	132:  "parallel_prepare_threshold",
 	133:  "partition_topn_max_partitions",
 	134:  "partition_topn_pre_partition_rows",
+	135:  "enable_parallel_outfile",
+	136:  "enable_phrase_query_sequential_opt",
+	137:  "enable_auto_create_when_overwrite",
 	1000: "disable_file_cache",
 }
 
@@ -4075,16 +4123,16 @@ func (p *TQueryOptions) IsSetSerdeDialect() bool {
 	return p.SerdeDialect != TQueryOptions_SerdeDialect_DEFAULT
 }
 
-func (p *TQueryOptions) IsSetKeepCarriageReturn() bool {
-	return p.KeepCarriageReturn != TQueryOptions_KeepCarriageReturn_DEFAULT
-}
-
 func (p *TQueryOptions) IsSetEnableMatchWithoutInvertedIndex() bool {
 	return p.EnableMatchWithoutInvertedIndex != TQueryOptions_EnableMatchWithoutInvertedIndex_DEFAULT
 }
 
 func (p *TQueryOptions) IsSetEnableFallbackOnMissingInvertedIndex() bool {
 	return p.EnableFallbackOnMissingInvertedIndex != TQueryOptions_EnableFallbackOnMissingInvertedIndex_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetKeepCarriageReturn() bool {
+	return p.KeepCarriageReturn != TQueryOptions_KeepCarriageReturn_DEFAULT
 }
 
 func (p *TQueryOptions) IsSetRuntimeBloomFilterMinSize() bool {
@@ -4137,6 +4185,18 @@ func (p *TQueryOptions) IsSetPartitionTopnMaxPartitions() bool {
 
 func (p *TQueryOptions) IsSetPartitionTopnPrePartitionRows() bool {
 	return p.PartitionTopnPrePartitionRows != TQueryOptions_PartitionTopnPrePartitionRows_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableParallelOutfile() bool {
+	return p.EnableParallelOutfile != TQueryOptions_EnableParallelOutfile_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnablePhraseQuerySequentialOpt() bool {
+	return p.EnablePhraseQuerySequentialOpt != TQueryOptions_EnablePhraseQuerySequentialOpt_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableAutoCreateWhenOverwrite() bool {
+	return p.EnableAutoCreateWhenOverwrite != TQueryOptions_EnableAutoCreateWhenOverwrite_DEFAULT
 }
 
 func (p *TQueryOptions) IsSetDisableFileCache() bool {
@@ -5157,6 +5217,30 @@ func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
 		case 134:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField134(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 135:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField135(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 136:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField136(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 137:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField137(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6403,7 +6487,7 @@ func (p *TQueryOptions) ReadField119(iprot thrift.TProtocol) error {
 	} else {
 		_field = v
 	}
-	p.KeepCarriageReturn = _field
+	p.EnableMatchWithoutInvertedIndex = _field
 	return nil
 }
 func (p *TQueryOptions) ReadField120(iprot thrift.TProtocol) error {
@@ -6414,7 +6498,7 @@ func (p *TQueryOptions) ReadField120(iprot thrift.TProtocol) error {
 	} else {
 		_field = v
 	}
-	p.EnableMatchWithoutInvertedIndex = _field
+	p.EnableFallbackOnMissingInvertedIndex = _field
 	return nil
 }
 func (p *TQueryOptions) ReadField121(iprot thrift.TProtocol) error {
@@ -6425,7 +6509,7 @@ func (p *TQueryOptions) ReadField121(iprot thrift.TProtocol) error {
 	} else {
 		_field = v
 	}
-	p.EnableFallbackOnMissingInvertedIndex = _field
+	p.KeepCarriageReturn = _field
 	return nil
 }
 func (p *TQueryOptions) ReadField122(iprot thrift.TProtocol) error {
@@ -6569,6 +6653,39 @@ func (p *TQueryOptions) ReadField134(iprot thrift.TProtocol) error {
 		_field = v
 	}
 	p.PartitionTopnPrePartitionRows = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField135(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnableParallelOutfile = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField136(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnablePhraseQuerySequentialOpt = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField137(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnableAutoCreateWhenOverwrite = _field
 	return nil
 }
 func (p *TQueryOptions) ReadField1000(iprot thrift.TProtocol) error {
@@ -7087,6 +7204,18 @@ func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField134(oprot); err != nil {
 			fieldId = 134
+			goto WriteFieldError
+		}
+		if err = p.writeField135(oprot); err != nil {
+			fieldId = 135
+			goto WriteFieldError
+		}
+		if err = p.writeField136(oprot); err != nil {
+			fieldId = 136
+			goto WriteFieldError
+		}
+		if err = p.writeField137(oprot); err != nil {
+			fieldId = 137
 			goto WriteFieldError
 		}
 		if err = p.writeField1000(oprot); err != nil {
@@ -9183,11 +9312,11 @@ WriteFieldEndError:
 }
 
 func (p *TQueryOptions) writeField119(oprot thrift.TProtocol) (err error) {
-	if p.IsSetKeepCarriageReturn() {
-		if err = oprot.WriteFieldBegin("keep_carriage_return", thrift.BOOL, 119); err != nil {
+	if p.IsSetEnableMatchWithoutInvertedIndex() {
+		if err = oprot.WriteFieldBegin("enable_match_without_inverted_index", thrift.BOOL, 119); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteBool(p.KeepCarriageReturn); err != nil {
+		if err := oprot.WriteBool(p.EnableMatchWithoutInvertedIndex); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -9202,11 +9331,11 @@ WriteFieldEndError:
 }
 
 func (p *TQueryOptions) writeField120(oprot thrift.TProtocol) (err error) {
-	if p.IsSetEnableMatchWithoutInvertedIndex() {
-		if err = oprot.WriteFieldBegin("enable_match_without_inverted_index", thrift.BOOL, 120); err != nil {
+	if p.IsSetEnableFallbackOnMissingInvertedIndex() {
+		if err = oprot.WriteFieldBegin("enable_fallback_on_missing_inverted_index", thrift.BOOL, 120); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteBool(p.EnableMatchWithoutInvertedIndex); err != nil {
+		if err := oprot.WriteBool(p.EnableFallbackOnMissingInvertedIndex); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -9221,11 +9350,11 @@ WriteFieldEndError:
 }
 
 func (p *TQueryOptions) writeField121(oprot thrift.TProtocol) (err error) {
-	if p.IsSetEnableFallbackOnMissingInvertedIndex() {
-		if err = oprot.WriteFieldBegin("enable_fallback_on_missing_inverted_index", thrift.BOOL, 121); err != nil {
+	if p.IsSetKeepCarriageReturn() {
+		if err = oprot.WriteFieldBegin("keep_carriage_return", thrift.BOOL, 121); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteBool(p.EnableFallbackOnMissingInvertedIndex); err != nil {
+		if err := oprot.WriteBool(p.KeepCarriageReturn); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -9484,6 +9613,63 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 134 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 134 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField135(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableParallelOutfile() {
+		if err = oprot.WriteFieldBegin("enable_parallel_outfile", thrift.BOOL, 135); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableParallelOutfile); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 135 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 135 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField136(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnablePhraseQuerySequentialOpt() {
+		if err = oprot.WriteFieldBegin("enable_phrase_query_sequential_opt", thrift.BOOL, 136); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnablePhraseQuerySequentialOpt); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 136 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 136 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField137(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableAutoCreateWhenOverwrite() {
+		if err = oprot.WriteFieldBegin("enable_auto_create_when_overwrite", thrift.BOOL, 137); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableAutoCreateWhenOverwrite); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 137 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 137 end error: ", p), err)
 }
 
 func (p *TQueryOptions) writeField1000(oprot thrift.TProtocol) (err error) {
@@ -9846,13 +10032,13 @@ func (p *TQueryOptions) DeepEqual(ano *TQueryOptions) bool {
 	if !p.Field118DeepEqual(ano.SerdeDialect) {
 		return false
 	}
-	if !p.Field119DeepEqual(ano.KeepCarriageReturn) {
+	if !p.Field119DeepEqual(ano.EnableMatchWithoutInvertedIndex) {
 		return false
 	}
-	if !p.Field120DeepEqual(ano.EnableMatchWithoutInvertedIndex) {
+	if !p.Field120DeepEqual(ano.EnableFallbackOnMissingInvertedIndex) {
 		return false
 	}
-	if !p.Field121DeepEqual(ano.EnableFallbackOnMissingInvertedIndex) {
+	if !p.Field121DeepEqual(ano.KeepCarriageReturn) {
 		return false
 	}
 	if !p.Field122DeepEqual(ano.RuntimeBloomFilterMinSize) {
@@ -9892,6 +10078,15 @@ func (p *TQueryOptions) DeepEqual(ano *TQueryOptions) bool {
 		return false
 	}
 	if !p.Field134DeepEqual(ano.PartitionTopnPrePartitionRows) {
+		return false
+	}
+	if !p.Field135DeepEqual(ano.EnableParallelOutfile) {
+		return false
+	}
+	if !p.Field136DeepEqual(ano.EnablePhraseQuerySequentialOpt) {
+		return false
+	}
+	if !p.Field137DeepEqual(ano.EnableAutoCreateWhenOverwrite) {
 		return false
 	}
 	if !p.Field1000DeepEqual(ano.DisableFileCache) {
@@ -10715,21 +10910,21 @@ func (p *TQueryOptions) Field118DeepEqual(src TSerdeDialect) bool {
 }
 func (p *TQueryOptions) Field119DeepEqual(src bool) bool {
 
-	if p.KeepCarriageReturn != src {
+	if p.EnableMatchWithoutInvertedIndex != src {
 		return false
 	}
 	return true
 }
 func (p *TQueryOptions) Field120DeepEqual(src bool) bool {
 
-	if p.EnableMatchWithoutInvertedIndex != src {
+	if p.EnableFallbackOnMissingInvertedIndex != src {
 		return false
 	}
 	return true
 }
 func (p *TQueryOptions) Field121DeepEqual(src bool) bool {
 
-	if p.EnableFallbackOnMissingInvertedIndex != src {
+	if p.KeepCarriageReturn != src {
 		return false
 	}
 	return true
@@ -10821,6 +11016,27 @@ func (p *TQueryOptions) Field133DeepEqual(src int32) bool {
 func (p *TQueryOptions) Field134DeepEqual(src int32) bool {
 
 	if p.PartitionTopnPrePartitionRows != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field135DeepEqual(src bool) bool {
+
+	if p.EnableParallelOutfile != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field136DeepEqual(src bool) bool {
+
+	if p.EnablePhraseQuerySequentialOpt != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field137DeepEqual(src bool) bool {
+
+	if p.EnableAutoCreateWhenOverwrite != src {
 		return false
 	}
 	return true
@@ -11336,6 +11552,7 @@ func (p *TRuntimeFilterTargetParams) Field2DeepEqual(src *types.TNetworkAddress)
 type TRuntimeFilterTargetParamsV2 struct {
 	TargetFragmentInstanceIds  []*types.TUniqueId     `thrift:"target_fragment_instance_ids,1,required" frugal:"1,required,list<types.TUniqueId>" json:"target_fragment_instance_ids"`
 	TargetFragmentInstanceAddr *types.TNetworkAddress `thrift:"target_fragment_instance_addr,2,required" frugal:"2,required,types.TNetworkAddress" json:"target_fragment_instance_addr"`
+	TargetFragmentIds          []int32                `thrift:"target_fragment_ids,3,optional" frugal:"3,optional,list<i32>" json:"target_fragment_ids,omitempty"`
 }
 
 func NewTRuntimeFilterTargetParamsV2() *TRuntimeFilterTargetParamsV2 {
@@ -11357,20 +11574,37 @@ func (p *TRuntimeFilterTargetParamsV2) GetTargetFragmentInstanceAddr() (v *types
 	}
 	return p.TargetFragmentInstanceAddr
 }
+
+var TRuntimeFilterTargetParamsV2_TargetFragmentIds_DEFAULT []int32
+
+func (p *TRuntimeFilterTargetParamsV2) GetTargetFragmentIds() (v []int32) {
+	if !p.IsSetTargetFragmentIds() {
+		return TRuntimeFilterTargetParamsV2_TargetFragmentIds_DEFAULT
+	}
+	return p.TargetFragmentIds
+}
 func (p *TRuntimeFilterTargetParamsV2) SetTargetFragmentInstanceIds(val []*types.TUniqueId) {
 	p.TargetFragmentInstanceIds = val
 }
 func (p *TRuntimeFilterTargetParamsV2) SetTargetFragmentInstanceAddr(val *types.TNetworkAddress) {
 	p.TargetFragmentInstanceAddr = val
 }
+func (p *TRuntimeFilterTargetParamsV2) SetTargetFragmentIds(val []int32) {
+	p.TargetFragmentIds = val
+}
 
 var fieldIDToName_TRuntimeFilterTargetParamsV2 = map[int16]string{
 	1: "target_fragment_instance_ids",
 	2: "target_fragment_instance_addr",
+	3: "target_fragment_ids",
 }
 
 func (p *TRuntimeFilterTargetParamsV2) IsSetTargetFragmentInstanceAddr() bool {
 	return p.TargetFragmentInstanceAddr != nil
+}
+
+func (p *TRuntimeFilterTargetParamsV2) IsSetTargetFragmentIds() bool {
+	return p.TargetFragmentIds != nil
 }
 
 func (p *TRuntimeFilterTargetParamsV2) Read(iprot thrift.TProtocol) (err error) {
@@ -11409,6 +11643,14 @@ func (p *TRuntimeFilterTargetParamsV2) Read(iprot thrift.TProtocol) (err error) 
 					goto ReadFieldError
 				}
 				issetTargetFragmentInstanceAddr = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -11483,6 +11725,29 @@ func (p *TRuntimeFilterTargetParamsV2) ReadField2(iprot thrift.TProtocol) error 
 	p.TargetFragmentInstanceAddr = _field
 	return nil
 }
+func (p *TRuntimeFilterTargetParamsV2) ReadField3(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int32, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int32
+		if v, err := iprot.ReadI32(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.TargetFragmentIds = _field
+	return nil
+}
 
 func (p *TRuntimeFilterTargetParamsV2) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -11496,6 +11761,10 @@ func (p *TRuntimeFilterTargetParamsV2) Write(oprot thrift.TProtocol) (err error)
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -11558,6 +11827,33 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 
+func (p *TRuntimeFilterTargetParamsV2) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTargetFragmentIds() {
+		if err = oprot.WriteFieldBegin("target_fragment_ids", thrift.LIST, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.I32, len(p.TargetFragmentIds)); err != nil {
+			return err
+		}
+		for _, v := range p.TargetFragmentIds {
+			if err := oprot.WriteI32(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
 func (p *TRuntimeFilterTargetParamsV2) String() string {
 	if p == nil {
 		return "<nil>"
@@ -11576,6 +11872,9 @@ func (p *TRuntimeFilterTargetParamsV2) DeepEqual(ano *TRuntimeFilterTargetParams
 		return false
 	}
 	if !p.Field2DeepEqual(ano.TargetFragmentInstanceAddr) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.TargetFragmentIds) {
 		return false
 	}
 	return true
@@ -11598,6 +11897,19 @@ func (p *TRuntimeFilterTargetParamsV2) Field2DeepEqual(src *types.TNetworkAddres
 
 	if !p.TargetFragmentInstanceAddr.DeepEqual(src) {
 		return false
+	}
+	return true
+}
+func (p *TRuntimeFilterTargetParamsV2) Field3DeepEqual(src []int32) bool {
+
+	if len(p.TargetFragmentIds) != len(src) {
+		return false
+	}
+	for i, v := range p.TargetFragmentIds {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
 	}
 	return true
 }

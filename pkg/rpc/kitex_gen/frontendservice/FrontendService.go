@@ -15610,6 +15610,8 @@ func (p *TQueryProfile) Field5DeepEqual(src []*runtimeprofile.TRuntimeProfileTre
 type TFragmentInstanceReport struct {
 	FragmentInstanceId *types.TUniqueId `thrift:"fragment_instance_id,1,optional" frugal:"1,optional,types.TUniqueId" json:"fragment_instance_id,omitempty"`
 	NumFinishedRange   *int32           `thrift:"num_finished_range,2,optional" frugal:"2,optional,i32" json:"num_finished_range,omitempty"`
+	LoadedRows         *int64           `thrift:"loaded_rows,3,optional" frugal:"3,optional,i64" json:"loaded_rows,omitempty"`
+	LoadedBytes        *int64           `thrift:"loaded_bytes,4,optional" frugal:"4,optional,i64" json:"loaded_bytes,omitempty"`
 }
 
 func NewTFragmentInstanceReport() *TFragmentInstanceReport {
@@ -15636,16 +15638,42 @@ func (p *TFragmentInstanceReport) GetNumFinishedRange() (v int32) {
 	}
 	return *p.NumFinishedRange
 }
+
+var TFragmentInstanceReport_LoadedRows_DEFAULT int64
+
+func (p *TFragmentInstanceReport) GetLoadedRows() (v int64) {
+	if !p.IsSetLoadedRows() {
+		return TFragmentInstanceReport_LoadedRows_DEFAULT
+	}
+	return *p.LoadedRows
+}
+
+var TFragmentInstanceReport_LoadedBytes_DEFAULT int64
+
+func (p *TFragmentInstanceReport) GetLoadedBytes() (v int64) {
+	if !p.IsSetLoadedBytes() {
+		return TFragmentInstanceReport_LoadedBytes_DEFAULT
+	}
+	return *p.LoadedBytes
+}
 func (p *TFragmentInstanceReport) SetFragmentInstanceId(val *types.TUniqueId) {
 	p.FragmentInstanceId = val
 }
 func (p *TFragmentInstanceReport) SetNumFinishedRange(val *int32) {
 	p.NumFinishedRange = val
 }
+func (p *TFragmentInstanceReport) SetLoadedRows(val *int64) {
+	p.LoadedRows = val
+}
+func (p *TFragmentInstanceReport) SetLoadedBytes(val *int64) {
+	p.LoadedBytes = val
+}
 
 var fieldIDToName_TFragmentInstanceReport = map[int16]string{
 	1: "fragment_instance_id",
 	2: "num_finished_range",
+	3: "loaded_rows",
+	4: "loaded_bytes",
 }
 
 func (p *TFragmentInstanceReport) IsSetFragmentInstanceId() bool {
@@ -15654,6 +15682,14 @@ func (p *TFragmentInstanceReport) IsSetFragmentInstanceId() bool {
 
 func (p *TFragmentInstanceReport) IsSetNumFinishedRange() bool {
 	return p.NumFinishedRange != nil
+}
+
+func (p *TFragmentInstanceReport) IsSetLoadedRows() bool {
+	return p.LoadedRows != nil
+}
+
+func (p *TFragmentInstanceReport) IsSetLoadedBytes() bool {
+	return p.LoadedBytes != nil
 }
 
 func (p *TFragmentInstanceReport) Read(iprot thrift.TProtocol) (err error) {
@@ -15686,6 +15722,22 @@ func (p *TFragmentInstanceReport) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -15739,6 +15791,28 @@ func (p *TFragmentInstanceReport) ReadField2(iprot thrift.TProtocol) error {
 	p.NumFinishedRange = _field
 	return nil
 }
+func (p *TFragmentInstanceReport) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.LoadedRows = _field
+	return nil
+}
+func (p *TFragmentInstanceReport) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.LoadedBytes = _field
+	return nil
+}
 
 func (p *TFragmentInstanceReport) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -15752,6 +15826,14 @@ func (p *TFragmentInstanceReport) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -15810,6 +15892,44 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 
+func (p *TFragmentInstanceReport) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLoadedRows() {
+		if err = oprot.WriteFieldBegin("loaded_rows", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.LoadedRows); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *TFragmentInstanceReport) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLoadedBytes() {
+		if err = oprot.WriteFieldBegin("loaded_bytes", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.LoadedBytes); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
 func (p *TFragmentInstanceReport) String() string {
 	if p == nil {
 		return "<nil>"
@@ -15830,6 +15950,12 @@ func (p *TFragmentInstanceReport) DeepEqual(ano *TFragmentInstanceReport) bool {
 	if !p.Field2DeepEqual(ano.NumFinishedRange) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.LoadedRows) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.LoadedBytes) {
+		return false
+	}
 	return true
 }
 
@@ -15848,6 +15974,30 @@ func (p *TFragmentInstanceReport) Field2DeepEqual(src *int32) bool {
 		return false
 	}
 	if *p.NumFinishedRange != *src {
+		return false
+	}
+	return true
+}
+func (p *TFragmentInstanceReport) Field3DeepEqual(src *int64) bool {
+
+	if p.LoadedRows == src {
+		return true
+	} else if p.LoadedRows == nil || src == nil {
+		return false
+	}
+	if *p.LoadedRows != *src {
+		return false
+	}
+	return true
+}
+func (p *TFragmentInstanceReport) Field4DeepEqual(src *int64) bool {
+
+	if p.LoadedBytes == src {
+		return true
+	} else if p.LoadedBytes == nil || src == nil {
+		return false
+	}
+	if *p.LoadedBytes != *src {
 		return false
 	}
 	return true
@@ -28144,6 +28294,7 @@ type TStreamLoadPutRequest struct {
 	GroupCommit          *bool                        `thrift:"group_commit,54,optional" frugal:"54,optional,bool" json:"group_commit,omitempty"`
 	StreamPerNode        *int32                       `thrift:"stream_per_node,55,optional" frugal:"55,optional,i32" json:"stream_per_node,omitempty"`
 	GroupCommitMode      *string                      `thrift:"group_commit_mode,56,optional" frugal:"56,optional,string" json:"group_commit_mode,omitempty"`
+	UniqueKeyUpdateMode  *types.TUniqueKeyUpdateMode  `thrift:"unique_key_update_mode,57,optional" frugal:"57,optional,TUniqueKeyUpdateMode" json:"unique_key_update_mode,omitempty"`
 	CloudCluster         *string                      `thrift:"cloud_cluster,1000,optional" frugal:"1000,optional,string" json:"cloud_cluster,omitempty"`
 	TableId              *int64                       `thrift:"table_id,1001,optional" frugal:"1001,optional,i64" json:"table_id,omitempty"`
 }
@@ -28624,6 +28775,15 @@ func (p *TStreamLoadPutRequest) GetGroupCommitMode() (v string) {
 	return *p.GroupCommitMode
 }
 
+var TStreamLoadPutRequest_UniqueKeyUpdateMode_DEFAULT types.TUniqueKeyUpdateMode
+
+func (p *TStreamLoadPutRequest) GetUniqueKeyUpdateMode() (v types.TUniqueKeyUpdateMode) {
+	if !p.IsSetUniqueKeyUpdateMode() {
+		return TStreamLoadPutRequest_UniqueKeyUpdateMode_DEFAULT
+	}
+	return *p.UniqueKeyUpdateMode
+}
+
 var TStreamLoadPutRequest_CloudCluster_DEFAULT string
 
 func (p *TStreamLoadPutRequest) GetCloudCluster() (v string) {
@@ -28809,6 +28969,9 @@ func (p *TStreamLoadPutRequest) SetStreamPerNode(val *int32) {
 func (p *TStreamLoadPutRequest) SetGroupCommitMode(val *string) {
 	p.GroupCommitMode = val
 }
+func (p *TStreamLoadPutRequest) SetUniqueKeyUpdateMode(val *types.TUniqueKeyUpdateMode) {
+	p.UniqueKeyUpdateMode = val
+}
 func (p *TStreamLoadPutRequest) SetCloudCluster(val *string) {
 	p.CloudCluster = val
 }
@@ -28873,6 +29036,7 @@ var fieldIDToName_TStreamLoadPutRequest = map[int16]string{
 	54:   "group_commit",
 	55:   "stream_per_node",
 	56:   "group_commit_mode",
+	57:   "unique_key_update_mode",
 	1000: "cloud_cluster",
 	1001: "table_id",
 }
@@ -29071,6 +29235,10 @@ func (p *TStreamLoadPutRequest) IsSetStreamPerNode() bool {
 
 func (p *TStreamLoadPutRequest) IsSetGroupCommitMode() bool {
 	return p.GroupCommitMode != nil
+}
+
+func (p *TStreamLoadPutRequest) IsSetUniqueKeyUpdateMode() bool {
+	return p.UniqueKeyUpdateMode != nil
 }
 
 func (p *TStreamLoadPutRequest) IsSetCloudCluster() bool {
@@ -29559,6 +29727,14 @@ func (p *TStreamLoadPutRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 56:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField56(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 57:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField57(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -30277,6 +30453,18 @@ func (p *TStreamLoadPutRequest) ReadField56(iprot thrift.TProtocol) error {
 	p.GroupCommitMode = _field
 	return nil
 }
+func (p *TStreamLoadPutRequest) ReadField57(iprot thrift.TProtocol) error {
+
+	var _field *types.TUniqueKeyUpdateMode
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := types.TUniqueKeyUpdateMode(v)
+		_field = &tmp
+	}
+	p.UniqueKeyUpdateMode = _field
+	return nil
+}
 func (p *TStreamLoadPutRequest) ReadField1000(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -30528,6 +30716,10 @@ func (p *TStreamLoadPutRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField56(oprot); err != nil {
 			fieldId = 56
+			goto WriteFieldError
+		}
+		if err = p.writeField57(oprot); err != nil {
+			fieldId = 57
 			goto WriteFieldError
 		}
 		if err = p.writeField1000(oprot); err != nil {
@@ -31612,6 +31804,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 56 end error: ", p), err)
 }
 
+func (p *TStreamLoadPutRequest) writeField57(oprot thrift.TProtocol) (err error) {
+	if p.IsSetUniqueKeyUpdateMode() {
+		if err = oprot.WriteFieldBegin("unique_key_update_mode", thrift.I32, 57); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.UniqueKeyUpdateMode)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 57 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 57 end error: ", p), err)
+}
+
 func (p *TStreamLoadPutRequest) writeField1000(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCloudCluster() {
 		if err = oprot.WriteFieldBegin("cloud_cluster", thrift.STRING, 1000); err != nil {
@@ -31830,6 +32041,9 @@ func (p *TStreamLoadPutRequest) DeepEqual(ano *TStreamLoadPutRequest) bool {
 		return false
 	}
 	if !p.Field56DeepEqual(ano.GroupCommitMode) {
+		return false
+	}
+	if !p.Field57DeepEqual(ano.UniqueKeyUpdateMode) {
 		return false
 	}
 	if !p.Field1000DeepEqual(ano.CloudCluster) {
@@ -32470,6 +32684,18 @@ func (p *TStreamLoadPutRequest) Field56DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.GroupCommitMode, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TStreamLoadPutRequest) Field57DeepEqual(src *types.TUniqueKeyUpdateMode) bool {
+
+	if p.UniqueKeyUpdateMode == src {
+		return true
+	} else if p.UniqueKeyUpdateMode == nil || src == nil {
+		return false
+	}
+	if *p.UniqueKeyUpdateMode != *src {
 		return false
 	}
 	return true
@@ -46125,6 +46351,7 @@ type TMetadataTableRequestParams struct {
 	TasksMetadataParams             *plannodes.TTasksMetadataParams             `thrift:"tasks_metadata_params,10,optional" frugal:"10,optional,plannodes.TTasksMetadataParams" json:"tasks_metadata_params,omitempty"`
 	PartitionsMetadataParams        *plannodes.TPartitionsMetadataParams        `thrift:"partitions_metadata_params,11,optional" frugal:"11,optional,plannodes.TPartitionsMetadataParams" json:"partitions_metadata_params,omitempty"`
 	MetaCacheStatsParams            *plannodes.TMetaCacheStatsParams            `thrift:"meta_cache_stats_params,12,optional" frugal:"12,optional,plannodes.TMetaCacheStatsParams" json:"meta_cache_stats_params,omitempty"`
+	PartitionValuesMetadataParams   *plannodes.TPartitionValuesMetadataParams   `thrift:"partition_values_metadata_params,13,optional" frugal:"13,optional,plannodes.TPartitionValuesMetadataParams" json:"partition_values_metadata_params,omitempty"`
 }
 
 func NewTMetadataTableRequestParams() *TMetadataTableRequestParams {
@@ -46241,6 +46468,15 @@ func (p *TMetadataTableRequestParams) GetMetaCacheStatsParams() (v *plannodes.TM
 	}
 	return p.MetaCacheStatsParams
 }
+
+var TMetadataTableRequestParams_PartitionValuesMetadataParams_DEFAULT *plannodes.TPartitionValuesMetadataParams
+
+func (p *TMetadataTableRequestParams) GetPartitionValuesMetadataParams() (v *plannodes.TPartitionValuesMetadataParams) {
+	if !p.IsSetPartitionValuesMetadataParams() {
+		return TMetadataTableRequestParams_PartitionValuesMetadataParams_DEFAULT
+	}
+	return p.PartitionValuesMetadataParams
+}
 func (p *TMetadataTableRequestParams) SetMetadataType(val *types.TMetadataType) {
 	p.MetadataType = val
 }
@@ -46277,6 +46513,9 @@ func (p *TMetadataTableRequestParams) SetPartitionsMetadataParams(val *plannodes
 func (p *TMetadataTableRequestParams) SetMetaCacheStatsParams(val *plannodes.TMetaCacheStatsParams) {
 	p.MetaCacheStatsParams = val
 }
+func (p *TMetadataTableRequestParams) SetPartitionValuesMetadataParams(val *plannodes.TPartitionValuesMetadataParams) {
+	p.PartitionValuesMetadataParams = val
+}
 
 var fieldIDToName_TMetadataTableRequestParams = map[int16]string{
 	1:  "metadata_type",
@@ -46291,6 +46530,7 @@ var fieldIDToName_TMetadataTableRequestParams = map[int16]string{
 	10: "tasks_metadata_params",
 	11: "partitions_metadata_params",
 	12: "meta_cache_stats_params",
+	13: "partition_values_metadata_params",
 }
 
 func (p *TMetadataTableRequestParams) IsSetMetadataType() bool {
@@ -46339,6 +46579,10 @@ func (p *TMetadataTableRequestParams) IsSetPartitionsMetadataParams() bool {
 
 func (p *TMetadataTableRequestParams) IsSetMetaCacheStatsParams() bool {
 	return p.MetaCacheStatsParams != nil
+}
+
+func (p *TMetadataTableRequestParams) IsSetPartitionValuesMetadataParams() bool {
+	return p.PartitionValuesMetadataParams != nil
 }
 
 func (p *TMetadataTableRequestParams) Read(iprot thrift.TProtocol) (err error) {
@@ -46451,6 +46695,14 @@ func (p *TMetadataTableRequestParams) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -46600,6 +46852,14 @@ func (p *TMetadataTableRequestParams) ReadField12(iprot thrift.TProtocol) error 
 	p.MetaCacheStatsParams = _field
 	return nil
 }
+func (p *TMetadataTableRequestParams) ReadField13(iprot thrift.TProtocol) error {
+	_field := plannodes.NewTPartitionValuesMetadataParams()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.PartitionValuesMetadataParams = _field
+	return nil
+}
 
 func (p *TMetadataTableRequestParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -46653,6 +46913,10 @@ func (p *TMetadataTableRequestParams) Write(oprot thrift.TProtocol) (err error) 
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 	}
@@ -46909,6 +47173,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
 
+func (p *TMetadataTableRequestParams) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPartitionValuesMetadataParams() {
+		if err = oprot.WriteFieldBegin("partition_values_metadata_params", thrift.STRUCT, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.PartitionValuesMetadataParams.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
+
 func (p *TMetadataTableRequestParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -46957,6 +47240,9 @@ func (p *TMetadataTableRequestParams) DeepEqual(ano *TMetadataTableRequestParams
 		return false
 	}
 	if !p.Field12DeepEqual(ano.MetaCacheStatsParams) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.PartitionValuesMetadataParams) {
 		return false
 	}
 	return true
@@ -47053,6 +47339,13 @@ func (p *TMetadataTableRequestParams) Field11DeepEqual(src *plannodes.TPartition
 func (p *TMetadataTableRequestParams) Field12DeepEqual(src *plannodes.TMetaCacheStatsParams) bool {
 
 	if !p.MetaCacheStatsParams.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TMetadataTableRequestParams) Field13DeepEqual(src *plannodes.TPartitionValuesMetadataParams) bool {
+
+	if !p.PartitionValuesMetadataParams.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -55007,15 +55300,16 @@ func (p *TGetTabletReplicaInfosResult_) Field3DeepEqual(src *string) bool {
 }
 
 type TGetSnapshotRequest struct {
-	Cluster      *string        `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
-	User         *string        `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
-	Passwd       *string        `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
-	Db           *string        `thrift:"db,4,optional" frugal:"4,optional,string" json:"db,omitempty"`
-	Table        *string        `thrift:"table,5,optional" frugal:"5,optional,string" json:"table,omitempty"`
-	Token        *string        `thrift:"token,6,optional" frugal:"6,optional,string" json:"token,omitempty"`
-	LabelName    *string        `thrift:"label_name,7,optional" frugal:"7,optional,string" json:"label_name,omitempty"`
-	SnapshotName *string        `thrift:"snapshot_name,8,optional" frugal:"8,optional,string" json:"snapshot_name,omitempty"`
-	SnapshotType *TSnapshotType `thrift:"snapshot_type,9,optional" frugal:"9,optional,TSnapshotType" json:"snapshot_type,omitempty"`
+	Cluster        *string        `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
+	User           *string        `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
+	Passwd         *string        `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
+	Db             *string        `thrift:"db,4,optional" frugal:"4,optional,string" json:"db,omitempty"`
+	Table          *string        `thrift:"table,5,optional" frugal:"5,optional,string" json:"table,omitempty"`
+	Token          *string        `thrift:"token,6,optional" frugal:"6,optional,string" json:"token,omitempty"`
+	LabelName      *string        `thrift:"label_name,7,optional" frugal:"7,optional,string" json:"label_name,omitempty"`
+	SnapshotName   *string        `thrift:"snapshot_name,8,optional" frugal:"8,optional,string" json:"snapshot_name,omitempty"`
+	SnapshotType   *TSnapshotType `thrift:"snapshot_type,9,optional" frugal:"9,optional,TSnapshotType" json:"snapshot_type,omitempty"`
+	EnableCompress *bool          `thrift:"enable_compress,10,optional" frugal:"10,optional,bool" json:"enable_compress,omitempty"`
 }
 
 func NewTGetSnapshotRequest() *TGetSnapshotRequest {
@@ -55105,6 +55399,15 @@ func (p *TGetSnapshotRequest) GetSnapshotType() (v TSnapshotType) {
 	}
 	return *p.SnapshotType
 }
+
+var TGetSnapshotRequest_EnableCompress_DEFAULT bool
+
+func (p *TGetSnapshotRequest) GetEnableCompress() (v bool) {
+	if !p.IsSetEnableCompress() {
+		return TGetSnapshotRequest_EnableCompress_DEFAULT
+	}
+	return *p.EnableCompress
+}
 func (p *TGetSnapshotRequest) SetCluster(val *string) {
 	p.Cluster = val
 }
@@ -55132,17 +55435,21 @@ func (p *TGetSnapshotRequest) SetSnapshotName(val *string) {
 func (p *TGetSnapshotRequest) SetSnapshotType(val *TSnapshotType) {
 	p.SnapshotType = val
 }
+func (p *TGetSnapshotRequest) SetEnableCompress(val *bool) {
+	p.EnableCompress = val
+}
 
 var fieldIDToName_TGetSnapshotRequest = map[int16]string{
-	1: "cluster",
-	2: "user",
-	3: "passwd",
-	4: "db",
-	5: "table",
-	6: "token",
-	7: "label_name",
-	8: "snapshot_name",
-	9: "snapshot_type",
+	1:  "cluster",
+	2:  "user",
+	3:  "passwd",
+	4:  "db",
+	5:  "table",
+	6:  "token",
+	7:  "label_name",
+	8:  "snapshot_name",
+	9:  "snapshot_type",
+	10: "enable_compress",
 }
 
 func (p *TGetSnapshotRequest) IsSetCluster() bool {
@@ -55179,6 +55486,10 @@ func (p *TGetSnapshotRequest) IsSetSnapshotName() bool {
 
 func (p *TGetSnapshotRequest) IsSetSnapshotType() bool {
 	return p.SnapshotType != nil
+}
+
+func (p *TGetSnapshotRequest) IsSetEnableCompress() bool {
+	return p.EnableCompress != nil
 }
 
 func (p *TGetSnapshotRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -55267,6 +55578,14 @@ func (p *TGetSnapshotRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 9:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -55401,6 +55720,17 @@ func (p *TGetSnapshotRequest) ReadField9(iprot thrift.TProtocol) error {
 	p.SnapshotType = _field
 	return nil
 }
+func (p *TGetSnapshotRequest) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EnableCompress = _field
+	return nil
+}
 
 func (p *TGetSnapshotRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -55442,6 +55772,10 @@ func (p *TGetSnapshotRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField9(oprot); err != nil {
 			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 	}
@@ -55633,6 +55967,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
 
+func (p *TGetSnapshotRequest) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableCompress() {
+		if err = oprot.WriteFieldBegin("enable_compress", thrift.BOOL, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.EnableCompress); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
 func (p *TGetSnapshotRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -55672,6 +56025,9 @@ func (p *TGetSnapshotRequest) DeepEqual(ano *TGetSnapshotRequest) bool {
 		return false
 	}
 	if !p.Field9DeepEqual(ano.SnapshotType) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.EnableCompress) {
 		return false
 	}
 	return true
@@ -55785,12 +56141,25 @@ func (p *TGetSnapshotRequest) Field9DeepEqual(src *TSnapshotType) bool {
 	}
 	return true
 }
+func (p *TGetSnapshotRequest) Field10DeepEqual(src *bool) bool {
+
+	if p.EnableCompress == src {
+		return true
+	} else if p.EnableCompress == nil || src == nil {
+		return false
+	}
+	if *p.EnableCompress != *src {
+		return false
+	}
+	return true
+}
 
 type TGetSnapshotResult_ struct {
 	Status        *status.TStatus        `thrift:"status,1,optional" frugal:"1,optional,status.TStatus" json:"status,omitempty"`
 	Meta          []byte                 `thrift:"meta,2,optional" frugal:"2,optional,binary" json:"meta,omitempty"`
 	JobInfo       []byte                 `thrift:"job_info,3,optional" frugal:"3,optional,binary" json:"job_info,omitempty"`
 	MasterAddress *types.TNetworkAddress `thrift:"master_address,4,optional" frugal:"4,optional,types.TNetworkAddress" json:"master_address,omitempty"`
+	Compressed    *bool                  `thrift:"compressed,5,optional" frugal:"5,optional,bool" json:"compressed,omitempty"`
 }
 
 func NewTGetSnapshotResult_() *TGetSnapshotResult_ {
@@ -55835,6 +56204,15 @@ func (p *TGetSnapshotResult_) GetMasterAddress() (v *types.TNetworkAddress) {
 	}
 	return p.MasterAddress
 }
+
+var TGetSnapshotResult__Compressed_DEFAULT bool
+
+func (p *TGetSnapshotResult_) GetCompressed() (v bool) {
+	if !p.IsSetCompressed() {
+		return TGetSnapshotResult__Compressed_DEFAULT
+	}
+	return *p.Compressed
+}
 func (p *TGetSnapshotResult_) SetStatus(val *status.TStatus) {
 	p.Status = val
 }
@@ -55847,12 +56225,16 @@ func (p *TGetSnapshotResult_) SetJobInfo(val []byte) {
 func (p *TGetSnapshotResult_) SetMasterAddress(val *types.TNetworkAddress) {
 	p.MasterAddress = val
 }
+func (p *TGetSnapshotResult_) SetCompressed(val *bool) {
+	p.Compressed = val
+}
 
 var fieldIDToName_TGetSnapshotResult_ = map[int16]string{
 	1: "status",
 	2: "meta",
 	3: "job_info",
 	4: "master_address",
+	5: "compressed",
 }
 
 func (p *TGetSnapshotResult_) IsSetStatus() bool {
@@ -55869,6 +56251,10 @@ func (p *TGetSnapshotResult_) IsSetJobInfo() bool {
 
 func (p *TGetSnapshotResult_) IsSetMasterAddress() bool {
 	return p.MasterAddress != nil
+}
+
+func (p *TGetSnapshotResult_) IsSetCompressed() bool {
+	return p.Compressed != nil
 }
 
 func (p *TGetSnapshotResult_) Read(iprot thrift.TProtocol) (err error) {
@@ -55917,6 +56303,14 @@ func (p *TGetSnapshotResult_) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -55989,6 +56383,17 @@ func (p *TGetSnapshotResult_) ReadField4(iprot thrift.TProtocol) error {
 	p.MasterAddress = _field
 	return nil
 }
+func (p *TGetSnapshotResult_) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Compressed = _field
+	return nil
+}
 
 func (p *TGetSnapshotResult_) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -56010,6 +56415,10 @@ func (p *TGetSnapshotResult_) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -56106,6 +56515,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 
+func (p *TGetSnapshotResult_) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCompressed() {
+		if err = oprot.WriteFieldBegin("compressed", thrift.BOOL, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.Compressed); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
 func (p *TGetSnapshotResult_) String() string {
 	if p == nil {
 		return "<nil>"
@@ -56130,6 +56558,9 @@ func (p *TGetSnapshotResult_) DeepEqual(ano *TGetSnapshotResult_) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.MasterAddress) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.Compressed) {
 		return false
 	}
 	return true
@@ -56159,6 +56590,18 @@ func (p *TGetSnapshotResult_) Field3DeepEqual(src []byte) bool {
 func (p *TGetSnapshotResult_) Field4DeepEqual(src *types.TNetworkAddress) bool {
 
 	if !p.MasterAddress.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TGetSnapshotResult_) Field5DeepEqual(src *bool) bool {
+
+	if p.Compressed == src {
+		return true
+	} else if p.Compressed == nil || src == nil {
+		return false
+	}
+	if *p.Compressed != *src {
 		return false
 	}
 	return true
@@ -56434,6 +56877,7 @@ type TRestoreSnapshotRequest struct {
 	CleanTables     *bool             `thrift:"clean_tables,13,optional" frugal:"13,optional,bool" json:"clean_tables,omitempty"`
 	CleanPartitions *bool             `thrift:"clean_partitions,14,optional" frugal:"14,optional,bool" json:"clean_partitions,omitempty"`
 	AtomicRestore   *bool             `thrift:"atomic_restore,15,optional" frugal:"15,optional,bool" json:"atomic_restore,omitempty"`
+	Compressed      *bool             `thrift:"compressed,16,optional" frugal:"16,optional,bool" json:"compressed,omitempty"`
 }
 
 func NewTRestoreSnapshotRequest() *TRestoreSnapshotRequest {
@@ -56577,6 +57021,15 @@ func (p *TRestoreSnapshotRequest) GetAtomicRestore() (v bool) {
 	}
 	return *p.AtomicRestore
 }
+
+var TRestoreSnapshotRequest_Compressed_DEFAULT bool
+
+func (p *TRestoreSnapshotRequest) GetCompressed() (v bool) {
+	if !p.IsSetCompressed() {
+		return TRestoreSnapshotRequest_Compressed_DEFAULT
+	}
+	return *p.Compressed
+}
 func (p *TRestoreSnapshotRequest) SetCluster(val *string) {
 	p.Cluster = val
 }
@@ -56622,6 +57075,9 @@ func (p *TRestoreSnapshotRequest) SetCleanPartitions(val *bool) {
 func (p *TRestoreSnapshotRequest) SetAtomicRestore(val *bool) {
 	p.AtomicRestore = val
 }
+func (p *TRestoreSnapshotRequest) SetCompressed(val *bool) {
+	p.Compressed = val
+}
 
 var fieldIDToName_TRestoreSnapshotRequest = map[int16]string{
 	1:  "cluster",
@@ -56639,6 +57095,7 @@ var fieldIDToName_TRestoreSnapshotRequest = map[int16]string{
 	13: "clean_tables",
 	14: "clean_partitions",
 	15: "atomic_restore",
+	16: "compressed",
 }
 
 func (p *TRestoreSnapshotRequest) IsSetCluster() bool {
@@ -56699,6 +57156,10 @@ func (p *TRestoreSnapshotRequest) IsSetCleanPartitions() bool {
 
 func (p *TRestoreSnapshotRequest) IsSetAtomicRestore() bool {
 	return p.AtomicRestore != nil
+}
+
+func (p *TRestoreSnapshotRequest) IsSetCompressed() bool {
+	return p.Compressed != nil
 }
 
 func (p *TRestoreSnapshotRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -56835,6 +57296,14 @@ func (p *TRestoreSnapshotRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 15:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField15(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 16:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField16(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -57064,6 +57533,17 @@ func (p *TRestoreSnapshotRequest) ReadField15(iprot thrift.TProtocol) error {
 	p.AtomicRestore = _field
 	return nil
 }
+func (p *TRestoreSnapshotRequest) ReadField16(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Compressed = _field
+	return nil
+}
 
 func (p *TRestoreSnapshotRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -57129,6 +57609,10 @@ func (p *TRestoreSnapshotRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField15(oprot); err != nil {
 			fieldId = 15
+			goto WriteFieldError
+		}
+		if err = p.writeField16(oprot); err != nil {
+			fieldId = 16
 			goto WriteFieldError
 		}
 	}
@@ -57453,6 +57937,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
 }
 
+func (p *TRestoreSnapshotRequest) writeField16(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCompressed() {
+		if err = oprot.WriteFieldBegin("compressed", thrift.BOOL, 16); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.Compressed); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
+}
+
 func (p *TRestoreSnapshotRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -57510,6 +58013,9 @@ func (p *TRestoreSnapshotRequest) DeepEqual(ano *TRestoreSnapshotRequest) bool {
 		return false
 	}
 	if !p.Field15DeepEqual(ano.AtomicRestore) {
+		return false
+	}
+	if !p.Field16DeepEqual(ano.Compressed) {
 		return false
 	}
 	return true
@@ -57683,6 +58189,18 @@ func (p *TRestoreSnapshotRequest) Field15DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.AtomicRestore != *src {
+		return false
+	}
+	return true
+}
+func (p *TRestoreSnapshotRequest) Field16DeepEqual(src *bool) bool {
+
+	if p.Compressed == src {
+		return true
+	} else if p.Compressed == nil || src == nil {
+		return false
+	}
+	if *p.Compressed != *src {
 		return false
 	}
 	return true

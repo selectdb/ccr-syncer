@@ -78,6 +78,7 @@ type RestoreSnapshotRequest struct {
 	AtomicRestore   bool
 	CleanPartitions bool
 	CleanTables     bool
+	Compress        bool
 }
 
 type IFeRpc interface {
@@ -86,7 +87,7 @@ type IFeRpc interface {
 	RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.TRollbackTxnResult_, error)
 	GetBinlog(*base.Spec, int64) (*festruct.TGetBinlogResult_, error)
 	GetBinlogLag(*base.Spec, int64) (*festruct.TGetBinlogLagResult_, error)
-	GetSnapshot(*base.Spec, string) (*festruct.TGetSnapshotResult_, error)
+	GetSnapshot(*base.Spec, string, bool) (*festruct.TGetSnapshotResult_, error)
 	RestoreSnapshot(*base.Spec, *RestoreSnapshotRequest) (*festruct.TRestoreSnapshotResult_, error)
 	GetMasterToken(*base.Spec) (*festruct.TGetMasterTokenResult_, error)
 	GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error)
@@ -384,10 +385,10 @@ func (rpc *FeRpc) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.TGet
 	return convertResult[festruct.TGetBinlogLagResult_](result, err)
 }
 
-func (rpc *FeRpc) GetSnapshot(spec *base.Spec, labelName string) (*festruct.TGetSnapshotResult_, error) {
+func (rpc *FeRpc) GetSnapshot(spec *base.Spec, labelName string, compress bool) (*festruct.TGetSnapshotResult_, error) {
 	// return rpc.masterClient.GetSnapshot(spec, labelName)
 	caller := func(client IFeRpc) (resultType, error) {
-		return client.GetSnapshot(spec, labelName)
+		return client.GetSnapshot(spec, labelName, compress)
 	}
 	result, err := rpc.callWithMasterRedirect(caller)
 	return convertResult[festruct.TGetSnapshotResult_](result, err)
@@ -632,23 +633,25 @@ func (rpc *singleFeClient) GetBinlogLag(spec *base.Spec, commitSeq int64) (*fest
 //	    7: optional string label_name
 //	    8: optional string snapshot_name
 //	    9: optional TSnapshotType snapshot_type
+//	    10: optional bool enable_compress
 //	}
-func (rpc *singleFeClient) GetSnapshot(spec *base.Spec, labelName string) (*festruct.TGetSnapshotResult_, error) {
+func (rpc *singleFeClient) GetSnapshot(spec *base.Spec, labelName string, compress bool) (*festruct.TGetSnapshotResult_, error) {
 	log.Debugf("Call GetSnapshot, addr: %s, spec: %s, label: %s", rpc.Address(), spec, labelName)
 
 	client := rpc.client
 	snapshotType := festruct.TSnapshotType_LOCAL
 	snapshotName := ""
 	req := &festruct.TGetSnapshotRequest{
-		Table:        &spec.Table,
-		LabelName:    &labelName,
-		SnapshotType: &snapshotType,
-		SnapshotName: &snapshotName,
+		Table:          &spec.Table,
+		LabelName:      &labelName,
+		SnapshotType:   &snapshotType,
+		SnapshotName:   &snapshotName,
+		EnableCompress: &compress,
 	}
 	setAuthInfo(req, spec)
 
-	log.Debugf("GetSnapshotRequest user %s, db %s, table %s, label name %s, snapshot name %s, snapshot type %d",
-		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), req.GetSnapshotName(), req.GetSnapshotType())
+	log.Debugf("GetSnapshotRequest user %s, db %s, table %s, label name %s, snapshot name %s, snapshot type %d, enable compress %t",
+		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), req.GetSnapshotName(), req.GetSnapshotType(), req.GetEnableCompress())
 	if resp, err := client.GetSnapshot(context.Background(), req); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "GetSnapshot error: %v, req: %+v", err, req)
 	} else {
@@ -672,6 +675,7 @@ func (rpc *singleFeClient) GetSnapshot(spec *base.Spec, labelName string) (*fest
 //	    13: optional bool clean_tables
 //	    14: optional bool clean_partitions
 //	    15: optional bool atomic_restore
+//	    16: optional bool compressed
 //	}
 //
 // Restore Snapshot rpc
@@ -683,24 +687,42 @@ func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, restoreReq *RestoreS
 	repoName := "__keep_on_local__"
 	properties := make(map[string]string)
 	properties["reserve_replica"] = "true"
+
+	// Support compressed snapshot
+	meta := restoreReq.SnapshotResult.GetMeta()
+	jobInfo := restoreReq.SnapshotResult.GetJobInfo()
+	if restoreReq.Compress {
+		var err error
+		meta, err = utils.GZIPCompress(meta)
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "gzip compress snapshot meta error: %v", err)
+		}
+		jobInfo, err = utils.GZIPCompress(jobInfo)
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "gzip compress snapshot job info error: %v", err)
+		}
+	}
+
 	req := &festruct.TRestoreSnapshotRequest{
 		Table:           &spec.Table,
 		LabelName:       &restoreReq.SnapshotName,
 		RepoName:        &repoName,
 		TableRefs:       restoreReq.TableRefs,
 		Properties:      properties,
-		Meta:            restoreReq.SnapshotResult.GetMeta(),
-		JobInfo:         restoreReq.SnapshotResult.GetJobInfo(),
+		Meta:            meta,
+		JobInfo:         jobInfo,
 		CleanTables:     &restoreReq.CleanTables,
 		CleanPartitions: &restoreReq.CleanPartitions,
 		AtomicRestore:   &restoreReq.AtomicRestore,
+		Compressed:      utils.ThriftValueWrapper(restoreReq.Compress),
 	}
 	setAuthInfo(req, spec)
 
 	// NOTE: ignore meta, because it's too large
-	log.Debugf("RestoreSnapshotRequest user %s, db %s, table %s, label name %s, properties %v, clean tables: %t, clean partitions: %t, atomic restore: %t",
+	log.Debugf("RestoreSnapshotRequest user %s, db %s, table %s, label name %s, properties %v, clean tables: %t, clean partitions: %t, atomic restore: %t, compressed: %t",
 		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), properties,
-		restoreReq.CleanTables, restoreReq.CleanPartitions, restoreReq.AtomicRestore)
+		restoreReq.CleanTables, restoreReq.CleanPartitions, restoreReq.AtomicRestore,
+		req.GetCompressed())
 
 	if resp, err := client.RestoreSnapshot(context.Background(), req); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "RestoreSnapshot failed")

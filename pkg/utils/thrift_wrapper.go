@@ -7,7 +7,7 @@ import (
 )
 
 type WrapperType interface {
-	~int64 | ~string
+	~int64 | ~string | ~bool
 }
 
 func ThriftValueWrapper[T WrapperType](value T) *T {
@@ -17,7 +17,7 @@ func ThriftValueWrapper[T WrapperType](value T) *T {
 func ThriftToJsonStr(obj thrift.TStruct) (string, error) {
 	transport := thrift.NewTMemoryBuffer()
 	protocol := thrift.NewTJSONProtocolFactory().GetProtocol(transport)
-	ts := &thrift.TSerializer{transport, protocol}
+	ts := &thrift.TSerializer{Transport: transport, Protocol: protocol}
 	if jsonBytes, err := ts.Write(context.Background(), obj); err != nil {
 		return "", nil
 	} else {

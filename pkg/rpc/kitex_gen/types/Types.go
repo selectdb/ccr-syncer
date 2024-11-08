@@ -1281,6 +1281,7 @@ const (
 	TOdbcTableType_OCEANBASE_ORACLE TOdbcTableType = 11
 	TOdbcTableType_NEBULA           TOdbcTableType = 12
 	TOdbcTableType_DB2              TOdbcTableType = 13
+	TOdbcTableType_GBASE            TOdbcTableType = 14
 )
 
 func (p TOdbcTableType) String() string {
@@ -1313,6 +1314,8 @@ func (p TOdbcTableType) String() string {
 		return "NEBULA"
 	case TOdbcTableType_DB2:
 		return "DB2"
+	case TOdbcTableType_GBASE:
+		return "GBASE"
 	}
 	return "<UNSET>"
 }
@@ -1347,6 +1350,8 @@ func TOdbcTableTypeFromString(s string) (TOdbcTableType, error) {
 		return TOdbcTableType_NEBULA, nil
 	case "DB2":
 		return TOdbcTableType_DB2, nil
+	case "GBASE":
+		return TOdbcTableType_GBASE, nil
 	}
 	return TOdbcTableType(0), fmt.Errorf("not a valid TOdbcTableType string")
 }
@@ -1931,6 +1936,53 @@ func (p *TMergeType) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+type TUniqueKeyUpdateMode int64
+
+const (
+	TUniqueKeyUpdateMode_UPSERT                  TUniqueKeyUpdateMode = 0
+	TUniqueKeyUpdateMode_UPDATE_FIXED_COLUMNS    TUniqueKeyUpdateMode = 1
+	TUniqueKeyUpdateMode_UPDATE_FLEXIBLE_COLUMNS TUniqueKeyUpdateMode = 2
+)
+
+func (p TUniqueKeyUpdateMode) String() string {
+	switch p {
+	case TUniqueKeyUpdateMode_UPSERT:
+		return "UPSERT"
+	case TUniqueKeyUpdateMode_UPDATE_FIXED_COLUMNS:
+		return "UPDATE_FIXED_COLUMNS"
+	case TUniqueKeyUpdateMode_UPDATE_FLEXIBLE_COLUMNS:
+		return "UPDATE_FLEXIBLE_COLUMNS"
+	}
+	return "<UNSET>"
+}
+
+func TUniqueKeyUpdateModeFromString(s string) (TUniqueKeyUpdateMode, error) {
+	switch s {
+	case "UPSERT":
+		return TUniqueKeyUpdateMode_UPSERT, nil
+	case "UPDATE_FIXED_COLUMNS":
+		return TUniqueKeyUpdateMode_UPDATE_FIXED_COLUMNS, nil
+	case "UPDATE_FLEXIBLE_COLUMNS":
+		return TUniqueKeyUpdateMode_UPDATE_FLEXIBLE_COLUMNS, nil
+	}
+	return TUniqueKeyUpdateMode(0), fmt.Errorf("not a valid TUniqueKeyUpdateMode string")
+}
+
+func TUniqueKeyUpdateModePtr(v TUniqueKeyUpdateMode) *TUniqueKeyUpdateMode { return &v }
+func (p *TUniqueKeyUpdateMode) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = TUniqueKeyUpdateMode(result.Int64)
+	return
+}
+
+func (p *TUniqueKeyUpdateMode) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
 type TSortType int64
 
 const (
@@ -1986,6 +2038,7 @@ const (
 	TMetadataType_TASKS                 TMetadataType = 7
 	TMetadataType_WORKLOAD_SCHED_POLICY TMetadataType = 8
 	TMetadataType_PARTITIONS            TMetadataType = 9
+	TMetadataType_PARTITION_VALUES      TMetadataType = 10
 )
 
 func (p TMetadataType) String() string {
@@ -2010,6 +2063,8 @@ func (p TMetadataType) String() string {
 		return "WORKLOAD_SCHED_POLICY"
 	case TMetadataType_PARTITIONS:
 		return "PARTITIONS"
+	case TMetadataType_PARTITION_VALUES:
+		return "PARTITION_VALUES"
 	}
 	return "<UNSET>"
 }
@@ -2036,6 +2091,8 @@ func TMetadataTypeFromString(s string) (TMetadataType, error) {
 		return TMetadataType_WORKLOAD_SCHED_POLICY, nil
 	case "PARTITIONS":
 		return TMetadataType_PARTITIONS, nil
+	case "PARTITION_VALUES":
+		return TMetadataType_PARTITION_VALUES, nil
 	}
 	return TMetadataType(0), fmt.Errorf("not a valid TMetadataType string")
 }

@@ -159,7 +159,7 @@ type JobProgress struct {
 	TableMapping  map[int64]int64 `json:"table_mapping"`
 	// the upstream table id to name mapping, build during the fullsync,
 	// keep snapshot to avoid rename. it might be staled.
-	TableNameMapping  map[int64]string    `json:"table_name_mapping"`
+	TableNameMapping  map[int64]string    `json:"table_name_mapping,omitempty"`
 	TableCommitSeqMap map[int64]int64     `json:"table_commit_seq_map"` // only for DBTablesIncrementalSync
 	InMemoryData      any                 `json:"-"`
 	PersistData       string              `json:"data"` // this often for binlog or snapshot info

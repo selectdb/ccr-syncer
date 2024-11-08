@@ -23,6 +23,8 @@ const (
 	RESTORE_CHECK_DURATION = time.Second * 3
 	MAX_CHECK_RETRY_TIMES  = 86400 // 3 day
 	SIGNATURE_NOT_MATCHED  = "already exist but with different schema"
+
+	FE_CONFIG_ENABLE_RESTORE_SNAPSHOT_COMPRESSION = "enable_restore_snapshot_rpc_compression"
 )
 
 type BackupState int
@@ -358,6 +360,38 @@ func (s *Spec) IsTableEnableBinlog() (bool, error) {
 	// check "binlog.enable" = "true" in create table string
 	binlogEnableString := `"binlog.enable" = "true"`
 	return strings.Contains(createTableString, binlogEnableString), nil
+}
+
+func (s *Spec) IsEnableRestoreSnapshotCompression() (bool, error) {
+	log.Debugf("check frontend enable restore snapshot compression")
+
+	db, err := s.Connect()
+	if err != nil {
+		return false, err
+	}
+
+	sql := fmt.Sprintf("SHOW FRONTEND CONFIG LIKE '%s'", FE_CONFIG_ENABLE_RESTORE_SNAPSHOT_COMPRESSION)
+	rows, err := db.Query(sql)
+	if err != nil {
+		return false, xerror.Wrap(err, xerror.Normal, "show frontend config failed")
+	}
+	defer rows.Close()
+
+	enableCompress := false
+	if rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return false, xerror.Wrap(err, xerror.Normal, "parse show frontend config result failed")
+		}
+		value, err := rowParser.GetString("Value")
+		if err != nil {
+			return false, xerror.Wrap(err, xerror.Normal, "parse show frontend config Value failed")
+		}
+		enableCompress = strings.ToLower(value) == "true"
+	}
+
+	log.Debugf("frontend enable restore snapshot compression: %t", enableCompress)
+	return enableCompress, nil
 }
 
 func (s *Spec) GetAllTables() ([]string, error) {

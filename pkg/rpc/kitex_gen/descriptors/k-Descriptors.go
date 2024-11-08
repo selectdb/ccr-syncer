@@ -4510,6 +4510,20 @@ func (p *TOlapTableIndex) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 7:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -4669,6 +4683,36 @@ func (p *TOlapTableIndex) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TOlapTableIndex) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := bthrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.ColumnUniqueIds = make([]int32, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem int32
+		if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_elem = v
+
+		}
+
+		p.ColumnUniqueIds = append(p.ColumnUniqueIds, _elem)
+	}
+	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TOlapTableIndex) FastWrite(buf []byte) int {
 	return 0
@@ -4684,6 +4728,7 @@ func (p *TOlapTableIndex) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binar
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
+		offset += p.fastWriteField7(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -4700,6 +4745,7 @@ func (p *TOlapTableIndex) BLength() int {
 		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
+		l += p.field7Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -4791,6 +4837,25 @@ func (p *TOlapTableIndex) fastWriteField6(buf []byte, binaryWriter bthrift.Binar
 	return offset
 }
 
+func (p *TOlapTableIndex) fastWriteField7(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetColumnUniqueIds() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "column_unique_ids", thrift.LIST, 7)
+		listBeginOffset := offset
+		offset += bthrift.Binary.ListBeginLength(thrift.I32, 0)
+		var length int
+		for _, v := range p.ColumnUniqueIds {
+			length++
+			offset += bthrift.Binary.WriteI32(buf[offset:], v)
+
+		}
+		bthrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I32, length)
+		offset += bthrift.Binary.WriteListEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TOlapTableIndex) field1Length() int {
 	l := 0
 	if p.IsSetIndexName() {
@@ -4863,6 +4928,19 @@ func (p *TOlapTableIndex) field6Length() int {
 
 		}
 		l += bthrift.Binary.MapEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TOlapTableIndex) field7Length() int {
+	l := 0
+	if p.IsSetColumnUniqueIds() {
+		l += bthrift.Binary.FieldBeginLength("column_unique_ids", thrift.LIST, 7)
+		l += bthrift.Binary.ListBeginLength(thrift.I32, len(p.ColumnUniqueIds))
+		var tmpV int32
+		l += bthrift.Binary.I32Length(int32(tmpV)) * len(p.ColumnUniqueIds)
+		l += bthrift.Binary.ListEndLength()
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l
@@ -5559,6 +5637,34 @@ func (p *TOlapTableSchemaParam) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 14:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField14(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 15:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField15(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -5845,6 +5951,35 @@ func (p *TOlapTableSchemaParam) FastReadField13(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TOlapTableSchemaParam) FastReadField14(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := types.TUniqueKeyUpdateMode(v)
+		p.UniqueKeyUpdateMode = &tmp
+
+	}
+	return offset, nil
+}
+
+func (p *TOlapTableSchemaParam) FastReadField15(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.SequenceMapColUniqueId = v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TOlapTableSchemaParam) FastWrite(buf []byte) int {
 	return 0
@@ -5861,12 +5996,14 @@ func (p *TOlapTableSchemaParam) FastWriteNocopy(buf []byte, binaryWriter bthrift
 		offset += p.fastWriteField8(buf[offset:], binaryWriter)
 		offset += p.fastWriteField10(buf[offset:], binaryWriter)
 		offset += p.fastWriteField12(buf[offset:], binaryWriter)
+		offset += p.fastWriteField15(buf[offset:], binaryWriter)
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
 		offset += p.fastWriteField11(buf[offset:], binaryWriter)
 		offset += p.fastWriteField13(buf[offset:], binaryWriter)
+		offset += p.fastWriteField14(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -5890,6 +6027,8 @@ func (p *TOlapTableSchemaParam) BLength() int {
 		l += p.field11Length()
 		l += p.field12Length()
 		l += p.field13Length()
+		l += p.field14Length()
+		l += p.field15Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -6048,6 +6187,28 @@ func (p *TOlapTableSchemaParam) fastWriteField13(buf []byte, binaryWriter bthrif
 	return offset
 }
 
+func (p *TOlapTableSchemaParam) fastWriteField14(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetUniqueKeyUpdateMode() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "unique_key_update_mode", thrift.I32, 14)
+		offset += bthrift.Binary.WriteI32(buf[offset:], int32(*p.UniqueKeyUpdateMode))
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TOlapTableSchemaParam) fastWriteField15(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetSequenceMapColUniqueId() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "sequence_map_col_unique_id", thrift.I32, 15)
+		offset += bthrift.Binary.WriteI32(buf[offset:], p.SequenceMapColUniqueId)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TOlapTableSchemaParam) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("db_id", thrift.I64, 1)
@@ -6182,6 +6343,28 @@ func (p *TOlapTableSchemaParam) field13Length() int {
 	if p.IsSetInvertedIndexFileStorageFormat() {
 		l += bthrift.Binary.FieldBeginLength("inverted_index_file_storage_format", thrift.I32, 13)
 		l += bthrift.Binary.I32Length(int32(p.InvertedIndexFileStorageFormat))
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TOlapTableSchemaParam) field14Length() int {
+	l := 0
+	if p.IsSetUniqueKeyUpdateMode() {
+		l += bthrift.Binary.FieldBeginLength("unique_key_update_mode", thrift.I32, 14)
+		l += bthrift.Binary.I32Length(int32(*p.UniqueKeyUpdateMode))
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TOlapTableSchemaParam) field15Length() int {
+	l := 0
+	if p.IsSetSequenceMapColUniqueId() {
+		l += bthrift.Binary.FieldBeginLength("sequence_map_col_unique_id", thrift.I32, 15)
+		l += bthrift.Binary.I32Length(p.SequenceMapColUniqueId)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

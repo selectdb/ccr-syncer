@@ -70,6 +70,7 @@ func TestJobProgress_MarshalJSON(t *testing.T) {
     "state": 0,
     "binlog_type": -1
   },
+  "job_sync_id":0,
   "prev_commit_seq": 0,
   "commit_seq": 1,
   "table_mapping": null,

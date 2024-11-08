@@ -262,17 +262,18 @@ func (p *TFrontendInfo) Field2DeepEqual(src *int64) bool {
 }
 
 type TMasterInfo struct {
-	NetworkAddress      *types.TNetworkAddress `thrift:"network_address,1,required" frugal:"1,required,types.TNetworkAddress" json:"network_address"`
-	ClusterId           types.TClusterId       `thrift:"cluster_id,2,required" frugal:"2,required,i32" json:"cluster_id"`
-	Epoch               types.TEpoch           `thrift:"epoch,3,required" frugal:"3,required,i64" json:"epoch"`
-	Token               *string                `thrift:"token,4,optional" frugal:"4,optional,string" json:"token,omitempty"`
-	BackendIp           *string                `thrift:"backend_ip,5,optional" frugal:"5,optional,string" json:"backend_ip,omitempty"`
-	HttpPort            *types.TPort           `thrift:"http_port,6,optional" frugal:"6,optional,i32" json:"http_port,omitempty"`
-	HeartbeatFlags      *int64                 `thrift:"heartbeat_flags,7,optional" frugal:"7,optional,i64" json:"heartbeat_flags,omitempty"`
-	BackendId           *int64                 `thrift:"backend_id,8,optional" frugal:"8,optional,i64" json:"backend_id,omitempty"`
-	FrontendInfos       []*TFrontendInfo       `thrift:"frontend_infos,9,optional" frugal:"9,optional,list<TFrontendInfo>" json:"frontend_infos,omitempty"`
-	MetaServiceEndpoint *string                `thrift:"meta_service_endpoint,10,optional" frugal:"10,optional,string" json:"meta_service_endpoint,omitempty"`
-	CloudUniqueId       *string                `thrift:"cloud_unique_id,11,optional" frugal:"11,optional,string" json:"cloud_unique_id,omitempty"`
+	NetworkAddress                 *types.TNetworkAddress `thrift:"network_address,1,required" frugal:"1,required,types.TNetworkAddress" json:"network_address"`
+	ClusterId                      types.TClusterId       `thrift:"cluster_id,2,required" frugal:"2,required,i32" json:"cluster_id"`
+	Epoch                          types.TEpoch           `thrift:"epoch,3,required" frugal:"3,required,i64" json:"epoch"`
+	Token                          *string                `thrift:"token,4,optional" frugal:"4,optional,string" json:"token,omitempty"`
+	BackendIp                      *string                `thrift:"backend_ip,5,optional" frugal:"5,optional,string" json:"backend_ip,omitempty"`
+	HttpPort                       *types.TPort           `thrift:"http_port,6,optional" frugal:"6,optional,i32" json:"http_port,omitempty"`
+	HeartbeatFlags                 *int64                 `thrift:"heartbeat_flags,7,optional" frugal:"7,optional,i64" json:"heartbeat_flags,omitempty"`
+	BackendId                      *int64                 `thrift:"backend_id,8,optional" frugal:"8,optional,i64" json:"backend_id,omitempty"`
+	FrontendInfos                  []*TFrontendInfo       `thrift:"frontend_infos,9,optional" frugal:"9,optional,list<TFrontendInfo>" json:"frontend_infos,omitempty"`
+	MetaServiceEndpoint            *string                `thrift:"meta_service_endpoint,10,optional" frugal:"10,optional,string" json:"meta_service_endpoint,omitempty"`
+	CloudUniqueId                  *string                `thrift:"cloud_unique_id,11,optional" frugal:"11,optional,string" json:"cloud_unique_id,omitempty"`
+	TabletReportInactiveDurationMs *int64                 `thrift:"tablet_report_inactive_duration_ms,12,optional" frugal:"12,optional,i64" json:"tablet_report_inactive_duration_ms,omitempty"`
 }
 
 func NewTMasterInfo() *TMasterInfo {
@@ -370,6 +371,15 @@ func (p *TMasterInfo) GetCloudUniqueId() (v string) {
 	}
 	return *p.CloudUniqueId
 }
+
+var TMasterInfo_TabletReportInactiveDurationMs_DEFAULT int64
+
+func (p *TMasterInfo) GetTabletReportInactiveDurationMs() (v int64) {
+	if !p.IsSetTabletReportInactiveDurationMs() {
+		return TMasterInfo_TabletReportInactiveDurationMs_DEFAULT
+	}
+	return *p.TabletReportInactiveDurationMs
+}
 func (p *TMasterInfo) SetNetworkAddress(val *types.TNetworkAddress) {
 	p.NetworkAddress = val
 }
@@ -403,6 +413,9 @@ func (p *TMasterInfo) SetMetaServiceEndpoint(val *string) {
 func (p *TMasterInfo) SetCloudUniqueId(val *string) {
 	p.CloudUniqueId = val
 }
+func (p *TMasterInfo) SetTabletReportInactiveDurationMs(val *int64) {
+	p.TabletReportInactiveDurationMs = val
+}
 
 var fieldIDToName_TMasterInfo = map[int16]string{
 	1:  "network_address",
@@ -416,6 +429,7 @@ var fieldIDToName_TMasterInfo = map[int16]string{
 	9:  "frontend_infos",
 	10: "meta_service_endpoint",
 	11: "cloud_unique_id",
+	12: "tablet_report_inactive_duration_ms",
 }
 
 func (p *TMasterInfo) IsSetNetworkAddress() bool {
@@ -452,6 +466,10 @@ func (p *TMasterInfo) IsSetMetaServiceEndpoint() bool {
 
 func (p *TMasterInfo) IsSetCloudUniqueId() bool {
 	return p.CloudUniqueId != nil
+}
+
+func (p *TMasterInfo) IsSetTabletReportInactiveDurationMs() bool {
+	return p.TabletReportInactiveDurationMs != nil
 }
 
 func (p *TMasterInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -562,6 +580,14 @@ func (p *TMasterInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 11:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -742,6 +768,17 @@ func (p *TMasterInfo) ReadField11(iprot thrift.TProtocol) error {
 	p.CloudUniqueId = _field
 	return nil
 }
+func (p *TMasterInfo) ReadField12(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TabletReportInactiveDurationMs = _field
+	return nil
+}
 
 func (p *TMasterInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -791,6 +828,10 @@ func (p *TMasterInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 	}
@@ -1022,6 +1063,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
 
+func (p *TMasterInfo) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTabletReportInactiveDurationMs() {
+		if err = oprot.WriteFieldBegin("tablet_report_inactive_duration_ms", thrift.I64, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TabletReportInactiveDurationMs); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
+
 func (p *TMasterInfo) String() string {
 	if p == nil {
 		return "<nil>"
@@ -1067,6 +1127,9 @@ func (p *TMasterInfo) DeepEqual(ano *TMasterInfo) bool {
 		return false
 	}
 	if !p.Field11DeepEqual(ano.CloudUniqueId) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.TabletReportInactiveDurationMs) {
 		return false
 	}
 	return true
@@ -1186,6 +1249,18 @@ func (p *TMasterInfo) Field11DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.CloudUniqueId, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TMasterInfo) Field12DeepEqual(src *int64) bool {
+
+	if p.TabletReportInactiveDurationMs == src {
+		return true
+	} else if p.TabletReportInactiveDurationMs == nil || src == nil {
+		return false
+	}
+	if *p.TabletReportInactiveDurationMs != *src {
 		return false
 	}
 	return true

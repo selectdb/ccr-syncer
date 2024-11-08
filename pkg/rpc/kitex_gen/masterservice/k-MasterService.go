@@ -3788,6 +3788,20 @@ func (p *TReportRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 14:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField14(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -4157,6 +4171,19 @@ func (p *TReportRequest) FastReadField13(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TReportRequest) FastReadField14(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.NumTablets = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TReportRequest) FastWrite(buf []byte) int {
 	return 0
@@ -4171,6 +4198,7 @@ func (p *TReportRequest) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binary
 		offset += p.fastWriteField8(buf[offset:], binaryWriter)
 		offset += p.fastWriteField11(buf[offset:], binaryWriter)
 		offset += p.fastWriteField12(buf[offset:], binaryWriter)
+		offset += p.fastWriteField14(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
@@ -4202,6 +4230,7 @@ func (p *TReportRequest) BLength() int {
 		l += p.field11Length()
 		l += p.field12Length()
 		l += p.field13Length()
+		l += p.field14Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -4428,6 +4457,17 @@ func (p *TReportRequest) fastWriteField13(buf []byte, binaryWriter bthrift.Binar
 	return offset
 }
 
+func (p *TReportRequest) fastWriteField14(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetNumTablets() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "num_tablets", thrift.I64, 14)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.NumTablets)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TReportRequest) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("backend", thrift.STRUCT, 1)
@@ -4605,6 +4645,17 @@ func (p *TReportRequest) field13Length() int {
 		var tmpV types.TVersion
 		l += (bthrift.Binary.I64Length(int64(tmpK)) + bthrift.Binary.I64Length(int64(tmpV))) * len(p.PartitionsVersion)
 		l += bthrift.Binary.MapEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TReportRequest) field14Length() int {
+	l := 0
+	if p.IsSetNumTablets() {
+		l += bthrift.Binary.FieldBeginLength("num_tablets", thrift.I64, 14)
+		l += bthrift.Binary.I64Length(*p.NumTablets)
+
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l

@@ -2887,6 +2887,48 @@ func (p *TQueryOptions) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 135:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField135(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 136:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField136(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 137:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField137(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 1000:
 			if fieldTypeId == thrift.BOOL {
 				l, err = p.FastReadField1000(buf[offset:])
@@ -4459,7 +4501,7 @@ func (p *TQueryOptions) FastReadField119(buf []byte) (int, error) {
 	} else {
 		offset += l
 
-		p.KeepCarriageReturn = v
+		p.EnableMatchWithoutInvertedIndex = v
 
 	}
 	return offset, nil
@@ -4473,7 +4515,7 @@ func (p *TQueryOptions) FastReadField120(buf []byte) (int, error) {
 	} else {
 		offset += l
 
-		p.EnableMatchWithoutInvertedIndex = v
+		p.EnableFallbackOnMissingInvertedIndex = v
 
 	}
 	return offset, nil
@@ -4487,7 +4529,7 @@ func (p *TQueryOptions) FastReadField121(buf []byte) (int, error) {
 	} else {
 		offset += l
 
-		p.EnableFallbackOnMissingInvertedIndex = v
+		p.KeepCarriageReturn = v
 
 	}
 	return offset, nil
@@ -4675,6 +4717,48 @@ func (p *TQueryOptions) FastReadField134(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TQueryOptions) FastReadField135(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.EnableParallelOutfile = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField136(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.EnablePhraseQuerySequentialOpt = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField137(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.EnableAutoCreateWhenOverwrite = v
+
+	}
+	return offset, nil
+}
+
 func (p *TQueryOptions) FastReadField1000(buf []byte) (int, error) {
 	offset := 0
 
@@ -4818,6 +4902,9 @@ func (p *TQueryOptions) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryW
 		offset += p.fastWriteField132(buf[offset:], binaryWriter)
 		offset += p.fastWriteField133(buf[offset:], binaryWriter)
 		offset += p.fastWriteField134(buf[offset:], binaryWriter)
+		offset += p.fastWriteField135(buf[offset:], binaryWriter)
+		offset += p.fastWriteField136(buf[offset:], binaryWriter)
+		offset += p.fastWriteField137(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1000(buf[offset:], binaryWriter)
 		offset += p.fastWriteField18(buf[offset:], binaryWriter)
 		offset += p.fastWriteField42(buf[offset:], binaryWriter)
@@ -4959,6 +5046,9 @@ func (p *TQueryOptions) BLength() int {
 		l += p.field132Length()
 		l += p.field133Length()
 		l += p.field134Length()
+		l += p.field135Length()
+		l += p.field136Length()
+		l += p.field137Length()
 		l += p.field1000Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
@@ -6166,9 +6256,9 @@ func (p *TQueryOptions) fastWriteField118(buf []byte, binaryWriter bthrift.Binar
 
 func (p *TQueryOptions) fastWriteField119(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
-	if p.IsSetKeepCarriageReturn() {
-		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "keep_carriage_return", thrift.BOOL, 119)
-		offset += bthrift.Binary.WriteBool(buf[offset:], p.KeepCarriageReturn)
+	if p.IsSetEnableMatchWithoutInvertedIndex() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_match_without_inverted_index", thrift.BOOL, 119)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableMatchWithoutInvertedIndex)
 
 		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
 	}
@@ -6177,9 +6267,9 @@ func (p *TQueryOptions) fastWriteField119(buf []byte, binaryWriter bthrift.Binar
 
 func (p *TQueryOptions) fastWriteField120(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
-	if p.IsSetEnableMatchWithoutInvertedIndex() {
-		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_match_without_inverted_index", thrift.BOOL, 120)
-		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableMatchWithoutInvertedIndex)
+	if p.IsSetEnableFallbackOnMissingInvertedIndex() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_fallback_on_missing_inverted_index", thrift.BOOL, 120)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableFallbackOnMissingInvertedIndex)
 
 		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
 	}
@@ -6188,9 +6278,9 @@ func (p *TQueryOptions) fastWriteField120(buf []byte, binaryWriter bthrift.Binar
 
 func (p *TQueryOptions) fastWriteField121(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
-	if p.IsSetEnableFallbackOnMissingInvertedIndex() {
-		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_fallback_on_missing_inverted_index", thrift.BOOL, 121)
-		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableFallbackOnMissingInvertedIndex)
+	if p.IsSetKeepCarriageReturn() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "keep_carriage_return", thrift.BOOL, 121)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.KeepCarriageReturn)
 
 		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
 	}
@@ -6334,6 +6424,39 @@ func (p *TQueryOptions) fastWriteField134(buf []byte, binaryWriter bthrift.Binar
 	if p.IsSetPartitionTopnPrePartitionRows() {
 		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "partition_topn_pre_partition_rows", thrift.I32, 134)
 		offset += bthrift.Binary.WriteI32(buf[offset:], p.PartitionTopnPrePartitionRows)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField135(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetEnableParallelOutfile() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_parallel_outfile", thrift.BOOL, 135)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableParallelOutfile)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField136(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetEnablePhraseQuerySequentialOpt() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_phrase_query_sequential_opt", thrift.BOOL, 136)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnablePhraseQuerySequentialOpt)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField137(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetEnableAutoCreateWhenOverwrite() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_auto_create_when_overwrite", thrift.BOOL, 137)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableAutoCreateWhenOverwrite)
 
 		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
 	}
@@ -7551,9 +7674,9 @@ func (p *TQueryOptions) field118Length() int {
 
 func (p *TQueryOptions) field119Length() int {
 	l := 0
-	if p.IsSetKeepCarriageReturn() {
-		l += bthrift.Binary.FieldBeginLength("keep_carriage_return", thrift.BOOL, 119)
-		l += bthrift.Binary.BoolLength(p.KeepCarriageReturn)
+	if p.IsSetEnableMatchWithoutInvertedIndex() {
+		l += bthrift.Binary.FieldBeginLength("enable_match_without_inverted_index", thrift.BOOL, 119)
+		l += bthrift.Binary.BoolLength(p.EnableMatchWithoutInvertedIndex)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -7562,9 +7685,9 @@ func (p *TQueryOptions) field119Length() int {
 
 func (p *TQueryOptions) field120Length() int {
 	l := 0
-	if p.IsSetEnableMatchWithoutInvertedIndex() {
-		l += bthrift.Binary.FieldBeginLength("enable_match_without_inverted_index", thrift.BOOL, 120)
-		l += bthrift.Binary.BoolLength(p.EnableMatchWithoutInvertedIndex)
+	if p.IsSetEnableFallbackOnMissingInvertedIndex() {
+		l += bthrift.Binary.FieldBeginLength("enable_fallback_on_missing_inverted_index", thrift.BOOL, 120)
+		l += bthrift.Binary.BoolLength(p.EnableFallbackOnMissingInvertedIndex)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -7573,9 +7696,9 @@ func (p *TQueryOptions) field120Length() int {
 
 func (p *TQueryOptions) field121Length() int {
 	l := 0
-	if p.IsSetEnableFallbackOnMissingInvertedIndex() {
-		l += bthrift.Binary.FieldBeginLength("enable_fallback_on_missing_inverted_index", thrift.BOOL, 121)
-		l += bthrift.Binary.BoolLength(p.EnableFallbackOnMissingInvertedIndex)
+	if p.IsSetKeepCarriageReturn() {
+		l += bthrift.Binary.FieldBeginLength("keep_carriage_return", thrift.BOOL, 121)
+		l += bthrift.Binary.BoolLength(p.KeepCarriageReturn)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -7719,6 +7842,39 @@ func (p *TQueryOptions) field134Length() int {
 	if p.IsSetPartitionTopnPrePartitionRows() {
 		l += bthrift.Binary.FieldBeginLength("partition_topn_pre_partition_rows", thrift.I32, 134)
 		l += bthrift.Binary.I32Length(p.PartitionTopnPrePartitionRows)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field135Length() int {
+	l := 0
+	if p.IsSetEnableParallelOutfile() {
+		l += bthrift.Binary.FieldBeginLength("enable_parallel_outfile", thrift.BOOL, 135)
+		l += bthrift.Binary.BoolLength(p.EnableParallelOutfile)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field136Length() int {
+	l := 0
+	if p.IsSetEnablePhraseQuerySequentialOpt() {
+		l += bthrift.Binary.FieldBeginLength("enable_phrase_query_sequential_opt", thrift.BOOL, 136)
+		l += bthrift.Binary.BoolLength(p.EnablePhraseQuerySequentialOpt)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field137Length() int {
+	l := 0
+	if p.IsSetEnableAutoCreateWhenOverwrite() {
+		l += bthrift.Binary.FieldBeginLength("enable_auto_create_when_overwrite", thrift.BOOL, 137)
+		l += bthrift.Binary.BoolLength(p.EnableAutoCreateWhenOverwrite)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -8164,6 +8320,20 @@ func (p *TRuntimeFilterTargetParamsV2) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -8250,6 +8420,36 @@ func (p *TRuntimeFilterTargetParamsV2) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TRuntimeFilterTargetParamsV2) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := bthrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.TargetFragmentIds = make([]int32, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem int32
+		if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_elem = v
+
+		}
+
+		p.TargetFragmentIds = append(p.TargetFragmentIds, _elem)
+	}
+	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TRuntimeFilterTargetParamsV2) FastWrite(buf []byte) int {
 	return 0
@@ -8261,6 +8461,7 @@ func (p *TRuntimeFilterTargetParamsV2) FastWriteNocopy(buf []byte, binaryWriter 
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
+		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -8273,6 +8474,7 @@ func (p *TRuntimeFilterTargetParamsV2) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -8303,6 +8505,25 @@ func (p *TRuntimeFilterTargetParamsV2) fastWriteField2(buf []byte, binaryWriter 
 	return offset
 }
 
+func (p *TRuntimeFilterTargetParamsV2) fastWriteField3(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTargetFragmentIds() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "target_fragment_ids", thrift.LIST, 3)
+		listBeginOffset := offset
+		offset += bthrift.Binary.ListBeginLength(thrift.I32, 0)
+		var length int
+		for _, v := range p.TargetFragmentIds {
+			length++
+			offset += bthrift.Binary.WriteI32(buf[offset:], v)
+
+		}
+		bthrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I32, length)
+		offset += bthrift.Binary.WriteListEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TRuntimeFilterTargetParamsV2) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("target_fragment_instance_ids", thrift.LIST, 1)
@@ -8320,6 +8541,19 @@ func (p *TRuntimeFilterTargetParamsV2) field2Length() int {
 	l += bthrift.Binary.FieldBeginLength("target_fragment_instance_addr", thrift.STRUCT, 2)
 	l += p.TargetFragmentInstanceAddr.BLength()
 	l += bthrift.Binary.FieldEndLength()
+	return l
+}
+
+func (p *TRuntimeFilterTargetParamsV2) field3Length() int {
+	l := 0
+	if p.IsSetTargetFragmentIds() {
+		l += bthrift.Binary.FieldBeginLength("target_fragment_ids", thrift.LIST, 3)
+		l += bthrift.Binary.ListBeginLength(thrift.I32, len(p.TargetFragmentIds))
+		var tmpV int32
+		l += bthrift.Binary.I32Length(int32(tmpV)) * len(p.TargetFragmentIds)
+		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
 	return l
 }
 

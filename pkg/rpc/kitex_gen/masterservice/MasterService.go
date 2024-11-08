@@ -4720,6 +4720,7 @@ type TReportRequest struct {
 	NumCores                 int32                                 `thrift:"num_cores,11" frugal:"11,default,i32" json:"num_cores"`
 	PipelineExecutorSize     int32                                 `thrift:"pipeline_executor_size,12" frugal:"12,default,i32" json:"pipeline_executor_size"`
 	PartitionsVersion        map[types.TPartitionId]types.TVersion `thrift:"partitions_version,13,optional" frugal:"13,optional,map<i64:i64>" json:"partitions_version,omitempty"`
+	NumTablets               *int64                                `thrift:"num_tablets,14,optional" frugal:"14,optional,i64" json:"num_tablets,omitempty"`
 }
 
 func NewTReportRequest() *TReportRequest {
@@ -4835,6 +4836,15 @@ func (p *TReportRequest) GetPartitionsVersion() (v map[types.TPartitionId]types.
 	}
 	return p.PartitionsVersion
 }
+
+var TReportRequest_NumTablets_DEFAULT int64
+
+func (p *TReportRequest) GetNumTablets() (v int64) {
+	if !p.IsSetNumTablets() {
+		return TReportRequest_NumTablets_DEFAULT
+	}
+	return *p.NumTablets
+}
 func (p *TReportRequest) SetBackend(val *types.TBackend) {
 	p.Backend = val
 }
@@ -4874,6 +4884,9 @@ func (p *TReportRequest) SetPipelineExecutorSize(val int32) {
 func (p *TReportRequest) SetPartitionsVersion(val map[types.TPartitionId]types.TVersion) {
 	p.PartitionsVersion = val
 }
+func (p *TReportRequest) SetNumTablets(val *int64) {
+	p.NumTablets = val
+}
 
 var fieldIDToName_TReportRequest = map[int16]string{
 	1:  "backend",
@@ -4889,6 +4902,7 @@ var fieldIDToName_TReportRequest = map[int16]string{
 	11: "num_cores",
 	12: "pipeline_executor_size",
 	13: "partitions_version",
+	14: "num_tablets",
 }
 
 func (p *TReportRequest) IsSetBackend() bool {
@@ -4933,6 +4947,10 @@ func (p *TReportRequest) IsSetResource() bool {
 
 func (p *TReportRequest) IsSetPartitionsVersion() bool {
 	return p.PartitionsVersion != nil
+}
+
+func (p *TReportRequest) IsSetNumTablets() bool {
+	return p.NumTablets != nil
 }
 
 func (p *TReportRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -5055,6 +5073,14 @@ func (p *TReportRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 13:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField14(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5355,6 +5381,17 @@ func (p *TReportRequest) ReadField13(iprot thrift.TProtocol) error {
 	p.PartitionsVersion = _field
 	return nil
 }
+func (p *TReportRequest) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.NumTablets = _field
+	return nil
+}
 
 func (p *TReportRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -5412,6 +5449,10 @@ func (p *TReportRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField13(oprot); err != nil {
 			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
 			goto WriteFieldError
 		}
 	}
@@ -5761,6 +5802,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
 
+func (p *TReportRequest) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNumTablets() {
+		if err = oprot.WriteFieldBegin("num_tablets", thrift.I64, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.NumTablets); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
+
 func (p *TReportRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -5812,6 +5872,9 @@ func (p *TReportRequest) DeepEqual(ano *TReportRequest) bool {
 		return false
 	}
 	if !p.Field13DeepEqual(ano.PartitionsVersion) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.NumTablets) {
 		return false
 	}
 	return true
@@ -5968,6 +6031,18 @@ func (p *TReportRequest) Field13DeepEqual(src map[types.TPartitionId]types.TVers
 		if v != _src {
 			return false
 		}
+	}
+	return true
+}
+func (p *TReportRequest) Field14DeepEqual(src *int64) bool {
+
+	if p.NumTablets == src {
+		return true
+	} else if p.NumTablets == nil || src == nil {
+		return false
+	}
+	if *p.NumTablets != *src {
+		return false
 	}
 	return true
 }
