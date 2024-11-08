@@ -17,30 +17,10 @@
 
 suite("test_ts_table_modify_comment") {
 
-    def tableName = "tbl_comment" + UUID.randomUUID().toString().replace("-", "")
-    def syncerAddress = "127.0.0.1:9190"
-    def sync_gap_time = 5000
-    String response
+    def helper = new GroovyShell(new Binding(['suite': delegate]))
+            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
-    def checkRestoreFinishTimesOf = { checkTable, times -> Boolean
-        Boolean ret = false
-        while (times > 0) {
-            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            for (List<Object> row : sqlInfo) {
-                if ((row[10] as String).contains(checkTable)) {
-                    ret = (row[4] as String) == "FINISHED"
-                }
-            }
-
-            if (ret) {
-                break
-            } else if (--times > 0) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
+    def tableName = "tbl_" + helper.randomSuffix()
 
     def checkTableCommentTimesOf = { checkTable, expectedComment, times -> Boolean
         def expected = "COMMENT '${expectedComment}'"
@@ -50,7 +30,7 @@ suite("test_ts_table_modify_comment") {
                 return true
             }
             if (--times > 0) {
-                sleep(sync_gap_time)
+                sleep(helper.sync_gap_time)
                 res = target_sql "SHOW CREATE TABLE ${checkTable}"
             }
         }
@@ -73,16 +53,10 @@ suite("test_ts_table_modify_comment") {
         )
         """
 
-    httpTest {
-        uri "/create_ccr"
-        endpoint syncerAddress
-        def bodyJson = get_ccr_body "${tableName}"
-        body "${bodyJson}"
-        op "post"
-        result response
-    }
+    helper.ccrJobDelete(tableName)
+    helper.ccrJobCreate(tableName)
 
-    assertTrue(checkRestoreFinishTimesOf("${tableName}", 30))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
 
     logger.info("=== Test 1: modify table comment case ===")
     sql """
