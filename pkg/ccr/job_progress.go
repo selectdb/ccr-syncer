@@ -194,6 +194,7 @@ func NewJobProgress(jobName string, syncType SyncType, db storage.DB) *JobProgre
 		JobName: jobName,
 		db:      db,
 
+		SyncId:       time.Now().Unix(),
 		SyncState:    syncState,
 		SubSyncState: BeginCreateSnapshot,
 		CommitSeq:    0,

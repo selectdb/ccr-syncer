@@ -867,7 +867,7 @@ func (s *Spec) GetValidRestoreJob(snapshotNamePrefix string) (string, error) {
 		log.Infof("check snapshot %s restore state: [%v], create time: %s",
 			info.Label, info.StateStr, info.CreateTime)
 
-		if info.State == RestoreStateFinished {
+		if info.State == RestoreStateCancelled {
 			continue
 		}
 
