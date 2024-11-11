@@ -146,6 +146,11 @@ suite("test_ts_col_basic") {
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num}", 1, 30))
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName} WHERE test=${test_num} AND _cost='666'", 1, 1))
 
+    if (!helper.is_version_supported([20108, 20017, 30004])) {
+        def version = helper.upstream_version()
+        logger.info("Skip the test case because the version is not supported. current version ${version}")
+        return
+    }
 
     logger.info("=== Test 4: modify column comment case ===")
     sql """

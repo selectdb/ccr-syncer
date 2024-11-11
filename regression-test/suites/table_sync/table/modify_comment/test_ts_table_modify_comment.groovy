@@ -20,6 +20,11 @@ suite("test_ts_table_modify_comment") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    if (!helper.is_version_supported([20108, 20017, 30004])) {
+        def version = helper.upstream_version()
+        logger.info("Skip the test case because the version is not supported. current version ${version}")
+    }
+
     def tableName = "tbl_" + helper.randomSuffix()
 
     def checkTableCommentTimesOf = { checkTable, expectedComment, times -> Boolean

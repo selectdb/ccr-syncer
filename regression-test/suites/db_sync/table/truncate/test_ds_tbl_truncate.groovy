@@ -32,7 +32,7 @@ suite("test_ds_tbl_truncate") {
     }
 
     logger.info("=== Create table ===")
-    tableName = "${baseTableName}"
+    def tableName = "${baseTableName}"
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (
