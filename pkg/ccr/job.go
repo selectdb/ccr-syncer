@@ -61,7 +61,7 @@ func init() {
 		"replace signature not matched tables with table alias during the full sync")
 	flag.BoolVar(&featureFilterShadowIndexesUpsert, "feature_filter_shadow_indexes_upsert", true,
 		"filter the upsert to the shadow indexes")
-	flag.BoolVar(&featureReuseRunningBackupRestoreJob, "feature_reuse_running_backup_restore_job", false,
+	flag.BoolVar(&featureReuseRunningBackupRestoreJob, "feature_reuse_running_backup_restore_job", true,
 		"reuse the running backup/restore issued by the job self")
 	flag.BoolVar(&featureCompressedSnapshot, "feature_compressed_snapshot", true,
 		"compress the snapshot job info and meta")
