@@ -56160,6 +56160,7 @@ type TGetSnapshotResult_ struct {
 	JobInfo       []byte                 `thrift:"job_info,3,optional" frugal:"3,optional,binary" json:"job_info,omitempty"`
 	MasterAddress *types.TNetworkAddress `thrift:"master_address,4,optional" frugal:"4,optional,types.TNetworkAddress" json:"master_address,omitempty"`
 	Compressed    *bool                  `thrift:"compressed,5,optional" frugal:"5,optional,bool" json:"compressed,omitempty"`
+	ExpiredAt     *int64                 `thrift:"expiredAt,6,optional" frugal:"6,optional,i64" json:"expiredAt,omitempty"`
 }
 
 func NewTGetSnapshotResult_() *TGetSnapshotResult_ {
@@ -56213,6 +56214,15 @@ func (p *TGetSnapshotResult_) GetCompressed() (v bool) {
 	}
 	return *p.Compressed
 }
+
+var TGetSnapshotResult__ExpiredAt_DEFAULT int64
+
+func (p *TGetSnapshotResult_) GetExpiredAt() (v int64) {
+	if !p.IsSetExpiredAt() {
+		return TGetSnapshotResult__ExpiredAt_DEFAULT
+	}
+	return *p.ExpiredAt
+}
 func (p *TGetSnapshotResult_) SetStatus(val *status.TStatus) {
 	p.Status = val
 }
@@ -56228,6 +56238,9 @@ func (p *TGetSnapshotResult_) SetMasterAddress(val *types.TNetworkAddress) {
 func (p *TGetSnapshotResult_) SetCompressed(val *bool) {
 	p.Compressed = val
 }
+func (p *TGetSnapshotResult_) SetExpiredAt(val *int64) {
+	p.ExpiredAt = val
+}
 
 var fieldIDToName_TGetSnapshotResult_ = map[int16]string{
 	1: "status",
@@ -56235,6 +56248,7 @@ var fieldIDToName_TGetSnapshotResult_ = map[int16]string{
 	3: "job_info",
 	4: "master_address",
 	5: "compressed",
+	6: "expiredAt",
 }
 
 func (p *TGetSnapshotResult_) IsSetStatus() bool {
@@ -56255,6 +56269,10 @@ func (p *TGetSnapshotResult_) IsSetMasterAddress() bool {
 
 func (p *TGetSnapshotResult_) IsSetCompressed() bool {
 	return p.Compressed != nil
+}
+
+func (p *TGetSnapshotResult_) IsSetExpiredAt() bool {
+	return p.ExpiredAt != nil
 }
 
 func (p *TGetSnapshotResult_) Read(iprot thrift.TProtocol) (err error) {
@@ -56311,6 +56329,14 @@ func (p *TGetSnapshotResult_) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -56394,6 +56420,17 @@ func (p *TGetSnapshotResult_) ReadField5(iprot thrift.TProtocol) error {
 	p.Compressed = _field
 	return nil
 }
+func (p *TGetSnapshotResult_) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExpiredAt = _field
+	return nil
+}
 
 func (p *TGetSnapshotResult_) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -56419,6 +56456,10 @@ func (p *TGetSnapshotResult_) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 	}
@@ -56534,6 +56575,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 
+func (p *TGetSnapshotResult_) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExpiredAt() {
+		if err = oprot.WriteFieldBegin("expiredAt", thrift.I64, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ExpiredAt); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
 func (p *TGetSnapshotResult_) String() string {
 	if p == nil {
 		return "<nil>"
@@ -56561,6 +56621,9 @@ func (p *TGetSnapshotResult_) DeepEqual(ano *TGetSnapshotResult_) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.Compressed) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.ExpiredAt) {
 		return false
 	}
 	return true
@@ -56602,6 +56665,18 @@ func (p *TGetSnapshotResult_) Field5DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.Compressed != *src {
+		return false
+	}
+	return true
+}
+func (p *TGetSnapshotResult_) Field6DeepEqual(src *int64) bool {
+
+	if p.ExpiredAt == src {
+		return true
+	} else if p.ExpiredAt == nil || src == nil {
+		return false
+	}
+	if *p.ExpiredAt != *src {
 		return false
 	}
 	return true

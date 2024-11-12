@@ -2929,6 +2929,48 @@ func (p *TQueryOptions) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 138:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField138(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 139:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField139(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 140:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField140(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 1000:
 			if fieldTypeId == thrift.BOOL {
 				l, err = p.FastReadField1000(buf[offset:])
@@ -4759,6 +4801,48 @@ func (p *TQueryOptions) FastReadField137(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TQueryOptions) FastReadField138(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.OrcTinyStripeThresholdBytes = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField139(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.OrcOnceMaxReadBytes = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField140(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.OrcMaxMergeDistanceBytes = v
+
+	}
+	return offset, nil
+}
+
 func (p *TQueryOptions) FastReadField1000(buf []byte) (int, error) {
 	offset := 0
 
@@ -4905,6 +4989,9 @@ func (p *TQueryOptions) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryW
 		offset += p.fastWriteField135(buf[offset:], binaryWriter)
 		offset += p.fastWriteField136(buf[offset:], binaryWriter)
 		offset += p.fastWriteField137(buf[offset:], binaryWriter)
+		offset += p.fastWriteField138(buf[offset:], binaryWriter)
+		offset += p.fastWriteField139(buf[offset:], binaryWriter)
+		offset += p.fastWriteField140(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1000(buf[offset:], binaryWriter)
 		offset += p.fastWriteField18(buf[offset:], binaryWriter)
 		offset += p.fastWriteField42(buf[offset:], binaryWriter)
@@ -5049,6 +5136,9 @@ func (p *TQueryOptions) BLength() int {
 		l += p.field135Length()
 		l += p.field136Length()
 		l += p.field137Length()
+		l += p.field138Length()
+		l += p.field139Length()
+		l += p.field140Length()
 		l += p.field1000Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
@@ -6457,6 +6547,39 @@ func (p *TQueryOptions) fastWriteField137(buf []byte, binaryWriter bthrift.Binar
 	if p.IsSetEnableAutoCreateWhenOverwrite() {
 		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_auto_create_when_overwrite", thrift.BOOL, 137)
 		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableAutoCreateWhenOverwrite)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField138(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetOrcTinyStripeThresholdBytes() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "orc_tiny_stripe_threshold_bytes", thrift.I64, 138)
+		offset += bthrift.Binary.WriteI64(buf[offset:], p.OrcTinyStripeThresholdBytes)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField139(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetOrcOnceMaxReadBytes() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "orc_once_max_read_bytes", thrift.I64, 139)
+		offset += bthrift.Binary.WriteI64(buf[offset:], p.OrcOnceMaxReadBytes)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField140(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetOrcMaxMergeDistanceBytes() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "orc_max_merge_distance_bytes", thrift.I64, 140)
+		offset += bthrift.Binary.WriteI64(buf[offset:], p.OrcMaxMergeDistanceBytes)
 
 		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
 	}
@@ -7875,6 +7998,39 @@ func (p *TQueryOptions) field137Length() int {
 	if p.IsSetEnableAutoCreateWhenOverwrite() {
 		l += bthrift.Binary.FieldBeginLength("enable_auto_create_when_overwrite", thrift.BOOL, 137)
 		l += bthrift.Binary.BoolLength(p.EnableAutoCreateWhenOverwrite)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field138Length() int {
+	l := 0
+	if p.IsSetOrcTinyStripeThresholdBytes() {
+		l += bthrift.Binary.FieldBeginLength("orc_tiny_stripe_threshold_bytes", thrift.I64, 138)
+		l += bthrift.Binary.I64Length(p.OrcTinyStripeThresholdBytes)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field139Length() int {
+	l := 0
+	if p.IsSetOrcOnceMaxReadBytes() {
+		l += bthrift.Binary.FieldBeginLength("orc_once_max_read_bytes", thrift.I64, 139)
+		l += bthrift.Binary.I64Length(p.OrcOnceMaxReadBytes)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field140Length() int {
+	l := 0
+	if p.IsSetOrcMaxMergeDistanceBytes() {
+		l += bthrift.Binary.FieldBeginLength("orc_max_merge_distance_bytes", thrift.I64, 140)
+		l += bthrift.Binary.I64Length(p.OrcMaxMergeDistanceBytes)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

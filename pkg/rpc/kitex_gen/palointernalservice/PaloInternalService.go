@@ -1759,6 +1759,9 @@ type TQueryOptions struct {
 	EnableParallelOutfile                       bool            `thrift:"enable_parallel_outfile,135,optional" frugal:"135,optional,bool" json:"enable_parallel_outfile,omitempty"`
 	EnablePhraseQuerySequentialOpt              bool            `thrift:"enable_phrase_query_sequential_opt,136,optional" frugal:"136,optional,bool" json:"enable_phrase_query_sequential_opt,omitempty"`
 	EnableAutoCreateWhenOverwrite               bool            `thrift:"enable_auto_create_when_overwrite,137,optional" frugal:"137,optional,bool" json:"enable_auto_create_when_overwrite,omitempty"`
+	OrcTinyStripeThresholdBytes                 int64           `thrift:"orc_tiny_stripe_threshold_bytes,138,optional" frugal:"138,optional,i64" json:"orc_tiny_stripe_threshold_bytes,omitempty"`
+	OrcOnceMaxReadBytes                         int64           `thrift:"orc_once_max_read_bytes,139,optional" frugal:"139,optional,i64" json:"orc_once_max_read_bytes,omitempty"`
+	OrcMaxMergeDistanceBytes                    int64           `thrift:"orc_max_merge_distance_bytes,140,optional" frugal:"140,optional,i64" json:"orc_max_merge_distance_bytes,omitempty"`
 	DisableFileCache                            bool            `thrift:"disable_file_cache,1000,optional" frugal:"1000,optional,bool" json:"disable_file_cache,omitempty"`
 }
 
@@ -1882,6 +1885,9 @@ func NewTQueryOptions() *TQueryOptions {
 		EnableParallelOutfile:                       false,
 		EnablePhraseQuerySequentialOpt:              true,
 		EnableAutoCreateWhenOverwrite:               false,
+		OrcTinyStripeThresholdBytes:                 8388608,
+		OrcOnceMaxReadBytes:                         8388608,
+		OrcMaxMergeDistanceBytes:                    1048576,
 		DisableFileCache:                            false,
 	}
 }
@@ -2004,6 +2010,9 @@ func (p *TQueryOptions) InitDefault() {
 	p.EnableParallelOutfile = false
 	p.EnablePhraseQuerySequentialOpt = true
 	p.EnableAutoCreateWhenOverwrite = false
+	p.OrcTinyStripeThresholdBytes = 8388608
+	p.OrcOnceMaxReadBytes = 8388608
+	p.OrcMaxMergeDistanceBytes = 1048576
 	p.DisableFileCache = false
 }
 
@@ -3159,6 +3168,33 @@ func (p *TQueryOptions) GetEnableAutoCreateWhenOverwrite() (v bool) {
 	return p.EnableAutoCreateWhenOverwrite
 }
 
+var TQueryOptions_OrcTinyStripeThresholdBytes_DEFAULT int64 = 8388608
+
+func (p *TQueryOptions) GetOrcTinyStripeThresholdBytes() (v int64) {
+	if !p.IsSetOrcTinyStripeThresholdBytes() {
+		return TQueryOptions_OrcTinyStripeThresholdBytes_DEFAULT
+	}
+	return p.OrcTinyStripeThresholdBytes
+}
+
+var TQueryOptions_OrcOnceMaxReadBytes_DEFAULT int64 = 8388608
+
+func (p *TQueryOptions) GetOrcOnceMaxReadBytes() (v int64) {
+	if !p.IsSetOrcOnceMaxReadBytes() {
+		return TQueryOptions_OrcOnceMaxReadBytes_DEFAULT
+	}
+	return p.OrcOnceMaxReadBytes
+}
+
+var TQueryOptions_OrcMaxMergeDistanceBytes_DEFAULT int64 = 1048576
+
+func (p *TQueryOptions) GetOrcMaxMergeDistanceBytes() (v int64) {
+	if !p.IsSetOrcMaxMergeDistanceBytes() {
+		return TQueryOptions_OrcMaxMergeDistanceBytes_DEFAULT
+	}
+	return p.OrcMaxMergeDistanceBytes
+}
+
 var TQueryOptions_DisableFileCache_DEFAULT bool = false
 
 func (p *TQueryOptions) GetDisableFileCache() (v bool) {
@@ -3551,6 +3587,15 @@ func (p *TQueryOptions) SetEnablePhraseQuerySequentialOpt(val bool) {
 func (p *TQueryOptions) SetEnableAutoCreateWhenOverwrite(val bool) {
 	p.EnableAutoCreateWhenOverwrite = val
 }
+func (p *TQueryOptions) SetOrcTinyStripeThresholdBytes(val int64) {
+	p.OrcTinyStripeThresholdBytes = val
+}
+func (p *TQueryOptions) SetOrcOnceMaxReadBytes(val int64) {
+	p.OrcOnceMaxReadBytes = val
+}
+func (p *TQueryOptions) SetOrcMaxMergeDistanceBytes(val int64) {
+	p.OrcMaxMergeDistanceBytes = val
+}
 func (p *TQueryOptions) SetDisableFileCache(val bool) {
 	p.DisableFileCache = val
 }
@@ -3684,6 +3729,9 @@ var fieldIDToName_TQueryOptions = map[int16]string{
 	135:  "enable_parallel_outfile",
 	136:  "enable_phrase_query_sequential_opt",
 	137:  "enable_auto_create_when_overwrite",
+	138:  "orc_tiny_stripe_threshold_bytes",
+	139:  "orc_once_max_read_bytes",
+	140:  "orc_max_merge_distance_bytes",
 	1000: "disable_file_cache",
 }
 
@@ -4197,6 +4245,18 @@ func (p *TQueryOptions) IsSetEnablePhraseQuerySequentialOpt() bool {
 
 func (p *TQueryOptions) IsSetEnableAutoCreateWhenOverwrite() bool {
 	return p.EnableAutoCreateWhenOverwrite != TQueryOptions_EnableAutoCreateWhenOverwrite_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetOrcTinyStripeThresholdBytes() bool {
+	return p.OrcTinyStripeThresholdBytes != TQueryOptions_OrcTinyStripeThresholdBytes_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetOrcOnceMaxReadBytes() bool {
+	return p.OrcOnceMaxReadBytes != TQueryOptions_OrcOnceMaxReadBytes_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetOrcMaxMergeDistanceBytes() bool {
+	return p.OrcMaxMergeDistanceBytes != TQueryOptions_OrcMaxMergeDistanceBytes_DEFAULT
 }
 
 func (p *TQueryOptions) IsSetDisableFileCache() bool {
@@ -5241,6 +5301,30 @@ func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
 		case 137:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField137(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 138:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField138(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 139:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField139(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 140:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField140(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6688,6 +6772,39 @@ func (p *TQueryOptions) ReadField137(iprot thrift.TProtocol) error {
 	p.EnableAutoCreateWhenOverwrite = _field
 	return nil
 }
+func (p *TQueryOptions) ReadField138(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.OrcTinyStripeThresholdBytes = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField139(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.OrcOnceMaxReadBytes = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField140(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.OrcMaxMergeDistanceBytes = _field
+	return nil
+}
 func (p *TQueryOptions) ReadField1000(iprot thrift.TProtocol) error {
 
 	var _field bool
@@ -7216,6 +7333,18 @@ func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField137(oprot); err != nil {
 			fieldId = 137
+			goto WriteFieldError
+		}
+		if err = p.writeField138(oprot); err != nil {
+			fieldId = 138
+			goto WriteFieldError
+		}
+		if err = p.writeField139(oprot); err != nil {
+			fieldId = 139
+			goto WriteFieldError
+		}
+		if err = p.writeField140(oprot); err != nil {
+			fieldId = 140
 			goto WriteFieldError
 		}
 		if err = p.writeField1000(oprot); err != nil {
@@ -9672,6 +9801,63 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 137 end error: ", p), err)
 }
 
+func (p *TQueryOptions) writeField138(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOrcTinyStripeThresholdBytes() {
+		if err = oprot.WriteFieldBegin("orc_tiny_stripe_threshold_bytes", thrift.I64, 138); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.OrcTinyStripeThresholdBytes); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 138 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 138 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField139(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOrcOnceMaxReadBytes() {
+		if err = oprot.WriteFieldBegin("orc_once_max_read_bytes", thrift.I64, 139); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.OrcOnceMaxReadBytes); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 139 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 139 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField140(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOrcMaxMergeDistanceBytes() {
+		if err = oprot.WriteFieldBegin("orc_max_merge_distance_bytes", thrift.I64, 140); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.OrcMaxMergeDistanceBytes); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 140 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 140 end error: ", p), err)
+}
+
 func (p *TQueryOptions) writeField1000(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDisableFileCache() {
 		if err = oprot.WriteFieldBegin("disable_file_cache", thrift.BOOL, 1000); err != nil {
@@ -10087,6 +10273,15 @@ func (p *TQueryOptions) DeepEqual(ano *TQueryOptions) bool {
 		return false
 	}
 	if !p.Field137DeepEqual(ano.EnableAutoCreateWhenOverwrite) {
+		return false
+	}
+	if !p.Field138DeepEqual(ano.OrcTinyStripeThresholdBytes) {
+		return false
+	}
+	if !p.Field139DeepEqual(ano.OrcOnceMaxReadBytes) {
+		return false
+	}
+	if !p.Field140DeepEqual(ano.OrcMaxMergeDistanceBytes) {
 		return false
 	}
 	if !p.Field1000DeepEqual(ano.DisableFileCache) {
@@ -11037,6 +11232,27 @@ func (p *TQueryOptions) Field136DeepEqual(src bool) bool {
 func (p *TQueryOptions) Field137DeepEqual(src bool) bool {
 
 	if p.EnableAutoCreateWhenOverwrite != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field138DeepEqual(src int64) bool {
+
+	if p.OrcTinyStripeThresholdBytes != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field139DeepEqual(src int64) bool {
+
+	if p.OrcOnceMaxReadBytes != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field140DeepEqual(src int64) bool {
+
+	if p.OrcMaxMergeDistanceBytes != src {
 		return false
 	}
 	return true

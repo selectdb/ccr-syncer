@@ -661,6 +661,32 @@ func (s *Spec) CheckTableExistsByName(tableName string) (bool, error) {
 	return table != "", nil
 }
 
+func (s *Spec) CancelRestoreIfExists(snapshotName string) error {
+	log.Debugf("cancel restore %s, db name: %s", snapshotName, s.Database)
+
+	db, err := s.Connect()
+	if err != nil {
+		return err
+	}
+
+	info, err := s.queryRestoreInfo(db, snapshotName)
+	if err != nil {
+		return err
+	}
+
+	if info == nil || info.State == RestoreStateCancelled || info.State == RestoreStateFinished {
+		return nil
+	}
+
+	sql := fmt.Sprintf("CANCEL RESTORE FROM %s", utils.FormatKeywordName(s.Database))
+	log.Infof("cancel restore %s, sql: %s", snapshotName, sql)
+	_, err = db.Exec(sql)
+	if err != nil {
+		return xerror.Wrapf(err, xerror.Normal, "cancel restore failed, sql: %s", sql)
+	}
+	return nil
+}
+
 // mysql> BACKUP SNAPSHOT ccr.snapshot_20230605 TO `__keep_on_local__` ON (      src_1 ) PROPERTIES ("type" = "full");
 func (s *Spec) CreateSnapshot(snapshotName string, tables []string) error {
 	if tables == nil {
@@ -882,7 +908,38 @@ func (s *Spec) GetValidRestoreJob(snapshotNamePrefix string) (string, error) {
 	return "", nil
 }
 
-// TODO: Add TaskErrMsg
+// query restore info, return nil if not found
+func (s *Spec) queryRestoreInfo(db *sql.DB, snapshotName string) (*RestoreInfo, error) {
+	query := fmt.Sprintf("SHOW RESTORE FROM %s WHERE Label = \"%s\"",
+		utils.FormatKeywordName(s.Database), snapshotName)
+
+	log.Debugf("query restore info sql: %s", query)
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, xerror.Wrap(err, xerror.Normal, "query restore state failed")
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return nil, xerror.Wrap(err, xerror.Normal, "scan restore state failed")
+		}
+
+		info, err := parseRestoreInfo(rowParser)
+		if err != nil {
+			return nil, xerror.Wrap(err, xerror.Normal, "scan restore state failed")
+		}
+
+		log.Infof("query snapshot %s restore state: [%v], restore status: %s",
+			snapshotName, info.StateStr, info.Status)
+
+		return info, nil
+	}
+
+	return nil, nil
+}
+
 func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, string, error) {
 	log.Debugf("check restore state %s", snapshotName)
 
@@ -891,32 +948,16 @@ func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, string, 
 		return RestoreStateUnknown, "", err
 	}
 
-	query := fmt.Sprintf("SHOW RESTORE FROM %s WHERE Label = \"%s\"", utils.FormatKeywordName(s.Database), snapshotName)
-
-	log.Debugf("check restore state sql: %s", query)
-	rows, err := db.Query(query)
+	info, err := s.queryRestoreInfo(db, snapshotName)
 	if err != nil {
-		return RestoreStateUnknown, "", xerror.Wrap(err, xerror.Normal, "query restore state failed")
+		return RestoreStateUnknown, "", err
 	}
-	defer rows.Close()
 
-	if rows.Next() {
-		rowParser := utils.NewRowParser()
-		if err := rowParser.Parse(rows); err != nil {
-			return RestoreStateUnknown, "", xerror.Wrap(err, xerror.Normal, "scan restore state failed")
-		}
-
-		info, err := parseRestoreInfo(rowParser)
-		if err != nil {
-			return RestoreStateUnknown, "", xerror.Wrap(err, xerror.Normal, "scan restore state failed")
-		}
-
-		log.Infof("check snapshot %s restore state: [%v], restore status: %s",
-			snapshotName, info.StateStr, info.Status)
-
-		return info.State, info.Status, nil
+	if info == nil {
+		return RestoreStateUnknown, "", xerror.Errorf(xerror.Normal, "no restore state found")
 	}
-	return RestoreStateUnknown, "", xerror.Errorf(xerror.Normal, "no restore state found")
+
+	return info.State, info.Status, nil
 }
 
 func (s *Spec) CheckRestoreFinished(snapshotName string) (bool, error) {

@@ -28,6 +28,7 @@ type Specer interface {
 	CheckTableExistsByName(tableName string) (bool, error)
 	GetValidBackupJob(snapshotNamePrefix string) (string, error)
 	GetValidRestoreJob(snapshotNamePrefix string) (string, error)
+	CancelRestoreIfExists(snapshotName string) error
 	CreatePartialSnapshot(snapshotName, table string, partitions []string) error
 	CreateSnapshot(snapshotName string, tables []string) error
 	CheckBackupFinished(snapshotName string) (bool, error)

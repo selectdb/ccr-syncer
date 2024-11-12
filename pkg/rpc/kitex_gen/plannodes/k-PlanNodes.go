@@ -6947,6 +6947,20 @@ func (p *TPaimonFileDesc) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 14:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField14(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -7205,6 +7219,19 @@ func (p *TPaimonFileDesc) FastReadField13(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TPaimonFileDesc) FastReadField14(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.PaimonTable = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TPaimonFileDesc) FastWrite(buf []byte) int {
 	return 0
@@ -7227,6 +7254,7 @@ func (p *TPaimonFileDesc) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binar
 		offset += p.fastWriteField11(buf[offset:], binaryWriter)
 		offset += p.fastWriteField12(buf[offset:], binaryWriter)
 		offset += p.fastWriteField13(buf[offset:], binaryWriter)
+		offset += p.fastWriteField14(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -7250,6 +7278,7 @@ func (p *TPaimonFileDesc) BLength() int {
 		l += p.field11Length()
 		l += p.field12Length()
 		l += p.field13Length()
+		l += p.field14Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -7420,6 +7449,17 @@ func (p *TPaimonFileDesc) fastWriteField13(buf []byte, binaryWriter bthrift.Bina
 	return offset
 }
 
+func (p *TPaimonFileDesc) fastWriteField14(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetPaimonTable() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "paimon_table", thrift.STRING, 14)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.PaimonTable)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TPaimonFileDesc) field1Length() int {
 	l := 0
 	if p.IsSetPaimonSplit() {
@@ -7571,6 +7611,17 @@ func (p *TPaimonFileDesc) field13Length() int {
 
 		}
 		l += bthrift.Binary.MapEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TPaimonFileDesc) field14Length() int {
+	l := 0
+	if p.IsSetPaimonTable() {
+		l += bthrift.Binary.FieldBeginLength("paimon_table", thrift.STRING, 14)
+		l += bthrift.Binary.StringLengthNocopy(*p.PaimonTable)
+
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l

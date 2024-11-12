@@ -53,6 +53,8 @@ const (
 	TStatusCode_HTTP_ERROR                      TStatusCode = 71
 	TStatusCode_TABLET_MISSING                  TStatusCode = 72
 	TStatusCode_NOT_MASTER                      TStatusCode = 73
+	TStatusCode_OBTAIN_LOCK_FAILED              TStatusCode = 74
+	TStatusCode_SNAPSHOT_EXPIRED                TStatusCode = 75
 	TStatusCode_DELETE_BITMAP_LOCK_ERROR        TStatusCode = 100
 )
 
@@ -138,6 +140,10 @@ func (p TStatusCode) String() string {
 		return "TABLET_MISSING"
 	case TStatusCode_NOT_MASTER:
 		return "NOT_MASTER"
+	case TStatusCode_OBTAIN_LOCK_FAILED:
+		return "OBTAIN_LOCK_FAILED"
+	case TStatusCode_SNAPSHOT_EXPIRED:
+		return "SNAPSHOT_EXPIRED"
 	case TStatusCode_DELETE_BITMAP_LOCK_ERROR:
 		return "DELETE_BITMAP_LOCK_ERROR"
 	}
@@ -226,6 +232,10 @@ func TStatusCodeFromString(s string) (TStatusCode, error) {
 		return TStatusCode_TABLET_MISSING, nil
 	case "NOT_MASTER":
 		return TStatusCode_NOT_MASTER, nil
+	case "OBTAIN_LOCK_FAILED":
+		return TStatusCode_OBTAIN_LOCK_FAILED, nil
+	case "SNAPSHOT_EXPIRED":
+		return TStatusCode_SNAPSHOT_EXPIRED, nil
 	case "DELETE_BITMAP_LOCK_ERROR":
 		return TStatusCode_DELETE_BITMAP_LOCK_ERROR, nil
 	}

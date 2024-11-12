@@ -41280,6 +41280,20 @@ func (p *TGetSnapshotResult_) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -41382,6 +41396,19 @@ func (p *TGetSnapshotResult_) FastReadField5(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TGetSnapshotResult_) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.ExpiredAt = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TGetSnapshotResult_) FastWrite(buf []byte) int {
 	return 0
@@ -41392,6 +41419,7 @@ func (p *TGetSnapshotResult_) FastWriteNocopy(buf []byte, binaryWriter bthrift.B
 	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "TGetSnapshotResult")
 	if p != nil {
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
+		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -41411,6 +41439,7 @@ func (p *TGetSnapshotResult_) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field6Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -41470,6 +41499,17 @@ func (p *TGetSnapshotResult_) fastWriteField5(buf []byte, binaryWriter bthrift.B
 	return offset
 }
 
+func (p *TGetSnapshotResult_) fastWriteField6(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetExpiredAt() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "expiredAt", thrift.I64, 6)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.ExpiredAt)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TGetSnapshotResult_) field1Length() int {
 	l := 0
 	if p.IsSetStatus() {
@@ -41517,6 +41557,17 @@ func (p *TGetSnapshotResult_) field5Length() int {
 	if p.IsSetCompressed() {
 		l += bthrift.Binary.FieldBeginLength("compressed", thrift.BOOL, 5)
 		l += bthrift.Binary.BoolLength(*p.Compressed)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TGetSnapshotResult_) field6Length() int {
+	l := 0
+	if p.IsSetExpiredAt() {
+		l += bthrift.Binary.FieldBeginLength("expiredAt", thrift.I64, 6)
+		l += bthrift.Binary.I64Length(*p.ExpiredAt)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

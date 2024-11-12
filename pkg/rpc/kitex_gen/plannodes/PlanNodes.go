@@ -10313,6 +10313,7 @@ type TPaimonFileDesc struct {
 	FileFormat        *string                  `thrift:"file_format,11,optional" frugal:"11,optional,string" json:"file_format,omitempty"`
 	DeletionFile      *TPaimonDeletionFileDesc `thrift:"deletion_file,12,optional" frugal:"12,optional,TPaimonDeletionFileDesc" json:"deletion_file,omitempty"`
 	HadoopConf        map[string]string        `thrift:"hadoop_conf,13,optional" frugal:"13,optional,map<string:string>" json:"hadoop_conf,omitempty"`
+	PaimonTable       *string                  `thrift:"paimon_table,14,optional" frugal:"14,optional,string" json:"paimon_table,omitempty"`
 }
 
 func NewTPaimonFileDesc() *TPaimonFileDesc {
@@ -10438,6 +10439,15 @@ func (p *TPaimonFileDesc) GetHadoopConf() (v map[string]string) {
 	}
 	return p.HadoopConf
 }
+
+var TPaimonFileDesc_PaimonTable_DEFAULT string
+
+func (p *TPaimonFileDesc) GetPaimonTable() (v string) {
+	if !p.IsSetPaimonTable() {
+		return TPaimonFileDesc_PaimonTable_DEFAULT
+	}
+	return *p.PaimonTable
+}
 func (p *TPaimonFileDesc) SetPaimonSplit(val *string) {
 	p.PaimonSplit = val
 }
@@ -10477,6 +10487,9 @@ func (p *TPaimonFileDesc) SetDeletionFile(val *TPaimonDeletionFileDesc) {
 func (p *TPaimonFileDesc) SetHadoopConf(val map[string]string) {
 	p.HadoopConf = val
 }
+func (p *TPaimonFileDesc) SetPaimonTable(val *string) {
+	p.PaimonTable = val
+}
 
 var fieldIDToName_TPaimonFileDesc = map[int16]string{
 	1:  "paimon_split",
@@ -10492,6 +10505,7 @@ var fieldIDToName_TPaimonFileDesc = map[int16]string{
 	11: "file_format",
 	12: "deletion_file",
 	13: "hadoop_conf",
+	14: "paimon_table",
 }
 
 func (p *TPaimonFileDesc) IsSetPaimonSplit() bool {
@@ -10544,6 +10558,10 @@ func (p *TPaimonFileDesc) IsSetDeletionFile() bool {
 
 func (p *TPaimonFileDesc) IsSetHadoopConf() bool {
 	return p.HadoopConf != nil
+}
+
+func (p *TPaimonFileDesc) IsSetPaimonTable() bool {
+	return p.PaimonTable != nil
 }
 
 func (p *TPaimonFileDesc) Read(iprot thrift.TProtocol) (err error) {
@@ -10664,6 +10682,14 @@ func (p *TPaimonFileDesc) Read(iprot thrift.TProtocol) (err error) {
 		case 13:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField14(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10874,6 +10900,17 @@ func (p *TPaimonFileDesc) ReadField13(iprot thrift.TProtocol) error {
 	p.HadoopConf = _field
 	return nil
 }
+func (p *TPaimonFileDesc) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PaimonTable = _field
+	return nil
+}
 
 func (p *TPaimonFileDesc) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -10931,6 +10968,10 @@ func (p *TPaimonFileDesc) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField13(oprot); err != nil {
 			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
 			goto WriteFieldError
 		}
 	}
@@ -11220,6 +11261,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
 
+func (p *TPaimonFileDesc) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPaimonTable() {
+		if err = oprot.WriteFieldBegin("paimon_table", thrift.STRING, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.PaimonTable); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
+
 func (p *TPaimonFileDesc) String() string {
 	if p == nil {
 		return "<nil>"
@@ -11271,6 +11331,9 @@ func (p *TPaimonFileDesc) DeepEqual(ano *TPaimonFileDesc) bool {
 		return false
 	}
 	if !p.Field13DeepEqual(ano.HadoopConf) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.PaimonTable) {
 		return false
 	}
 	return true
@@ -11426,6 +11489,18 @@ func (p *TPaimonFileDesc) Field13DeepEqual(src map[string]string) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *TPaimonFileDesc) Field14DeepEqual(src *string) bool {
+
+	if p.PaimonTable == src {
+		return true
+	} else if p.PaimonTable == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.PaimonTable, *src) != 0 {
+		return false
 	}
 	return true
 }
