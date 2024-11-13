@@ -341,7 +341,9 @@ class Helper {
             def version = String.format("%d%02d%02d", major, minor, patch).toLong()
             for (long expect : versions) {
                 logger.info("current version ${version}, expect version ${expect}")
-                if (expect % 100 == version % 100 && version < expect) {
+                def expect_version_set = expect / 100
+                def got_version_set = version / 100
+                if (expect_version_set == got_version_set && version < expect) {
                     return false
                 }
             }
