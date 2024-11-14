@@ -44,6 +44,7 @@ var (
 	featureFilterShadowIndexesUpsert    bool
 	featureReuseRunningBackupRestoreJob bool
 	featureCompressedSnapshot           bool
+	featureSkipRollupBinlogs            bool
 )
 
 func init() {
@@ -65,6 +66,8 @@ func init() {
 		"reuse the running backup/restore issued by the job self")
 	flag.BoolVar(&featureCompressedSnapshot, "feature_compressed_snapshot", true,
 		"compress the snapshot job info and meta")
+	flag.BoolVar(&featureSkipRollupBinlogs, "feature_skip_rollup_binlogs", false,
+		"skip the rollup related binlogs")
 }
 
 type SyncType int
@@ -1718,6 +1721,11 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 	alterJob, err := record.NewAlterJobV2FromJson(data)
 	if err != nil {
 		return err
+	}
+
+	if featureSkipRollupBinlogs && alterJob.Type == record.ALTER_JOB_ROLLUP {
+		log.Warnf("skip rollup alter job: %s", alterJob)
+		return nil
 	}
 
 	if !alterJob.IsFinished() {
