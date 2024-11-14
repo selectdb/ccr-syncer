@@ -16,6 +16,7 @@ type DatabaseMeta struct {
 type TableMeta struct {
 	DatabaseMeta      *DatabaseMeta
 	Id                int64
+	BaseIndexId       int64
 	Name              string                    // maybe dirty, such after rename
 	PartitionIdMap    map[int64]*PartitionMeta  // partitionId -> partitionMeta
 	PartitionRangeMap map[string]*PartitionMeta // partitionRange -> partitionMeta

@@ -2971,6 +2971,20 @@ func (p *TQueryOptions) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 141:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField141(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 1000:
 			if fieldTypeId == thrift.BOOL {
 				l, err = p.FastReadField1000(buf[offset:])
@@ -4843,6 +4857,20 @@ func (p *TQueryOptions) FastReadField140(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TQueryOptions) FastReadField141(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.IgnoreRuntimeFilterError = v
+
+	}
+	return offset, nil
+}
+
 func (p *TQueryOptions) FastReadField1000(buf []byte) (int, error) {
 	offset := 0
 
@@ -4992,6 +5020,7 @@ func (p *TQueryOptions) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryW
 		offset += p.fastWriteField138(buf[offset:], binaryWriter)
 		offset += p.fastWriteField139(buf[offset:], binaryWriter)
 		offset += p.fastWriteField140(buf[offset:], binaryWriter)
+		offset += p.fastWriteField141(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1000(buf[offset:], binaryWriter)
 		offset += p.fastWriteField18(buf[offset:], binaryWriter)
 		offset += p.fastWriteField42(buf[offset:], binaryWriter)
@@ -5139,6 +5168,7 @@ func (p *TQueryOptions) BLength() int {
 		l += p.field138Length()
 		l += p.field139Length()
 		l += p.field140Length()
+		l += p.field141Length()
 		l += p.field1000Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
@@ -6580,6 +6610,17 @@ func (p *TQueryOptions) fastWriteField140(buf []byte, binaryWriter bthrift.Binar
 	if p.IsSetOrcMaxMergeDistanceBytes() {
 		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "orc_max_merge_distance_bytes", thrift.I64, 140)
 		offset += bthrift.Binary.WriteI64(buf[offset:], p.OrcMaxMergeDistanceBytes)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField141(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetIgnoreRuntimeFilterError() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "ignore_runtime_filter_error", thrift.BOOL, 141)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.IgnoreRuntimeFilterError)
 
 		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
 	}
@@ -8031,6 +8072,17 @@ func (p *TQueryOptions) field140Length() int {
 	if p.IsSetOrcMaxMergeDistanceBytes() {
 		l += bthrift.Binary.FieldBeginLength("orc_max_merge_distance_bytes", thrift.I64, 140)
 		l += bthrift.Binary.I64Length(p.OrcMaxMergeDistanceBytes)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field141Length() int {
+	l := 0
+	if p.IsSetIgnoreRuntimeFilterError() {
+		l += bthrift.Binary.FieldBeginLength("ignore_runtime_filter_error", thrift.BOOL, 141)
+		l += bthrift.Binary.BoolLength(p.IgnoreRuntimeFilterError)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

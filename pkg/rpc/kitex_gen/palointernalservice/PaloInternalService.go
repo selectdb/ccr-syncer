@@ -1762,6 +1762,7 @@ type TQueryOptions struct {
 	OrcTinyStripeThresholdBytes                 int64           `thrift:"orc_tiny_stripe_threshold_bytes,138,optional" frugal:"138,optional,i64" json:"orc_tiny_stripe_threshold_bytes,omitempty"`
 	OrcOnceMaxReadBytes                         int64           `thrift:"orc_once_max_read_bytes,139,optional" frugal:"139,optional,i64" json:"orc_once_max_read_bytes,omitempty"`
 	OrcMaxMergeDistanceBytes                    int64           `thrift:"orc_max_merge_distance_bytes,140,optional" frugal:"140,optional,i64" json:"orc_max_merge_distance_bytes,omitempty"`
+	IgnoreRuntimeFilterError                    bool            `thrift:"ignore_runtime_filter_error,141,optional" frugal:"141,optional,bool" json:"ignore_runtime_filter_error,omitempty"`
 	DisableFileCache                            bool            `thrift:"disable_file_cache,1000,optional" frugal:"1000,optional,bool" json:"disable_file_cache,omitempty"`
 }
 
@@ -1888,6 +1889,7 @@ func NewTQueryOptions() *TQueryOptions {
 		OrcTinyStripeThresholdBytes:                 8388608,
 		OrcOnceMaxReadBytes:                         8388608,
 		OrcMaxMergeDistanceBytes:                    1048576,
+		IgnoreRuntimeFilterError:                    false,
 		DisableFileCache:                            false,
 	}
 }
@@ -2013,6 +2015,7 @@ func (p *TQueryOptions) InitDefault() {
 	p.OrcTinyStripeThresholdBytes = 8388608
 	p.OrcOnceMaxReadBytes = 8388608
 	p.OrcMaxMergeDistanceBytes = 1048576
+	p.IgnoreRuntimeFilterError = false
 	p.DisableFileCache = false
 }
 
@@ -3195,6 +3198,15 @@ func (p *TQueryOptions) GetOrcMaxMergeDistanceBytes() (v int64) {
 	return p.OrcMaxMergeDistanceBytes
 }
 
+var TQueryOptions_IgnoreRuntimeFilterError_DEFAULT bool = false
+
+func (p *TQueryOptions) GetIgnoreRuntimeFilterError() (v bool) {
+	if !p.IsSetIgnoreRuntimeFilterError() {
+		return TQueryOptions_IgnoreRuntimeFilterError_DEFAULT
+	}
+	return p.IgnoreRuntimeFilterError
+}
+
 var TQueryOptions_DisableFileCache_DEFAULT bool = false
 
 func (p *TQueryOptions) GetDisableFileCache() (v bool) {
@@ -3596,6 +3608,9 @@ func (p *TQueryOptions) SetOrcOnceMaxReadBytes(val int64) {
 func (p *TQueryOptions) SetOrcMaxMergeDistanceBytes(val int64) {
 	p.OrcMaxMergeDistanceBytes = val
 }
+func (p *TQueryOptions) SetIgnoreRuntimeFilterError(val bool) {
+	p.IgnoreRuntimeFilterError = val
+}
 func (p *TQueryOptions) SetDisableFileCache(val bool) {
 	p.DisableFileCache = val
 }
@@ -3732,6 +3747,7 @@ var fieldIDToName_TQueryOptions = map[int16]string{
 	138:  "orc_tiny_stripe_threshold_bytes",
 	139:  "orc_once_max_read_bytes",
 	140:  "orc_max_merge_distance_bytes",
+	141:  "ignore_runtime_filter_error",
 	1000: "disable_file_cache",
 }
 
@@ -4257,6 +4273,10 @@ func (p *TQueryOptions) IsSetOrcOnceMaxReadBytes() bool {
 
 func (p *TQueryOptions) IsSetOrcMaxMergeDistanceBytes() bool {
 	return p.OrcMaxMergeDistanceBytes != TQueryOptions_OrcMaxMergeDistanceBytes_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetIgnoreRuntimeFilterError() bool {
+	return p.IgnoreRuntimeFilterError != TQueryOptions_IgnoreRuntimeFilterError_DEFAULT
 }
 
 func (p *TQueryOptions) IsSetDisableFileCache() bool {
@@ -5325,6 +5345,14 @@ func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
 		case 140:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField140(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 141:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField141(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6805,6 +6833,17 @@ func (p *TQueryOptions) ReadField140(iprot thrift.TProtocol) error {
 	p.OrcMaxMergeDistanceBytes = _field
 	return nil
 }
+func (p *TQueryOptions) ReadField141(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.IgnoreRuntimeFilterError = _field
+	return nil
+}
 func (p *TQueryOptions) ReadField1000(iprot thrift.TProtocol) error {
 
 	var _field bool
@@ -7345,6 +7384,10 @@ func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField140(oprot); err != nil {
 			fieldId = 140
+			goto WriteFieldError
+		}
+		if err = p.writeField141(oprot); err != nil {
+			fieldId = 141
 			goto WriteFieldError
 		}
 		if err = p.writeField1000(oprot); err != nil {
@@ -9858,6 +9901,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 140 end error: ", p), err)
 }
 
+func (p *TQueryOptions) writeField141(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIgnoreRuntimeFilterError() {
+		if err = oprot.WriteFieldBegin("ignore_runtime_filter_error", thrift.BOOL, 141); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.IgnoreRuntimeFilterError); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 141 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 141 end error: ", p), err)
+}
+
 func (p *TQueryOptions) writeField1000(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDisableFileCache() {
 		if err = oprot.WriteFieldBegin("disable_file_cache", thrift.BOOL, 1000); err != nil {
@@ -10282,6 +10344,9 @@ func (p *TQueryOptions) DeepEqual(ano *TQueryOptions) bool {
 		return false
 	}
 	if !p.Field140DeepEqual(ano.OrcMaxMergeDistanceBytes) {
+		return false
+	}
+	if !p.Field141DeepEqual(ano.IgnoreRuntimeFilterError) {
 		return false
 	}
 	if !p.Field1000DeepEqual(ano.DisableFileCache) {
@@ -11253,6 +11318,13 @@ func (p *TQueryOptions) Field139DeepEqual(src int64) bool {
 func (p *TQueryOptions) Field140DeepEqual(src int64) bool {
 
 	if p.OrcMaxMergeDistanceBytes != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field141DeepEqual(src bool) bool {
+
+	if p.IgnoreRuntimeFilterError != src {
 		return false
 	}
 	return true

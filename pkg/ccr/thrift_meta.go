@@ -107,6 +107,9 @@ func NewThriftMeta(spec *base.Spec, rpcFactory rpc.IRpcFactory, tableIds []int64
 				}
 				partitionMeta.IndexIdMap[indexMeta.Id] = indexMeta
 				partitionMeta.IndexNameMap[indexMeta.Name] = indexMeta
+				if tableMeta.Name == indexMeta.Name {
+					tableMeta.BaseIndexId = indexMeta.Id
+				}
 
 				for _, tablet := range index.GetTablets() {
 					tabletMeta := &TabletMeta{

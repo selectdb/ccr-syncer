@@ -2079,6 +2079,54 @@ func (j *Job) handleRenameTableRecord(renameTable *record.RenameTable) error {
 	return nil
 }
 
+func (j *Job) handleReplaceTable(binlog *festruct.TBinlog) error {
+	log.Infof("handle replace table binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
+
+	record, err := record.NewReplaceTableRecordFromJson(binlog.GetData())
+	if err != nil {
+		return err
+	}
+
+	if j.isBinlogCommitted(record.OriginTableId, binlog.GetCommitSeq()) {
+		return nil
+	}
+
+	return j.handleReplaceTableRecord(record)
+}
+
+func (j *Job) handleReplaceTableRecord(record *record.ReplaceTableRecord) error {
+	// don't support replace table when table sync
+	//
+	// replace table will change the table id, and it depends the new table exists in the dest cluster.
+	if j.SyncType == TableSync {
+		log.Warnf("replace table is not supported when table sync, consider rebuilding this job instead")
+		return xerror.Errorf(xerror.Normal, "replace table is not supported when table sync, consider rebuilding this job instead")
+	}
+
+	toName := record.OriginTableName
+	fromName := record.NewTableName
+	if err := j.IDest.ReplaceTable(fromName, toName, record.SwapTable); err != nil {
+		return err
+	}
+
+	j.destMeta.GetTables() // update id <=> name cache
+	if j.progress.TableNameMapping == nil {
+		j.progress.TableNameMapping = make(map[int64]string)
+	}
+	if record.SwapTable {
+		// keep table mapping
+		j.progress.TableNameMapping[record.OriginTableId] = record.NewTableName
+		j.progress.TableNameMapping[record.NewTableId] = record.OriginTableName
+	} else { // delete table1
+		j.progress.TableNameMapping[record.NewTableId] = record.OriginTableName
+		delete(j.progress.TableNameMapping, record.OriginTableId)
+		delete(j.progress.TableMapping, record.OriginTableId)
+	}
+
+	return nil
+}
+
 func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 	data := binlog.GetData()
 	barrierLog, err := record.NewBarrierLogFromJson(data)
@@ -2112,6 +2160,12 @@ func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 			return err
 		}
 		return j.handleRenameColumnRecord(renameColumn)
+	case festruct.TBinlogType_REPLACE_TABLE:
+		replaceTable, err := record.NewReplaceTableRecordFromJson(barrierLog.Binlog)
+		if err != nil {
+			return err
+		}
+		return j.handleReplaceTableRecord(replaceTable)
 	case festruct.TBinlogType_BARRIER:
 		log.Info("handle barrier binlog, ignore it")
 	default:
@@ -2210,6 +2264,8 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		return j.handleReplacePartitions(binlog)
 	case festruct.TBinlogType_MODIFY_PARTITIONS:
 		return j.handleModifyPartitions(binlog)
+	case festruct.TBinlogType_REPLACE_TABLE:
+		return j.handleReplaceTable(binlog)
 	default:
 		return xerror.Errorf(xerror.Normal, "unknown binlog type: %v", binlog.GetType())
 	}

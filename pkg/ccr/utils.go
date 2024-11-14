@@ -41,6 +41,15 @@ func (i *BackupJobInfo) TableNameMapping() map[int64]string {
 	return tableMapping
 }
 
+// Get the table id by table name, return -1 if not found
+func (i *BackupJobInfo) TableId(name string) int64 {
+	if tableInfo, ok := i.BackupObjects[name]; ok {
+		return tableInfo.Id
+	}
+
+	return -1
+}
+
 func (i *BackupJobInfo) Views() []string {
 	if i.NewBackupObjects == nil {
 		return []string{}

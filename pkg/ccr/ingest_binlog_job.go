@@ -370,6 +370,8 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 		j.setError(err)
 		return
 	}
+	log.Infof("walter dest index name map: %v, src table id %d, part id %d, dest table id %d, part id %d",
+		destIndexNameMap, srcTableId, srcPartitionId, destTableId, destPartitionId)
 
 	getSrcIndexName := func(ccrJob *Job, srcIndexMeta *IndexMeta) string {
 		srcIndexName := srcIndexMeta.Name
@@ -398,10 +400,11 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 		}
 
 		srcIndexName := getSrcIndexName(job, srcIndexMeta)
+		log.Debugf("src idx id %d, name %s", indexId, srcIndexName)
 		if _, ok := destIndexNameMap[srcIndexName]; !ok {
 			j.setError(xerror.Errorf(xerror.Meta,
-				"index name %v not found in dest meta, is base index: %t",
-				srcIndexName, srcIndexMeta.IsBaseIndex))
+				"index name %v not found in dest meta, is base index: %t, src index id: %d",
+				srcIndexName, srcIndexMeta.IsBaseIndex, indexId))
 			return
 		}
 	}

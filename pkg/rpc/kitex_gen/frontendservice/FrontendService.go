@@ -631,8 +631,8 @@ const (
 	TBinlogType_RENAME_COLUMN                    TBinlogType = 15
 	TBinlogType_MODIFY_COMMENT                   TBinlogType = 16
 	TBinlogType_MODIFY_VIEW_DEF                  TBinlogType = 17
-	TBinlogType_MIN_UNKNOWN                      TBinlogType = 18
-	TBinlogType_UNKNOWN_3                        TBinlogType = 19
+	TBinlogType_REPLACE_TABLE                    TBinlogType = 18
+	TBinlogType_MIN_UNKNOWN                      TBinlogType = 19
 	TBinlogType_UNKNOWN_4                        TBinlogType = 20
 	TBinlogType_UNKNOWN_5                        TBinlogType = 21
 	TBinlogType_UNKNOWN_6                        TBinlogType = 22
@@ -770,10 +770,10 @@ func (p TBinlogType) String() string {
 		return "MODIFY_COMMENT"
 	case TBinlogType_MODIFY_VIEW_DEF:
 		return "MODIFY_VIEW_DEF"
+	case TBinlogType_REPLACE_TABLE:
+		return "REPLACE_TABLE"
 	case TBinlogType_MIN_UNKNOWN:
 		return "MIN_UNKNOWN"
-	case TBinlogType_UNKNOWN_3:
-		return "UNKNOWN_3"
 	case TBinlogType_UNKNOWN_4:
 		return "UNKNOWN_4"
 	case TBinlogType_UNKNOWN_5:
@@ -1010,10 +1010,10 @@ func TBinlogTypeFromString(s string) (TBinlogType, error) {
 		return TBinlogType_MODIFY_COMMENT, nil
 	case "MODIFY_VIEW_DEF":
 		return TBinlogType_MODIFY_VIEW_DEF, nil
+	case "REPLACE_TABLE":
+		return TBinlogType_REPLACE_TABLE, nil
 	case "MIN_UNKNOWN":
 		return TBinlogType_MIN_UNKNOWN, nil
-	case "UNKNOWN_3":
-		return TBinlogType_UNKNOWN_3, nil
 	case "UNKNOWN_4":
 		return TBinlogType_UNKNOWN_4, nil
 	case "UNKNOWN_5":
