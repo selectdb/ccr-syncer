@@ -683,10 +683,12 @@ func (m *Meta) UpdateIndexes(tableId int64, partitionId int64) error {
 		}
 		log.Debugf("indexId: %d, indexName: %s", indexId, indexName)
 
+		isBaseIndex := table.Name == indexName // it might be staled, caused by rename table
 		index := &IndexMeta{
 			PartitionMeta: partition,
 			Id:            indexId,
 			Name:          indexName,
+			IsBaseIndex:   isBaseIndex,
 		}
 		indexes = append(indexes, index)
 	}
@@ -734,20 +736,20 @@ func (m *Meta) GetIndexIdMap(tableId int64, partitionId int64) (map[int64]*Index
 }
 
 // Get indexes name map by table and partition, return xerror.Meta if no such table or partition exists.
-func (m *Meta) GetIndexNameMap(tableId int64, partitionId int64) (map[string]*IndexMeta, error) {
+func (m *Meta) GetIndexNameMap(tableId int64, partitionId int64) (map[string]*IndexMeta, *IndexMeta, error) {
 	if _, err := m.getIndexes(tableId, partitionId, false); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	partitions, err := m.GetPartitionIdMap(tableId)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if partition, ok := partitions[partitionId]; !ok {
-		return nil, xerror.Errorf(xerror.Meta, "partition %d is not found", partitionId)
+		return nil, nil, xerror.Errorf(xerror.Meta, "partition %d is not found", partitionId)
 	} else {
-		return partition.IndexNameMap, nil
+		return partition.IndexNameMap, nil, nil
 	}
 }
 

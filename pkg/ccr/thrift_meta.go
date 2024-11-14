@@ -95,10 +95,13 @@ func NewThriftMeta(spec *base.Spec, rpcFactory rpc.IRpcFactory, tableIds []int64
 			tableMeta.PartitionRangeMap[partitionMeta.Range] = partitionMeta
 
 			for _, index := range partition.GetIndexes() {
+				indexName := index.GetName()
+				isBaseIndex := indexName == tableMeta.Name // it is accurate, since lock is held
 				indexMeta := &IndexMeta{
 					PartitionMeta: partitionMeta,
 					Id:            index.GetId(),
-					Name:          index.GetName(),
+					Name:          indexName,
+					IsBaseIndex:   isBaseIndex,
 					TabletMetas:   btree.NewMap[int64, *TabletMeta](degree),
 					ReplicaMetas:  btree.NewMap[int64, *ReplicaMeta](degree),
 				}
@@ -221,20 +224,25 @@ func (tm *ThriftMeta) GetIndexIdMap(tableId, partitionId int64) (map[int64]*Inde
 	return partitionMeta.IndexIdMap, nil
 }
 
-func (tm *ThriftMeta) GetIndexNameMap(tableId, partitionId int64) (map[string]*IndexMeta, error) {
+func (tm *ThriftMeta) GetIndexNameMap(tableId, partitionId int64) (map[string]*IndexMeta, *IndexMeta, error) {
 	dbId := tm.meta.Id
 
 	tableMeta, ok := tm.meta.Tables[tableId]
 	if !ok {
-		return nil, xerror.Errorf(xerror.Meta, "dbId: %d, tableId: %d not found", dbId, tableId)
+		return nil, nil, xerror.Errorf(xerror.Meta, "dbId: %d, tableId: %d not found", dbId, tableId)
 	}
 
 	partitionMeta, ok := tableMeta.PartitionIdMap[partitionId]
 	if !ok {
-		return nil, xerror.Errorf(xerror.Meta, "dbId: %d, tableId: %d, partitionId: %d not found", dbId, tableId, partitionId)
+		return nil, nil, xerror.Errorf(xerror.Meta, "dbId: %d, tableId: %d, partitionId: %d not found", dbId, tableId, partitionId)
 	}
 
-	return partitionMeta.IndexNameMap, nil
+	baseIndex, ok := partitionMeta.IndexNameMap[tableMeta.Name]
+	if !ok {
+		return nil, nil, xerror.Errorf(xerror.Meta, "dbId: %d, tableId: %d, partitionId: %d, indexName: %s not found", dbId, tableId, partitionId, tableMeta.Name)
+	}
+
+	return partitionMeta.IndexNameMap, baseIndex, nil
 }
 
 func (tm *ThriftMeta) GetBackendMap() (map[int64]*base.Backend, error) {

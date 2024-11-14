@@ -344,7 +344,6 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 	// 还是要求一下和下游对齐的index length，这个是不可以recover的
 	// 思考那些是recover用的，主要就是tablet那块的
 
-	// TODO(Drogon): add use Backup/Restore to handle this
 	if len(indexIds) == 0 {
 		j.setError(xerror.Errorf(xerror.Meta, "index ids is empty"))
 		return
@@ -366,7 +365,7 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 		j.setError(err)
 		return
 	}
-	destIndexNameMap, err := j.destMeta.GetIndexNameMap(destTableId, destPartitionId)
+	destIndexNameMap, destBaseIndex, err := j.destMeta.GetIndexNameMap(destTableId, destPartitionId)
 	if err != nil {
 		j.setError(err)
 		return
@@ -376,6 +375,8 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 		srcIndexName := srcIndexMeta.Name
 		if ccrJob.SyncType == TableSync && srcIndexName == ccrJob.Src.Table {
 			return ccrJob.Dest.Table
+		} else if srcIndexMeta.IsBaseIndex {
+			return destBaseIndex.Name
 		} else {
 			return srcIndexName
 		}
@@ -398,7 +399,9 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 
 		srcIndexName := getSrcIndexName(job, srcIndexMeta)
 		if _, ok := destIndexNameMap[srcIndexName]; !ok {
-			j.setError(xerror.Errorf(xerror.Meta, "index name %v not found in dest meta", srcIndexName))
+			j.setError(xerror.Errorf(xerror.Meta,
+				"index name %v not found in dest meta, is base index: %t",
+				srcIndexName, srcIndexMeta.IsBaseIndex))
 			return
 		}
 	}

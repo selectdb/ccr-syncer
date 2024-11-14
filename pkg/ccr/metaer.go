@@ -45,6 +45,7 @@ type IndexMeta struct {
 	PartitionMeta *PartitionMeta
 	Id            int64
 	Name          string
+	IsBaseIndex   bool
 	TabletMetas   *btree.Map[int64, *TabletMeta]  // tabletId -> tablet
 	ReplicaMetas  *btree.Map[int64, *ReplicaMeta] // replicaId -> replica
 }
@@ -73,7 +74,7 @@ type IngestBinlogMetaer interface {
 	GetPartitionIdByRange(tableId int64, partitionRange string) (int64, error)
 	GetPartitionRangeMap(tableId int64) (map[string]*PartitionMeta, error)
 	GetIndexIdMap(tableId, partitionId int64) (map[int64]*IndexMeta, error)
-	GetIndexNameMap(tableId, partitionId int64) (map[string]*IndexMeta, error)
+	GetIndexNameMap(tableId, partitionId int64) (map[string]*IndexMeta, *IndexMeta, error)
 	GetBackendMap() (map[int64]*base.Backend, error)
 	IsPartitionDropped(partitionId int64) bool
 	IsTableDropped(tableId int64) bool
