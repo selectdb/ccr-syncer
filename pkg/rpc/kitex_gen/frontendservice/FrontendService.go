@@ -630,6 +630,106 @@ const (
 	TBinlogType_RENAME_TABLE                     TBinlogType = 14
 	TBinlogType_RENAME_COLUMN                    TBinlogType = 15
 	TBinlogType_MODIFY_COMMENT                   TBinlogType = 16
+	TBinlogType_MODIFY_VIEW_DEF                  TBinlogType = 17
+	TBinlogType_MIN_UNKNOWN                      TBinlogType = 18
+	TBinlogType_UNKNOWN_3                        TBinlogType = 19
+	TBinlogType_UNKNOWN_4                        TBinlogType = 20
+	TBinlogType_UNKNOWN_5                        TBinlogType = 21
+	TBinlogType_UNKNOWN_6                        TBinlogType = 22
+	TBinlogType_UNKNOWN_7                        TBinlogType = 23
+	TBinlogType_UNKNOWN_8                        TBinlogType = 24
+	TBinlogType_UNKNOWN_9                        TBinlogType = 25
+	TBinlogType_UNKNOWN_10                       TBinlogType = 26
+	TBinlogType_UNKNOWN_11                       TBinlogType = 27
+	TBinlogType_UNKNOWN_12                       TBinlogType = 28
+	TBinlogType_UNKNOWN_13                       TBinlogType = 29
+	TBinlogType_UNKNOWN_14                       TBinlogType = 30
+	TBinlogType_UNKNOWN_15                       TBinlogType = 31
+	TBinlogType_UNKNOWN_16                       TBinlogType = 32
+	TBinlogType_UNKNOWN_17                       TBinlogType = 33
+	TBinlogType_UNKNOWN_18                       TBinlogType = 34
+	TBinlogType_UNKNOWN_19                       TBinlogType = 35
+	TBinlogType_UNKNOWN_20                       TBinlogType = 36
+	TBinlogType_UNKNOWN_21                       TBinlogType = 37
+	TBinlogType_UNKNOWN_22                       TBinlogType = 38
+	TBinlogType_UNKNOWN_23                       TBinlogType = 39
+	TBinlogType_UNKNOWN_24                       TBinlogType = 40
+	TBinlogType_UNKNOWN_25                       TBinlogType = 41
+	TBinlogType_UNKNOWN_26                       TBinlogType = 42
+	TBinlogType_UNKNOWN_27                       TBinlogType = 43
+	TBinlogType_UNKNOWN_28                       TBinlogType = 44
+	TBinlogType_UNKNOWN_29                       TBinlogType = 45
+	TBinlogType_UNKNOWN_30                       TBinlogType = 46
+	TBinlogType_UNKNOWN_31                       TBinlogType = 47
+	TBinlogType_UNKNOWN_32                       TBinlogType = 48
+	TBinlogType_UNKNOWN_33                       TBinlogType = 49
+	TBinlogType_UNKNOWN_34                       TBinlogType = 50
+	TBinlogType_UNKNOWN_35                       TBinlogType = 51
+	TBinlogType_UNKNOWN_36                       TBinlogType = 52
+	TBinlogType_UNKNOWN_37                       TBinlogType = 53
+	TBinlogType_UNKNOWN_38                       TBinlogType = 54
+	TBinlogType_UNKNOWN_39                       TBinlogType = 55
+	TBinlogType_UNKNOWN_40                       TBinlogType = 56
+	TBinlogType_UNKNOWN_41                       TBinlogType = 57
+	TBinlogType_UNKNOWN_42                       TBinlogType = 58
+	TBinlogType_UNKNOWN_43                       TBinlogType = 59
+	TBinlogType_UNKNOWN_44                       TBinlogType = 60
+	TBinlogType_UNKNOWN_45                       TBinlogType = 61
+	TBinlogType_UNKNOWN_46                       TBinlogType = 62
+	TBinlogType_UNKNOWN_47                       TBinlogType = 63
+	TBinlogType_UNKNOWN_48                       TBinlogType = 64
+	TBinlogType_UNKNOWN_49                       TBinlogType = 65
+	TBinlogType_UNKNOWN_50                       TBinlogType = 66
+	TBinlogType_UNKNOWN_51                       TBinlogType = 67
+	TBinlogType_UNKNOWN_52                       TBinlogType = 68
+	TBinlogType_UNKNOWN_53                       TBinlogType = 69
+	TBinlogType_UNKNOWN_54                       TBinlogType = 70
+	TBinlogType_UNKNOWN_55                       TBinlogType = 71
+	TBinlogType_UNKNOWN_56                       TBinlogType = 72
+	TBinlogType_UNKNOWN_57                       TBinlogType = 73
+	TBinlogType_UNKNOWN_58                       TBinlogType = 74
+	TBinlogType_UNKNOWN_59                       TBinlogType = 75
+	TBinlogType_UNKNOWN_60                       TBinlogType = 76
+	TBinlogType_UNKNOWN_61                       TBinlogType = 77
+	TBinlogType_UNKNOWN_62                       TBinlogType = 78
+	TBinlogType_UNKNOWN_63                       TBinlogType = 79
+	TBinlogType_UNKNOWN_64                       TBinlogType = 80
+	TBinlogType_UNKNOWN_65                       TBinlogType = 81
+	TBinlogType_UNKNOWN_66                       TBinlogType = 82
+	TBinlogType_UNKNOWN_67                       TBinlogType = 83
+	TBinlogType_UNKNOWN_68                       TBinlogType = 84
+	TBinlogType_UNKNOWN_69                       TBinlogType = 85
+	TBinlogType_UNKNOWN_70                       TBinlogType = 86
+	TBinlogType_UNKNOWN_71                       TBinlogType = 87
+	TBinlogType_UNKNOWN_72                       TBinlogType = 88
+	TBinlogType_UNKNOWN_73                       TBinlogType = 89
+	TBinlogType_UNKNOWN_74                       TBinlogType = 90
+	TBinlogType_UNKNOWN_75                       TBinlogType = 91
+	TBinlogType_UNKNOWN_76                       TBinlogType = 92
+	TBinlogType_UNKNOWN_77                       TBinlogType = 93
+	TBinlogType_UNKNOWN_78                       TBinlogType = 94
+	TBinlogType_UNKNOWN_79                       TBinlogType = 95
+	TBinlogType_UNKNOWN_80                       TBinlogType = 96
+	TBinlogType_UNKNOWN_81                       TBinlogType = 97
+	TBinlogType_UNKNOWN_82                       TBinlogType = 98
+	TBinlogType_UNKNOWN_83                       TBinlogType = 99
+	TBinlogType_UNKNOWN_84                       TBinlogType = 100
+	TBinlogType_UNKNOWN_85                       TBinlogType = 101
+	TBinlogType_UNKNOWN_86                       TBinlogType = 102
+	TBinlogType_UNKNOWN_87                       TBinlogType = 103
+	TBinlogType_UNKNOWN_88                       TBinlogType = 104
+	TBinlogType_UNKNOWN_89                       TBinlogType = 105
+	TBinlogType_UNKNOWN_90                       TBinlogType = 106
+	TBinlogType_UNKNOWN_91                       TBinlogType = 107
+	TBinlogType_UNKNOWN_92                       TBinlogType = 108
+	TBinlogType_UNKNOWN_93                       TBinlogType = 109
+	TBinlogType_UNKNOWN_94                       TBinlogType = 110
+	TBinlogType_UNKNOWN_95                       TBinlogType = 111
+	TBinlogType_UNKNOWN_96                       TBinlogType = 112
+	TBinlogType_UNKNOWN_97                       TBinlogType = 113
+	TBinlogType_UNKNOWN_98                       TBinlogType = 114
+	TBinlogType_UNKNOWN_99                       TBinlogType = 115
+	TBinlogType_UNKNOWN_100                      TBinlogType = 116
 )
 
 func (p TBinlogType) String() string {
@@ -668,6 +768,206 @@ func (p TBinlogType) String() string {
 		return "RENAME_COLUMN"
 	case TBinlogType_MODIFY_COMMENT:
 		return "MODIFY_COMMENT"
+	case TBinlogType_MODIFY_VIEW_DEF:
+		return "MODIFY_VIEW_DEF"
+	case TBinlogType_MIN_UNKNOWN:
+		return "MIN_UNKNOWN"
+	case TBinlogType_UNKNOWN_3:
+		return "UNKNOWN_3"
+	case TBinlogType_UNKNOWN_4:
+		return "UNKNOWN_4"
+	case TBinlogType_UNKNOWN_5:
+		return "UNKNOWN_5"
+	case TBinlogType_UNKNOWN_6:
+		return "UNKNOWN_6"
+	case TBinlogType_UNKNOWN_7:
+		return "UNKNOWN_7"
+	case TBinlogType_UNKNOWN_8:
+		return "UNKNOWN_8"
+	case TBinlogType_UNKNOWN_9:
+		return "UNKNOWN_9"
+	case TBinlogType_UNKNOWN_10:
+		return "UNKNOWN_10"
+	case TBinlogType_UNKNOWN_11:
+		return "UNKNOWN_11"
+	case TBinlogType_UNKNOWN_12:
+		return "UNKNOWN_12"
+	case TBinlogType_UNKNOWN_13:
+		return "UNKNOWN_13"
+	case TBinlogType_UNKNOWN_14:
+		return "UNKNOWN_14"
+	case TBinlogType_UNKNOWN_15:
+		return "UNKNOWN_15"
+	case TBinlogType_UNKNOWN_16:
+		return "UNKNOWN_16"
+	case TBinlogType_UNKNOWN_17:
+		return "UNKNOWN_17"
+	case TBinlogType_UNKNOWN_18:
+		return "UNKNOWN_18"
+	case TBinlogType_UNKNOWN_19:
+		return "UNKNOWN_19"
+	case TBinlogType_UNKNOWN_20:
+		return "UNKNOWN_20"
+	case TBinlogType_UNKNOWN_21:
+		return "UNKNOWN_21"
+	case TBinlogType_UNKNOWN_22:
+		return "UNKNOWN_22"
+	case TBinlogType_UNKNOWN_23:
+		return "UNKNOWN_23"
+	case TBinlogType_UNKNOWN_24:
+		return "UNKNOWN_24"
+	case TBinlogType_UNKNOWN_25:
+		return "UNKNOWN_25"
+	case TBinlogType_UNKNOWN_26:
+		return "UNKNOWN_26"
+	case TBinlogType_UNKNOWN_27:
+		return "UNKNOWN_27"
+	case TBinlogType_UNKNOWN_28:
+		return "UNKNOWN_28"
+	case TBinlogType_UNKNOWN_29:
+		return "UNKNOWN_29"
+	case TBinlogType_UNKNOWN_30:
+		return "UNKNOWN_30"
+	case TBinlogType_UNKNOWN_31:
+		return "UNKNOWN_31"
+	case TBinlogType_UNKNOWN_32:
+		return "UNKNOWN_32"
+	case TBinlogType_UNKNOWN_33:
+		return "UNKNOWN_33"
+	case TBinlogType_UNKNOWN_34:
+		return "UNKNOWN_34"
+	case TBinlogType_UNKNOWN_35:
+		return "UNKNOWN_35"
+	case TBinlogType_UNKNOWN_36:
+		return "UNKNOWN_36"
+	case TBinlogType_UNKNOWN_37:
+		return "UNKNOWN_37"
+	case TBinlogType_UNKNOWN_38:
+		return "UNKNOWN_38"
+	case TBinlogType_UNKNOWN_39:
+		return "UNKNOWN_39"
+	case TBinlogType_UNKNOWN_40:
+		return "UNKNOWN_40"
+	case TBinlogType_UNKNOWN_41:
+		return "UNKNOWN_41"
+	case TBinlogType_UNKNOWN_42:
+		return "UNKNOWN_42"
+	case TBinlogType_UNKNOWN_43:
+		return "UNKNOWN_43"
+	case TBinlogType_UNKNOWN_44:
+		return "UNKNOWN_44"
+	case TBinlogType_UNKNOWN_45:
+		return "UNKNOWN_45"
+	case TBinlogType_UNKNOWN_46:
+		return "UNKNOWN_46"
+	case TBinlogType_UNKNOWN_47:
+		return "UNKNOWN_47"
+	case TBinlogType_UNKNOWN_48:
+		return "UNKNOWN_48"
+	case TBinlogType_UNKNOWN_49:
+		return "UNKNOWN_49"
+	case TBinlogType_UNKNOWN_50:
+		return "UNKNOWN_50"
+	case TBinlogType_UNKNOWN_51:
+		return "UNKNOWN_51"
+	case TBinlogType_UNKNOWN_52:
+		return "UNKNOWN_52"
+	case TBinlogType_UNKNOWN_53:
+		return "UNKNOWN_53"
+	case TBinlogType_UNKNOWN_54:
+		return "UNKNOWN_54"
+	case TBinlogType_UNKNOWN_55:
+		return "UNKNOWN_55"
+	case TBinlogType_UNKNOWN_56:
+		return "UNKNOWN_56"
+	case TBinlogType_UNKNOWN_57:
+		return "UNKNOWN_57"
+	case TBinlogType_UNKNOWN_58:
+		return "UNKNOWN_58"
+	case TBinlogType_UNKNOWN_59:
+		return "UNKNOWN_59"
+	case TBinlogType_UNKNOWN_60:
+		return "UNKNOWN_60"
+	case TBinlogType_UNKNOWN_61:
+		return "UNKNOWN_61"
+	case TBinlogType_UNKNOWN_62:
+		return "UNKNOWN_62"
+	case TBinlogType_UNKNOWN_63:
+		return "UNKNOWN_63"
+	case TBinlogType_UNKNOWN_64:
+		return "UNKNOWN_64"
+	case TBinlogType_UNKNOWN_65:
+		return "UNKNOWN_65"
+	case TBinlogType_UNKNOWN_66:
+		return "UNKNOWN_66"
+	case TBinlogType_UNKNOWN_67:
+		return "UNKNOWN_67"
+	case TBinlogType_UNKNOWN_68:
+		return "UNKNOWN_68"
+	case TBinlogType_UNKNOWN_69:
+		return "UNKNOWN_69"
+	case TBinlogType_UNKNOWN_70:
+		return "UNKNOWN_70"
+	case TBinlogType_UNKNOWN_71:
+		return "UNKNOWN_71"
+	case TBinlogType_UNKNOWN_72:
+		return "UNKNOWN_72"
+	case TBinlogType_UNKNOWN_73:
+		return "UNKNOWN_73"
+	case TBinlogType_UNKNOWN_74:
+		return "UNKNOWN_74"
+	case TBinlogType_UNKNOWN_75:
+		return "UNKNOWN_75"
+	case TBinlogType_UNKNOWN_76:
+		return "UNKNOWN_76"
+	case TBinlogType_UNKNOWN_77:
+		return "UNKNOWN_77"
+	case TBinlogType_UNKNOWN_78:
+		return "UNKNOWN_78"
+	case TBinlogType_UNKNOWN_79:
+		return "UNKNOWN_79"
+	case TBinlogType_UNKNOWN_80:
+		return "UNKNOWN_80"
+	case TBinlogType_UNKNOWN_81:
+		return "UNKNOWN_81"
+	case TBinlogType_UNKNOWN_82:
+		return "UNKNOWN_82"
+	case TBinlogType_UNKNOWN_83:
+		return "UNKNOWN_83"
+	case TBinlogType_UNKNOWN_84:
+		return "UNKNOWN_84"
+	case TBinlogType_UNKNOWN_85:
+		return "UNKNOWN_85"
+	case TBinlogType_UNKNOWN_86:
+		return "UNKNOWN_86"
+	case TBinlogType_UNKNOWN_87:
+		return "UNKNOWN_87"
+	case TBinlogType_UNKNOWN_88:
+		return "UNKNOWN_88"
+	case TBinlogType_UNKNOWN_89:
+		return "UNKNOWN_89"
+	case TBinlogType_UNKNOWN_90:
+		return "UNKNOWN_90"
+	case TBinlogType_UNKNOWN_91:
+		return "UNKNOWN_91"
+	case TBinlogType_UNKNOWN_92:
+		return "UNKNOWN_92"
+	case TBinlogType_UNKNOWN_93:
+		return "UNKNOWN_93"
+	case TBinlogType_UNKNOWN_94:
+		return "UNKNOWN_94"
+	case TBinlogType_UNKNOWN_95:
+		return "UNKNOWN_95"
+	case TBinlogType_UNKNOWN_96:
+		return "UNKNOWN_96"
+	case TBinlogType_UNKNOWN_97:
+		return "UNKNOWN_97"
+	case TBinlogType_UNKNOWN_98:
+		return "UNKNOWN_98"
+	case TBinlogType_UNKNOWN_99:
+		return "UNKNOWN_99"
+	case TBinlogType_UNKNOWN_100:
+		return "UNKNOWN_100"
 	}
 	return "<UNSET>"
 }
@@ -708,6 +1008,206 @@ func TBinlogTypeFromString(s string) (TBinlogType, error) {
 		return TBinlogType_RENAME_COLUMN, nil
 	case "MODIFY_COMMENT":
 		return TBinlogType_MODIFY_COMMENT, nil
+	case "MODIFY_VIEW_DEF":
+		return TBinlogType_MODIFY_VIEW_DEF, nil
+	case "MIN_UNKNOWN":
+		return TBinlogType_MIN_UNKNOWN, nil
+	case "UNKNOWN_3":
+		return TBinlogType_UNKNOWN_3, nil
+	case "UNKNOWN_4":
+		return TBinlogType_UNKNOWN_4, nil
+	case "UNKNOWN_5":
+		return TBinlogType_UNKNOWN_5, nil
+	case "UNKNOWN_6":
+		return TBinlogType_UNKNOWN_6, nil
+	case "UNKNOWN_7":
+		return TBinlogType_UNKNOWN_7, nil
+	case "UNKNOWN_8":
+		return TBinlogType_UNKNOWN_8, nil
+	case "UNKNOWN_9":
+		return TBinlogType_UNKNOWN_9, nil
+	case "UNKNOWN_10":
+		return TBinlogType_UNKNOWN_10, nil
+	case "UNKNOWN_11":
+		return TBinlogType_UNKNOWN_11, nil
+	case "UNKNOWN_12":
+		return TBinlogType_UNKNOWN_12, nil
+	case "UNKNOWN_13":
+		return TBinlogType_UNKNOWN_13, nil
+	case "UNKNOWN_14":
+		return TBinlogType_UNKNOWN_14, nil
+	case "UNKNOWN_15":
+		return TBinlogType_UNKNOWN_15, nil
+	case "UNKNOWN_16":
+		return TBinlogType_UNKNOWN_16, nil
+	case "UNKNOWN_17":
+		return TBinlogType_UNKNOWN_17, nil
+	case "UNKNOWN_18":
+		return TBinlogType_UNKNOWN_18, nil
+	case "UNKNOWN_19":
+		return TBinlogType_UNKNOWN_19, nil
+	case "UNKNOWN_20":
+		return TBinlogType_UNKNOWN_20, nil
+	case "UNKNOWN_21":
+		return TBinlogType_UNKNOWN_21, nil
+	case "UNKNOWN_22":
+		return TBinlogType_UNKNOWN_22, nil
+	case "UNKNOWN_23":
+		return TBinlogType_UNKNOWN_23, nil
+	case "UNKNOWN_24":
+		return TBinlogType_UNKNOWN_24, nil
+	case "UNKNOWN_25":
+		return TBinlogType_UNKNOWN_25, nil
+	case "UNKNOWN_26":
+		return TBinlogType_UNKNOWN_26, nil
+	case "UNKNOWN_27":
+		return TBinlogType_UNKNOWN_27, nil
+	case "UNKNOWN_28":
+		return TBinlogType_UNKNOWN_28, nil
+	case "UNKNOWN_29":
+		return TBinlogType_UNKNOWN_29, nil
+	case "UNKNOWN_30":
+		return TBinlogType_UNKNOWN_30, nil
+	case "UNKNOWN_31":
+		return TBinlogType_UNKNOWN_31, nil
+	case "UNKNOWN_32":
+		return TBinlogType_UNKNOWN_32, nil
+	case "UNKNOWN_33":
+		return TBinlogType_UNKNOWN_33, nil
+	case "UNKNOWN_34":
+		return TBinlogType_UNKNOWN_34, nil
+	case "UNKNOWN_35":
+		return TBinlogType_UNKNOWN_35, nil
+	case "UNKNOWN_36":
+		return TBinlogType_UNKNOWN_36, nil
+	case "UNKNOWN_37":
+		return TBinlogType_UNKNOWN_37, nil
+	case "UNKNOWN_38":
+		return TBinlogType_UNKNOWN_38, nil
+	case "UNKNOWN_39":
+		return TBinlogType_UNKNOWN_39, nil
+	case "UNKNOWN_40":
+		return TBinlogType_UNKNOWN_40, nil
+	case "UNKNOWN_41":
+		return TBinlogType_UNKNOWN_41, nil
+	case "UNKNOWN_42":
+		return TBinlogType_UNKNOWN_42, nil
+	case "UNKNOWN_43":
+		return TBinlogType_UNKNOWN_43, nil
+	case "UNKNOWN_44":
+		return TBinlogType_UNKNOWN_44, nil
+	case "UNKNOWN_45":
+		return TBinlogType_UNKNOWN_45, nil
+	case "UNKNOWN_46":
+		return TBinlogType_UNKNOWN_46, nil
+	case "UNKNOWN_47":
+		return TBinlogType_UNKNOWN_47, nil
+	case "UNKNOWN_48":
+		return TBinlogType_UNKNOWN_48, nil
+	case "UNKNOWN_49":
+		return TBinlogType_UNKNOWN_49, nil
+	case "UNKNOWN_50":
+		return TBinlogType_UNKNOWN_50, nil
+	case "UNKNOWN_51":
+		return TBinlogType_UNKNOWN_51, nil
+	case "UNKNOWN_52":
+		return TBinlogType_UNKNOWN_52, nil
+	case "UNKNOWN_53":
+		return TBinlogType_UNKNOWN_53, nil
+	case "UNKNOWN_54":
+		return TBinlogType_UNKNOWN_54, nil
+	case "UNKNOWN_55":
+		return TBinlogType_UNKNOWN_55, nil
+	case "UNKNOWN_56":
+		return TBinlogType_UNKNOWN_56, nil
+	case "UNKNOWN_57":
+		return TBinlogType_UNKNOWN_57, nil
+	case "UNKNOWN_58":
+		return TBinlogType_UNKNOWN_58, nil
+	case "UNKNOWN_59":
+		return TBinlogType_UNKNOWN_59, nil
+	case "UNKNOWN_60":
+		return TBinlogType_UNKNOWN_60, nil
+	case "UNKNOWN_61":
+		return TBinlogType_UNKNOWN_61, nil
+	case "UNKNOWN_62":
+		return TBinlogType_UNKNOWN_62, nil
+	case "UNKNOWN_63":
+		return TBinlogType_UNKNOWN_63, nil
+	case "UNKNOWN_64":
+		return TBinlogType_UNKNOWN_64, nil
+	case "UNKNOWN_65":
+		return TBinlogType_UNKNOWN_65, nil
+	case "UNKNOWN_66":
+		return TBinlogType_UNKNOWN_66, nil
+	case "UNKNOWN_67":
+		return TBinlogType_UNKNOWN_67, nil
+	case "UNKNOWN_68":
+		return TBinlogType_UNKNOWN_68, nil
+	case "UNKNOWN_69":
+		return TBinlogType_UNKNOWN_69, nil
+	case "UNKNOWN_70":
+		return TBinlogType_UNKNOWN_70, nil
+	case "UNKNOWN_71":
+		return TBinlogType_UNKNOWN_71, nil
+	case "UNKNOWN_72":
+		return TBinlogType_UNKNOWN_72, nil
+	case "UNKNOWN_73":
+		return TBinlogType_UNKNOWN_73, nil
+	case "UNKNOWN_74":
+		return TBinlogType_UNKNOWN_74, nil
+	case "UNKNOWN_75":
+		return TBinlogType_UNKNOWN_75, nil
+	case "UNKNOWN_76":
+		return TBinlogType_UNKNOWN_76, nil
+	case "UNKNOWN_77":
+		return TBinlogType_UNKNOWN_77, nil
+	case "UNKNOWN_78":
+		return TBinlogType_UNKNOWN_78, nil
+	case "UNKNOWN_79":
+		return TBinlogType_UNKNOWN_79, nil
+	case "UNKNOWN_80":
+		return TBinlogType_UNKNOWN_80, nil
+	case "UNKNOWN_81":
+		return TBinlogType_UNKNOWN_81, nil
+	case "UNKNOWN_82":
+		return TBinlogType_UNKNOWN_82, nil
+	case "UNKNOWN_83":
+		return TBinlogType_UNKNOWN_83, nil
+	case "UNKNOWN_84":
+		return TBinlogType_UNKNOWN_84, nil
+	case "UNKNOWN_85":
+		return TBinlogType_UNKNOWN_85, nil
+	case "UNKNOWN_86":
+		return TBinlogType_UNKNOWN_86, nil
+	case "UNKNOWN_87":
+		return TBinlogType_UNKNOWN_87, nil
+	case "UNKNOWN_88":
+		return TBinlogType_UNKNOWN_88, nil
+	case "UNKNOWN_89":
+		return TBinlogType_UNKNOWN_89, nil
+	case "UNKNOWN_90":
+		return TBinlogType_UNKNOWN_90, nil
+	case "UNKNOWN_91":
+		return TBinlogType_UNKNOWN_91, nil
+	case "UNKNOWN_92":
+		return TBinlogType_UNKNOWN_92, nil
+	case "UNKNOWN_93":
+		return TBinlogType_UNKNOWN_93, nil
+	case "UNKNOWN_94":
+		return TBinlogType_UNKNOWN_94, nil
+	case "UNKNOWN_95":
+		return TBinlogType_UNKNOWN_95, nil
+	case "UNKNOWN_96":
+		return TBinlogType_UNKNOWN_96, nil
+	case "UNKNOWN_97":
+		return TBinlogType_UNKNOWN_97, nil
+	case "UNKNOWN_98":
+		return TBinlogType_UNKNOWN_98, nil
+	case "UNKNOWN_99":
+		return TBinlogType_UNKNOWN_99, nil
+	case "UNKNOWN_100":
+		return TBinlogType_UNKNOWN_100, nil
 	}
 	return TBinlogType(0), fmt.Errorf("not a valid TBinlogType string")
 }
@@ -43085,8 +43585,9 @@ func (p *TSnapshotLoaderReportRequest) Field5DeepEqual(src *int32) bool {
 }
 
 type TFrontendPingFrontendRequest struct {
-	ClusterId int32  `thrift:"clusterId,1,required" frugal:"1,required,i32" json:"clusterId"`
-	Token     string `thrift:"token,2,required" frugal:"2,required,string" json:"token"`
+	ClusterId  int32   `thrift:"clusterId,1,required" frugal:"1,required,i32" json:"clusterId"`
+	Token      string  `thrift:"token,2,required" frugal:"2,required,string" json:"token"`
+	DeployMode *string `thrift:"deployMode,3,optional" frugal:"3,optional,string" json:"deployMode,omitempty"`
 }
 
 func NewTFrontendPingFrontendRequest() *TFrontendPingFrontendRequest {
@@ -43103,16 +43604,33 @@ func (p *TFrontendPingFrontendRequest) GetClusterId() (v int32) {
 func (p *TFrontendPingFrontendRequest) GetToken() (v string) {
 	return p.Token
 }
+
+var TFrontendPingFrontendRequest_DeployMode_DEFAULT string
+
+func (p *TFrontendPingFrontendRequest) GetDeployMode() (v string) {
+	if !p.IsSetDeployMode() {
+		return TFrontendPingFrontendRequest_DeployMode_DEFAULT
+	}
+	return *p.DeployMode
+}
 func (p *TFrontendPingFrontendRequest) SetClusterId(val int32) {
 	p.ClusterId = val
 }
 func (p *TFrontendPingFrontendRequest) SetToken(val string) {
 	p.Token = val
 }
+func (p *TFrontendPingFrontendRequest) SetDeployMode(val *string) {
+	p.DeployMode = val
+}
 
 var fieldIDToName_TFrontendPingFrontendRequest = map[int16]string{
 	1: "clusterId",
 	2: "token",
+	3: "deployMode",
+}
+
+func (p *TFrontendPingFrontendRequest) IsSetDeployMode() bool {
+	return p.DeployMode != nil
 }
 
 func (p *TFrontendPingFrontendRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -43151,6 +43669,14 @@ func (p *TFrontendPingFrontendRequest) Read(iprot thrift.TProtocol) (err error) 
 					goto ReadFieldError
 				}
 				issetToken = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -43216,6 +43742,17 @@ func (p *TFrontendPingFrontendRequest) ReadField2(iprot thrift.TProtocol) error 
 	p.Token = _field
 	return nil
 }
+func (p *TFrontendPingFrontendRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DeployMode = _field
+	return nil
+}
 
 func (p *TFrontendPingFrontendRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -43229,6 +43766,10 @@ func (p *TFrontendPingFrontendRequest) Write(oprot thrift.TProtocol) (err error)
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -43283,6 +43824,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 
+func (p *TFrontendPingFrontendRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDeployMode() {
+		if err = oprot.WriteFieldBegin("deployMode", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.DeployMode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
 func (p *TFrontendPingFrontendRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -43303,6 +43863,9 @@ func (p *TFrontendPingFrontendRequest) DeepEqual(ano *TFrontendPingFrontendReque
 	if !p.Field2DeepEqual(ano.Token) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.DeployMode) {
+		return false
+	}
 	return true
 }
 
@@ -43316,6 +43879,18 @@ func (p *TFrontendPingFrontendRequest) Field1DeepEqual(src int32) bool {
 func (p *TFrontendPingFrontendRequest) Field2DeepEqual(src string) bool {
 
 	if strings.Compare(p.Token, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TFrontendPingFrontendRequest) Field3DeepEqual(src *string) bool {
+
+	if p.DeployMode == src {
+		return true
+	} else if p.DeployMode == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.DeployMode, *src) != 0 {
 		return false
 	}
 	return true
@@ -56161,6 +56736,7 @@ type TGetSnapshotResult_ struct {
 	MasterAddress *types.TNetworkAddress `thrift:"master_address,4,optional" frugal:"4,optional,types.TNetworkAddress" json:"master_address,omitempty"`
 	Compressed    *bool                  `thrift:"compressed,5,optional" frugal:"5,optional,bool" json:"compressed,omitempty"`
 	ExpiredAt     *int64                 `thrift:"expiredAt,6,optional" frugal:"6,optional,i64" json:"expiredAt,omitempty"`
+	CommitSeq     *int64                 `thrift:"commit_seq,7,optional" frugal:"7,optional,i64" json:"commit_seq,omitempty"`
 }
 
 func NewTGetSnapshotResult_() *TGetSnapshotResult_ {
@@ -56223,6 +56799,15 @@ func (p *TGetSnapshotResult_) GetExpiredAt() (v int64) {
 	}
 	return *p.ExpiredAt
 }
+
+var TGetSnapshotResult__CommitSeq_DEFAULT int64
+
+func (p *TGetSnapshotResult_) GetCommitSeq() (v int64) {
+	if !p.IsSetCommitSeq() {
+		return TGetSnapshotResult__CommitSeq_DEFAULT
+	}
+	return *p.CommitSeq
+}
 func (p *TGetSnapshotResult_) SetStatus(val *status.TStatus) {
 	p.Status = val
 }
@@ -56241,6 +56826,9 @@ func (p *TGetSnapshotResult_) SetCompressed(val *bool) {
 func (p *TGetSnapshotResult_) SetExpiredAt(val *int64) {
 	p.ExpiredAt = val
 }
+func (p *TGetSnapshotResult_) SetCommitSeq(val *int64) {
+	p.CommitSeq = val
+}
 
 var fieldIDToName_TGetSnapshotResult_ = map[int16]string{
 	1: "status",
@@ -56249,6 +56837,7 @@ var fieldIDToName_TGetSnapshotResult_ = map[int16]string{
 	4: "master_address",
 	5: "compressed",
 	6: "expiredAt",
+	7: "commit_seq",
 }
 
 func (p *TGetSnapshotResult_) IsSetStatus() bool {
@@ -56273,6 +56862,10 @@ func (p *TGetSnapshotResult_) IsSetCompressed() bool {
 
 func (p *TGetSnapshotResult_) IsSetExpiredAt() bool {
 	return p.ExpiredAt != nil
+}
+
+func (p *TGetSnapshotResult_) IsSetCommitSeq() bool {
+	return p.CommitSeq != nil
 }
 
 func (p *TGetSnapshotResult_) Read(iprot thrift.TProtocol) (err error) {
@@ -56337,6 +56930,14 @@ func (p *TGetSnapshotResult_) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -56431,6 +57032,17 @@ func (p *TGetSnapshotResult_) ReadField6(iprot thrift.TProtocol) error {
 	p.ExpiredAt = _field
 	return nil
 }
+func (p *TGetSnapshotResult_) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CommitSeq = _field
+	return nil
+}
 
 func (p *TGetSnapshotResult_) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -56460,6 +57072,10 @@ func (p *TGetSnapshotResult_) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 	}
@@ -56594,6 +57210,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 
+func (p *TGetSnapshotResult_) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCommitSeq() {
+		if err = oprot.WriteFieldBegin("commit_seq", thrift.I64, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.CommitSeq); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
 func (p *TGetSnapshotResult_) String() string {
 	if p == nil {
 		return "<nil>"
@@ -56624,6 +57259,9 @@ func (p *TGetSnapshotResult_) DeepEqual(ano *TGetSnapshotResult_) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.ExpiredAt) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.CommitSeq) {
 		return false
 	}
 	return true
@@ -56677,6 +57315,18 @@ func (p *TGetSnapshotResult_) Field6DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.ExpiredAt != *src {
+		return false
+	}
+	return true
+}
+func (p *TGetSnapshotResult_) Field7DeepEqual(src *int64) bool {
+
+	if p.CommitSeq == src {
+		return true
+	} else if p.CommitSeq == nil || src == nil {
+		return false
+	}
+	if *p.CommitSeq != *src {
 		return false
 	}
 	return true

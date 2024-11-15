@@ -372,6 +372,43 @@ func (p *TWorkloadActionType) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+type TWorkloadType int64
+
+const (
+	TWorkloadType_INTERNAL TWorkloadType = 2
+)
+
+func (p TWorkloadType) String() string {
+	switch p {
+	case TWorkloadType_INTERNAL:
+		return "INTERNAL"
+	}
+	return "<UNSET>"
+}
+
+func TWorkloadTypeFromString(s string) (TWorkloadType, error) {
+	switch s {
+	case "INTERNAL":
+		return TWorkloadType_INTERNAL, nil
+	}
+	return TWorkloadType(0), fmt.Errorf("not a valid TWorkloadType string")
+}
+
+func TWorkloadTypePtr(v TWorkloadType) *TWorkloadType { return &v }
+func (p *TWorkloadType) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = TWorkloadType(result.Int64)
+	return
+}
+
+func (p *TWorkloadType) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
 type TExportTaskRequest struct {
 	Params *palointernalservice.TExecPlanFragmentParams `thrift:"params,1,required" frugal:"1,required,palointernalservice.TExecPlanFragmentParams" json:"params"`
 }

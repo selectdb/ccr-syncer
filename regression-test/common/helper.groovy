@@ -42,6 +42,18 @@ class Helper {
         return Integer.toString(hashCode)
     }
 
+    def get_backup_lable_prefix(String table = "") {
+        return "ccrs_" + get_ccr_job_name(table)
+    }
+
+    def get_ccr_job_name(String table = "") {
+        def name = context.suiteName
+        if (!table.equals("")) {
+            name = name + "_" + table
+        }
+        return name
+    }
+
     def get_ccr_body(String table, String db = null) {
         if (db == null) {
             db = context.dbName

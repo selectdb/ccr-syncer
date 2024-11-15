@@ -711,11 +711,8 @@ func (j *Job) fullSync() error {
 			if err != nil {
 				return err
 			}
-			for _, table := range tables {
-				backupTableList = append(backupTableList, table.Name)
-			}
 			if len(tables) == 0 {
-				log.Warnf("source db is empty! retry later")
+				log.Warnf("full sync but source db is empty! retry later")
 				return nil
 			}
 		case TableSync:
@@ -825,8 +822,8 @@ func (j *Job) fullSync() error {
 		snapshotResp := inMemoryData.SnapshotResp
 		jobInfo := snapshotResp.GetJobInfo()
 
-		log.Infof("snapshot response meta size: %d, job info size: %d, expired at: %d",
-			len(snapshotResp.Meta), len(snapshotResp.JobInfo), snapshotResp.GetExpiredAt())
+		log.Infof("snapshot response meta size: %d, job info size: %d, expired at: %d, commit seq: %d",
+			len(snapshotResp.Meta), len(snapshotResp.JobInfo), snapshotResp.GetExpiredAt(), snapshotResp.GetCommitSeq())
 
 		jobInfoBytes, err := j.addExtraInfo(jobInfo)
 		if err != nil {
@@ -1026,6 +1023,9 @@ func (j *Job) fullSync() error {
 			case DBSync:
 				for _, seq := range tableCommitSeqMap {
 					commitSeq = utils.Min(commitSeq, seq)
+				}
+				if snapshotResp.GetCommitSeq() > 0 {
+					commitSeq = utils.Min(commitSeq, snapshotResp.GetCommitSeq())
 				}
 				j.progress.TableCommitSeqMap = tableCommitSeqMap // persist in CommitNext
 				j.progress.TableNameMapping = tableNameMapping

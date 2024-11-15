@@ -408,6 +408,20 @@ func (p *TMasterInfo) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 13:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField13(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -631,6 +645,19 @@ func (p *TMasterInfo) FastReadField12(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TMasterInfo) FastReadField13(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.AuthToken = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TMasterInfo) FastWrite(buf []byte) int {
 	return 0
@@ -652,6 +679,7 @@ func (p *TMasterInfo) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWri
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
 		offset += p.fastWriteField10(buf[offset:], binaryWriter)
 		offset += p.fastWriteField11(buf[offset:], binaryWriter)
+		offset += p.fastWriteField13(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -674,6 +702,7 @@ func (p *TMasterInfo) BLength() int {
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field12Length()
+		l += p.field13Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -812,6 +841,17 @@ func (p *TMasterInfo) fastWriteField12(buf []byte, binaryWriter bthrift.BinaryWr
 	return offset
 }
 
+func (p *TMasterInfo) fastWriteField13(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetAuthToken() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "auth_token", thrift.STRING, 13)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.AuthToken)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TMasterInfo) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("network_address", thrift.STRUCT, 1)
@@ -934,6 +974,17 @@ func (p *TMasterInfo) field12Length() int {
 	if p.IsSetTabletReportInactiveDurationMs() {
 		l += bthrift.Binary.FieldBeginLength("tablet_report_inactive_duration_ms", thrift.I64, 12)
 		l += bthrift.Binary.I64Length(*p.TabletReportInactiveDurationMs)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TMasterInfo) field13Length() int {
+	l := 0
+	if p.IsSetAuthToken() {
+		l += bthrift.Binary.FieldBeginLength("auth_token", thrift.STRING, 13)
+		l += bthrift.Binary.StringLengthNocopy(*p.AuthToken)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

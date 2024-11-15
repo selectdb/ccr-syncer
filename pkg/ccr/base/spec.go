@@ -687,6 +687,7 @@ func (s *Spec) CancelRestoreIfExists(snapshotName string) error {
 	return nil
 }
 
+// Create a full snapshot of the specified tables, if tables is empty, backup the entire database.
 // mysql> BACKUP SNAPSHOT ccr.snapshot_20230605 TO `__keep_on_local__` ON (      src_1 ) PROPERTIES ("type" = "full");
 func (s *Spec) CreateSnapshot(snapshotName string, tables []string) error {
 	if tables == nil {
@@ -705,9 +706,11 @@ func (s *Spec) CreateSnapshot(snapshotName string, tables []string) error {
 		tableRefs = "`" + strings.Join(tables, "`,`") + "`"
 	}
 
-	// means source is a empty db, table number is 0
+	// means source is a empty db, table number is 0, so backup the entire database
 	if tableRefs == "``" {
-		return xerror.Errorf(xerror.Normal, "source db is empty! you should have at least one table")
+		tableRefs = ""
+	} else {
+		tableRefs = fmt.Sprintf("ON ( %s )", tableRefs)
 	}
 
 	db, err := s.Connect()
@@ -715,7 +718,8 @@ func (s *Spec) CreateSnapshot(snapshotName string, tables []string) error {
 		return err
 	}
 
-	backupSnapshotSql := fmt.Sprintf("BACKUP SNAPSHOT %s.%s TO `__keep_on_local__` ON ( %s ) PROPERTIES (\"type\" = \"full\")", utils.FormatKeywordName(s.Database), utils.FormatKeywordName(snapshotName), tableRefs)
+	backupSnapshotSql := fmt.Sprintf("BACKUP SNAPSHOT %s.%s TO `__keep_on_local__` %s PROPERTIES (\"type\" = \"full\")",
+		utils.FormatKeywordName(s.Database), utils.FormatKeywordName(snapshotName), tableRefs)
 	log.Infof("create snapshot %s.%s, backup snapshot sql: %s", s.Database, snapshotName, backupSnapshotSql)
 	_, err = db.Exec(backupSnapshotSql)
 	if err != nil {

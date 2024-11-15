@@ -274,6 +274,7 @@ type TMasterInfo struct {
 	MetaServiceEndpoint            *string                `thrift:"meta_service_endpoint,10,optional" frugal:"10,optional,string" json:"meta_service_endpoint,omitempty"`
 	CloudUniqueId                  *string                `thrift:"cloud_unique_id,11,optional" frugal:"11,optional,string" json:"cloud_unique_id,omitempty"`
 	TabletReportInactiveDurationMs *int64                 `thrift:"tablet_report_inactive_duration_ms,12,optional" frugal:"12,optional,i64" json:"tablet_report_inactive_duration_ms,omitempty"`
+	AuthToken                      *string                `thrift:"auth_token,13,optional" frugal:"13,optional,string" json:"auth_token,omitempty"`
 }
 
 func NewTMasterInfo() *TMasterInfo {
@@ -380,6 +381,15 @@ func (p *TMasterInfo) GetTabletReportInactiveDurationMs() (v int64) {
 	}
 	return *p.TabletReportInactiveDurationMs
 }
+
+var TMasterInfo_AuthToken_DEFAULT string
+
+func (p *TMasterInfo) GetAuthToken() (v string) {
+	if !p.IsSetAuthToken() {
+		return TMasterInfo_AuthToken_DEFAULT
+	}
+	return *p.AuthToken
+}
 func (p *TMasterInfo) SetNetworkAddress(val *types.TNetworkAddress) {
 	p.NetworkAddress = val
 }
@@ -416,6 +426,9 @@ func (p *TMasterInfo) SetCloudUniqueId(val *string) {
 func (p *TMasterInfo) SetTabletReportInactiveDurationMs(val *int64) {
 	p.TabletReportInactiveDurationMs = val
 }
+func (p *TMasterInfo) SetAuthToken(val *string) {
+	p.AuthToken = val
+}
 
 var fieldIDToName_TMasterInfo = map[int16]string{
 	1:  "network_address",
@@ -430,6 +443,7 @@ var fieldIDToName_TMasterInfo = map[int16]string{
 	10: "meta_service_endpoint",
 	11: "cloud_unique_id",
 	12: "tablet_report_inactive_duration_ms",
+	13: "auth_token",
 }
 
 func (p *TMasterInfo) IsSetNetworkAddress() bool {
@@ -470,6 +484,10 @@ func (p *TMasterInfo) IsSetCloudUniqueId() bool {
 
 func (p *TMasterInfo) IsSetTabletReportInactiveDurationMs() bool {
 	return p.TabletReportInactiveDurationMs != nil
+}
+
+func (p *TMasterInfo) IsSetAuthToken() bool {
+	return p.AuthToken != nil
 }
 
 func (p *TMasterInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -588,6 +606,14 @@ func (p *TMasterInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -779,6 +805,17 @@ func (p *TMasterInfo) ReadField12(iprot thrift.TProtocol) error {
 	p.TabletReportInactiveDurationMs = _field
 	return nil
 }
+func (p *TMasterInfo) ReadField13(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AuthToken = _field
+	return nil
+}
 
 func (p *TMasterInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -832,6 +869,10 @@ func (p *TMasterInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
 			goto WriteFieldError
 		}
 	}
@@ -1082,6 +1123,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
 
+func (p *TMasterInfo) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAuthToken() {
+		if err = oprot.WriteFieldBegin("auth_token", thrift.STRING, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.AuthToken); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
+
 func (p *TMasterInfo) String() string {
 	if p == nil {
 		return "<nil>"
@@ -1130,6 +1190,9 @@ func (p *TMasterInfo) DeepEqual(ano *TMasterInfo) bool {
 		return false
 	}
 	if !p.Field12DeepEqual(ano.TabletReportInactiveDurationMs) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.AuthToken) {
 		return false
 	}
 	return true
@@ -1261,6 +1324,18 @@ func (p *TMasterInfo) Field12DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.TabletReportInactiveDurationMs != *src {
+		return false
+	}
+	return true
+}
+func (p *TMasterInfo) Field13DeepEqual(src *string) bool {
+
+	if p.AuthToken == src {
+		return true
+	} else if p.AuthToken == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.AuthToken, *src) != 0 {
 		return false
 	}
 	return true

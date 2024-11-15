@@ -31482,6 +31482,20 @@ func (p *TFrontendPingFrontendRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -31556,6 +31570,19 @@ func (p *TFrontendPingFrontendRequest) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TFrontendPingFrontendRequest) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.DeployMode = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TFrontendPingFrontendRequest) FastWrite(buf []byte) int {
 	return 0
@@ -31567,6 +31594,7 @@ func (p *TFrontendPingFrontendRequest) FastWriteNocopy(buf []byte, binaryWriter 
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
+		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -31579,6 +31607,7 @@ func (p *TFrontendPingFrontendRequest) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -31603,6 +31632,17 @@ func (p *TFrontendPingFrontendRequest) fastWriteField2(buf []byte, binaryWriter 
 	return offset
 }
 
+func (p *TFrontendPingFrontendRequest) fastWriteField3(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetDeployMode() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "deployMode", thrift.STRING, 3)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.DeployMode)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TFrontendPingFrontendRequest) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("clusterId", thrift.I32, 1)
@@ -31618,6 +31658,17 @@ func (p *TFrontendPingFrontendRequest) field2Length() int {
 	l += bthrift.Binary.StringLengthNocopy(p.Token)
 
 	l += bthrift.Binary.FieldEndLength()
+	return l
+}
+
+func (p *TFrontendPingFrontendRequest) field3Length() int {
+	l := 0
+	if p.IsSetDeployMode() {
+		l += bthrift.Binary.FieldBeginLength("deployMode", thrift.STRING, 3)
+		l += bthrift.Binary.StringLengthNocopy(*p.DeployMode)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
 	return l
 }
 
@@ -41294,6 +41345,20 @@ func (p *TGetSnapshotResult_) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 7:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -41409,6 +41474,19 @@ func (p *TGetSnapshotResult_) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TGetSnapshotResult_) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.CommitSeq = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TGetSnapshotResult_) FastWrite(buf []byte) int {
 	return 0
@@ -41420,6 +41498,7 @@ func (p *TGetSnapshotResult_) FastWriteNocopy(buf []byte, binaryWriter bthrift.B
 	if p != nil {
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
+		offset += p.fastWriteField7(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -41440,6 +41519,7 @@ func (p *TGetSnapshotResult_) BLength() int {
 		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
+		l += p.field7Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -41510,6 +41590,17 @@ func (p *TGetSnapshotResult_) fastWriteField6(buf []byte, binaryWriter bthrift.B
 	return offset
 }
 
+func (p *TGetSnapshotResult_) fastWriteField7(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetCommitSeq() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "commit_seq", thrift.I64, 7)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.CommitSeq)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TGetSnapshotResult_) field1Length() int {
 	l := 0
 	if p.IsSetStatus() {
@@ -41568,6 +41659,17 @@ func (p *TGetSnapshotResult_) field6Length() int {
 	if p.IsSetExpiredAt() {
 		l += bthrift.Binary.FieldBeginLength("expiredAt", thrift.I64, 6)
 		l += bthrift.Binary.I64Length(*p.ExpiredAt)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TGetSnapshotResult_) field7Length() int {
+	l := 0
+	if p.IsSetCommitSeq() {
+		l += bthrift.Binary.FieldBeginLength("commit_seq", thrift.I64, 7)
+		l += bthrift.Binary.I64Length(*p.CommitSeq)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
