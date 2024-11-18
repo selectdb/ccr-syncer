@@ -322,6 +322,21 @@ func (j *Job) isTableSyncWithAlias() bool {
 	return j.SyncType == TableSync && j.Src.Table != j.Dest.Table
 }
 
+func (j *Job) isTableDropped(tableId int64) (bool, error) {
+	// Keep compatible with the old version, which doesn't have the table id in partial sync data.
+	if tableId == 0 {
+		return false, nil
+	}
+
+	var tableIds = []int64{tableId}
+	srcMeta, err := j.factory.NewThriftMeta(&j.Src, j.factory, tableIds)
+	if err != nil {
+		return false, err
+	}
+
+	return srcMeta.IsTableDropped(tableId), nil
+}
+
 func (j *Job) addExtraInfo(jobInfo []byte) ([]byte, error) {
 	var jobInfoMap map[string]interface{}
 	err := json.Unmarshal(jobInfo, &jobInfoMap)
@@ -358,13 +373,14 @@ func (j *Job) partialSync() error {
 		return xerror.Errorf(xerror.Normal, "run partial sync but data is nil")
 	}
 
+	tableId := j.progress.PartialSyncData.TableId
 	table := j.progress.PartialSyncData.Table
 	partitions := j.progress.PartialSyncData.Partitions
 	switch j.progress.SubSyncState {
 	case Done:
 		log.Infof("partial sync status: done")
 		withAlias := len(j.progress.TableAliases) > 0
-		if err := j.newPartialSnapshot(table, partitions, withAlias); err != nil {
+		if err := j.newPartialSnapshot(tableId, table, partitions, withAlias); err != nil {
 			return err
 		}
 
@@ -386,10 +402,32 @@ func (j *Job) partialSync() error {
 		}
 
 		snapshotName := NewLabelWithTs(prefix)
-		if err := j.ISrc.CreatePartialSnapshot(snapshotName, table, partitions); err != nil {
-			// TODO: handle error
-			// 1. Unknown partition p2 in tabletbl_replace_partition_687615531
-			// 2. Unknown table 'tbl_old_1508939100'
+		err := j.ISrc.CreatePartialSnapshot(snapshotName, table, partitions)
+		if err != nil && err == base.ErrBackupPartitionNotFound {
+			log.Warnf("partial sync status: partition not found in the upstream, step to table partial sync")
+			replace := true // replace the old data to avoid blocking reading
+			return j.newPartialSnapshot(tableId, table, partitions, replace)
+		} else if err != nil && err == base.ErrBackupTableNotFound {
+			var nextCommitSeq int64
+			if dropped, err := j.isTableDropped(tableId); err != nil {
+				return err
+			} else if dropped {
+				// skip this partial sync because table has been dropped
+				log.Infof("skip this partial sync because table %s has been dropped, table id: %d", table, tableId)
+				nextCommitSeq = j.progress.CommitSeq
+			} else {
+				// rollback to the previous state and try to filter the binlog
+				log.Warnf("partial sync status: table %s not found, rollback and filter the binlog, table id: %d", table, tableId)
+				nextCommitSeq = j.progress.PrevCommitSeq
+			}
+
+			if j.SyncType == DBSync {
+				j.progress.NextWithPersist(nextCommitSeq, DBIncrementalSync, Done, "")
+			} else {
+				j.progress.NextWithPersist(nextCommitSeq, TableIncrementalSync, Done, "")
+			}
+			return nil
+		} else if err != nil {
 			return err
 		}
 
@@ -436,7 +474,7 @@ func (j *Job) partialSync() error {
 				utils.FirstOr(snapshotResp.Status.GetErrorMsgs(), "unknown"),
 				snapshotResp.Status.GetStatusCode())
 			replace := len(j.progress.TableAliases) > 0
-			return j.newPartialSnapshot(table, partitions, replace)
+			return j.newPartialSnapshot(tableId, table, partitions, replace)
 		} else if snapshotResp.Status.GetStatusCode() != tstatus.TStatusCode_OK {
 			err = xerror.Errorf(xerror.FE, "get snapshot failed, status: %v", snapshotResp.Status)
 			return err
@@ -588,7 +626,7 @@ func (j *Job) partialSync() error {
 				return err
 			}
 			replace := len(j.progress.TableAliases) > 0
-			return j.newPartialSnapshot(table, partitions, replace)
+			return j.newPartialSnapshot(tableId, table, partitions, replace)
 		}
 
 		restoreFinished, err := j.IDest.CheckRestoreFinished(restoreSnapshotName)
@@ -1771,7 +1809,7 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 		}
 
 		replaceTable := true
-		return j.newPartialSnapshot(alterJob.TableName, nil, replaceTable)
+		return j.newPartialSnapshot(alterJob.TableId, alterJob.TableName, nil, replaceTable)
 	}
 
 	var allViewDeleted bool = false
@@ -1957,7 +1995,7 @@ func (j *Job) handleReplacePartitions(binlog *festruct.TBinlog) error {
 		partitions = replacePartition.TempPartitions
 	}
 
-	return j.newPartialSnapshot(replacePartition.TableName, partitions, false)
+	return j.newPartialSnapshot(replacePartition.TableId, replacePartition.TableName, partitions, false)
 }
 
 func (j *Job) handleModifyPartitions(binlog *festruct.TBinlog) error {
@@ -2404,7 +2442,7 @@ func (j *Job) newSnapshot(commitSeq int64) error {
 //
 // If the replace is true, the restore task will load data into a new table and replaces the old
 // one when restore finished. So replace requires whole table partial sync.
-func (j *Job) newPartialSnapshot(table string, partitions []string, replace bool) error {
+func (j *Job) newPartialSnapshot(tableId int64, table string, partitions []string, replace bool) error {
 	if j.SyncType == TableSync && table != j.Src.Table {
 		return xerror.Errorf(xerror.Normal,
 			"partial sync table name is not equals to the source name %s, table: %s, sync type: table", j.Src.Table, table)
@@ -2419,6 +2457,7 @@ func (j *Job) newPartialSnapshot(table string, partitions []string, replace bool
 	commitSeq := j.progress.CommitSeq
 
 	syncData := &JobPartialSyncData{
+		TableId:    tableId,
 		Table:      table,
 		Partitions: partitions,
 	}
@@ -2429,9 +2468,11 @@ func (j *Job) newPartialSnapshot(table string, partitions []string, replace bool
 		alias := TableAlias(table)
 		j.progress.TableAliases = make(map[string]string)
 		j.progress.TableAliases[table] = alias
-		log.Infof("new partial snapshot, commitSeq: %d, table: %s, alias: %s", commitSeq, table, alias)
+		log.Infof("new partial snapshot, commitSeq: %d, table id: %d, table: %s, alias: %s",
+			commitSeq, tableId, table, alias)
 	} else {
-		log.Infof("new partial snapshot, commitSeq: %d, table: %s, partitions: %v", commitSeq, table, partitions)
+		log.Infof("new partial snapshot, commitSeq: %d, table id: %d, table: %s, partitions: %v",
+			commitSeq, tableId, table, partitions)
 	}
 
 	switch j.SyncType {

@@ -17,6 +17,8 @@ import (
 )
 
 var ErrRestoreSignatureNotMatched = xerror.NewWithoutStack(xerror.Normal, "The signature is not matched, the table already exist but with different schema")
+var ErrBackupTableNotFound = xerror.NewWithoutStack(xerror.Normal, "backup table not found")
+var ErrBackupPartitionNotFound = xerror.NewWithoutStack(xerror.Normal, "backup partition not found")
 
 const (
 	BACKUP_CHECK_DURATION  = time.Second * 3
@@ -755,7 +757,13 @@ func (s *Spec) CreatePartialSnapshot(snapshotName, table string, partitions []st
 	log.Debugf("backup partial snapshot sql: %s", backupSnapshotSql)
 	_, err = db.Exec(backupSnapshotSql)
 	if err != nil {
-		return xerror.Wrapf(err, xerror.Normal, "backup partial snapshot %s failed, sql: %s", snapshotName, backupSnapshotSql)
+		if strings.Contains(err.Error(), "Unknown table") {
+			return ErrBackupTableNotFound
+		} else if strings.Contains(err.Error(), "Unknown partition") {
+			return ErrBackupPartitionNotFound
+		} else {
+			return xerror.Wrapf(err, xerror.Normal, "backup partial snapshot %s failed, sql: %s", snapshotName, backupSnapshotSql)
+		}
 	}
 
 	return nil
