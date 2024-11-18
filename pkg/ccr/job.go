@@ -1641,10 +1641,10 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 		// name from upstream, but the result might be wrong if upstream has executed rename/replace.
 		log.Infof("the table id %d is not found in the binlog record, get the name from the upstream", createTable.TableId)
 		srcTableName, err = j.srcMeta.GetTableNameById(createTable.TableId)
-        if err != nil {
+		if err != nil {
 			return xerror.Errorf(xerror.Normal, "the table with id %d is not found in the upstream cluster, create table: %s",
 				createTable.TableId, createTable.String())
-        }
+		}
 	}
 
 	var destTableId int64
@@ -1657,10 +1657,10 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 		j.progress.TableMapping = make(map[int64]int64)
 	}
 	j.progress.TableMapping[createTable.TableId] = destTableId
-    if j.progress.TableNameMapping == nil {
-        j.progress.TableNameMapping = make(map[int64]string)
-    }
-    j.progress.TableNameMapping[createTable.TableId] = srcTableName
+	if j.progress.TableNameMapping == nil {
+		j.progress.TableNameMapping = make(map[int64]string)
+	}
+	j.progress.TableNameMapping[createTable.TableId] = srcTableName
 	j.progress.Done()
 	return nil
 }
@@ -1705,7 +1705,7 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 
 	j.srcMeta.ClearTablesCache()
 	j.destMeta.ClearTablesCache()
-    delete(j.progress.TableNameMapping, dropTable.TableId)
+	delete(j.progress.TableNameMapping, dropTable.TableId)
 	delete(j.progress.TableMapping, dropTable.TableId)
 	return nil
 }
@@ -1916,7 +1916,7 @@ func (j *Job) handleTruncateTable(binlog *festruct.TBinlog) error {
 
 	err = j.IDest.TruncateTable(destTableName, truncateTable)
 	if err == nil {
-        j.srcMeta.ClearTable(j.Src.Database, truncateTable.TableName)
+		j.srcMeta.ClearTable(j.Src.Database, truncateTable.TableName)
 		j.destMeta.ClearTable(j.Dest.Database, destTableName)
 	}
 
@@ -2010,15 +2010,15 @@ func (j *Job) handleRenameTableRecord(renameTable *record.RenameTable) error {
 	}
 
 	err = j.IDest.RenameTable(destTableName, renameTable)
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
-    j.destMeta.GetTables()
-    if j.progress.TableNameMapping == nil {
-        j.progress.TableNameMapping = make(map[int64]string)
-    }
-    j.progress.TableNameMapping[renameTable.TableId] = renameTable.NewTableName
+	j.destMeta.GetTables()
+	if j.progress.TableNameMapping == nil {
+		j.progress.TableNameMapping = make(map[int64]string)
+	}
+	j.progress.TableNameMapping[renameTable.TableId] = renameTable.NewTableName
 
 	return nil
 }
