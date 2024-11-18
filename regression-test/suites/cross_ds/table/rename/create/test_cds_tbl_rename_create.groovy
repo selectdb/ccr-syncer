@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_cds_tbl_rename_alter") {
+suite("test_cds_tbl_rename_create") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -36,9 +36,9 @@ suite("test_cds_tbl_rename_alter") {
         return res.size() == 0
     }
 
-    logger.info("=== Create both table ===")
+    logger.info("=== Create a fake table ===")
     sql """
-        CREATE TABLE if NOT EXISTS ${oldTableName}
+        CREATE TABLE if NOT EXISTS ${oldTableName}_fake
         (
             `test` INT,
             `id` INT
@@ -64,29 +64,41 @@ suite("test_cds_tbl_rename_alter") {
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 
-    assertTrue(helper.checkRestoreFinishTimesOf("${oldTableName}", 60))
+    assertTrue(helper.checkRestoreFinishTimesOf("${oldTableName}_fake", 60))
 
-    sql "INSERT INTO ${oldTableName} VALUES (1, 100), (100, 1), (2, 200), (200, 2)"
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${oldTableName}", 4, 60))
-
-    logger.info(" ==== alter table and rename ==== ")
+    logger.info(" ==== create table and rename ==== ")
 
     def first_job_progress = helper.get_job_progress()
 
     helper.ccrJobPause()
 
-    sql "ALTER TABLE ${oldTableName} ADD COLUMN `new_col` INT KEY DEFAULT \"0\""
+    sql """
+        CREATE TABLE if NOT EXISTS ${oldTableName}
+        (
+            `test` INT,
+            `id` INT
+        )
+        ENGINE=OLAP
+        UNIQUE KEY(`test`, `id`)
+        PARTITION BY RANGE(`id`)
+        (
+            PARTITION `p1` VALUES LESS THAN ("0"),
+            PARTITION `p2` VALUES LESS THAN ("100"),
+            PARTITION `p3` VALUES LESS THAN ("200"),
+            PARTITION `p4` VALUES LESS THAN ("300"),
+            PARTITION `p5` VALUES LESS THAN ("1000")
+        )
+        DISTRIBUTED BY HASH(id) BUCKETS AUTO
+        PROPERTIES (
+            "replication_allocation" = "tag.location.default: 1",
+            "binlog.enable" = "true"
+        )
+    """
 
-    assertTrue(helper.checkShowTimesOf("""
-                                SHOW ALTER TABLE COLUMN
-                                FROM ${context.dbName}
-                                WHERE TableName = "${oldTableName}" AND State = "FINISHED"
-                                """,
-                                exist, 30))
-
-    sql "INSERT INTO ${oldTableName} VALUES (5, 500, 1)"
+    sql "INSERT INTO ${oldTableName} VALUES (1, 100), (100, 1), (2, 200), (200, 2)"
+    sql "INSERT INTO ${oldTableName} VALUES (5, 500)"
     sql "ALTER TABLE ${oldTableName} RENAME ${newTableName}"
-    sql "INSERT INTO ${newTableName} VALUES (6, 600, 2)"
+    sql "INSERT INTO ${newTableName} VALUES (6, 600)"
 
     helper.ccrJobResume()
 
@@ -97,5 +109,6 @@ suite("test_cds_tbl_rename_alter") {
     def last_job_progress = helper.get_job_progress()
     assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
 }
+
 
 

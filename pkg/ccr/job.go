@@ -350,6 +350,7 @@ func (j *Job) partialSync() error {
 		SnapshotName      string                        `json:"snapshot_name"`
 		SnapshotResp      *festruct.TGetSnapshotResult_ `json:"snapshot_resp"`
 		TableCommitSeqMap map[int64]int64               `json:"table_commit_seq_map"`
+		TableNameMapping  map[int64]string              `json:"table_name_mapping"`
 		RestoreLabel      string                        `json:"restore_label"`
 	}
 
@@ -386,6 +387,9 @@ func (j *Job) partialSync() error {
 
 		snapshotName := NewLabelWithTs(prefix)
 		if err := j.ISrc.CreatePartialSnapshot(snapshotName, table, partitions); err != nil {
+			// TODO: handle error
+			// 1. Unknown partition p2 in tabletbl_replace_partition_687615531
+			// 2. Unknown table 'tbl_old_1508939100'
 			return err
 		}
 
@@ -450,18 +454,19 @@ func (j *Job) partialSync() error {
 		}
 
 		tableCommitSeqMap := backupJobInfo.TableCommitSeqMap
-
-		log.Debugf("table commit seq map: %v", tableCommitSeqMap)
-		if j.SyncType == TableSync {
-			if _, ok := tableCommitSeqMap[j.Src.TableId]; !ok {
-				return xerror.Errorf(xerror.Normal, "table id %d, commit seq not found", j.Src.TableId)
-			}
+		tableNameMapping := backupJobInfo.TableNameMapping()
+		log.Debugf("table commit seq map: %v, table name mapping: %v", tableCommitSeqMap, tableNameMapping)
+		if backupObject, ok := backupJobInfo.BackupObjects[table]; !ok {
+			return xerror.Errorf(xerror.Normal, "table %s not found in backup objects", table)
+		} else if _, ok := tableCommitSeqMap[backupObject.Id]; !ok {
+			return xerror.Errorf(xerror.Normal, "commit seq not found, table id %d, table name: %s", backupObject.Id, table)
 		}
 
 		inMemoryData := &inMemoryData{
 			SnapshotName:      snapshotName,
 			SnapshotResp:      snapshotResp,
 			TableCommitSeqMap: tableCommitSeqMap,
+			TableNameMapping:  tableNameMapping,
 		}
 		j.progress.NextSubVolatile(AddExtraInfo, inMemoryData)
 
@@ -598,12 +603,10 @@ func (j *Job) partialSync() error {
 		}
 
 		// save the entire commit seq map, this value will be used in PersistRestoreInfo.
-		if len(j.progress.TableCommitSeqMap) == 0 {
-			j.progress.TableCommitSeqMap = make(map[int64]int64)
-		}
-		for tableId, commitSeq := range inMemoryData.TableCommitSeqMap {
-			j.progress.TableCommitSeqMap[tableId] = commitSeq
-		}
+		j.progress.TableCommitSeqMap = utils.MergeMap(
+			j.progress.TableCommitSeqMap, inMemoryData.TableCommitSeqMap)
+		j.progress.TableNameMapping = utils.MergeMap(
+			j.progress.TableNameMapping, inMemoryData.TableNameMapping)
 		j.progress.NextSubCheckpoint(PersistRestoreInfo, restoreSnapshotName)
 
 	case PersistRestoreInfo:
@@ -642,9 +645,14 @@ func (j *Job) partialSync() error {
 		}
 		switch j.SyncType {
 		case DBSync:
-			srcTableId, err := j.srcMeta.GetTableId(table)
-			if err != nil {
-				return err
+			srcTableId, ok := j.progress.GetTableId(table)
+			if !ok {
+				// Keep compatible with the old version, try to get the table id from the FE.
+				// The result might be wrong since the table might has been changed, eg: rename, replace.
+				srcTableId, err = j.srcMeta.GetTableId(table)
+				if err != nil {
+					return xerror.Wrapf(err, xerror.Meta, "table id is not found in table name mapping, table %s", table)
+				}
 			}
 			j.progress.TableMapping[srcTableId] = destTable.Id
 			j.progress.NextWithPersist(j.progress.CommitSeq, DBTablesIncrementalSync, Done, "")
@@ -1175,12 +1183,14 @@ func (j *Job) getDestTableIdBySrc(srcTableId int64) (int64, error) {
 		if destTableId, ok := j.progress.TableMapping[srcTableId]; ok {
 			return destTableId, nil
 		}
-		log.Warnf("table mapping not found, srcTableId: %d", srcTableId)
+		log.Warnf("table mapping not found, src table id: %d", srcTableId)
 	} else {
-		log.Warnf("table mapping not found, srcTableId: %d", srcTableId)
+		log.Warnf("table mapping not found, src table id: %d", srcTableId)
 		j.progress.TableMapping = make(map[int64]int64)
 	}
 
+	// WARNING: the table name might be changed, and the TableMapping has been updated in time,
+	// only keep this for compatible.
 	srcTableName, err := j.srcMeta.GetTableNameById(srcTableId)
 	if err != nil {
 		return 0, err
@@ -1625,22 +1635,16 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 	j.srcMeta.ClearTablesCache()
 	j.destMeta.ClearTablesCache()
 
-	var srcTableName string
-	srcTableName, err = j.srcMeta.GetTableNameById(createTable.TableId)
-	if err != nil {
-		return err
-	}
-
+	srcTableName := createTable.TableName
 	if len(srcTableName) == 0 {
-		// The table is not found in upstream, try read it from the binlog record,
-		// but it might failed because the `tableName` field is added after doris 2.0.3.
-		srcTableName = strings.TrimSpace(createTable.TableName)
-		if len(srcTableName) == 0 {
+		// the field `TableName` is added after doris 2.0.3, to keep compatible, try read src table
+		// name from upstream, but the result might be wrong if upstream has executed rename/replace.
+		log.Infof("the table id %d is not found in the binlog record, get the name from the upstream", createTable.TableId)
+		srcTableName, err = j.srcMeta.GetTableNameById(createTable.TableId)
+        if err != nil {
 			return xerror.Errorf(xerror.Normal, "the table with id %d is not found in the upstream cluster, create table: %s",
 				createTable.TableId, createTable.String())
-		}
-		log.Infof("the table id %d is not found in the upstream, use the name %s from the binlog record",
-			createTable.TableId, srcTableName)
+        }
 	}
 
 	var destTableId int64
@@ -1653,6 +1657,10 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 		j.progress.TableMapping = make(map[int64]int64)
 	}
 	j.progress.TableMapping[createTable.TableId] = destTableId
+    if j.progress.TableNameMapping == nil {
+        j.progress.TableNameMapping = make(map[int64]string)
+    }
+    j.progress.TableNameMapping[createTable.TableId] = srcTableName
 	j.progress.Done()
 	return nil
 }
@@ -1673,7 +1681,7 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 	}
 
 	tableName := dropTable.TableName
-	// deprecated
+	// deprecated, `TableName` has been added after doris 2.0.0
 	if tableName == "" {
 		dirtySrcTables := j.srcMeta.DirtyGetTables()
 		srcTable, ok := dirtySrcTables[dropTable.TableId]
@@ -1697,10 +1705,8 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 
 	j.srcMeta.ClearTablesCache()
 	j.destMeta.ClearTablesCache()
-	if j.progress.TableMapping != nil {
-		delete(j.progress.TableMapping, dropTable.TableId)
-		j.progress.Done()
-	}
+    delete(j.progress.TableNameMapping, dropTable.TableId)
+	delete(j.progress.TableMapping, dropTable.TableId)
 	return nil
 }
 
@@ -1910,10 +1916,7 @@ func (j *Job) handleTruncateTable(binlog *festruct.TBinlog) error {
 
 	err = j.IDest.TruncateTable(destTableName, truncateTable)
 	if err == nil {
-		if srcTableName, err := j.srcMeta.GetTableNameById(truncateTable.TableId); err == nil {
-			// if err != nil, maybe truncate table had been dropped
-			j.srcMeta.ClearTable(j.Src.Database, srcTableName)
-		}
+        j.srcMeta.ClearTable(j.Src.Database, truncateTable.TableName)
 		j.destMeta.ClearTable(j.Dest.Database, destTableName)
 	}
 
@@ -1980,8 +1983,6 @@ func (j *Job) handleRenameTable(binlog *festruct.TBinlog) error {
 }
 
 func (j *Job) handleRenameTableRecord(renameTable *record.RenameTable) error {
-	j.srcMeta.GetTables()
-
 	// don't support rename table when table sync
 	if j.SyncType == TableSync {
 		log.Warnf("rename table is not supported when table sync, consider rebuilding this job instead")
@@ -2009,11 +2010,17 @@ func (j *Job) handleRenameTableRecord(renameTable *record.RenameTable) error {
 	}
 
 	err = j.IDest.RenameTable(destTableName, renameTable)
-	if err == nil {
-		j.destMeta.GetTables()
-	}
+    if err != nil {
+        return err
+    }
 
-	return err
+    j.destMeta.GetTables()
+    if j.progress.TableNameMapping == nil {
+        j.progress.TableNameMapping = make(map[int64]string)
+    }
+    j.progress.TableNameMapping[renameTable.TableId] = renameTable.NewTableName
+
+	return nil
 }
 
 func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {

@@ -241,6 +241,16 @@ func NewJobProgressFromJson(jobName string, db storage.DB) (*JobProgress, error)
 	}
 }
 
+// GetTableId get table id by table name from TableNameMapping
+func (j *JobProgress) GetTableId(tableName string) (int64, bool) {
+	for tableId, table := range j.TableNameMapping {
+		if table == tableName {
+			return tableId, true
+		}
+	}
+	return 0, false
+}
+
 func (j *JobProgress) StartHandle(commitSeq int64) {
 	j.CommitSeq = commitSeq
 
