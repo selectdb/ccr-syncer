@@ -1249,8 +1249,7 @@ func (s *Spec) AddPartition(destTableName string, addPartition *record.AddPartit
 func (s *Spec) DropPartition(destTableName string, dropPartition *record.DropPartition) error {
 	destDbName := utils.FormatKeywordName(s.Database)
 	destTableName = utils.FormatKeywordName(destTableName)
-	dropPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s",
-		utils.FormatKeywordName(destDbName), utils.FormatKeywordName(destTableName), dropPartition.Sql)
+	dropPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s", destDbName, destTableName, dropPartition.Sql)
 	log.Infof("dropPartitionSql: %s", dropPartitionSql)
 	return s.Exec(dropPartitionSql)
 }
