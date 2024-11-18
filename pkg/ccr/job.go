@@ -645,6 +645,16 @@ func (j *Job) partialSync() error {
 			j.progress.TableCommitSeqMap, inMemoryData.TableCommitSeqMap)
 		j.progress.TableNameMapping = utils.MergeMap(
 			j.progress.TableNameMapping, inMemoryData.TableNameMapping)
+		if _, ok := inMemoryData.TableCommitSeqMap[tableId]; !ok {
+			// The table might be overwritten during backup & restore, so we also need to update
+			// it's commit seq to skip the binlogs.
+			//
+			// See test_cds_tbl_alter_drop_create.groovy for details.
+			commitSeq, _ := j.progress.GetTableCommitSeq(table)
+			log.Infof("partial sync update the overwritten table %s commit seq to %d, table id: %d",
+				table, commitSeq, tableId)
+			j.progress.TableCommitSeqMap[tableId] = commitSeq
+		}
 		j.progress.NextSubCheckpoint(PersistRestoreInfo, restoreSnapshotName)
 
 	case PersistRestoreInfo:
@@ -1652,6 +1662,10 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
+	if j.isBinlogCommitted(createTable.TableId, binlog.GetCommitSeq()) {
+		return nil
+	}
+
 	if featureCreateViewDropExists {
 		viewRegex := regexp.MustCompile(`(?i)^CREATE(\s+)VIEW`)
 		isCreateView := viewRegex.MatchString(createTable.Sql)
@@ -1716,6 +1730,10 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 	dropTable, err := record.NewDropTableFromJson(data)
 	if err != nil {
 		return err
+	}
+
+	if j.isBinlogCommitted(dropTable.TableId, binlog.GetCommitSeq()) {
+		return nil
 	}
 
 	tableName := dropTable.TableName
