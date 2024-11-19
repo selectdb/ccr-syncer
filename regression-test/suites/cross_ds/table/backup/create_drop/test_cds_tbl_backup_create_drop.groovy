@@ -108,5 +108,50 @@ suite("test_cds_tbl_backup_create_drop") {
 
     sql "INSERT INTO ${tableName}_1 VALUES (2, 2)"
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}_1", 2, 60))
+
+    logger.info("drop table and create it again, during full sync")
+    // 1. pause fullsync backup job
+    // 2. drop table A
+    // 3. create table A again
+    // 4. resume fullsync backup job
+    // The drop table A should be skipped.
+
+    GetDebugPoint().enableDebugPointForAllFEs("FE.PAUSE_PENDING_BACKUP_JOB", [value: prefix])
+    helper.ccrJobDelete()
+
+    target_sql "DROP DATABASE TEST_${context.DbName}"
+    helper.ccrJobCreate()
+
+    assertTrue(helper.checkShowTimesOf(
+        """ SHOW BACKUP WHERE SnapshotName LIKE "${prefix}%" """,
+        is_backup_running, 60))
+    sql "DROP TABLE IF EXISTS ${tableName}_1 FORCE"
+    sql """
+        CREATE TABLE if NOT EXISTS ${tableName}_1
+        (
+            `test` INT,
+            `id` INT
+        )
+        ENGINE=OLAP
+        UNIQUE KEY(`test`, `id`)
+        PARTITION BY RANGE(`id`)
+        (
+            PARTITION `${opPartitonName}_0` VALUES LESS THAN ("0"),
+            PARTITION `${opPartitonName}_1` VALUES LESS THAN ("1000")
+        )
+        DISTRIBUTED BY HASH(id) BUCKETS 1
+        PROPERTIES (
+            "replication_allocation" = "tag.location.default: 1",
+            "binlog.enable" = "true"
+        )
+    """
+    sql "INSERT INTO ${tableName}_1 VALUES (1, 1)"
+    sql "sync"
+
+    GetDebugPoint().disableDebugPointForAllFEs("FE.PAUSE_PENDING_BACKUP_JOB")
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_1", 60))
+
+    sql "INSERT INTO ${tableName}_1 VALUES (2, 2)"
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}_1", 2, 60))
 }
 

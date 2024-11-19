@@ -1264,7 +1264,7 @@ func (j *Job) isBinlogCommitted(tableId int64, binlogCommitSeq int64) bool {
 	return false
 }
 
-func (j *Job) getDbSyncTableRecords(upsert *record.Upsert) ([]*record.TableRecord, error) {
+func (j *Job) getDbSyncTableRecords(upsert *record.Upsert) []*record.TableRecord {
 	commitSeq := upsert.CommitSeq
 	tableCommitSeqMap := j.progress.TableCommitSeqMap
 	tableRecords := make([]*record.TableRecord, 0, len(upsert.TableRecords))
@@ -1286,7 +1286,7 @@ func (j *Job) getDbSyncTableRecords(upsert *record.Upsert) ([]*record.TableRecor
 		}
 	}
 
-	return tableRecords, nil
+	return tableRecords
 }
 
 func (j *Job) getReleatedTableRecords(upsert *record.Upsert) ([]*record.TableRecord, error) {
@@ -1294,11 +1294,7 @@ func (j *Job) getReleatedTableRecords(upsert *record.Upsert) ([]*record.TableRec
 
 	switch j.SyncType {
 	case DBSync:
-		records, err := j.getDbSyncTableRecords(upsert)
-		if err != nil {
-			return nil, err
-		}
-
+		records := j.getDbSyncTableRecords(upsert)
 		if len(records) == 0 {
 			return nil, nil
 		}
@@ -1730,6 +1726,12 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 	dropTable, err := record.NewDropTableFromJson(data)
 	if err != nil {
 		return err
+	}
+
+	if _, ok := j.progress.TableMapping[dropTable.TableId]; !ok {
+		log.Warnf("the dest table is not found, skip drop table binlog, src table id: %d, commit seq: %d",
+			dropTable.TableId, binlog.GetCommitSeq())
+		return nil
 	}
 
 	if j.isBinlogCommitted(dropTable.TableId, binlog.GetCommitSeq()) {
