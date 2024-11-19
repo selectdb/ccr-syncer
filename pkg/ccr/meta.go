@@ -515,6 +515,10 @@ func (m *Meta) UpdateBackends() error {
 		backends = append(backends, &backend)
 	}
 
+	if err := rows.Err(); err != nil {
+		return xerror.Wrap(err, xerror.Normal, query)
+	}
+
 	for _, backend := range backends {
 		m.Backends[backend.Id] = backend
 
@@ -569,6 +573,11 @@ func (m *Meta) GetFrontends() ([]*base.Frontend, error) {
 
 		frontends = append(frontends, &fe)
 	}
+
+	if err := rows.Err(); err != nil {
+		return nil, xerror.Wrap(err, xerror.Normal, query)
+	}
+
 	return frontends, nil
 }
 

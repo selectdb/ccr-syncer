@@ -392,6 +392,11 @@ func (s *Spec) IsEnableRestoreSnapshotCompression() (bool, error) {
 		enableCompress = strings.ToLower(value) == "true"
 	}
 
+	if err := rows.Err(); err != nil {
+		return false, xerror.Wrapf(err, xerror.Normal,
+			"check frontend enable restore snapshot compress, sql: %s", sql)
+	}
+
 	log.Debugf("frontend enable restore snapshot compression: %t", enableCompress)
 	return enableCompress, nil
 }
@@ -422,6 +427,11 @@ func (s *Spec) GetAllTables() ([]string, error) {
 		}
 		tables = append(tables, table)
 	}
+
+	if err := rows.Err(); err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "SHOW TABLES")
+	}
+
 	return tables, nil
 }
 
@@ -448,6 +458,10 @@ func (s *Spec) queryResult(querySQL string, queryColumn string, errMsg string) (
 			return nil, xerror.Wrap(err, xerror.Normal, errMsg)
 		}
 		results = append(results, result)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "query result failed, sql: %s", querySQL)
 	}
 
 	return results, nil
@@ -800,6 +814,11 @@ func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, string, er
 		log.Infof("check snapshot %s backup state: [%v]", snapshotName, info.StateStr)
 		return info.State, info.Status, nil
 	}
+
+	if err := rows.Err(); err != nil {
+		return BackupStateUnknown, "", xerror.Wrapf(err, xerror.Normal, "check snapshot backup state, sql: %s", sql)
+	}
+
 	return BackupStateUnknown, "", xerror.Errorf(xerror.Normal, "no backup state found, sql: %s", sql)
 }
 
@@ -863,6 +882,10 @@ func (s *Spec) GetValidBackupJob(snapshotNamePrefix string) (string, error) {
 		labels = append(labels, info.SnapshotName)
 	}
 
+	if err := rows.Err(); err != nil {
+		return "", xerror.Wrapf(err, xerror.Normal, "get valid backup job, sql: %s", query)
+	}
+
 	// Return the last one. Assume that the result of `SHOW BACKUP` is ordered by CreateTime in ascending order.
 	if len(labels) != 0 {
 		return labels[len(labels)-1], nil
@@ -912,6 +935,10 @@ func (s *Spec) GetValidRestoreJob(snapshotNamePrefix string) (string, error) {
 		labels = append(labels, info.Label)
 	}
 
+	if err := rows.Err(); err != nil {
+		return "", xerror.Wrapf(err, xerror.Normal, "get valid restore job, sql: %s", query)
+	}
+
 	// Return the last one. Assume that the result of `SHOW BACKUP` is ordered by CreateTime in ascending order.
 	if len(labels) != 0 {
 		return labels[len(labels)-1], nil
@@ -947,6 +974,10 @@ func (s *Spec) queryRestoreInfo(db *sql.DB, snapshotName string) (*RestoreInfo, 
 			snapshotName, info.StateStr, info.Status)
 
 		return info, nil
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "query restore info, sql: %s", query)
 	}
 
 	return nil, nil
@@ -1063,6 +1094,11 @@ func (s *Spec) waitTransactionDone(txnId int64) error {
 			return xerror.Errorf(xerror.Normal, "transaction %d status: %s", txnId, transactionStatus)
 		}
 	}
+
+	if err := rows.Err(); err != nil {
+		return xerror.Wrapf(err, xerror.Normal, "get transaction status failed, sql: %s", query)
+	}
+
 	return xerror.Errorf(xerror.Normal, "no transaction status found")
 }
 
