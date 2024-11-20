@@ -985,6 +985,7 @@ func (m *Meta) GetTableNameById(tableId int64) (string, error) {
 		if err != nil {
 			return "", xerror.Wrap(err, xerror.Normal, sql)
 		}
+		log.Debugf("found table %d name %s", tableId, tableName)
 	}
 
 	if err := rows.Err(); err != nil {

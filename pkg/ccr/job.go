@@ -45,6 +45,7 @@ var (
 	featureReuseRunningBackupRestoreJob bool
 	featureCompressedSnapshot           bool
 	featureSkipRollupBinlogs            bool
+	featureReplayReplaceTableIdempotent bool
 )
 
 func init() {
@@ -68,6 +69,8 @@ func init() {
 		"compress the snapshot job info and meta")
 	flag.BoolVar(&featureSkipRollupBinlogs, "feature_skip_rollup_binlogs", false,
 		"skip the rollup related binlogs")
+	flag.BoolVar(&featureReplayReplaceTableIdempotent, "feature_replay_replace_table_idempotent", true,
+		"replace table idempotent when replaying the replace table binlog")
 }
 
 type SyncType int
@@ -367,6 +370,7 @@ func (j *Job) partialSync() error {
 		TableCommitSeqMap map[int64]int64               `json:"table_commit_seq_map"`
 		TableNameMapping  map[int64]string              `json:"table_name_mapping"`
 		RestoreLabel      string                        `json:"restore_label"`
+		SnapshotTableId   int64                         `json:"snapshot_table_id"` // the table id included in the snapshot.
 	}
 
 	if j.progress.PartialSyncData == nil {
@@ -494,10 +498,13 @@ func (j *Job) partialSync() error {
 		tableCommitSeqMap := backupJobInfo.TableCommitSeqMap
 		tableNameMapping := backupJobInfo.TableNameMapping()
 		log.Debugf("table commit seq map: %v, table name mapping: %v", tableCommitSeqMap, tableNameMapping)
+		var snapshotTableId int64
 		if backupObject, ok := backupJobInfo.BackupObjects[table]; !ok {
 			return xerror.Errorf(xerror.Normal, "table %s not found in backup objects", table)
 		} else if _, ok := tableCommitSeqMap[backupObject.Id]; !ok {
 			return xerror.Errorf(xerror.Normal, "commit seq not found, table id %d, table name: %s", backupObject.Id, table)
+		} else {
+			snapshotTableId = backupObject.Id
 		}
 
 		inMemoryData := &inMemoryData{
@@ -505,6 +512,7 @@ func (j *Job) partialSync() error {
 			SnapshotResp:      snapshotResp,
 			TableCommitSeqMap: tableCommitSeqMap,
 			TableNameMapping:  tableNameMapping,
+			SnapshotTableId:   snapshotTableId,
 		}
 		j.progress.NextSubVolatile(AddExtraInfo, inMemoryData)
 
@@ -645,15 +653,23 @@ func (j *Job) partialSync() error {
 			j.progress.TableCommitSeqMap, inMemoryData.TableCommitSeqMap)
 		j.progress.TableNameMapping = utils.MergeMap(
 			j.progress.TableNameMapping, inMemoryData.TableNameMapping)
-		if _, ok := inMemoryData.TableCommitSeqMap[tableId]; !ok {
+		if inMemoryData.SnapshotTableId != tableId {
 			// The table might be overwritten during backup & restore, so we also need to update
 			// it's commit seq to skip the binlogs.
 			//
+			// There are some cases might cause the table overwritten, eg:
+			// 1. The table is dropped and recreated with the same name.
+			// 2. The table is dropped and a table renamed with the same name.
+			// 3. The table is replaced by another table.
+			//
 			// See test_cds_tbl_alter_drop_create.groovy for details.
-			commitSeq, _ := j.progress.GetTableCommitSeq(table)
-			log.Infof("partial sync update the overwritten table %s commit seq to %d, table id: %d",
-				table, commitSeq, tableId)
+			commitSeq, _ := j.progress.TableCommitSeqMap[inMemoryData.SnapshotTableId]
+			log.Infof("partial sync update the overwritten table %s commit seq to %d, table id: %d, "+
+				"snapshot table id: %d", table, commitSeq, tableId, inMemoryData.SnapshotTableId)
 			j.progress.TableCommitSeqMap[tableId] = commitSeq
+			// update the sync table id too, to avoid query the table id from the upstream.
+			j.progress.PartialSyncData.TableId = inMemoryData.SnapshotTableId
+			delete(j.progress.TableNameMapping, tableId)
 		}
 		j.progress.NextSubCheckpoint(PersistRestoreInfo, restoreSnapshotName)
 
@@ -693,16 +709,7 @@ func (j *Job) partialSync() error {
 		}
 		switch j.SyncType {
 		case DBSync:
-			srcTableId, ok := j.progress.GetTableId(table)
-			if !ok {
-				// Keep compatible with the old version, try to get the table id from the FE.
-				// The result might be wrong since the table might has been changed, eg: rename, replace.
-				srcTableId, err = j.srcMeta.GetTableId(table)
-				if err != nil {
-					return xerror.Wrapf(err, xerror.Meta, "table id is not found in table name mapping, table %s", table)
-				}
-			}
-			j.progress.TableMapping[srcTableId] = destTable.Id
+			j.progress.TableMapping[tableId] = destTable.Id
 			j.progress.NextWithPersist(j.progress.CommitSeq, DBTablesIncrementalSync, Done, "")
 		case TableSync:
 			commitSeq, ok := j.progress.TableCommitSeqMap[j.Src.TableId]
@@ -1897,14 +1904,14 @@ func (j *Job) handleRenameColumn(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	if j.isBinlogCommitted(renameColumn.TableId, binlog.GetCommitSeq()) {
+	return j.handleRenameColumnRecord(binlog.GetCommitSeq(), renameColumn)
+}
+
+func (j *Job) handleRenameColumnRecord(commitSeq int64, renameColumn *record.RenameColumn) error {
+	if j.isBinlogCommitted(renameColumn.TableId, commitSeq) {
 		return nil
 	}
 
-	return j.handleRenameColumnRecord(renameColumn)
-}
-
-func (j *Job) handleRenameColumnRecord(renameColumn *record.RenameColumn) error {
 	destTableId, err := j.getDestTableIdBySrc(renameColumn.TableId)
 	if err != nil {
 		return err
@@ -2037,14 +2044,18 @@ func (j *Job) handleRenameTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	return j.handleRenameTableRecord(renameTable)
+	return j.handleRenameTableRecord(binlog.GetCommitSeq(), renameTable)
 }
 
-func (j *Job) handleRenameTableRecord(renameTable *record.RenameTable) error {
+func (j *Job) handleRenameTableRecord(commitSeq int64, renameTable *record.RenameTable) error {
 	// don't support rename table when table sync
 	if j.SyncType == TableSync {
 		log.Warnf("rename table is not supported when table sync, consider rebuilding this job instead")
 		return xerror.Errorf(xerror.Normal, "rename table is not supported when table sync, consider rebuilding this job instead")
+	}
+
+	if j.isBinlogCommitted(renameTable.TableId, commitSeq) {
+		return nil
 	}
 
 	destTableId, err := j.getDestTableIdBySrc(renameTable.TableId)
@@ -2090,20 +2101,113 @@ func (j *Job) handleReplaceTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	if j.isBinlogCommitted(record.OriginTableId, binlog.GetCommitSeq()) {
-		return nil
-	}
-
-	return j.handleReplaceTableRecord(record)
+	return j.handleReplaceTableRecord(binlog.GetCommitSeq(), record)
 }
 
-func (j *Job) handleReplaceTableRecord(record *record.ReplaceTableRecord) error {
+func (j *Job) handleReplaceTableRecord(commitSeq int64, record *record.ReplaceTableRecord) error {
 	// don't support replace table when table sync
 	//
 	// replace table will change the table id, and it depends the new table exists in the dest cluster.
 	if j.SyncType == TableSync {
 		log.Warnf("replace table is not supported when table sync, consider rebuilding this job instead")
 		return xerror.Errorf(xerror.Normal, "replace table is not supported when table sync, consider rebuilding this job instead")
+	}
+
+	if j.isBinlogCommitted(record.OriginTableId, commitSeq) {
+		if !featureReplayReplaceTableIdempotent {
+			return nil
+		}
+
+		log.Infof("replace table is partially committed, ensure it is fully committed, record: %s, commit seq: %d", record, commitSeq)
+
+		// There are some corner cases that the replace table is partially committed in
+		// the partial snapshot. Thus, we need to check the table mapping to ensure the
+		// replace table is fully committed, if not, we need to replay the left part.
+		//
+		// Case analysis:
+		// 1. alter A, replace A with B, swap = false =>
+		//      except:
+		//          upstream old-A dropped, upstream B dropped
+		//          downstream old-A dropped, downstream B dropped
+		//          downstream old-B named new-A
+		//          upstream, downstream new-A = old-B data
+		//          table mapping [old-B => old-B], old-A was dropped
+		//      actual:
+		//          downstream old-A dropped via partial snapshot
+		//          downstream new-A = old-B data via partial snapshot
+		//          downstream old-B without change => drop it
+		//          table mapping [old-A => old-A, old-B => new-A] would not found old-B
+		//      key:
+		// 2. alter B, replace A with B, swap = false => B dropped
+		// 3. alter A, replace A with B, swap = true
+		//      except:
+		//          upstream new-A = old-B data, new-B = old-A data
+		//          downstream new-A = old-B data, new-B = old-A data
+		//          table mapping [old-A => old-A, old-B => old-B]
+		//      actual:
+		//          downstream old-A dropped via partial snapshot
+		//          downstream new-A = old-B data via partial snapshot
+		//          downstream old-B without change => need partial sync from upstream old-A (new-B)
+		//          table mapping [old-A => old-A, old-B => new-A], would not found old-B
+		// 4. alter B, replace A with B, swap = true
+		//      except:
+		//          upstream new-A = old-B data, new-B = old-A data
+		//          downstream new-A = old-B data, new-B = old-A data
+		//          table mapping [old-A => old-A, old-B => old-B]
+		//      actual:
+		//          downstream old-B dropped via partial snapshot
+		//          downstream new-B = old-A data via partial snapshot
+		//          downstream old-A without change => need partial sync from upstream old-B (new-A)
+		//          table mapping [old-A => new-B, old-B => old-B], old-A would not found
+		if record.SwapTable {
+			// The origin table (id, not name) must exists in the dest cluster, if the origin
+			// table is not exists in the dest cluster, we should rebuild it.
+			//
+			// See test_cds_tbl_alter_replace_swap.groovy for details
+			destTableId, ok := j.progress.TableMapping[record.OriginTableId]
+			if !ok {
+				return xerror.Errorf(xerror.Normal, "the new table %s not found in dest cluster, src table id: %d",
+					record.NewTableName, record.OriginTableId)
+			}
+			if tableName, err := j.destMeta.GetTableNameById(destTableId); err != nil {
+				return err
+			} else if len(tableName) == 0 {
+				log.Warnf("the new table %s not found in dest cluster, rebuild via partial snapshot, src table id: %d",
+					record.NewTableName, record.OriginTableId)
+				replace := true
+				return j.newPartialSnapshot(record.OriginTableId, record.NewTableName, nil, replace)
+			}
+
+			destTableId, ok = j.progress.TableMapping[record.NewTableId]
+			if !ok {
+				return xerror.Errorf(xerror.Normal, "the origin table %s not found in dest cluster, src table id: %d",
+					record.OriginTableName, record.NewTableId)
+			}
+			if tableName, err := j.destMeta.GetTableNameById(destTableId); err != nil {
+				return err
+			} else if len(tableName) == 0 {
+				log.Warnf("the origin table %s not found in dest cluster, rebuild via partial snapshot, src table id: %d",
+					record.OriginTableName, record.NewTableId)
+				replace := true
+				return j.newPartialSnapshot(record.NewTableId, record.OriginTableName, nil, replace)
+			}
+		} else {
+			// The origin table (id, not name) must be dropped, if the origin table still
+			// exists in the dest cluster, we should drop it.
+			//
+			// See test_cds_tbl_alter_replace_create.groovy for details
+			if _, ok := j.progress.TableMapping[record.OriginTableId]; ok {
+				// drop the new table in dest cluster
+				log.Infof("drop the replace new table %s, src table id: %d",
+					record.NewTableName, record.OriginTableId)
+				if err := j.IDest.DropTable(record.NewTableName, true); err != nil {
+					return err
+				}
+				delete(j.progress.TableNameMapping, record.OriginTableId)
+				delete(j.progress.TableMapping, record.NewTableId)
+			}
+		}
+		return nil
 	}
 
 	toName := record.OriginTableName
@@ -2141,33 +2245,30 @@ func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	if j.isBinlogCommitted(barrierLog.TableId, binlog.GetCommitSeq()) {
-		return nil
-	}
-
 	binlogType := festruct.TBinlogType(barrierLog.BinlogType)
 	log.Infof("handle barrier binlog with type %s, prevCommitSeq: %d, commitSeq: %d",
 		binlogType, j.progress.PrevCommitSeq, j.progress.CommitSeq)
 
+	commitSeq := binlog.GetCommitSeq()
 	switch binlogType {
 	case festruct.TBinlogType_RENAME_TABLE:
 		renameTable, err := record.NewRenameTableFromJson(barrierLog.Binlog)
 		if err != nil {
 			return err
 		}
-		return j.handleRenameTableRecord(renameTable)
+		return j.handleRenameTableRecord(commitSeq, renameTable)
 	case festruct.TBinlogType_RENAME_COLUMN:
 		renameColumn, err := record.NewRenameColumnFromJson(barrierLog.Binlog)
 		if err != nil {
 			return err
 		}
-		return j.handleRenameColumnRecord(renameColumn)
+		return j.handleRenameColumnRecord(commitSeq, renameColumn)
 	case festruct.TBinlogType_REPLACE_TABLE:
 		replaceTable, err := record.NewReplaceTableRecordFromJson(barrierLog.Binlog)
 		if err != nil {
 			return err
 		}
-		return j.handleReplaceTableRecord(replaceTable)
+		return j.handleReplaceTableRecord(commitSeq, replaceTable)
 	case festruct.TBinlogType_BARRIER:
 		log.Info("handle barrier binlog, ignore it")
 	default:

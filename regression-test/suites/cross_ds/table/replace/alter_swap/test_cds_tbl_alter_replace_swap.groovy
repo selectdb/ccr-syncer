@@ -89,7 +89,7 @@ suite("test_cds_tbl_alter_replace_swap") {
     sql "INSERT INTO ${oldTableName} VALUES (1, 100), (100, 1), (2, 200), (200, 2)"
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${oldTableName}", 4, 60))
 
-    logger.info(" ==== add key column and replace without swap ==== ")
+    logger.info(" ==== add key column and replace with swap ==== ")
     def first_job_progress = helper.get_job_progress()
 
     helper.ccrJobPause()
@@ -116,5 +116,91 @@ suite("test_cds_tbl_alter_replace_swap") {
 
     // no fullsync are triggered
     def last_job_progress = helper.get_job_progress()
+    assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
+
+    logger.info("alter new table and swap again")
+
+    helper.ccrJobDelete()
+    target_sql "DROP DATABASE TEST_${context.DbName}"
+
+    sql "DROP TABLE ${oldTableName}"
+    sql "DROP TABLE ${newTableName}"
+    sql """
+        CREATE TABLE if NOT EXISTS ${oldTableName}
+        (
+            `test` INT,
+            `id` INT
+        )
+        ENGINE=OLAP
+        UNIQUE KEY(`test`, `id`)
+        PARTITION BY RANGE(`id`)
+        (
+            PARTITION `p1` VALUES LESS THAN ("0"),
+            PARTITION `p2` VALUES LESS THAN ("100"),
+            PARTITION `p3` VALUES LESS THAN ("200"),
+            PARTITION `p4` VALUES LESS THAN ("300"),
+            PARTITION `p5` VALUES LESS THAN ("1000")
+        )
+        DISTRIBUTED BY HASH(id) BUCKETS AUTO
+        PROPERTIES (
+            "replication_allocation" = "tag.location.default: 1",
+            "binlog.enable" = "true"
+        )
+    """
+    sql """
+        CREATE TABLE if NOT EXISTS ${newTableName}
+        (
+            `test` INT,
+            `id` INT
+        )
+        ENGINE=OLAP
+        UNIQUE KEY(`test`, `id`)
+        PARTITION BY RANGE(`id`)
+        (
+            PARTITION `p100` VALUES LESS THAN ("1000")
+        )
+        DISTRIBUTED BY HASH(id) BUCKETS AUTO
+        PROPERTIES (
+            "replication_allocation" = "tag.location.default: 1",
+            "binlog.enable" = "true"
+        )
+    """
+
+    helper.enableDbBinlog()
+    helper.ccrJobDelete()
+    helper.ccrJobCreate()
+
+    assertTrue(helper.checkRestoreFinishTimesOf("${oldTableName}", 60))
+
+    sql "INSERT INTO ${oldTableName} VALUES (1, 100), (100, 1), (2, 200), (200, 2)"
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${oldTableName}", 4, 60))
+
+    logger.info(" ==== add key column and replace with swap ==== ")
+    first_job_progress = helper.get_job_progress()
+
+    helper.ccrJobPause()
+
+    sql "ALTER TABLE ${newTableName} ADD COLUMN `new_col` INT KEY DEFAULT \"0\""
+
+    assertTrue(helper.checkShowTimesOf("""
+                                SHOW ALTER TABLE COLUMN
+                                FROM ${context.dbName}
+                                WHERE TableName = "${newTableName}" AND State = "FINISHED"
+                                """,
+                                exist, 30))
+
+    sql "INSERT INTO ${newTableName} VALUES (3, 300, 3), (300, 3, 3)"  // o:n, 4:2
+    sql "INSERT INTO ${oldTableName} VALUES (3, 300), (300, 3)"  // o:n, 6:2
+    sql "ALTER TABLE ${oldTableName} REPLACE WITH TABLE ${newTableName} PROPERTIES (\"swap\"=\"true\")"  // o:n, 2:6
+    sql "INSERT INTO ${oldTableName} VALUES (4, 400, 4)"            // o:n, 3:6
+    sql "INSERT INTO ${newTableName} VALUES (4, 400)"            // o:n, 3:7
+
+    helper.ccrJobResume()
+
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${oldTableName}", 3, 60))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${newTableName}", 7, 60))
+
+    // no fullsync are triggered
+    last_job_progress = helper.get_job_progress()
     assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
 }

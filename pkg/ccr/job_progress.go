@@ -251,17 +251,6 @@ func (j *JobProgress) GetTableId(tableName string) (int64, bool) {
 	return 0, false
 }
 
-// GetTableCommitSeq get table commit seq by table name
-func (j *JobProgress) GetTableCommitSeq(tableName string) (int64, bool) {
-	tableId, ok := j.GetTableId(tableName)
-	if !ok {
-		return 0, false
-	}
-
-	commitSeq, ok := j.TableCommitSeqMap[tableId]
-	return commitSeq, ok
-}
-
 func (j *JobProgress) StartHandle(commitSeq int64) {
 	j.CommitSeq = commitSeq
 
