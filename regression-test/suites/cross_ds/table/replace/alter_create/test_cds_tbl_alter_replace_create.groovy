@@ -26,6 +26,11 @@ suite("test_cds_tbl_alter_replace_create") {
         return
     }
 
+    if (!helper.has_feature("feature_replay_replace_table_idempotent")) {
+        logger.info("skip this suite because feature_replay_replace_table_idempotent is disabled")
+        return
+    }
+
     logger.info("replace part and replace table without swap")
 
     def oldTableName = "tbl_old_" + helper.randomSuffix()

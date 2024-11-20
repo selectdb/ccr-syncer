@@ -2137,7 +2137,6 @@ func (j *Job) handleReplaceTableRecord(commitSeq int64, record *record.ReplaceTa
 		//          downstream new-A = old-B data via partial snapshot
 		//          downstream old-B without change => drop it
 		//          table mapping [old-A => old-A, old-B => new-A] would not found old-B
-		//      key:
 		// 2. alter B, replace A with B, swap = false => B dropped
 		// 3. alter A, replace A with B, swap = true
 		//      except:
