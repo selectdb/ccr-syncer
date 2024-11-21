@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_tbl_index_add_bloom_filter") {
+suite("test_tbl_index_add_drop_bloom_filter") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -37,7 +37,8 @@ suite("test_tbl_index_add_bloom_filter") {
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
-            "bloom_filter_columns" = "id"
+            "bloom_filter_columns" = "id",
+            "binlog.enable" = "true"
         )
     """
     for (int index = 0; index < insert_num; index++) {
@@ -45,7 +46,6 @@ suite("test_tbl_index_add_bloom_filter") {
             INSERT INTO ${tableName} VALUES (${test_num}, ${index}, "test_${index}", "${index}_test")
             """
     }
-    sql """ALTER TABLE ${tableName} set ("binlog.enable" = "true")"""
     sql "sync"
 
     logger.info("=== Test 1: full update bloom filter ===")
@@ -98,4 +98,16 @@ suite("test_tbl_index_add_bloom_filter") {
                                 SHOW INDEXES FROM TEST_${context.dbName}.${tableName}
                                 """,
                                 checkNgramBf1, 30, "target"))
+
+    logger.info("=== Test 3: drop bloom filter ===")
+    sql """
+        ALTER TABLE ${tableName}
+        DROP INDEX idx_ngrambf
+        """
+    sql "INSERT INTO ${tableName} VALUES (1, 1, '1', '1')"
+
+    assertTrue(helper.checkSelectTimesOf(
+        """ SELECT * FROM ${tableName} """, insert_num + 1, 30))
+    def show_indexes_result = target_sql "show indexes from ${tableName}"
+    assertFalse(checkNgramBf(show_indexes_result))
 }

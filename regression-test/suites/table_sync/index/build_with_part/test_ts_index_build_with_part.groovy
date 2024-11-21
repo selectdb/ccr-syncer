@@ -14,7 +14,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_ts_index_add_inverted") {
+suite("test_ts_index_build_with_part") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -43,6 +43,13 @@ suite("test_ts_index_add_inverted") {
         )
         ENGINE=OLAP
         UNIQUE KEY(`test`, `id`)
+        PARTITION BY RANGE(`test`)
+        (
+            PARTITION p1 VALUES LESS THAN ("20"),
+            PARTITION p2 VALUES LESS THAN ("30"),
+            PARTITION p3 VALUES LESS THAN ("40"),
+            PARTITION p4 VALUES LESS THAN ("50")
+        )
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
@@ -92,7 +99,7 @@ suite("test_ts_index_add_inverted") {
     logger.info("show indexes: ${show_indexes_result}")
 
     sql """
-        BUILD INDEX idx_inverted ON ${tableName}
+        BUILD INDEX idx_inverted ON ${tableName} PARTITIONS (`p1`, `p2`)
         """
     sql "sync"
 
@@ -102,7 +109,7 @@ suite("test_ts_index_add_inverted") {
                                 SHOW BUILD INDEX FROM ${context.dbName}
                                 WHERE TableName = "${tableName}" AND State = "FINISHED"
                                 """,
-                                has_count(1), 30))
+                                has_count(2), 30))
 
     show_indexes_result = sql "show indexes from ${tableName}"
     logger.info("show indexes: ${show_indexes_result}")
@@ -137,32 +144,5 @@ suite("test_ts_index_add_inverted") {
     show_indexes_result = target_sql_return_maparray "show indexes from ${tableName}"
     assertTrue(show_indexes_result.isEmpty())
 
-    // FIXME(walter) no such binlogs
-
-    // logger.info("=== Test 2: build bloom filter ===")
-    // sql """
-    //     ALTER TABLE ${tableName}
-    //     SET ("bloom_filter_columns" = "value,value1")
-    //     """
-    // sql "sync"
-
-    // assertTrue(helper.checkShowTimesOf("""
-    //                             SHOW ALTER TABLE COLUMN
-    //                             FROM ${context.dbName}
-    //                             WHERE TableName = "${tableName}" AND State = "FINISHED"
-    //                             """,
-    //                             has_count(3), 30))
-
-    // // drop bloom filter
-    // sql """
-    //     ALTER TABLE ${tableName}
-    //     SET ("bloom_filter_columns" = "")
-    //     """
-    // assertTrue(helper.checkShowTimesOf("""
-    //                             SHOW ALTER TABLE COLUMN
-    //                             FROM ${context.dbName}
-    //                             WHERE TableName = "${tableName}" AND State = "FINISHED"
-    //                             """,
-    //                             has_count(4), 30))
 }
 

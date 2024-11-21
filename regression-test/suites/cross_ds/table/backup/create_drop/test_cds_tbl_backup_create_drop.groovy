@@ -57,7 +57,7 @@ suite("test_cds_tbl_backup_create_drop") {
         )
     """
 
-    def prefix = helper.get_backup_lable_prefix()
+    def prefix = helper.get_backup_label_prefix()
     GetDebugPoint().enableDebugPointForAllFEs("FE.PAUSE_PENDING_BACKUP_JOB", [value: prefix])
 
     helper.enableDbBinlog()

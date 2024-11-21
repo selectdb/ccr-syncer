@@ -6,10 +6,10 @@ import (
 )
 
 type AlterView struct {
-	DbId          int64    `json:"dbId"`
-	TableId       int64    `json:"tableId"`
-	InlineViewDef string   `json:"inlineViewDef"`
-	SqlMode       int64    `json:"sqlMode"`
+	DbId          int64  `json:"dbId"`
+	TableId       int64  `json:"tableId"`
+	InlineViewDef string `json:"inlineViewDef"`
+	SqlMode       int64  `json:"sqlMode"`
 }
 
 func NewAlterViewFromJson(data string) (*AlterView, error) {
@@ -20,8 +20,8 @@ func NewAlterViewFromJson(data string) (*AlterView, error) {
 	}
 
 	if alterView.TableId == 0 {
-            return nil, fmt.Errorf("table id not found")
-    }
+		return nil, fmt.Errorf("table id not found")
+	}
 
 	return &alterView, nil
 }

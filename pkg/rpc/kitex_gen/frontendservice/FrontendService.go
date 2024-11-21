@@ -613,123 +613,123 @@ func (p *TQueryStatsType) Value() (driver.Value, error) {
 type TBinlogType int64
 
 const (
-	TBinlogType_UPSERT                           TBinlogType = 0
-	TBinlogType_ADD_PARTITION                    TBinlogType = 1
-	TBinlogType_CREATE_TABLE                     TBinlogType = 2
-	TBinlogType_DROP_PARTITION                   TBinlogType = 3
-	TBinlogType_DROP_TABLE                       TBinlogType = 4
-	TBinlogType_ALTER_JOB                        TBinlogType = 5
-	TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS TBinlogType = 6
-	TBinlogType_DUMMY                            TBinlogType = 7
-	TBinlogType_ALTER_DATABASE_PROPERTY          TBinlogType = 8
-	TBinlogType_MODIFY_TABLE_PROPERTY            TBinlogType = 9
-	TBinlogType_BARRIER                          TBinlogType = 10
-	TBinlogType_MODIFY_PARTITIONS                TBinlogType = 11
-	TBinlogType_REPLACE_PARTITIONS               TBinlogType = 12
-	TBinlogType_TRUNCATE_TABLE                   TBinlogType = 13
-	TBinlogType_RENAME_TABLE                     TBinlogType = 14
-	TBinlogType_RENAME_COLUMN                    TBinlogType = 15
-	TBinlogType_MODIFY_COMMENT                   TBinlogType = 16
-	TBinlogType_MODIFY_VIEW_DEF                  TBinlogType = 17
-	TBinlogType_REPLACE_TABLE                    TBinlogType = 18
-	TBinlogType_MIN_UNKNOWN                      TBinlogType = 19
-	TBinlogType_UNKNOWN_4                        TBinlogType = 20
-	TBinlogType_UNKNOWN_5                        TBinlogType = 21
-	TBinlogType_UNKNOWN_6                        TBinlogType = 22
-	TBinlogType_UNKNOWN_7                        TBinlogType = 23
-	TBinlogType_UNKNOWN_8                        TBinlogType = 24
-	TBinlogType_UNKNOWN_9                        TBinlogType = 25
-	TBinlogType_UNKNOWN_10                       TBinlogType = 26
-	TBinlogType_UNKNOWN_11                       TBinlogType = 27
-	TBinlogType_UNKNOWN_12                       TBinlogType = 28
-	TBinlogType_UNKNOWN_13                       TBinlogType = 29
-	TBinlogType_UNKNOWN_14                       TBinlogType = 30
-	TBinlogType_UNKNOWN_15                       TBinlogType = 31
-	TBinlogType_UNKNOWN_16                       TBinlogType = 32
-	TBinlogType_UNKNOWN_17                       TBinlogType = 33
-	TBinlogType_UNKNOWN_18                       TBinlogType = 34
-	TBinlogType_UNKNOWN_19                       TBinlogType = 35
-	TBinlogType_UNKNOWN_20                       TBinlogType = 36
-	TBinlogType_UNKNOWN_21                       TBinlogType = 37
-	TBinlogType_UNKNOWN_22                       TBinlogType = 38
-	TBinlogType_UNKNOWN_23                       TBinlogType = 39
-	TBinlogType_UNKNOWN_24                       TBinlogType = 40
-	TBinlogType_UNKNOWN_25                       TBinlogType = 41
-	TBinlogType_UNKNOWN_26                       TBinlogType = 42
-	TBinlogType_UNKNOWN_27                       TBinlogType = 43
-	TBinlogType_UNKNOWN_28                       TBinlogType = 44
-	TBinlogType_UNKNOWN_29                       TBinlogType = 45
-	TBinlogType_UNKNOWN_30                       TBinlogType = 46
-	TBinlogType_UNKNOWN_31                       TBinlogType = 47
-	TBinlogType_UNKNOWN_32                       TBinlogType = 48
-	TBinlogType_UNKNOWN_33                       TBinlogType = 49
-	TBinlogType_UNKNOWN_34                       TBinlogType = 50
-	TBinlogType_UNKNOWN_35                       TBinlogType = 51
-	TBinlogType_UNKNOWN_36                       TBinlogType = 52
-	TBinlogType_UNKNOWN_37                       TBinlogType = 53
-	TBinlogType_UNKNOWN_38                       TBinlogType = 54
-	TBinlogType_UNKNOWN_39                       TBinlogType = 55
-	TBinlogType_UNKNOWN_40                       TBinlogType = 56
-	TBinlogType_UNKNOWN_41                       TBinlogType = 57
-	TBinlogType_UNKNOWN_42                       TBinlogType = 58
-	TBinlogType_UNKNOWN_43                       TBinlogType = 59
-	TBinlogType_UNKNOWN_44                       TBinlogType = 60
-	TBinlogType_UNKNOWN_45                       TBinlogType = 61
-	TBinlogType_UNKNOWN_46                       TBinlogType = 62
-	TBinlogType_UNKNOWN_47                       TBinlogType = 63
-	TBinlogType_UNKNOWN_48                       TBinlogType = 64
-	TBinlogType_UNKNOWN_49                       TBinlogType = 65
-	TBinlogType_UNKNOWN_50                       TBinlogType = 66
-	TBinlogType_UNKNOWN_51                       TBinlogType = 67
-	TBinlogType_UNKNOWN_52                       TBinlogType = 68
-	TBinlogType_UNKNOWN_53                       TBinlogType = 69
-	TBinlogType_UNKNOWN_54                       TBinlogType = 70
-	TBinlogType_UNKNOWN_55                       TBinlogType = 71
-	TBinlogType_UNKNOWN_56                       TBinlogType = 72
-	TBinlogType_UNKNOWN_57                       TBinlogType = 73
-	TBinlogType_UNKNOWN_58                       TBinlogType = 74
-	TBinlogType_UNKNOWN_59                       TBinlogType = 75
-	TBinlogType_UNKNOWN_60                       TBinlogType = 76
-	TBinlogType_UNKNOWN_61                       TBinlogType = 77
-	TBinlogType_UNKNOWN_62                       TBinlogType = 78
-	TBinlogType_UNKNOWN_63                       TBinlogType = 79
-	TBinlogType_UNKNOWN_64                       TBinlogType = 80
-	TBinlogType_UNKNOWN_65                       TBinlogType = 81
-	TBinlogType_UNKNOWN_66                       TBinlogType = 82
-	TBinlogType_UNKNOWN_67                       TBinlogType = 83
-	TBinlogType_UNKNOWN_68                       TBinlogType = 84
-	TBinlogType_UNKNOWN_69                       TBinlogType = 85
-	TBinlogType_UNKNOWN_70                       TBinlogType = 86
-	TBinlogType_UNKNOWN_71                       TBinlogType = 87
-	TBinlogType_UNKNOWN_72                       TBinlogType = 88
-	TBinlogType_UNKNOWN_73                       TBinlogType = 89
-	TBinlogType_UNKNOWN_74                       TBinlogType = 90
-	TBinlogType_UNKNOWN_75                       TBinlogType = 91
-	TBinlogType_UNKNOWN_76                       TBinlogType = 92
-	TBinlogType_UNKNOWN_77                       TBinlogType = 93
-	TBinlogType_UNKNOWN_78                       TBinlogType = 94
-	TBinlogType_UNKNOWN_79                       TBinlogType = 95
-	TBinlogType_UNKNOWN_80                       TBinlogType = 96
-	TBinlogType_UNKNOWN_81                       TBinlogType = 97
-	TBinlogType_UNKNOWN_82                       TBinlogType = 98
-	TBinlogType_UNKNOWN_83                       TBinlogType = 99
-	TBinlogType_UNKNOWN_84                       TBinlogType = 100
-	TBinlogType_UNKNOWN_85                       TBinlogType = 101
-	TBinlogType_UNKNOWN_86                       TBinlogType = 102
-	TBinlogType_UNKNOWN_87                       TBinlogType = 103
-	TBinlogType_UNKNOWN_88                       TBinlogType = 104
-	TBinlogType_UNKNOWN_89                       TBinlogType = 105
-	TBinlogType_UNKNOWN_90                       TBinlogType = 106
-	TBinlogType_UNKNOWN_91                       TBinlogType = 107
-	TBinlogType_UNKNOWN_92                       TBinlogType = 108
-	TBinlogType_UNKNOWN_93                       TBinlogType = 109
-	TBinlogType_UNKNOWN_94                       TBinlogType = 110
-	TBinlogType_UNKNOWN_95                       TBinlogType = 111
-	TBinlogType_UNKNOWN_96                       TBinlogType = 112
-	TBinlogType_UNKNOWN_97                       TBinlogType = 113
-	TBinlogType_UNKNOWN_98                       TBinlogType = 114
-	TBinlogType_UNKNOWN_99                       TBinlogType = 115
-	TBinlogType_UNKNOWN_100                      TBinlogType = 116
+	TBinlogType_UPSERT                                    TBinlogType = 0
+	TBinlogType_ADD_PARTITION                             TBinlogType = 1
+	TBinlogType_CREATE_TABLE                              TBinlogType = 2
+	TBinlogType_DROP_PARTITION                            TBinlogType = 3
+	TBinlogType_DROP_TABLE                                TBinlogType = 4
+	TBinlogType_ALTER_JOB                                 TBinlogType = 5
+	TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS          TBinlogType = 6
+	TBinlogType_DUMMY                                     TBinlogType = 7
+	TBinlogType_ALTER_DATABASE_PROPERTY                   TBinlogType = 8
+	TBinlogType_MODIFY_TABLE_PROPERTY                     TBinlogType = 9
+	TBinlogType_BARRIER                                   TBinlogType = 10
+	TBinlogType_MODIFY_PARTITIONS                         TBinlogType = 11
+	TBinlogType_REPLACE_PARTITIONS                        TBinlogType = 12
+	TBinlogType_TRUNCATE_TABLE                            TBinlogType = 13
+	TBinlogType_RENAME_TABLE                              TBinlogType = 14
+	TBinlogType_RENAME_COLUMN                             TBinlogType = 15
+	TBinlogType_MODIFY_COMMENT                            TBinlogType = 16
+	TBinlogType_MODIFY_VIEW_DEF                           TBinlogType = 17
+	TBinlogType_REPLACE_TABLE                             TBinlogType = 18
+	TBinlogType_MODIFY_TABLE_ADD_OR_DROP_INVERTED_INDICES TBinlogType = 19
+	TBinlogType_INDEX_CHANGE_JOB                          TBinlogType = 20
+	TBinlogType_MIN_UNKNOWN                               TBinlogType = 21
+	TBinlogType_UNKNOWN_6                                 TBinlogType = 22
+	TBinlogType_UNKNOWN_7                                 TBinlogType = 23
+	TBinlogType_UNKNOWN_8                                 TBinlogType = 24
+	TBinlogType_UNKNOWN_9                                 TBinlogType = 25
+	TBinlogType_UNKNOWN_10                                TBinlogType = 26
+	TBinlogType_UNKNOWN_11                                TBinlogType = 27
+	TBinlogType_UNKNOWN_12                                TBinlogType = 28
+	TBinlogType_UNKNOWN_13                                TBinlogType = 29
+	TBinlogType_UNKNOWN_14                                TBinlogType = 30
+	TBinlogType_UNKNOWN_15                                TBinlogType = 31
+	TBinlogType_UNKNOWN_16                                TBinlogType = 32
+	TBinlogType_UNKNOWN_17                                TBinlogType = 33
+	TBinlogType_UNKNOWN_18                                TBinlogType = 34
+	TBinlogType_UNKNOWN_19                                TBinlogType = 35
+	TBinlogType_UNKNOWN_20                                TBinlogType = 36
+	TBinlogType_UNKNOWN_21                                TBinlogType = 37
+	TBinlogType_UNKNOWN_22                                TBinlogType = 38
+	TBinlogType_UNKNOWN_23                                TBinlogType = 39
+	TBinlogType_UNKNOWN_24                                TBinlogType = 40
+	TBinlogType_UNKNOWN_25                                TBinlogType = 41
+	TBinlogType_UNKNOWN_26                                TBinlogType = 42
+	TBinlogType_UNKNOWN_27                                TBinlogType = 43
+	TBinlogType_UNKNOWN_28                                TBinlogType = 44
+	TBinlogType_UNKNOWN_29                                TBinlogType = 45
+	TBinlogType_UNKNOWN_30                                TBinlogType = 46
+	TBinlogType_UNKNOWN_31                                TBinlogType = 47
+	TBinlogType_UNKNOWN_32                                TBinlogType = 48
+	TBinlogType_UNKNOWN_33                                TBinlogType = 49
+	TBinlogType_UNKNOWN_34                                TBinlogType = 50
+	TBinlogType_UNKNOWN_35                                TBinlogType = 51
+	TBinlogType_UNKNOWN_36                                TBinlogType = 52
+	TBinlogType_UNKNOWN_37                                TBinlogType = 53
+	TBinlogType_UNKNOWN_38                                TBinlogType = 54
+	TBinlogType_UNKNOWN_39                                TBinlogType = 55
+	TBinlogType_UNKNOWN_40                                TBinlogType = 56
+	TBinlogType_UNKNOWN_41                                TBinlogType = 57
+	TBinlogType_UNKNOWN_42                                TBinlogType = 58
+	TBinlogType_UNKNOWN_43                                TBinlogType = 59
+	TBinlogType_UNKNOWN_44                                TBinlogType = 60
+	TBinlogType_UNKNOWN_45                                TBinlogType = 61
+	TBinlogType_UNKNOWN_46                                TBinlogType = 62
+	TBinlogType_UNKNOWN_47                                TBinlogType = 63
+	TBinlogType_UNKNOWN_48                                TBinlogType = 64
+	TBinlogType_UNKNOWN_49                                TBinlogType = 65
+	TBinlogType_UNKNOWN_50                                TBinlogType = 66
+	TBinlogType_UNKNOWN_51                                TBinlogType = 67
+	TBinlogType_UNKNOWN_52                                TBinlogType = 68
+	TBinlogType_UNKNOWN_53                                TBinlogType = 69
+	TBinlogType_UNKNOWN_54                                TBinlogType = 70
+	TBinlogType_UNKNOWN_55                                TBinlogType = 71
+	TBinlogType_UNKNOWN_56                                TBinlogType = 72
+	TBinlogType_UNKNOWN_57                                TBinlogType = 73
+	TBinlogType_UNKNOWN_58                                TBinlogType = 74
+	TBinlogType_UNKNOWN_59                                TBinlogType = 75
+	TBinlogType_UNKNOWN_60                                TBinlogType = 76
+	TBinlogType_UNKNOWN_61                                TBinlogType = 77
+	TBinlogType_UNKNOWN_62                                TBinlogType = 78
+	TBinlogType_UNKNOWN_63                                TBinlogType = 79
+	TBinlogType_UNKNOWN_64                                TBinlogType = 80
+	TBinlogType_UNKNOWN_65                                TBinlogType = 81
+	TBinlogType_UNKNOWN_66                                TBinlogType = 82
+	TBinlogType_UNKNOWN_67                                TBinlogType = 83
+	TBinlogType_UNKNOWN_68                                TBinlogType = 84
+	TBinlogType_UNKNOWN_69                                TBinlogType = 85
+	TBinlogType_UNKNOWN_70                                TBinlogType = 86
+	TBinlogType_UNKNOWN_71                                TBinlogType = 87
+	TBinlogType_UNKNOWN_72                                TBinlogType = 88
+	TBinlogType_UNKNOWN_73                                TBinlogType = 89
+	TBinlogType_UNKNOWN_74                                TBinlogType = 90
+	TBinlogType_UNKNOWN_75                                TBinlogType = 91
+	TBinlogType_UNKNOWN_76                                TBinlogType = 92
+	TBinlogType_UNKNOWN_77                                TBinlogType = 93
+	TBinlogType_UNKNOWN_78                                TBinlogType = 94
+	TBinlogType_UNKNOWN_79                                TBinlogType = 95
+	TBinlogType_UNKNOWN_80                                TBinlogType = 96
+	TBinlogType_UNKNOWN_81                                TBinlogType = 97
+	TBinlogType_UNKNOWN_82                                TBinlogType = 98
+	TBinlogType_UNKNOWN_83                                TBinlogType = 99
+	TBinlogType_UNKNOWN_84                                TBinlogType = 100
+	TBinlogType_UNKNOWN_85                                TBinlogType = 101
+	TBinlogType_UNKNOWN_86                                TBinlogType = 102
+	TBinlogType_UNKNOWN_87                                TBinlogType = 103
+	TBinlogType_UNKNOWN_88                                TBinlogType = 104
+	TBinlogType_UNKNOWN_89                                TBinlogType = 105
+	TBinlogType_UNKNOWN_90                                TBinlogType = 106
+	TBinlogType_UNKNOWN_91                                TBinlogType = 107
+	TBinlogType_UNKNOWN_92                                TBinlogType = 108
+	TBinlogType_UNKNOWN_93                                TBinlogType = 109
+	TBinlogType_UNKNOWN_94                                TBinlogType = 110
+	TBinlogType_UNKNOWN_95                                TBinlogType = 111
+	TBinlogType_UNKNOWN_96                                TBinlogType = 112
+	TBinlogType_UNKNOWN_97                                TBinlogType = 113
+	TBinlogType_UNKNOWN_98                                TBinlogType = 114
+	TBinlogType_UNKNOWN_99                                TBinlogType = 115
+	TBinlogType_UNKNOWN_100                               TBinlogType = 116
 )
 
 func (p TBinlogType) String() string {
@@ -772,12 +772,12 @@ func (p TBinlogType) String() string {
 		return "MODIFY_VIEW_DEF"
 	case TBinlogType_REPLACE_TABLE:
 		return "REPLACE_TABLE"
+	case TBinlogType_MODIFY_TABLE_ADD_OR_DROP_INVERTED_INDICES:
+		return "MODIFY_TABLE_ADD_OR_DROP_INVERTED_INDICES"
+	case TBinlogType_INDEX_CHANGE_JOB:
+		return "INDEX_CHANGE_JOB"
 	case TBinlogType_MIN_UNKNOWN:
 		return "MIN_UNKNOWN"
-	case TBinlogType_UNKNOWN_4:
-		return "UNKNOWN_4"
-	case TBinlogType_UNKNOWN_5:
-		return "UNKNOWN_5"
 	case TBinlogType_UNKNOWN_6:
 		return "UNKNOWN_6"
 	case TBinlogType_UNKNOWN_7:
@@ -1012,12 +1012,12 @@ func TBinlogTypeFromString(s string) (TBinlogType, error) {
 		return TBinlogType_MODIFY_VIEW_DEF, nil
 	case "REPLACE_TABLE":
 		return TBinlogType_REPLACE_TABLE, nil
+	case "MODIFY_TABLE_ADD_OR_DROP_INVERTED_INDICES":
+		return TBinlogType_MODIFY_TABLE_ADD_OR_DROP_INVERTED_INDICES, nil
+	case "INDEX_CHANGE_JOB":
+		return TBinlogType_INDEX_CHANGE_JOB, nil
 	case "MIN_UNKNOWN":
 		return TBinlogType_MIN_UNKNOWN, nil
-	case "UNKNOWN_4":
-		return TBinlogType_UNKNOWN_4, nil
-	case "UNKNOWN_5":
-		return TBinlogType_UNKNOWN_5, nil
 	case "UNKNOWN_6":
 		return TBinlogType_UNKNOWN_6, nil
 	case "UNKNOWN_7":

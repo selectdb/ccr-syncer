@@ -18,7 +18,9 @@ suite("test_tsa_column_add") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
-    def tableName = "test_" + helper.randomSuffix()
+    def suffix = helper.randomSuffix()
+    def tableName = "test_${suffix}"
+    def aliasName = "alias_${suffix}"
     def test_num = 0
     def insert_num = 5
 
@@ -32,6 +34,7 @@ suite("test_tsa_column_add") {
         }
     }
 
+    helper.set_alias(aliasName)
     sql "DROP TABLE IF EXISTS ${tableName}"
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
@@ -92,6 +95,6 @@ suite("test_tsa_column_add") {
         return res[2][0] == 'first_value' && (res[2][3] == 'NO' || res[2][3] == 'false')
     }
 
-    assertTrue(helper.checkShowTimesOf("SHOW COLUMNS FROM `${tableName}`", has_column_first_value, 60, "target_sql"))
+    assertTrue(helper.checkShowTimesOf("SHOW COLUMNS FROM `${aliasName}`", has_column_first_value, 60, "target_sql"))
 }
 

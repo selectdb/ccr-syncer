@@ -1284,6 +1284,7 @@ func (s *Spec) DropView(viewName string) error {
 }
 
 func (s *Spec) AlterViewDef(viewName string, alterView *record.AlterView) error {
+	viewName = utils.FormatKeywordName(viewName)
 	alterViewSql := fmt.Sprintf("ALTER VIEW %s AS %s", viewName, alterView.InlineViewDef)
 	log.Infof("alter view sql: %s", alterViewSql)
 	return s.DbExec(alterViewSql)
@@ -1302,6 +1303,63 @@ func (s *Spec) DropPartition(destTableName string, dropPartition *record.DropPar
 	dropPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s", destDbName, destTableName, dropPartition.Sql)
 	log.Infof("dropPartitionSql: %s", dropPartitionSql)
 	return s.Exec(dropPartitionSql)
+}
+
+func (s *Spec) LightningIndexChange(alias string, record *record.ModifyTableAddOrDropInvertedIndices) error {
+	rawSql := record.GetRawSql()
+	if len(record.AlternativeIndexes) != 1 {
+		return xerror.Errorf(xerror.Normal, "lightning index change job has more than one index, should not be here")
+	}
+
+	index := record.AlternativeIndexes[0]
+	if !index.IsInvertedIndex() {
+		return xerror.Errorf(xerror.Normal, "lightning index change job is not inverted index, should not be here")
+	}
+
+	sql := fmt.Sprintf("ALTER TABLE %s", utils.FormatKeywordName(alias))
+	if record.IsDropInvertedIndex {
+		sql = fmt.Sprintf("%s DROP INDEX %s", sql, utils.FormatKeywordName(index.GetIndexName()))
+	} else {
+		columns := index.GetColumns()
+		columnsRef := fmt.Sprintf("(`%s`)", strings.Join(columns, "`,`"))
+		sql = fmt.Sprintf("%s ADD INDEX %s %s USING INVERTED COMMENT '%s'",
+			sql, utils.FormatKeywordName(index.GetIndexName()), columnsRef, index.GetComment())
+	}
+
+	log.Infof("lighting index change sql, rawSql: %s, sql: %s", rawSql, sql)
+	return s.DbExec(sql)
+}
+
+func (s *Spec) BuildIndex(tableAlias string, buildIndex *record.IndexChangeJob) error {
+	if buildIndex.IsDropOp {
+		return xerror.Errorf(xerror.Normal, "build index job is drop op, should not be here")
+	}
+
+	if len(buildIndex.Indexes) != 1 {
+		return xerror.Errorf(xerror.Normal, "build index job has more than one index, should not be here")
+	}
+
+	index := buildIndex.Indexes[0]
+	indexName := index.GetIndexName()
+	sql := fmt.Sprintf("BUILD INDEX %s ON %s",
+		utils.FormatKeywordName(indexName), utils.FormatKeywordName(tableAlias))
+
+	if buildIndex.PartitionName != "" {
+		sqlWithPart := fmt.Sprintf("%s PARTITION (%s)", sql, utils.FormatKeywordName(buildIndex.PartitionName))
+
+		log.Infof("build index sql: %s", sqlWithPart)
+		err := s.DbExec(sqlWithPart)
+		if err == nil {
+			return nil
+		} else if !strings.Contains(err.Error(), "is not partitioned, cannot build index with partitions") {
+			return err
+		}
+
+		log.Infof("table %s is not partitioned, try to build index without partition", tableAlias)
+	}
+
+	log.Infof("build index sql: %s", sql)
+	return s.DbExec(sql)
 }
 
 func (s *Spec) DesyncTables(tables ...string) error {

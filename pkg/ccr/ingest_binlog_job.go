@@ -370,8 +370,6 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 		j.setError(err)
 		return
 	}
-	log.Infof("walter dest index name map: %v, src table id %d, part id %d, dest table id %d, part id %d",
-		destIndexNameMap, srcTableId, srcPartitionId, destTableId, destPartitionId)
 
 	getSrcIndexName := func(ccrJob *Job, srcIndexMeta *IndexMeta) string {
 		srcIndexName := srcIndexMeta.Name

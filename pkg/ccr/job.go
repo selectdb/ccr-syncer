@@ -1259,6 +1259,24 @@ func (j *Job) getDestTableIdBySrc(srcTableId int64) (int64, error) {
 	}
 }
 
+func (j *Job) getDestTableNameBySrcId(srcTableId int64) (string, error) {
+	destTableId, err := j.getDestTableIdBySrc(srcTableId)
+	if err != nil {
+		return "", err
+	}
+
+	name, err := j.destMeta.GetTableNameById(destTableId)
+	if err != nil {
+		return "", err
+	}
+
+	if name == "" {
+		return "", xerror.Errorf(xerror.Normal, "dest table name not found, dest table id: %d", destTableId)
+	}
+
+	return name, nil
+}
+
 func (j *Job) isBinlogCommitted(tableId int64, binlogCommitSeq int64) bool {
 	if j.progress.SyncState == DBTablesIncrementalSync {
 		tableCommitSeq, ok := j.progress.TableCommitSeqMap[tableId]
@@ -2132,7 +2150,7 @@ func (j *Job) handleReplaceTableRecord(commitSeq int64, record *record.ReplaceTa
 		//
 		// Case analysis:
 		// 1. alter A, replace A with B, swap = false =>
-		//      except:
+		//      expect:
 		//          upstream old-A dropped, upstream B dropped
 		//          downstream old-A dropped, downstream B dropped
 		//          downstream old-B named new-A
@@ -2145,7 +2163,7 @@ func (j *Job) handleReplaceTableRecord(commitSeq int64, record *record.ReplaceTa
 		//          table mapping [old-A => old-A, old-B => new-A] would not found old-B
 		// 2. alter B, replace A with B, swap = false => B dropped
 		// 3. alter A, replace A with B, swap = true
-		//      except:
+		//      expect:
 		//          upstream new-A = old-B data, new-B = old-A data
 		//          downstream new-A = old-B data, new-B = old-A data
 		//          table mapping [old-A => old-A, old-B => old-B]
@@ -2155,7 +2173,7 @@ func (j *Job) handleReplaceTableRecord(commitSeq int64, record *record.ReplaceTa
 		//          downstream old-B without change => need partial sync from upstream old-A (new-B)
 		//          table mapping [old-A => old-A, old-B => new-A], would not found old-B
 		// 4. alter B, replace A with B, swap = true
-		//      except:
+		//      expect:
 		//          upstream new-A = old-B data, new-B = old-A data
 		//          downstream new-A = old-B data, new-B = old-A data
 		//          table mapping [old-A => old-A, old-B => old-B]
@@ -2238,6 +2256,72 @@ func (j *Job) handleReplaceTableRecord(commitSeq int64, record *record.ReplaceTa
 	return nil
 }
 
+func (j *Job) handleModifyTableAddOrDropInvertedIndices(binlog *festruct.TBinlog) error {
+	log.Infof("handle modify table add or drop inverted indices binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
+
+	data := binlog.GetData()
+	modifyTableAddOrDropInvertedIndices, err := record.NewModifyTableAddOrDropInvertedIndicesFromJson(data)
+	if err != nil {
+		return err
+	}
+
+	return j.handleModifyTableAddOrDropInvertedIndicesRecord(binlog.GetCommitSeq(), modifyTableAddOrDropInvertedIndices)
+}
+
+func (j *Job) handleModifyTableAddOrDropInvertedIndicesRecord(commitSeq int64, record *record.ModifyTableAddOrDropInvertedIndices) error {
+	if j.isBinlogCommitted(record.TableId, commitSeq) {
+		return nil
+	}
+
+	tableAlias := ""
+	if j.isTableSyncWithAlias() {
+		tableAlias = j.Dest.Table
+	}
+	if tableAlias == "" {
+		if name, err := j.getDestTableNameBySrcId(record.TableId); err != nil {
+			return err
+		} else {
+			tableAlias = name
+		}
+	}
+
+	return j.IDest.LightningIndexChange(tableAlias, record)
+}
+
+func (j *Job) handleIndexChangeJob(binlog *festruct.TBinlog) error {
+	log.Infof("handle index change job binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
+
+	data := binlog.GetData()
+	indexChangeJob, err := record.NewIndexChangeJobFromJson(data)
+	if err != nil {
+		return err
+	}
+
+	return j.handleIndexChangeJobRecord(binlog.GetCommitSeq(), indexChangeJob)
+}
+
+func (j *Job) handleIndexChangeJobRecord(commitSeq int64, indexChangeJob *record.IndexChangeJob) error {
+	if j.isBinlogCommitted(indexChangeJob.TableId, commitSeq) {
+		return nil
+	}
+
+	if indexChangeJob.JobState != record.INDEX_CHANGE_JOB_STATE_FINISHED ||
+		indexChangeJob.IsDropOp {
+		log.Debugf("skip index change job binlog, job state: %s, is drop op: %t",
+			indexChangeJob.JobState, indexChangeJob.IsDropOp)
+		return nil
+	}
+
+	tableAlias := indexChangeJob.TableName
+	if j.isTableSyncWithAlias() {
+		tableAlias = j.Dest.Table
+	}
+
+	return j.IDest.BuildIndex(tableAlias, indexChangeJob)
+}
+
 func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 	data := binlog.GetData()
 	barrierLog, err := record.NewBarrierLogFromJson(data)
@@ -2274,6 +2358,18 @@ func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 			return err
 		}
 		return j.handleReplaceTableRecord(commitSeq, replaceTable)
+	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_INVERTED_INDICES:
+		m, err := record.NewModifyTableAddOrDropInvertedIndicesFromJson(barrierLog.Binlog)
+		if err != nil {
+			return err
+		}
+		return j.handleModifyTableAddOrDropInvertedIndicesRecord(commitSeq, m)
+	case festruct.TBinlogType_INDEX_CHANGE_JOB:
+		job, err := record.NewIndexChangeJobFromJson(barrierLog.Binlog)
+		if err != nil {
+			return err
+		}
+		return j.handleIndexChangeJobRecord(commitSeq, job)
 	case festruct.TBinlogType_BARRIER:
 		log.Info("handle barrier binlog, ignore it")
 	default:
@@ -2284,28 +2380,21 @@ func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 
 // handle alter view def
 func (j *Job) handleAlterViewDef(binlog *festruct.TBinlog) error {
-    log.Infof("handle alter view def binlog")
+	log.Infof("handle alter view def binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
 
-    data := binlog.GetData()
-    alterView, err := record.NewAlterViewFromJson(data)
-    	if err != nil {
-    		return err
-    	}
+	data := binlog.GetData()
+	alterView, err := record.NewAlterViewFromJson(data)
+	if err != nil {
+		return err
+	}
 
-    	tableId, err := j.getDestTableIdBySrc(alterView.TableId)
-    	if err != nil {
-    		return err
-    	}
+	viewName, err := j.getDestTableNameBySrcId(alterView.TableId)
+	if err != nil {
+		return err
+	}
 
-    	viewName, err := j.destMeta.GetTableNameById(tableId)
-    	if err != nil {
-    		return err
-    	} else if viewName == "" {
-    		return xerror.Errorf(xerror.Normal, "tableId %d not found in destMeta", tableId)
-    	}
-
-    	err = j.IDest.AlterViewDef(viewName, alterView)
-    return err
+	return j.IDest.AlterViewDef(viewName, alterView)
 }
 
 // return: error && bool backToRunLoop
@@ -2401,7 +2490,11 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 	case festruct.TBinlogType_REPLACE_TABLE:
 		return j.handleReplaceTable(binlog)
 	case festruct.TBinlogType_MODIFY_VIEW_DEF:
-	        return j.handleAlterViewDef(binlog)
+		return j.handleAlterViewDef(binlog)
+	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_INVERTED_INDICES:
+		return j.handleModifyTableAddOrDropInvertedIndices(binlog)
+	case festruct.TBinlogType_INDEX_CHANGE_JOB:
+		return j.handleIndexChangeJob(binlog)
 	default:
 		return xerror.Errorf(xerror.Normal, "unknown binlog type: %v", binlog.GetType())
 	}
@@ -2470,7 +2563,8 @@ func (j *Job) incrementalSync() error {
 		case tstatus.TStatusCode_BINLOG_NOT_FOUND_TABLE:
 			return xerror.Errorf(xerror.Normal, "can't found table")
 		default:
-			return xerror.Errorf(xerror.Normal, "invalid binlog status type: %v", status.StatusCode)
+			return xerror.Errorf(xerror.Normal, "invalid binlog status type: %v, msg: %s",
+				status.StatusCode, utils.FirstOr(status.GetErrorMsgs(), ""))
 		}
 
 		// Step 2.2: handle binlogs records if has job

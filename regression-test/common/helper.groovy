@@ -23,6 +23,7 @@ class Helper {
     def suite
     def context
     def logger
+    String alias = null
 
     // the configurations about ccr syncer.
     def sync_gap_time = 5000
@@ -34,6 +35,10 @@ class Helper {
         this.logger = suite.logger
     }
 
+    void set_alias(String alias) {
+        this.alias = alias
+    }
+
     String randomSuffix() {
         def hashCode = UUID.randomUUID().toString().replace("-", "").hashCode()
         if (hashCode < 0) {
@@ -42,7 +47,7 @@ class Helper {
         return Integer.toString(hashCode)
     }
 
-    def get_backup_lable_prefix(String table = "") {
+    def get_backup_label_prefix(String table = "") {
         return "ccrs_" + get_ccr_job_name(table)
     }
 
@@ -65,7 +70,11 @@ class Helper {
         srcSpec.put("table", table)
 
         Map<String, String> destSpec = context.getDestSpec(db)
-        destSpec.put("table", table)
+        if (alias != null) {
+            destSpec.put("table", alias)
+        } else {
+            destSpec.put("table", table)
+        }
 
         Map<String, Object> body = Maps.newHashMap()
         String name = context.suiteName
@@ -206,6 +215,8 @@ class Helper {
             if (--times > 0) {
                 tmpRes = suite.target_sql "${sqlString}"
             } else {
+                logger.info("last select result: ${tmpRes}")
+                logger.info("expected row size: ${rowSize}, actual row size: ${tmpRes.size()}")
                 break
             }
         }
