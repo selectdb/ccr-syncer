@@ -1735,10 +1735,12 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	if _, ok := j.progress.TableMapping[dropTable.TableId]; !ok {
-		log.Warnf("the dest table is not found, skip drop table binlog, src table id: %d, commit seq: %d",
-			dropTable.TableId, binlog.GetCommitSeq())
-		return nil
+	if !dropTable.IsView {
+		if _, ok := j.progress.TableMapping[dropTable.TableId]; !ok {
+			log.Warnf("the dest table is not found, skip drop table binlog, src table id: %d, commit seq: %d",
+				dropTable.TableId, binlog.GetCommitSeq())
+			return nil
+		}
 	}
 
 	if j.isBinlogCommitted(dropTable.TableId, binlog.GetCommitSeq()) {
