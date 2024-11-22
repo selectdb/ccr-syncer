@@ -410,7 +410,7 @@ func (j *Job) partialSync() error {
 		if err != nil && err == base.ErrBackupPartitionNotFound {
 			log.Warnf("partial sync status: partition not found in the upstream, step to table partial sync")
 			replace := true // replace the old data to avoid blocking reading
-			return j.newPartialSnapshot(tableId, table, partitions, replace)
+			return j.newPartialSnapshot(tableId, table, nil, replace)
 		} else if err != nil && err == base.ErrBackupTableNotFound {
 			var nextCommitSeq int64
 			if dropped, err := j.isTableDropped(tableId); err != nil {
