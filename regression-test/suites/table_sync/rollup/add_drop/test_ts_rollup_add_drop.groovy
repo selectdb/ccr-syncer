@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_ts_rollup_add") {
+suite("test_ts_rollup_add_drop") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -24,7 +24,7 @@ suite("test_ts_rollup_add") {
     def insert_num = 5
 
     sql """
-        CREATE TABLE if NOT EXISTS ${tableName} 
+        CREATE TABLE if NOT EXISTS ${tableName}
         (
             `id` INT,
             `col1` INT,
@@ -33,14 +33,14 @@ suite("test_ts_rollup_add") {
             `col4` INT,
         )
         ENGINE=OLAP
-        DISTRIBUTED BY HASH(id) BUCKETS 1 
-        PROPERTIES ( 
+        DISTRIBUTED BY HASH(id) BUCKETS 1
+        PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true"
         )
     """
     sql """
-        ALTER TABLE ${tableName} 
+        ALTER TABLE ${tableName}
         ADD ROLLUP rollup_${tableName}_full (id, col2, col4)
         """
 
@@ -53,10 +53,10 @@ suite("test_ts_rollup_add") {
         return false
     }
     assertTrue(helper.checkShowTimesOf("""
-                                SHOW ALTER TABLE ROLLUP 
+                                SHOW ALTER TABLE ROLLUP
                                 FROM ${context.dbName}
                                 WHERE TableName = "${tableName}" AND State = "FINISHED"
-                                """, 
+                                """,
                                 rollupFullFinished, 30))
     sql """ALTER TABLE ${tableName} set ("binlog.enable" = "true")"""
 
@@ -74,13 +74,13 @@ suite("test_ts_rollup_add") {
 
         return false
     }
-    assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${tableName} ALL", 
+    assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${tableName} ALL",
                                 hasRollupFull, 30, "target"))
 
 
     logger.info("=== Test 2: incremental update rollup ===")
     sql """
-        ALTER TABLE ${tableName} 
+        ALTER TABLE ${tableName}
         ADD ROLLUP rollup_${tableName}_incr (id, col1, col3)
         """
     def hasRollupIncremental = { res -> Boolean
@@ -91,6 +91,11 @@ suite("test_ts_rollup_add") {
         }
         return false
     }
-    assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${tableName} ALL", 
+    assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${tableName} ALL",
                                 hasRollupIncremental, 30, "target"))
+
+    logger.info("=== Test 3: drop rollup")
+    sql """
+        ALTER TABLE ${tableName}
+    """
 }

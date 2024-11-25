@@ -14,7 +14,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_ts_index_create_drop_inverted") {
+suite("test_ts_idx_inverted_build_with_part") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -43,6 +43,13 @@ suite("test_ts_index_create_drop_inverted") {
         )
         ENGINE=OLAP
         UNIQUE KEY(`test`, `id`)
+        PARTITION BY RANGE(`test`)
+        (
+            PARTITION p1 VALUES LESS THAN ("20"),
+            PARTITION p2 VALUES LESS THAN ("30"),
+            PARTITION p3 VALUES LESS THAN ("40"),
+            PARTITION p4 VALUES LESS THAN ("50")
+        )
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
@@ -69,7 +76,8 @@ suite("test_ts_index_create_drop_inverted") {
 
     logger.info("=== Test 1: add inverted index ===")
     sql """
-        CREATE INDEX idx_inverted ON ${tableName} (value) USING INVERTED
+        ALTER TABLE ${tableName}
+        ADD INDEX idx_inverted(value) USING INVERTED
         """
     sql "sync"
 
@@ -91,7 +99,31 @@ suite("test_ts_index_create_drop_inverted") {
     logger.info("show indexes: ${show_indexes_result}")
 
     sql """
-        DROP INDEX idx_inverted ON ${tableName}
+        BUILD INDEX idx_inverted ON ${tableName} PARTITIONS (`p1`, `p2`)
+        """
+    sql "sync"
+
+    sql """ INSERT INTO ${tableName} VALUES (2, 2, "2", "2") """
+
+    assertTrue(helper.checkShowTimesOf("""
+                                SHOW BUILD INDEX FROM ${context.dbName}
+                                WHERE TableName = "${tableName}" AND State = "FINISHED"
+                                """,
+                                has_count(2), 30))
+
+    show_indexes_result = sql "show indexes from ${tableName}"
+    logger.info("show indexes: ${show_indexes_result}")
+
+    assertTrue(helper.checkSelectTimesOf(
+        """ SELECT * FROM ${tableName} """, insert_num+2, 30))
+    show_indexes_result = target_sql_return_maparray "show indexes from ${tableName}"
+    logger.info("show indexes: ${show_indexes_result}")
+    assertTrue(show_indexes_result.any {
+        it['Key_name'] == 'idx_inverted' && it['Index_type'] == 'INVERTED' })
+
+    sql """
+        ALTER TABLE ${tableName}
+        DROP INDEX idx_inverted
         """
     sql "sync"
 
@@ -108,9 +140,9 @@ suite("test_ts_index_create_drop_inverted") {
     sql """ INSERT INTO ${tableName} VALUES (3, 3, "3", "3")"""
 
     assertTrue(helper.checkSelectTimesOf(
-        """ SELECT * FROM ${tableName} """, insert_num + 2, 30))
+        """ SELECT * FROM ${tableName} """, insert_num + 3, 30))
     show_indexes_result = target_sql_return_maparray "show indexes from ${tableName}"
     assertTrue(show_indexes_result.isEmpty())
-}
 
+}
 
