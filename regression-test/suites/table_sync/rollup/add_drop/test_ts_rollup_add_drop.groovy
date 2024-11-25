@@ -96,6 +96,17 @@ suite("test_ts_rollup_add_drop") {
 
     logger.info("=== Test 3: drop rollup")
     sql """
-        ALTER TABLE ${tableName}
-    """
+        ALTER TABLE ${tableName} DROP ROLLUP rollup_${tableName}_inc
+        """
+
+    def hasRollupIncrementalDropped = { res -> Boolean
+        for (List<Object> row : res) {
+            if ((row[0] as String) == "rollup_${tableName}_inc") {
+                return false
+            }
+        }
+        return true
+    }
+    assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${tableName} ALL",
+                                hasRollupIncrementalDropped, 30, "target"))
 }
