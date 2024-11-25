@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_tbl_idx_bf_add_drop") {
+suite("test_tbl_idx_ngbf_add_drop") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -29,14 +29,15 @@ suite("test_tbl_idx_bf_add_drop") {
             `test` INT,
             `id` INT,
             `username` varchar(32) NULL DEFAULT "",
-            `only4test` varchar(32) NULL DEFAULT ""
+            `only4test` varchar(32) NULL DEFAULT "",
+            INDEX idx_ngrambf (`username`) USING NGRAM_BF PROPERTIES("gram_size"="3", "bf_size"="256")
         )
         ENGINE=OLAP
         DUPLICATE KEY(`test`, `id`)
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
-            "bloom_filter_columns" = "username",
+            "bloom_filter_columns" = "id",
             "binlog.enable" = "true"
         )
     """
@@ -51,9 +52,21 @@ suite("test_tbl_idx_bf_add_drop") {
     helper.ccrJobCreate(tableName)
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
+    def checkNgramBf = { inputRes -> Boolean
+        for (List<Object> row : inputRes) {
+            if (row[2] == "idx_ngrambf" && row[10] == "NGRAM_BF") {
+                return true
+            }
+        }
+        return false
+    }
+    assertTrue(helper.checkShowTimesOf("""
+                                SHOW INDEXES FROM TEST_${context.dbName}.${tableName}
+                                """,
+                                checkNgramBf, 30, "target"))
     def checkBloomFilter = { inputRes -> Boolean
         for (List<Object> row : inputRes) {
-            if ((row[1] as String).contains("\"bloom_filter_columns\" = \"username\"")) {
+            if ((row[1] as String).contains("\"bloom_filter_columns\" = \"id\"")) {
                 return true
             }
         }
@@ -64,65 +77,37 @@ suite("test_tbl_idx_bf_add_drop") {
                                 """,
                                 checkBloomFilter, 30, "target"))
 
-    logger.info("=== Test 2: incremental update bloom filter ===")
-    // {
-    //   "type": "SCHEMA_CHANGE",
-    //   "dbId": 10140,
-    //   "tableId": 10181,
-    //   "tableName": "tbl_752378863",
-    //   "jobId": 10216,
-    //   "jobState": "FINISHED",
-    //   "rawSql": "ALTER TABLE `regression_test_table_sync_idx_bf_add_drop`.`tbl_752378863` PROPERTIES (\"bloom_filter_columns\" = \"username,only4test\")",
-    //   "iim": {
-    //     "10217": 10182
-    //   }
-    // }
+    logger.info("=== Test 2: incremental update Ngram bloom filter ===")
     sql """
         ALTER TABLE ${tableName}
-        SET ("bloom_filter_columns" = "username,only4test")
+        ADD INDEX idx_only4test(`only4test`) USING NGRAM_BF PROPERTIES("gram_size"="3", "bf_size"="256")
         """
-    def checkBloomFilter2 = { inputRes -> Boolean
+    def checkNgramBf1 = { inputRes -> Boolean
         for (List<Object> row : inputRes) {
-            if ((row[1] as String).contains("\"bloom_filter_columns\"")) {
-                def columns = row[1]
-                    .split("\"bloom_filter_columns\" = \"")[1]
-                    .split("\"")[0]
-                    .split(",")
-                    .collect { it.trim() }
-                if (columns.contains("username") && columns.contains("only4test")) {
-                    return true
-                }
-            }
-        }
-        return false
-    }
-    assertTrue(helper.checkShowTimesOf("""
-                                SHOW CREATE TABLE ${context.dbName}.${tableName}
-                                """,
-                                checkBloomFilter2, 30, "sql"))
-    assertTrue(helper.checkShowTimesOf("""
-                                SHOW CREATE TABLE TEST_${context.dbName}.${tableName}
-                                """,
-                                checkBloomFilter2, 30, "target"))
-
-    logger.info("=== Test 3: drop bloom filter ===")
-    sql """
-        ALTER TABLE ${tableName}
-        SET ("bloom_filter_columns" = "only4test")
-        """
-    sql "INSERT INTO ${tableName} VALUES (1, 1, '1', '1')"
-
-    assertTrue(helper.checkSelectTimesOf(
-        """ SELECT * FROM ${tableName} """, insert_num + 1, 30))
-
-    def checkBloomFilter3 = { inputRes -> Boolean
-        for (List<Object> row : inputRes) {
-            if ((row[1] as String).contains("\"bloom_filter_columns\" = \"only4test\"")) {
+            if (row[2] == "idx_only4test" && row[10] == "NGRAM_BF") {
                 return true
             }
         }
         return false
     }
-    def show_create_table = target_sql "SHOW CREATE TABLE ${tableName}"
-    assertTrue(checkBloomFilter3(show_create_table))
+    assertTrue(helper.checkShowTimesOf("""
+                                SHOW INDEXES FROM ${context.dbName}.${tableName}
+                                """,
+                                checkNgramBf1, 30, "sql"))
+    assertTrue(helper.checkShowTimesOf("""
+                                SHOW INDEXES FROM TEST_${context.dbName}.${tableName}
+                                """,
+                                checkNgramBf1, 30, "target"))
+
+    logger.info("=== Test 3: drop bloom filter ===")
+    sql """
+        ALTER TABLE ${tableName}
+        DROP INDEX idx_ngrambf
+        """
+    sql "INSERT INTO ${tableName} VALUES (1, 1, '1', '1')"
+
+    assertTrue(helper.checkSelectTimesOf(
+        """ SELECT * FROM ${tableName} """, insert_num + 1, 30))
+    def show_indexes_result = target_sql "show indexes from ${tableName}"
+    assertFalse(checkNgramBf(show_indexes_result))
 }
