@@ -46,7 +46,7 @@ var (
 	featureCompressedSnapshot           bool
 	featureSkipRollupBinlogs            bool
 	featureReplayReplaceTableIdempotent bool
-	featureTxnInsert bool
+	featureTxnInsert                    bool
 )
 
 func init() {
