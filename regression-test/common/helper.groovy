@@ -182,6 +182,10 @@ class Helper {
             }
         }
 
+        if (!ret) {
+            logger.info("last select result: ${res}")
+        }
+
         return ret
     }
 
