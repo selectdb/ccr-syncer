@@ -19,6 +19,11 @@ suite("test_txn_insert") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    if (!helper.has_feature("feature_txn_insert")) {
+        logger.info("Skip the test because the feature is not supported.")
+        return
+    }
+
     def tableName1 = "t1_" + helper.randomSuffix()
     def tableName2 = "t2_" + helper.randomSuffix()
     def test_num = 0

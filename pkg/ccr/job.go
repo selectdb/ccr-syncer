@@ -46,6 +46,7 @@ var (
 	featureCompressedSnapshot           bool
 	featureSkipRollupBinlogs            bool
 	featureReplayReplaceTableIdempotent bool
+	featureTxnInsert bool
 )
 
 func init() {
@@ -71,6 +72,8 @@ func init() {
 		"skip the rollup related binlogs")
 	flag.BoolVar(&featureReplayReplaceTableIdempotent, "feature_replay_replace_table_idempotent", true,
 		"replace table idempotent when replaying the replace table binlog")
+	flag.BoolVar(&featureTxnInsert, "feature_txn_insert", false,
+		"enable txn insert support")
 }
 
 type SyncType int
@@ -1476,6 +1479,10 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		// Step 1: get related tableRecords
 		var isTxnInsert bool = false
 		if len(upsert.Stids) > 0 {
+			if !featureTxnInsert {
+				log.Warnf("The txn insert is not supported yet")
+				return xerror.Errorf(xerror.Normal, "The txn insert is not supported yet")
+			}
 			if j.SyncType == DBSync {
 				log.Warnf("Txn insert is NOT supported when DBSync")
 				return xerror.Errorf(xerror.Normal, "Txn insert is NOT supported when DBSync")
