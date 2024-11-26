@@ -1812,6 +1812,22 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 		}
 	}
 
+	// Some operations, such as DROP TABLE, will be skiped in the partial/full snapshot,
+	// in that case, the dest table might already exists, so we need to check it before creating.
+	// If the dest table already exists, we need to do a partial snapshot.
+	//
+	// See test_cds_fullsync_tbl_drop_create.groovy for details
+	if j.SyncType == DBSync && !createTable.IsCreateView() {
+		if exists, err := j.IDest.CheckTableExistsByName(createTable.TableName); err != nil {
+			return err
+		} else if exists {
+			log.Warnf("the dest table %s already exists, force partial snapshot, commit seq: %d",
+				createTable.TableName, binlog.GetCommitSeq())
+			replace := true
+			return j.newPartialSnapshot(createTable.TableId, createTable.TableName, nil, replace)
+		}
+	}
+
 	if err = j.IDest.CreateTableOrView(createTable, j.Src.Database); err != nil {
 		return xerror.Wrapf(err, xerror.Normal, "create table %d", createTable.TableId)
 	}
