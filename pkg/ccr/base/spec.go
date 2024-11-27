@@ -501,28 +501,43 @@ func (s *Spec) GetAllViewsFromTable(tableName string) ([]string, error) {
 }
 
 func (s *Spec) RenameTable(destTableName string, renameTable *record.RenameTable) error {
+	destTableName = utils.FormatKeywordName(destTableName)
 	// rename table may be 'rename table', 'rename rollup', 'rename partition'
 	var sql string
 	// ALTER TABLE table1 RENAME table2;
 	if renameTable.NewTableName != "" && renameTable.OldTableName != "" {
-		sql = fmt.Sprintf("ALTER TABLE %s RENAME %s", renameTable.OldTableName, renameTable.NewTableName)
+		oldName := utils.FormatKeywordName(renameTable.OldTableName)
+		newName := utils.FormatKeywordName(renameTable.NewTableName)
+		sql = fmt.Sprintf("ALTER TABLE %s RENAME %s", oldName, newName)
 	}
 
 	// ALTER TABLE example_table RENAME ROLLUP rollup1 rollup2;
 	// if rename rollup, table name is unchanged
 	if renameTable.NewRollupName != "" && renameTable.OldRollupName != "" {
-		sql = fmt.Sprintf("ALTER TABLE %s RENAME ROLLUP %s %s", destTableName, renameTable.OldRollupName, renameTable.NewRollupName)
+		oldName := utils.FormatKeywordName(renameTable.OldRollupName)
+		newName := utils.FormatKeywordName(renameTable.NewRollupName)
+		sql = fmt.Sprintf("ALTER TABLE %s RENAME ROLLUP %s %s", destTableName, oldName, newName)
 	}
 
 	// ALTER TABLE example_table RENAME PARTITION p1 p2;
 	// if rename partition, table name is unchanged
 	if renameTable.NewPartitionName != "" && renameTable.OldPartitionName != "" {
-		sql = fmt.Sprintf("ALTER TABLE %s RENAME PARTITION %s %s;", destTableName, renameTable.OldPartitionName, renameTable.NewPartitionName)
+		oldName := utils.FormatKeywordName(renameTable.OldPartitionName)
+		newName := utils.FormatKeywordName(renameTable.NewPartitionName)
+		sql = fmt.Sprintf("ALTER TABLE %s RENAME PARTITION %s %s", destTableName, oldName, newName)
 	}
 	if sql == "" {
 		return xerror.Errorf(xerror.Normal, "rename sql is empty")
 	}
 
+	log.Infof("rename table sql: %s", sql)
+	return s.DbExec(sql)
+}
+
+func (s *Spec) RenameTableWithName(oldName, newName string) error {
+	oldName = utils.FormatKeywordName(oldName)
+	newName = utils.FormatKeywordName(newName)
+	sql := fmt.Sprintf("ALTER TABLE %s RENAME %s", oldName, newName)
 	log.Infof("rename table sql: %s", sql)
 	return s.DbExec(sql)
 }
@@ -585,9 +600,7 @@ func (s *Spec) CreateTableOrView(createTable *record.CreateTable, srcDatabase st
 	//	Creating table will only occur when sync db.
 	//	When create view, the db name of sql is source db name, we should use dest db name to create view
 	createSql := createTable.Sql
-	viewRegex := regexp.MustCompile(`(?i)^CREATE(\s+)VIEW`)
-	isCreateView := viewRegex.MatchString(createSql)
-	if isCreateView {
+	if createTable.IsCreateView() {
 		log.Debugf("create view, use dest db name to replace source db name")
 
 		// replace `internal`.`source_db_name`. or `default_cluster:source_db_name`. to `internal`.`dest_db_name`.

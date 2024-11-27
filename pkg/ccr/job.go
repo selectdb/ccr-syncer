@@ -365,6 +365,32 @@ func (j *Job) addExtraInfo(jobInfo []byte) ([]byte, error) {
 	return jobInfoBytes, nil
 }
 
+func (j *Job) handlePartialSyncTableNotFound() error {
+	tableId := j.progress.PartialSyncData.TableId
+	table := j.progress.PartialSyncData.Table
+
+	if dropped, err := j.isTableDropped(tableId); err != nil {
+		return err
+	} else if dropped {
+		// skip this partial sync because table has been dropped
+		log.Warnf("skip this partial sync because table %s has been dropped, table id: %d", table, tableId)
+		nextCommitSeq := j.progress.CommitSeq
+		if j.SyncType == DBSync {
+			j.progress.NextWithPersist(nextCommitSeq, DBIncrementalSync, Done, "")
+		} else {
+			j.progress.NextWithPersist(nextCommitSeq, TableIncrementalSync, Done, "")
+		}
+		return nil
+	} else if newTableName, err := j.srcMeta.GetTableNameById(tableId); err != nil {
+		return err
+	} else {
+		// The table might be renamed, so we need to update the table name.
+		log.Warnf("force new partial snapshot, since table %d has renamed from %s to %s", tableId, table, newTableName)
+		replace := true // replace the old data to avoid blocking reading
+		return j.newPartialSnapshot(tableId, newTableName, nil, replace)
+	}
+}
+
 // Like fullSync, but only backup and restore partial of the partitions of a table.
 func (j *Job) partialSync() error {
 	type inMemoryData struct {
@@ -373,7 +399,6 @@ func (j *Job) partialSync() error {
 		TableCommitSeqMap map[int64]int64               `json:"table_commit_seq_map"`
 		TableNameMapping  map[int64]string              `json:"table_name_mapping"`
 		RestoreLabel      string                        `json:"restore_label"`
-		SnapshotTableId   int64                         `json:"snapshot_table_id"` // the table id included in the snapshot.
 	}
 
 	if j.progress.PartialSyncData == nil {
@@ -415,25 +440,7 @@ func (j *Job) partialSync() error {
 			replace := true // replace the old data to avoid blocking reading
 			return j.newPartialSnapshot(tableId, table, nil, replace)
 		} else if err != nil && err == base.ErrBackupTableNotFound {
-			var nextCommitSeq int64
-			if dropped, err := j.isTableDropped(tableId); err != nil {
-				return err
-			} else if dropped {
-				// skip this partial sync because table has been dropped
-				log.Infof("skip this partial sync because table %s has been dropped, table id: %d", table, tableId)
-				nextCommitSeq = j.progress.CommitSeq
-			} else {
-				// rollback to the previous state and try to filter the binlog
-				log.Warnf("partial sync status: table %s not found, rollback and filter the binlog, table id: %d", table, tableId)
-				nextCommitSeq = j.progress.PrevCommitSeq
-			}
-
-			if j.SyncType == DBSync {
-				j.progress.NextWithPersist(nextCommitSeq, DBIncrementalSync, Done, "")
-			} else {
-				j.progress.NextWithPersist(nextCommitSeq, TableIncrementalSync, Done, "")
-			}
-			return nil
+			return j.handlePartialSyncTableNotFound()
 		} else if err != nil {
 			return err
 		}
@@ -501,13 +508,14 @@ func (j *Job) partialSync() error {
 		tableCommitSeqMap := backupJobInfo.TableCommitSeqMap
 		tableNameMapping := backupJobInfo.TableNameMapping()
 		log.Debugf("table commit seq map: %v, table name mapping: %v", tableCommitSeqMap, tableNameMapping)
-		var snapshotTableId int64
 		if backupObject, ok := backupJobInfo.BackupObjects[table]; !ok {
 			return xerror.Errorf(xerror.Normal, "table %s not found in backup objects", table)
+		} else if backupObject.Id != tableId {
+			log.Warnf("partial sync table %s id not match, force full sync. table id %d, backup object id %d",
+				table, tableId, backupObject.Id)
+			return j.newSnapshot(j.progress.CommitSeq)
 		} else if _, ok := tableCommitSeqMap[backupObject.Id]; !ok {
 			return xerror.Errorf(xerror.Normal, "commit seq not found, table id %d, table name: %s", backupObject.Id, table)
-		} else {
-			snapshotTableId = backupObject.Id
 		}
 
 		inMemoryData := &inMemoryData{
@@ -515,7 +523,6 @@ func (j *Job) partialSync() error {
 			SnapshotResp:      snapshotResp,
 			TableCommitSeqMap: tableCommitSeqMap,
 			TableNameMapping:  tableNameMapping,
-			SnapshotTableId:   snapshotTableId,
 		}
 		j.progress.NextSubVolatile(AddExtraInfo, inMemoryData)
 
@@ -656,43 +663,33 @@ func (j *Job) partialSync() error {
 			j.progress.TableCommitSeqMap, inMemoryData.TableCommitSeqMap)
 		j.progress.TableNameMapping = utils.MergeMap(
 			j.progress.TableNameMapping, inMemoryData.TableNameMapping)
-		if inMemoryData.SnapshotTableId != tableId {
-			// The table might be overwritten during backup & restore, so we also need to update
-			// it's commit seq to skip the binlogs.
-			//
-			// There are some cases might cause the table overwritten, eg:
-			// 1. The table is dropped and recreated with the same name.
-			// 2. The table is dropped and a table renamed with the same name.
-			// 3. The table is replaced by another table.
-			//
-			// See test_cds_tbl_alter_drop_create.groovy for details.
-			commitSeq, _ := j.progress.TableCommitSeqMap[inMemoryData.SnapshotTableId]
-			log.Infof("partial sync update the overwritten table %s commit seq to %d, table id: %d, "+
-				"snapshot table id: %d", table, commitSeq, tableId, inMemoryData.SnapshotTableId)
-			j.progress.TableCommitSeqMap[tableId] = commitSeq
-			// update the sync table id too, to avoid query the table id from the upstream.
-			j.progress.PartialSyncData.TableId = inMemoryData.SnapshotTableId
-			delete(j.progress.TableNameMapping, tableId)
-		}
 		j.progress.NextSubCheckpoint(PersistRestoreInfo, restoreSnapshotName)
 
 	case PersistRestoreInfo:
 		// Step 7: Update job progress && dest table id
 		// update job info, only for dest table id
 		var targetName = table
+		if j.isTableSyncWithAlias() {
+			targetName = j.Dest.Table
+		}
 		if alias, ok := j.progress.TableAliases[table]; ok {
-			if j.isTableSyncWithAlias() {
-				targetName = j.Dest.Table
-			}
-
 			// check table exists to ensure the idempotent
 			if exist, err := j.IDest.CheckTableExistsByName(alias); err != nil {
 				return err
 			} else if exist {
-				log.Infof("partial sync swap table with alias, table: %s, alias: %s", targetName, alias)
-				swap := false // drop the old table
-				if err := j.IDest.ReplaceTable(alias, targetName, swap); err != nil {
+				if exists, err := j.IDest.CheckTableExistsByName(targetName); err != nil {
 					return err
+				} else if exists {
+					log.Infof("partial sync swap table with alias, table: %s, alias: %s", targetName, alias)
+					swap := false // drop the old table
+					if err := j.IDest.ReplaceTable(alias, targetName, swap); err != nil {
+						return err
+					}
+				} else {
+					log.Infof("partial sync rename table alias %s to %s", alias, targetName)
+					if err := j.IDest.RenameTableWithName(alias, targetName); err != nil {
+						return err
+					}
 				}
 				// Since the meta of dest table has been changed, refresh it.
 				j.destMeta.ClearTablesCache()

@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_cds_tbl_alter_replace") {
+suite("test_cds_tbl_alter_replace_create_1") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -23,6 +23,11 @@ suite("test_cds_tbl_alter_replace") {
         // at least doris 3.0.3, 2.1.8 and doris 2.0.16
         def version = helper.upstream_version()
         logger.info("skip this suite because version is not supported, upstream version ${version}")
+        return
+    }
+
+    if (!helper.has_feature("feature_replay_replace_table_idempotent")) {
+        logger.info("skip this suite because feature_replay_replace_table_idempotent is disabled")
         return
     }
 
@@ -107,20 +112,37 @@ suite("test_cds_tbl_alter_replace") {
     sql "INSERT INTO ${oldTableName} VALUES (3, 300, 3), (300, 3, 3)"  // o:n, 6:2
     sql "ALTER TABLE ${oldTableName} REPLACE WITH TABLE ${newTableName} PROPERTIES (\"swap\"=\"false\")"  // o:n, 2:6
     sql "INSERT INTO ${oldTableName} VALUES (4, 400)"            // o:n, 3:6
-
     helper.ccrJobResume()
 
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${oldTableName}", 3, 60))
 
-    // FIXME(walter) ALTER TABLE COLUMN + REPLACE will trigger full sync, which the dropped tables are not dropped
-    // new table are dropped
-    // assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${newTableName}" """, notExist, 60, "target"))
+    logger.info("create new table again")
+    sql """
+        CREATE TABLE if NOT EXISTS ${newTableName}
+        (
+            `test` INT,
+            `id` INT
+        )
+        ENGINE=OLAP
+        UNIQUE KEY(`test`, `id`)
+        PARTITION BY RANGE(`id`)
+        (
+            PARTITION `p100` VALUES LESS THAN ("1000")
+        )
+        DISTRIBUTED BY HASH(id) BUCKETS AUTO
+        PROPERTIES (
+            "replication_allocation" = "tag.location.default: 1",
+            "binlog.enable" = "true"
+        )
+    """
+    sql "INSERT INTO ${newTableName} VALUES (3, 300), (300, 3)"
 
-    // // no fullsync are triggered
+    def expect_res = { res ->
+        return res.size() == 2
+    }
+    assertTrue(helper.checkShowTimesOf("SELECT * FROM ${newTableName}", expect_res, 60, "target"))
+
+    // no fullsync are triggered
     // def last_job_progress = helper.get_job_progress()
     // assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
 }
-
-
-
-

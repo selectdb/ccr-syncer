@@ -12,11 +12,12 @@ type PartitionRecord struct {
 	Range   string `json:"range"`
 	Version int64  `json:"version"`
 	IsTemp  bool   `json:"isTempPartition"`
-	Stid    int64  `json:stid`
+	Stid    int64  `json:"stid"`
 }
 
 func (p PartitionRecord) String() string {
-	return fmt.Sprintf("PartitionRecord{Id: %d, Range: %s, Version: %d}", p.Id, p.Range, p.Version)
+	return fmt.Sprintf("PartitionRecord{Id: %d, Range: %s, Version: %d, IsTemp: %v, Stid: %d}",
+		p.Id, p.Range, p.Version, p.IsTemp, p.Stid)
 }
 
 type TableRecord struct {

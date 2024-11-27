@@ -3,6 +3,7 @@ package record
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 )
@@ -34,6 +35,11 @@ func NewCreateTableFromJson(data string) (*CreateTable, error) {
 	}
 
 	return &createTable, nil
+}
+
+func (c *CreateTable) IsCreateView() bool {
+	viewRegex := regexp.MustCompile(`(?i)^CREATE(\s+)VIEW`)
+	return viewRegex.MatchString(c.Sql)
 }
 
 // String
