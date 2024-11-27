@@ -1951,7 +1951,7 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 	} else if alterJob.Type == record.ALTER_JOB_ROLLUP {
 		return j.handleAlterRollup(alterJob)
 	} else {
-		return xerror.Errorf(xerror.Normal, "unsupported alter job type: %d", alterJob.Type)
+		return xerror.Errorf(xerror.Normal, "unsupported alter job type: %s", alterJob.Type)
 	}
 }
 
