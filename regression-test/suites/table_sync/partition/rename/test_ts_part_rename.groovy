@@ -20,7 +20,7 @@ suite("test_ts_part_rename") {
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
     // only works on 3.0.4/2.1.8/2.0.16
-    if (!helper.is_version_supported([30004, 20108, 20016]) {
+    if (!helper.is_version_supported([30004, 20108, 20016])) {
         // at least doris 3.0.3, 2.1.8 and doris 2.0.16
         def version = helper.upstream_version()
         logger.info("skip this suite because version is not supported, upstream version ${version}")
