@@ -2095,20 +2095,18 @@ func (j *Job) handleRenameColumnRecord(commitSeq int64, renameColumn *record.Ren
 		return nil
 	}
 
-	destTableId, err := j.getDestTableIdBySrc(renameColumn.TableId)
-	if err != nil {
-		return err
+	var destTableName string
+	if j.SyncType == TableSync {
+		destTableName = j.Dest.Table
+	} else {
+		var err error
+		destTableName, err = j.getDestTableNameBySrcId(renameColumn.TableId)
+		if err != nil {
+			return err
+		}
 	}
 
-	destTableName, err := j.destMeta.GetTableNameById(destTableId)
-	if err != nil {
-		return err
-	} else if destTableName == "" {
-		return xerror.Errorf(xerror.Normal, "tableId %d not found in destMeta", destTableId)
-	}
-
-	err = j.IDest.RenameColumn(destTableName, renameColumn)
-	return err
+	return j.IDest.RenameColumn(destTableName, renameColumn)
 }
 
 // handle modify comment
@@ -2122,20 +2120,26 @@ func (j *Job) handleModifyComment(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	destTableId, err := j.getDestTableIdBySrc(modifyComment.TblId)
-	if err != nil {
-		return err
+	return j.handleModifyCommentRecord(binlog.GetCommitSeq(), modifyComment)
+}
+
+func (j *Job) handleModifyCommentRecord(commitSeq int64, modifyComment *record.ModifyComment) error {
+	if j.isBinlogCommitted(modifyComment.TblId, commitSeq) {
+		return nil
 	}
 
-	destTableName, err := j.destMeta.GetTableNameById(destTableId)
-	if err != nil {
-		return err
-	} else if destTableName == "" {
-		return xerror.Errorf(xerror.Normal, "tableId %d not found in destMeta", destTableId)
+	var destTableName string
+	if j.SyncType == TableSync {
+		destTableName = j.Dest.Table
+	} else {
+		var err error
+		destTableName, err = j.getDestTableNameBySrcId(modifyComment.TblId)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = j.IDest.ModifyComment(destTableName, modifyComment)
-	return err
+	return j.IDest.ModifyComment(destTableName, modifyComment)
 }
 
 func (j *Job) handleTruncateTable(binlog *festruct.TBinlog) error {
@@ -2241,16 +2245,15 @@ func (j *Job) handleRenameTableRecord(commitSeq int64, renameTable *record.Renam
 		return nil
 	}
 
-	destTableId, err := j.getDestTableIdBySrc(renameTable.TableId)
-	if err != nil {
-		return err
-	}
-
 	var destTableName string
-	if destTableName, err = j.destMeta.GetTableNameById(destTableId); err != nil {
-		return err
-	} else if destTableName == "" {
-		return xerror.Errorf(xerror.Normal, "tableId %d not found in destMeta", destTableId)
+	if j.SyncType == TableSync {
+		destTableName = j.Dest.Table
+	} else {
+		var err error
+		destTableName, err = j.getDestTableNameBySrcId(renameTable.TableId)
+		if err != nil {
+			return err
+		}
 	}
 
 	if renameTable.NewTableName != "" && renameTable.OldTableName == "" {
@@ -2261,7 +2264,7 @@ func (j *Job) handleRenameTableRecord(commitSeq int64, renameTable *record.Renam
 		renameTable.OldTableName = destTableName
 	}
 
-	err = j.IDest.RenameTable(destTableName, renameTable)
+	err := j.IDest.RenameTable(destTableName, renameTable)
 	if err != nil {
 		return err
 	}
@@ -2341,19 +2344,18 @@ func (j *Job) handleModifyTableAddOrDropInvertedIndicesRecord(commitSeq int64, r
 		return nil
 	}
 
-	tableAlias := ""
-	if j.isTableSyncWithAlias() {
-		tableAlias = j.Dest.Table
-	}
-	if tableAlias == "" {
-		if name, err := j.getDestTableNameBySrcId(record.TableId); err != nil {
+	var destTableName string
+	if j.SyncType == TableSync {
+		destTableName = j.Dest.Table
+	} else {
+		var err error
+		destTableName, err = j.getDestTableNameBySrcId(record.TableId)
+		if err != nil {
 			return err
-		} else {
-			tableAlias = name
 		}
 	}
 
-	return j.IDest.LightningIndexChange(tableAlias, record)
+	return j.IDest.LightningIndexChange(destTableName, record)
 }
 
 func (j *Job) handleIndexChangeJob(binlog *festruct.TBinlog) error {
@@ -2381,12 +2383,14 @@ func (j *Job) handleIndexChangeJobRecord(commitSeq int64, indexChangeJob *record
 		return nil
 	}
 
-	tableAlias := indexChangeJob.TableName
-	if j.isTableSyncWithAlias() {
-		tableAlias = j.Dest.Table
+	var destTableName string
+	if j.SyncType == TableSync {
+		destTableName = j.Dest.Table
+	} else {
+		destTableName = indexChangeJob.TableName
 	}
 
-	return j.IDest.BuildIndex(tableAlias, indexChangeJob)
+	return j.IDest.BuildIndex(destTableName, indexChangeJob)
 }
 
 // handle alter view def
@@ -2398,6 +2402,13 @@ func (j *Job) handleAlterViewDef(binlog *festruct.TBinlog) error {
 	alterView, err := record.NewAlterViewFromJson(data)
 	if err != nil {
 		return err
+	}
+	return j.handleAlterViewDefRecord(binlog.GetCommitSeq(), alterView)
+}
+
+func (j *Job) handleAlterViewDefRecord(commitSeq int64, alterView *record.AlterView) error {
+	if j.isBinlogCommitted(alterView.TableId, commitSeq) {
+		return nil
 	}
 
 	viewName, err := j.getDestTableNameBySrcId(alterView.TableId)
@@ -2425,12 +2436,12 @@ func (j *Job) handleRenamePartitionRecord(commitSeq int64, renamePartition *reco
 		return nil
 	}
 
-	var tableAlias string
+	var destTableName string
 	if j.SyncType == TableSync {
-		tableAlias = j.Dest.Table
-	} else if j.SyncType == DBSync {
+		destTableName = j.Dest.Table
+	} else {
 		var err error
-		tableAlias, err = j.getDestTableNameBySrcId(renamePartition.TableId)
+		destTableName, err = j.getDestTableNameBySrcId(renamePartition.TableId)
 		if err != nil {
 			return err
 		}
@@ -2443,13 +2454,13 @@ func (j *Job) handleRenamePartitionRecord(commitSeq int64, renamePartition *reco
 			"new partition: %s, partition id: %d, table id: %d, commit seq: %d",
 			newPartition, renamePartition.PartitionId, renamePartition.TableId, commitSeq)
 		replace := true
-		tableName := tableAlias
+		tableName := destTableName
 		if j.isTableSyncWithAlias() {
 			tableName = j.Src.Table
 		}
 		return j.newPartialSnapshot(renamePartition.TableId, tableName, nil, replace)
 	}
-	return j.IDest.RenamePartition(tableAlias, oldPartition, newPartition)
+	return j.IDest.RenamePartition(destTableName, oldPartition, newPartition)
 }
 
 func (j *Job) handleRenameRollup(binlog *festruct.TBinlog) error {
@@ -2470,12 +2481,12 @@ func (j *Job) handleRenameRollupRecord(commitSeq int64, renameRollup *record.Ren
 		return nil
 	}
 
-	var tableAlias string
+	var destTableName string
 	if j.SyncType == TableSync {
-		tableAlias = j.Dest.Table
-	} else if j.SyncType == DBSync {
+		destTableName = j.Dest.Table
+	} else {
 		var err error
-		tableAlias, err = j.getDestTableNameBySrcId(renameRollup.TableId)
+		destTableName, err = j.getDestTableNameBySrcId(renameRollup.TableId)
 		if err != nil {
 			return err
 		}
@@ -2488,14 +2499,14 @@ func (j *Job) handleRenameRollupRecord(commitSeq int64, renameRollup *record.Ren
 			"new rollup: %s, index id: %d, table id: %d, commit seq: %d",
 			newRollup, renameRollup.IndexId, renameRollup.TableId, commitSeq)
 		replace := true
-		tableName := tableAlias
+		tableName := destTableName
 		if j.isTableSyncWithAlias() {
 			tableName = j.Src.Table
 		}
 		return j.newPartialSnapshot(renameRollup.TableId, tableName, nil, replace)
 	}
 
-	return j.IDest.RenameRollup(tableAlias, oldRollup, newRollup)
+	return j.IDest.RenameRollup(destTableName, oldRollup, newRollup)
 }
 
 func (j *Job) handleDropRollup(binlog *festruct.TBinlog) error {
@@ -2516,12 +2527,14 @@ func (j *Job) handleDropRollupRecord(commitSeq int64, dropRollup *record.DropRol
 		return nil
 	}
 
-	tableAlias := dropRollup.TableName
+	var destTableName string
 	if j.SyncType == TableSync {
-		tableAlias = j.Dest.Table
+		destTableName = j.Dest.Table
+	} else {
+		destTableName = dropRollup.TableName
 	}
 
-	return j.IDest.DropRollup(tableAlias, dropRollup.IndexName)
+	return j.IDest.DropRollup(destTableName, dropRollup.IndexName)
 }
 
 func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
@@ -2590,6 +2603,18 @@ func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 			return err
 		}
 		return j.handleIndexChangeJobRecord(commitSeq, job)
+	case festruct.TBinlogType_MODIFY_VIEW_DEF:
+		alterView, err := record.NewAlterViewFromJson(barrierLog.Binlog)
+		if err != nil {
+			return err
+		}
+		return j.handleAlterViewDefRecord(commitSeq, alterView)
+	case festruct.TBinlogType_MODIFY_COMMENT:
+		modifyComment, err := record.NewModifyCommentFromJson(barrierLog.Binlog)
+		if err != nil {
+			return err
+		}
+		return j.handleModifyCommentRecord(commitSeq, modifyComment)
 	case festruct.TBinlogType_BARRIER:
 		log.Info("handle barrier binlog, ignore it")
 	default:
