@@ -45,7 +45,6 @@ var (
 	featureReuseRunningBackupRestoreJob bool
 	featureCompressedSnapshot           bool
 	featureSkipRollupBinlogs            bool
-	featureReplayReplaceTableIdempotent bool
 	featureTxnInsert                    bool
 )
 
@@ -70,8 +69,6 @@ func init() {
 		"compress the snapshot job info and meta")
 	flag.BoolVar(&featureSkipRollupBinlogs, "feature_skip_rollup_binlogs", false,
 		"skip the rollup related binlogs")
-	flag.BoolVar(&featureReplayReplaceTableIdempotent, "feature_replay_replace_table_idempotent", true,
-		"replace table idempotent when replaying the replace table binlog")
 	flag.BoolVar(&featureTxnInsert, "feature_txn_insert", false,
 		"enable txn insert support")
 }
@@ -2264,98 +2261,6 @@ func (j *Job) handleReplaceTableRecord(commitSeq int64, record *record.ReplaceTa
 	}
 
 	if j.isBinlogCommitted(record.OriginTableId, commitSeq) {
-		if !featureReplayReplaceTableIdempotent {
-			return nil
-		}
-
-		log.Infof("replace table is partially committed, ensure it is fully committed, record: %s, commit seq: %d", record, commitSeq)
-
-		// There are some corner cases that the replace table is partially committed in
-		// the partial snapshot. Thus, we need to check the table mapping to ensure the
-		// replace table is fully committed, if not, we need to replay the left part.
-		//
-		// Case analysis:
-		// 1. alter A, replace A with B, swap = false =>
-		//      expect:
-		//          upstream old-A dropped, upstream B dropped
-		//          downstream old-A dropped, downstream B dropped
-		//          downstream old-B named new-A
-		//          upstream, downstream new-A = old-B data
-		//          table mapping [old-B => old-B], old-A was dropped
-		//      actual:
-		//          downstream old-A dropped via partial snapshot
-		//          downstream new-A = old-B data via partial snapshot
-		//          downstream old-B without change => drop it
-		//          table mapping [old-A => old-A, old-B => new-A] would not found old-B
-		// 2. alter B, replace A with B, swap = false => B dropped
-		// 3. alter A, replace A with B, swap = true
-		//      expect:
-		//          upstream new-A = old-B data, new-B = old-A data
-		//          downstream new-A = old-B data, new-B = old-A data
-		//          table mapping [old-A => old-A, old-B => old-B]
-		//      actual:
-		//          downstream old-A dropped via partial snapshot
-		//          downstream new-A = old-B data via partial snapshot
-		//          downstream old-B without change => need partial sync from upstream old-A (new-B)
-		//          table mapping [old-A => old-A, old-B => new-A], would not found old-B
-		// 4. alter B, replace A with B, swap = true
-		//      expect:
-		//          upstream new-A = old-B data, new-B = old-A data
-		//          downstream new-A = old-B data, new-B = old-A data
-		//          table mapping [old-A => old-A, old-B => old-B]
-		//      actual:
-		//          downstream old-B dropped via partial snapshot
-		//          downstream new-B = old-A data via partial snapshot
-		//          downstream old-A without change => need partial sync from upstream old-B (new-A)
-		//          table mapping [old-A => new-B, old-B => old-B], old-A would not found
-		if record.SwapTable {
-			// The origin table (id, not name) must exists in the dest cluster, if the origin
-			// table is not exists in the dest cluster, we should rebuild it.
-			//
-			// See test_cds_tbl_alter_replace_swap.groovy for details
-			destTableId, ok := j.progress.TableMapping[record.OriginTableId]
-			if !ok {
-				return xerror.Errorf(xerror.Normal, "the new table %s not found in dest cluster, src table id: %d",
-					record.NewTableName, record.OriginTableId)
-			}
-			if tableName, err := j.destMeta.GetTableNameById(destTableId); err != nil {
-				return err
-			} else if len(tableName) == 0 {
-				log.Warnf("the new table %s not found in dest cluster, rebuild via partial snapshot, src table id: %d",
-					record.NewTableName, record.OriginTableId)
-				replace := true
-				return j.newPartialSnapshot(record.OriginTableId, record.NewTableName, nil, replace)
-			}
-
-			destTableId, ok = j.progress.TableMapping[record.NewTableId]
-			if !ok {
-				return xerror.Errorf(xerror.Normal, "the origin table %s not found in dest cluster, src table id: %d",
-					record.OriginTableName, record.NewTableId)
-			}
-			if tableName, err := j.destMeta.GetTableNameById(destTableId); err != nil {
-				return err
-			} else if len(tableName) == 0 {
-				log.Warnf("the origin table %s not found in dest cluster, rebuild via partial snapshot, src table id: %d",
-					record.OriginTableName, record.NewTableId)
-				replace := true
-				return j.newPartialSnapshot(record.NewTableId, record.OriginTableName, nil, replace)
-			}
-		} else {
-			// The origin table (id, not name) must be dropped, if the origin table still
-			// exists in the dest cluster, we should drop it.
-			//
-			// See test_cds_tbl_alter_replace_create.groovy for details
-			if _, ok := j.progress.TableMapping[record.OriginTableId]; ok {
-				// drop the new table in dest cluster
-				log.Infof("drop the replace new table %s, src table id: %d",
-					record.NewTableName, record.OriginTableId)
-				if err := j.IDest.DropTable(record.NewTableName, true); err != nil {
-					return err
-				}
-				delete(j.progress.TableNameMapping, record.OriginTableId)
-				delete(j.progress.TableMapping, record.NewTableId)
-			}
-		}
 		return nil
 	}
 
