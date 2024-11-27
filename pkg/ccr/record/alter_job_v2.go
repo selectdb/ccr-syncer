@@ -27,6 +27,12 @@ type AlterJobV2 struct {
 	JobState      string          `json:"jobState"`
 	RawSql        string          `json:"rawSql"`
 	ShadowIndexes map[int64]int64 `json:"iim"`
+
+	// for rollup
+	RollupIndexId   int64  `json:"rollupIndexId"`
+	RollupIndexName string `json:"rollupIndexName"`
+	BaseIndexId     int64  `json:"baseIndexId"`
+	BaseIndexName   string `json:"baseIndexName"`
 }
 
 func NewAlterJobV2FromJson(data string) (*AlterJobV2, error) {

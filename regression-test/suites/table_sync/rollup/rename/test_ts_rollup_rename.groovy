@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_ts_rollup_add_drop") {
+suite("test_ts_rollup_rename") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -82,36 +82,20 @@ suite("test_ts_rollup_add_drop") {
     assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${tableName} ALL",
                                 hasRollupFull, 30, "target"))
 
-
-    logger.info("=== Test 2: incremental update rollup ===")
+    logger.info("=== Test 2: Rename rollup ===")
     sql """
         ALTER TABLE ${tableName}
-        ADD ROLLUP rollup_${tableName}_incr (id, col1, col3)
-        """
-    def hasRollupIncremental = { res -> Boolean
+        RENAME ROLLUP rollup_${tableName}_full rollup_${tableName}_full_new
+    """
+    def hasRollupFullNew = { res -> Boolean
         for (List<Object> row : res) {
-            if ((row[0] as String) == "rollup_${tableName}_incr") {
+            if ((row[0] as String) == "rollup_${tableName}_full_new") {
                 return true
             }
         }
+
         return false
     }
     assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${tableName} ALL",
-                                hasRollupIncremental, 30, "target"))
-
-    logger.info("=== Test 3: drop rollup")
-    sql """
-        ALTER TABLE ${tableName} DROP ROLLUP rollup_${tableName}_incr
-        """
-
-    def hasRollupIncrementalDropped = { res -> Boolean
-        for (List<Object> row : res) {
-            if ((row[0] as String) == "rollup_${tableName}_incr") {
-                return false
-            }
-        }
-        return true
-    }
-    assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${tableName} ALL",
-                                hasRollupIncrementalDropped, 30, "target"))
+                                hasRollupFullNew, 30, "target"))
 }

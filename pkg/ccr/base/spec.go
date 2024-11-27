@@ -1394,6 +1394,14 @@ func (s *Spec) RenameRollup(destTableName, oldRollup, newRollup string) error {
 	return s.DbExec(renameRollupSql)
 }
 
+func (s *Spec) DropRollup(destTableName, rollup string) error {
+	destTableName = utils.FormatKeywordName(destTableName)
+	rollup = utils.FormatKeywordName(rollup)
+	dropRollupSql := fmt.Sprintf("ALTER TABLE %s DROP ROLLUP %s", destTableName, rollup)
+	log.Infof("drop rollup sql: %s", dropRollupSql)
+	return s.DbExec(dropRollupSql)
+}
+
 func (s *Spec) DesyncTables(tables ...string) error {
 	var err error
 

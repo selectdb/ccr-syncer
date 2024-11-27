@@ -1946,6 +1946,42 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
+	if alterJob.Type == record.ALTER_JOB_SCHEMA_CHANGE {
+		return j.handleSchemaChange(alterJob)
+	} else if alterJob.Type == record.ALTER_JOB_ROLLUP {
+		return j.handleAlterRollup(alterJob)
+	} else {
+		return xerror.Errorf(xerror.Normal, "unsupported alter job type: %d", alterJob.Type)
+	}
+}
+
+func (j *Job) handleAlterRollup(alterJob *record.AlterJobV2) error {
+	if !alterJob.IsFinished() {
+		switch alterJob.JobState {
+		case record.ALTER_JOB_STATE_PENDING:
+			// Once the rollup job step to WAITING_TXN, the upsert to the rollup index is allowed,
+			// but the dest index of the downstream cluster hasn't been created.
+			//
+			// To filter the upsert to the rollup index, save the shadow index ids here.
+			if j.progress.ShadowIndexes == nil {
+				j.progress.ShadowIndexes = make(map[int64]int64)
+			}
+			j.progress.ShadowIndexes[alterJob.RollupIndexId] = alterJob.BaseIndexId
+		case record.ALTER_JOB_STATE_CANCELLED:
+			// clear the shadow indexes
+			delete(j.progress.ShadowIndexes, alterJob.RollupIndexId)
+		}
+		return nil
+	}
+
+	// Once partial snapshot finished, the rollup indexes will be convert to normal index.
+	delete(j.progress.ShadowIndexes, alterJob.RollupIndexId)
+
+	replace := true
+	return j.newPartialSnapshot(alterJob.TableId, alterJob.TableName, nil, replace)
+}
+
+func (j *Job) handleSchemaChange(alterJob *record.AlterJobV2) error {
 	if !alterJob.IsFinished() {
 		switch alterJob.JobState {
 		case record.ALTER_JOB_STATE_PENDING:
@@ -2462,6 +2498,32 @@ func (j *Job) handleRenameRollupRecord(commitSeq int64, renameRollup *record.Ren
 	return j.IDest.RenameRollup(tableAlias, oldRollup, newRollup)
 }
 
+func (j *Job) handleDropRollup(binlog *festruct.TBinlog) error {
+	log.Infof("handle drop rollup binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
+
+	data := binlog.GetData()
+	dropRollup, err := record.NewDropRollupFromJson(data)
+	if err != nil {
+		return err
+	}
+
+	return j.handleDropRollupRecord(binlog.GetCommitSeq(), dropRollup)
+}
+
+func (j *Job) handleDropRollupRecord(commitSeq int64, dropRollup *record.DropRollup) error {
+	if j.isBinlogCommitted(dropRollup.TableId, commitSeq) {
+		return nil
+	}
+
+	tableAlias := dropRollup.TableName
+	if j.SyncType == TableSync {
+		tableAlias = j.Dest.Table
+	}
+
+	return j.IDest.DropRollup(tableAlias, dropRollup.IndexName)
+}
+
 func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 	data := binlog.GetData()
 	barrierLog, err := record.NewBarrierLogFromJson(data)
@@ -2498,6 +2560,18 @@ func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 			return err
 		}
 		return j.handleRenamePartitionRecord(commitSeq, renamePartition)
+	case festruct.TBinlogType_RENAME_ROLLUP:
+		renameRollup, err := record.NewRenameRollupFromJson(barrierLog.Binlog)
+		if err != nil {
+			return err
+		}
+		return j.handleRenameRollupRecord(binlog.GetCommitSeq(), renameRollup)
+	case festruct.TBinlogType_DROP_ROLLUP:
+		dropRollup, err := record.NewDropRollupFromJson(barrierLog.Binlog)
+		if err != nil {
+			return err
+		}
+		return j.handleDropRollupRecord(commitSeq, dropRollup)
 	case festruct.TBinlogType_REPLACE_TABLE:
 		replaceTable, err := record.NewReplaceTableRecordFromJson(barrierLog.Binlog)
 		if err != nil {
@@ -2626,6 +2700,8 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		return j.handleRenamePartition(binlog)
 	case festruct.TBinlogType_RENAME_ROLLUP:
 		return j.handleRenameRollup(binlog)
+	case festruct.TBinlogType_DROP_ROLLUP:
+		return j.handleDropRollup(binlog)
 	default:
 		return xerror.Errorf(xerror.Normal, "unknown binlog type: %v", binlog.GetType())
 	}

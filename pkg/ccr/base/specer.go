@@ -55,6 +55,7 @@ type Specer interface {
 	BuildIndex(tableAlias string, buildIndex *record.IndexChangeJob) error
 
 	RenameRollup(destTableName, oldRollup, newRollup string) error
+	DropRollup(destTableName, rollupName string) error
 
 	DesyncTables(tables ...string) error
 
