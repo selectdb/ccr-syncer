@@ -15495,6 +15495,7 @@ type TFileScanRangeParams struct {
 	LoadId                      *types.TUniqueId                `thrift:"load_id,21,optional" frugal:"21,optional,types.TUniqueId" json:"load_id,omitempty"`
 	TextSerdeType               *TTextSerdeType                 `thrift:"text_serde_type,22,optional" frugal:"22,optional,TTextSerdeType" json:"text_serde_type,omitempty"`
 	SequenceMapCol              *string                         `thrift:"sequence_map_col,23,optional" frugal:"23,optional,string" json:"sequence_map_col,omitempty"`
+	SerializedTable             *string                         `thrift:"serialized_table,24,optional" frugal:"24,optional,string" json:"serialized_table,omitempty"`
 }
 
 func NewTFileScanRangeParams() *TFileScanRangeParams {
@@ -15710,6 +15711,15 @@ func (p *TFileScanRangeParams) GetSequenceMapCol() (v string) {
 	}
 	return *p.SequenceMapCol
 }
+
+var TFileScanRangeParams_SerializedTable_DEFAULT string
+
+func (p *TFileScanRangeParams) GetSerializedTable() (v string) {
+	if !p.IsSetSerializedTable() {
+		return TFileScanRangeParams_SerializedTable_DEFAULT
+	}
+	return *p.SerializedTable
+}
 func (p *TFileScanRangeParams) SetFileType(val *types.TFileType) {
 	p.FileType = val
 }
@@ -15779,6 +15789,9 @@ func (p *TFileScanRangeParams) SetTextSerdeType(val *TTextSerdeType) {
 func (p *TFileScanRangeParams) SetSequenceMapCol(val *string) {
 	p.SequenceMapCol = val
 }
+func (p *TFileScanRangeParams) SetSerializedTable(val *string) {
+	p.SerializedTable = val
+}
 
 var fieldIDToName_TFileScanRangeParams = map[int16]string{
 	1:  "file_type",
@@ -15804,6 +15817,7 @@ var fieldIDToName_TFileScanRangeParams = map[int16]string{
 	21: "load_id",
 	22: "text_serde_type",
 	23: "sequence_map_col",
+	24: "serialized_table",
 }
 
 func (p *TFileScanRangeParams) IsSetFileType() bool {
@@ -15896,6 +15910,10 @@ func (p *TFileScanRangeParams) IsSetTextSerdeType() bool {
 
 func (p *TFileScanRangeParams) IsSetSequenceMapCol() bool {
 	return p.SequenceMapCol != nil
+}
+
+func (p *TFileScanRangeParams) IsSetSerializedTable() bool {
+	return p.SerializedTable != nil
 }
 
 func (p *TFileScanRangeParams) Read(iprot thrift.TProtocol) (err error) {
@@ -16096,6 +16114,14 @@ func (p *TFileScanRangeParams) Read(iprot thrift.TProtocol) (err error) {
 		case 23:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField23(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 24:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField24(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -16510,6 +16536,17 @@ func (p *TFileScanRangeParams) ReadField23(iprot thrift.TProtocol) error {
 	p.SequenceMapCol = _field
 	return nil
 }
+func (p *TFileScanRangeParams) ReadField24(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SerializedTable = _field
+	return nil
+}
 
 func (p *TFileScanRangeParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -16607,6 +16644,10 @@ func (p *TFileScanRangeParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField23(oprot); err != nil {
 			fieldId = 23
+			goto WriteFieldError
+		}
+		if err = p.writeField24(oprot); err != nil {
+			fieldId = 24
 			goto WriteFieldError
 		}
 	}
@@ -17151,6 +17192,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
 }
 
+func (p *TFileScanRangeParams) writeField24(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSerializedTable() {
+		if err = oprot.WriteFieldBegin("serialized_table", thrift.STRING, 24); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SerializedTable); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 24 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 24 end error: ", p), err)
+}
+
 func (p *TFileScanRangeParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -17232,6 +17292,9 @@ func (p *TFileScanRangeParams) DeepEqual(ano *TFileScanRangeParams) bool {
 		return false
 	}
 	if !p.Field23DeepEqual(ano.SequenceMapCol) {
+		return false
+	}
+	if !p.Field24DeepEqual(ano.SerializedTable) {
 		return false
 	}
 	return true
@@ -17493,6 +17556,18 @@ func (p *TFileScanRangeParams) Field23DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.SequenceMapCol, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TFileScanRangeParams) Field24DeepEqual(src *string) bool {
+
+	if p.SerializedTable == src {
+		return true
+	} else if p.SerializedTable == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SerializedTable, *src) != 0 {
 		return false
 	}
 	return true

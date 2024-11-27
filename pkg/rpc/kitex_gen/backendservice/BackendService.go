@@ -11658,22 +11658,22 @@ func (p *TQueryIngestBinlogResult_) Field2DeepEqual(src *string) bool {
 }
 
 type TWorkloadGroupInfo struct {
-	Id                          *int64  `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id,omitempty"`
-	Name                        *string `thrift:"name,2,optional" frugal:"2,optional,string" json:"name,omitempty"`
-	Version                     *int64  `thrift:"version,3,optional" frugal:"3,optional,i64" json:"version,omitempty"`
-	CpuShare                    *int64  `thrift:"cpu_share,4,optional" frugal:"4,optional,i64" json:"cpu_share,omitempty"`
-	CpuHardLimit                *int32  `thrift:"cpu_hard_limit,5,optional" frugal:"5,optional,i32" json:"cpu_hard_limit,omitempty"`
-	MemLimit                    *string `thrift:"mem_limit,6,optional" frugal:"6,optional,string" json:"mem_limit,omitempty"`
-	EnableMemoryOvercommit      *bool   `thrift:"enable_memory_overcommit,7,optional" frugal:"7,optional,bool" json:"enable_memory_overcommit,omitempty"`
-	EnableCpuHardLimit          *bool   `thrift:"enable_cpu_hard_limit,8,optional" frugal:"8,optional,bool" json:"enable_cpu_hard_limit,omitempty"`
-	ScanThreadNum               *int32  `thrift:"scan_thread_num,9,optional" frugal:"9,optional,i32" json:"scan_thread_num,omitempty"`
-	MaxRemoteScanThreadNum      *int32  `thrift:"max_remote_scan_thread_num,10,optional" frugal:"10,optional,i32" json:"max_remote_scan_thread_num,omitempty"`
-	MinRemoteScanThreadNum      *int32  `thrift:"min_remote_scan_thread_num,11,optional" frugal:"11,optional,i32" json:"min_remote_scan_thread_num,omitempty"`
-	SpillThresholdLowWatermark  *int32  `thrift:"spill_threshold_low_watermark,12,optional" frugal:"12,optional,i32" json:"spill_threshold_low_watermark,omitempty"`
-	SpillThresholdHighWatermark *int32  `thrift:"spill_threshold_high_watermark,13,optional" frugal:"13,optional,i32" json:"spill_threshold_high_watermark,omitempty"`
-	ReadBytesPerSecond          *int64  `thrift:"read_bytes_per_second,14,optional" frugal:"14,optional,i64" json:"read_bytes_per_second,omitempty"`
-	RemoteReadBytesPerSecond    *int64  `thrift:"remote_read_bytes_per_second,15,optional" frugal:"15,optional,i64" json:"remote_read_bytes_per_second,omitempty"`
-	Tag                         *string `thrift:"tag,16,optional" frugal:"16,optional,string" json:"tag,omitempty"`
+	Id                       *int64  `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id,omitempty"`
+	Name                     *string `thrift:"name,2,optional" frugal:"2,optional,string" json:"name,omitempty"`
+	Version                  *int64  `thrift:"version,3,optional" frugal:"3,optional,i64" json:"version,omitempty"`
+	CpuShare                 *int64  `thrift:"cpu_share,4,optional" frugal:"4,optional,i64" json:"cpu_share,omitempty"`
+	CpuHardLimit             *int32  `thrift:"cpu_hard_limit,5,optional" frugal:"5,optional,i32" json:"cpu_hard_limit,omitempty"`
+	MemLimit                 *string `thrift:"mem_limit,6,optional" frugal:"6,optional,string" json:"mem_limit,omitempty"`
+	EnableMemoryOvercommit   *bool   `thrift:"enable_memory_overcommit,7,optional" frugal:"7,optional,bool" json:"enable_memory_overcommit,omitempty"`
+	EnableCpuHardLimit       *bool   `thrift:"enable_cpu_hard_limit,8,optional" frugal:"8,optional,bool" json:"enable_cpu_hard_limit,omitempty"`
+	ScanThreadNum            *int32  `thrift:"scan_thread_num,9,optional" frugal:"9,optional,i32" json:"scan_thread_num,omitempty"`
+	MaxRemoteScanThreadNum   *int32  `thrift:"max_remote_scan_thread_num,10,optional" frugal:"10,optional,i32" json:"max_remote_scan_thread_num,omitempty"`
+	MinRemoteScanThreadNum   *int32  `thrift:"min_remote_scan_thread_num,11,optional" frugal:"11,optional,i32" json:"min_remote_scan_thread_num,omitempty"`
+	MemoryLowWatermark       *int32  `thrift:"memory_low_watermark,12,optional" frugal:"12,optional,i32" json:"memory_low_watermark,omitempty"`
+	MemoryHighWatermark      *int32  `thrift:"memory_high_watermark,13,optional" frugal:"13,optional,i32" json:"memory_high_watermark,omitempty"`
+	ReadBytesPerSecond       *int64  `thrift:"read_bytes_per_second,14,optional" frugal:"14,optional,i64" json:"read_bytes_per_second,omitempty"`
+	RemoteReadBytesPerSecond *int64  `thrift:"remote_read_bytes_per_second,15,optional" frugal:"15,optional,i64" json:"remote_read_bytes_per_second,omitempty"`
+	Tag                      *string `thrift:"tag,16,optional" frugal:"16,optional,string" json:"tag,omitempty"`
 }
 
 func NewTWorkloadGroupInfo() *TWorkloadGroupInfo {
@@ -11782,22 +11782,22 @@ func (p *TWorkloadGroupInfo) GetMinRemoteScanThreadNum() (v int32) {
 	return *p.MinRemoteScanThreadNum
 }
 
-var TWorkloadGroupInfo_SpillThresholdLowWatermark_DEFAULT int32
+var TWorkloadGroupInfo_MemoryLowWatermark_DEFAULT int32
 
-func (p *TWorkloadGroupInfo) GetSpillThresholdLowWatermark() (v int32) {
-	if !p.IsSetSpillThresholdLowWatermark() {
-		return TWorkloadGroupInfo_SpillThresholdLowWatermark_DEFAULT
+func (p *TWorkloadGroupInfo) GetMemoryLowWatermark() (v int32) {
+	if !p.IsSetMemoryLowWatermark() {
+		return TWorkloadGroupInfo_MemoryLowWatermark_DEFAULT
 	}
-	return *p.SpillThresholdLowWatermark
+	return *p.MemoryLowWatermark
 }
 
-var TWorkloadGroupInfo_SpillThresholdHighWatermark_DEFAULT int32
+var TWorkloadGroupInfo_MemoryHighWatermark_DEFAULT int32
 
-func (p *TWorkloadGroupInfo) GetSpillThresholdHighWatermark() (v int32) {
-	if !p.IsSetSpillThresholdHighWatermark() {
-		return TWorkloadGroupInfo_SpillThresholdHighWatermark_DEFAULT
+func (p *TWorkloadGroupInfo) GetMemoryHighWatermark() (v int32) {
+	if !p.IsSetMemoryHighWatermark() {
+		return TWorkloadGroupInfo_MemoryHighWatermark_DEFAULT
 	}
-	return *p.SpillThresholdHighWatermark
+	return *p.MemoryHighWatermark
 }
 
 var TWorkloadGroupInfo_ReadBytesPerSecond_DEFAULT int64
@@ -11859,11 +11859,11 @@ func (p *TWorkloadGroupInfo) SetMaxRemoteScanThreadNum(val *int32) {
 func (p *TWorkloadGroupInfo) SetMinRemoteScanThreadNum(val *int32) {
 	p.MinRemoteScanThreadNum = val
 }
-func (p *TWorkloadGroupInfo) SetSpillThresholdLowWatermark(val *int32) {
-	p.SpillThresholdLowWatermark = val
+func (p *TWorkloadGroupInfo) SetMemoryLowWatermark(val *int32) {
+	p.MemoryLowWatermark = val
 }
-func (p *TWorkloadGroupInfo) SetSpillThresholdHighWatermark(val *int32) {
-	p.SpillThresholdHighWatermark = val
+func (p *TWorkloadGroupInfo) SetMemoryHighWatermark(val *int32) {
+	p.MemoryHighWatermark = val
 }
 func (p *TWorkloadGroupInfo) SetReadBytesPerSecond(val *int64) {
 	p.ReadBytesPerSecond = val
@@ -11887,8 +11887,8 @@ var fieldIDToName_TWorkloadGroupInfo = map[int16]string{
 	9:  "scan_thread_num",
 	10: "max_remote_scan_thread_num",
 	11: "min_remote_scan_thread_num",
-	12: "spill_threshold_low_watermark",
-	13: "spill_threshold_high_watermark",
+	12: "memory_low_watermark",
+	13: "memory_high_watermark",
 	14: "read_bytes_per_second",
 	15: "remote_read_bytes_per_second",
 	16: "tag",
@@ -11938,12 +11938,12 @@ func (p *TWorkloadGroupInfo) IsSetMinRemoteScanThreadNum() bool {
 	return p.MinRemoteScanThreadNum != nil
 }
 
-func (p *TWorkloadGroupInfo) IsSetSpillThresholdLowWatermark() bool {
-	return p.SpillThresholdLowWatermark != nil
+func (p *TWorkloadGroupInfo) IsSetMemoryLowWatermark() bool {
+	return p.MemoryLowWatermark != nil
 }
 
-func (p *TWorkloadGroupInfo) IsSetSpillThresholdHighWatermark() bool {
-	return p.SpillThresholdHighWatermark != nil
+func (p *TWorkloadGroupInfo) IsSetMemoryHighWatermark() bool {
+	return p.MemoryHighWatermark != nil
 }
 
 func (p *TWorkloadGroupInfo) IsSetReadBytesPerSecond() bool {
@@ -12263,7 +12263,7 @@ func (p *TWorkloadGroupInfo) ReadField12(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.SpillThresholdLowWatermark = _field
+	p.MemoryLowWatermark = _field
 	return nil
 }
 func (p *TWorkloadGroupInfo) ReadField13(iprot thrift.TProtocol) error {
@@ -12274,7 +12274,7 @@ func (p *TWorkloadGroupInfo) ReadField13(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.SpillThresholdHighWatermark = _field
+	p.MemoryHighWatermark = _field
 	return nil
 }
 func (p *TWorkloadGroupInfo) ReadField14(iprot thrift.TProtocol) error {
@@ -12609,11 +12609,11 @@ WriteFieldEndError:
 }
 
 func (p *TWorkloadGroupInfo) writeField12(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSpillThresholdLowWatermark() {
-		if err = oprot.WriteFieldBegin("spill_threshold_low_watermark", thrift.I32, 12); err != nil {
+	if p.IsSetMemoryLowWatermark() {
+		if err = oprot.WriteFieldBegin("memory_low_watermark", thrift.I32, 12); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI32(*p.SpillThresholdLowWatermark); err != nil {
+		if err := oprot.WriteI32(*p.MemoryLowWatermark); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -12628,11 +12628,11 @@ WriteFieldEndError:
 }
 
 func (p *TWorkloadGroupInfo) writeField13(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSpillThresholdHighWatermark() {
-		if err = oprot.WriteFieldBegin("spill_threshold_high_watermark", thrift.I32, 13); err != nil {
+	if p.IsSetMemoryHighWatermark() {
+		if err = oprot.WriteFieldBegin("memory_high_watermark", thrift.I32, 13); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI32(*p.SpillThresholdHighWatermark); err != nil {
+		if err := oprot.WriteI32(*p.MemoryHighWatermark); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -12750,10 +12750,10 @@ func (p *TWorkloadGroupInfo) DeepEqual(ano *TWorkloadGroupInfo) bool {
 	if !p.Field11DeepEqual(ano.MinRemoteScanThreadNum) {
 		return false
 	}
-	if !p.Field12DeepEqual(ano.SpillThresholdLowWatermark) {
+	if !p.Field12DeepEqual(ano.MemoryLowWatermark) {
 		return false
 	}
-	if !p.Field13DeepEqual(ano.SpillThresholdHighWatermark) {
+	if !p.Field13DeepEqual(ano.MemoryHighWatermark) {
 		return false
 	}
 	if !p.Field14DeepEqual(ano.ReadBytesPerSecond) {
@@ -12902,24 +12902,24 @@ func (p *TWorkloadGroupInfo) Field11DeepEqual(src *int32) bool {
 }
 func (p *TWorkloadGroupInfo) Field12DeepEqual(src *int32) bool {
 
-	if p.SpillThresholdLowWatermark == src {
+	if p.MemoryLowWatermark == src {
 		return true
-	} else if p.SpillThresholdLowWatermark == nil || src == nil {
+	} else if p.MemoryLowWatermark == nil || src == nil {
 		return false
 	}
-	if *p.SpillThresholdLowWatermark != *src {
+	if *p.MemoryLowWatermark != *src {
 		return false
 	}
 	return true
 }
 func (p *TWorkloadGroupInfo) Field13DeepEqual(src *int32) bool {
 
-	if p.SpillThresholdHighWatermark == src {
+	if p.MemoryHighWatermark == src {
 		return true
-	} else if p.SpillThresholdHighWatermark == nil || src == nil {
+	} else if p.MemoryHighWatermark == nil || src == nil {
 		return false
 	}
-	if *p.SpillThresholdHighWatermark != *src {
+	if *p.MemoryHighWatermark != *src {
 		return false
 	}
 	return true

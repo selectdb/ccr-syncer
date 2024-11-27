@@ -634,9 +634,9 @@ const (
 	TBinlogType_REPLACE_TABLE                             TBinlogType = 18
 	TBinlogType_MODIFY_TABLE_ADD_OR_DROP_INVERTED_INDICES TBinlogType = 19
 	TBinlogType_INDEX_CHANGE_JOB                          TBinlogType = 20
-	TBinlogType_MIN_UNKNOWN                               TBinlogType = 21
-	TBinlogType_UNKNOWN_6                                 TBinlogType = 22
-	TBinlogType_UNKNOWN_7                                 TBinlogType = 23
+	TBinlogType_RENAME_ROLLUP                             TBinlogType = 21
+	TBinlogType_RENAME_PARTITION                          TBinlogType = 22
+	TBinlogType_MIN_UNKNOWN                               TBinlogType = 23
 	TBinlogType_UNKNOWN_8                                 TBinlogType = 24
 	TBinlogType_UNKNOWN_9                                 TBinlogType = 25
 	TBinlogType_UNKNOWN_10                                TBinlogType = 26
@@ -776,12 +776,12 @@ func (p TBinlogType) String() string {
 		return "MODIFY_TABLE_ADD_OR_DROP_INVERTED_INDICES"
 	case TBinlogType_INDEX_CHANGE_JOB:
 		return "INDEX_CHANGE_JOB"
+	case TBinlogType_RENAME_ROLLUP:
+		return "RENAME_ROLLUP"
+	case TBinlogType_RENAME_PARTITION:
+		return "RENAME_PARTITION"
 	case TBinlogType_MIN_UNKNOWN:
 		return "MIN_UNKNOWN"
-	case TBinlogType_UNKNOWN_6:
-		return "UNKNOWN_6"
-	case TBinlogType_UNKNOWN_7:
-		return "UNKNOWN_7"
 	case TBinlogType_UNKNOWN_8:
 		return "UNKNOWN_8"
 	case TBinlogType_UNKNOWN_9:
@@ -1016,12 +1016,12 @@ func TBinlogTypeFromString(s string) (TBinlogType, error) {
 		return TBinlogType_MODIFY_TABLE_ADD_OR_DROP_INVERTED_INDICES, nil
 	case "INDEX_CHANGE_JOB":
 		return TBinlogType_INDEX_CHANGE_JOB, nil
+	case "RENAME_ROLLUP":
+		return TBinlogType_RENAME_ROLLUP, nil
+	case "RENAME_PARTITION":
+		return TBinlogType_RENAME_PARTITION, nil
 	case "MIN_UNKNOWN":
 		return TBinlogType_MIN_UNKNOWN, nil
-	case "UNKNOWN_6":
-		return TBinlogType_UNKNOWN_6, nil
-	case "UNKNOWN_7":
-		return TBinlogType_UNKNOWN_7, nil
 	case "UNKNOWN_8":
 		return TBinlogType_UNKNOWN_8, nil
 	case "UNKNOWN_9":

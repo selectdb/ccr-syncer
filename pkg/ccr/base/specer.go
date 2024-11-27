@@ -49,9 +49,12 @@ type Specer interface {
 
 	AddPartition(destTableName string, addPartition *record.AddPartition) error
 	DropPartition(destTableName string, dropPartition *record.DropPartition) error
+	RenamePartition(destTableName, oldPartition, newPartition string) error
 
 	LightningIndexChange(tableAlias string, changes *record.ModifyTableAddOrDropInvertedIndices) error
 	BuildIndex(tableAlias string, buildIndex *record.IndexChangeJob) error
+
+	RenameRollup(destTableName, oldRollup, newRollup string) error
 
 	DesyncTables(tables ...string) error
 

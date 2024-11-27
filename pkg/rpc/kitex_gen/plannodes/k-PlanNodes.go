@@ -10923,6 +10923,20 @@ func (p *TFileScanRangeParams) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 24:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField24(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -11451,6 +11465,19 @@ func (p *TFileScanRangeParams) FastReadField23(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TFileScanRangeParams) FastReadField24(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.SerializedTable = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TFileScanRangeParams) FastWrite(buf []byte) int {
 	return 0
@@ -11483,6 +11510,7 @@ func (p *TFileScanRangeParams) FastWriteNocopy(buf []byte, binaryWriter bthrift.
 		offset += p.fastWriteField21(buf[offset:], binaryWriter)
 		offset += p.fastWriteField22(buf[offset:], binaryWriter)
 		offset += p.fastWriteField23(buf[offset:], binaryWriter)
+		offset += p.fastWriteField24(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -11516,6 +11544,7 @@ func (p *TFileScanRangeParams) BLength() int {
 		l += p.field21Length()
 		l += p.field22Length()
 		l += p.field23Length()
+		l += p.field24Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -11852,6 +11881,17 @@ func (p *TFileScanRangeParams) fastWriteField23(buf []byte, binaryWriter bthrift
 	return offset
 }
 
+func (p *TFileScanRangeParams) fastWriteField24(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetSerializedTable() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "serialized_table", thrift.STRING, 24)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.SerializedTable)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TFileScanRangeParams) field1Length() int {
 	l := 0
 	if p.IsSetFileType() {
@@ -12134,6 +12174,17 @@ func (p *TFileScanRangeParams) field23Length() int {
 	if p.IsSetSequenceMapCol() {
 		l += bthrift.Binary.FieldBeginLength("sequence_map_col", thrift.STRING, 23)
 		l += bthrift.Binary.StringLengthNocopy(*p.SequenceMapCol)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TFileScanRangeParams) field24Length() int {
+	l := 0
+	if p.IsSetSerializedTable() {
+		l += bthrift.Binary.FieldBeginLength("serialized_table", thrift.STRING, 24)
+		l += bthrift.Binary.StringLengthNocopy(*p.SerializedTable)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

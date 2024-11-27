@@ -2353,6 +2353,115 @@ func (j *Job) handleIndexChangeJobRecord(commitSeq int64, indexChangeJob *record
 	return j.IDest.BuildIndex(tableAlias, indexChangeJob)
 }
 
+// handle alter view def
+func (j *Job) handleAlterViewDef(binlog *festruct.TBinlog) error {
+	log.Infof("handle alter view def binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
+
+	data := binlog.GetData()
+	alterView, err := record.NewAlterViewFromJson(data)
+	if err != nil {
+		return err
+	}
+
+	viewName, err := j.getDestTableNameBySrcId(alterView.TableId)
+	if err != nil {
+		return err
+	}
+
+	return j.IDest.AlterViewDef(viewName, alterView)
+}
+
+func (j *Job) handleRenamePartition(binlog *festruct.TBinlog) error {
+	log.Infof("handle rename partition binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
+
+	data := binlog.GetData()
+	renamePartition, err := record.NewRenamePartitionFromJson(data)
+	if err != nil {
+		return err
+	}
+	return j.handleRenamePartitionRecord(binlog.GetCommitSeq(), renamePartition)
+}
+
+func (j *Job) handleRenamePartitionRecord(commitSeq int64, renamePartition *record.RenamePartition) error {
+	if j.isBinlogCommitted(renamePartition.TableId, commitSeq) {
+		return nil
+	}
+
+	var tableAlias string
+	if j.SyncType == TableSync {
+		tableAlias = j.Dest.Table
+	} else if j.SyncType == DBSync {
+		var err error
+		tableAlias, err = j.getDestTableNameBySrcId(renamePartition.TableId)
+		if err != nil {
+			return err
+		}
+	}
+
+	newPartition := renamePartition.NewPartitionName
+	oldPartition := renamePartition.OldPartitionName
+	if oldPartition == "" {
+		log.Warnf("old partition name is empty, sync partition via partial snapshot, "+
+			"new partition: %s, partition id: %d, table id: %d, commit seq: %d",
+			newPartition, renamePartition.PartitionId, renamePartition.TableId, commitSeq)
+		replace := true
+		tableName := tableAlias
+		if j.isTableSyncWithAlias() {
+			tableName = j.Src.Table
+		}
+		return j.newPartialSnapshot(renamePartition.TableId, tableName, nil, replace)
+	}
+	return j.IDest.RenamePartition(tableAlias, oldPartition, newPartition)
+}
+
+func (j *Job) handleRenameRollup(binlog *festruct.TBinlog) error {
+	log.Infof("handle rename rollup binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
+
+	data := binlog.GetData()
+	renameRollup, err := record.NewRenameRollupFromJson(data)
+	if err != nil {
+		return err
+	}
+
+	return j.handleRenameRollupRecord(binlog.GetCommitSeq(), renameRollup)
+}
+
+func (j *Job) handleRenameRollupRecord(commitSeq int64, renameRollup *record.RenameRollup) error {
+	if j.isBinlogCommitted(renameRollup.TableId, commitSeq) {
+		return nil
+	}
+
+	var tableAlias string
+	if j.SyncType == TableSync {
+		tableAlias = j.Dest.Table
+	} else if j.SyncType == DBSync {
+		var err error
+		tableAlias, err = j.getDestTableNameBySrcId(renameRollup.TableId)
+		if err != nil {
+			return err
+		}
+	}
+
+	newRollup := renameRollup.NewRollupName
+	oldRollup := renameRollup.OldRollupName
+	if oldRollup == "" {
+		log.Warnf("old rollup name is empty, sync rollup via partial snapshot, "+
+			"new rollup: %s, index id: %d, table id: %d, commit seq: %d",
+			newRollup, renameRollup.IndexId, renameRollup.TableId, commitSeq)
+		replace := true
+		tableName := tableAlias
+		if j.isTableSyncWithAlias() {
+			tableName = j.Src.Table
+		}
+		return j.newPartialSnapshot(renameRollup.TableId, tableName, nil, replace)
+	}
+
+	return j.IDest.RenameRollup(tableAlias, oldRollup, newRollup)
+}
+
 func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 	data := binlog.GetData()
 	barrierLog, err := record.NewBarrierLogFromJson(data)
@@ -2383,6 +2492,12 @@ func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 			return err
 		}
 		return j.handleRenameColumnRecord(commitSeq, renameColumn)
+	case festruct.TBinlogType_RENAME_PARTITION:
+		renamePartition, err := record.NewRenamePartitionFromJson(barrierLog.Binlog)
+		if err != nil {
+			return err
+		}
+		return j.handleRenamePartitionRecord(commitSeq, renamePartition)
 	case festruct.TBinlogType_REPLACE_TABLE:
 		replaceTable, err := record.NewReplaceTableRecordFromJson(barrierLog.Binlog)
 		if err != nil {
@@ -2407,25 +2522,6 @@ func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 		return xerror.Errorf(xerror.Normal, "unknown binlog type wrapped by barrier: %d", barrierLog.BinlogType)
 	}
 	return nil
-}
-
-// handle alter view def
-func (j *Job) handleAlterViewDef(binlog *festruct.TBinlog) error {
-	log.Infof("handle alter view def binlog, prevCommitSeq: %d, commitSeq: %d",
-		j.progress.PrevCommitSeq, j.progress.CommitSeq)
-
-	data := binlog.GetData()
-	alterView, err := record.NewAlterViewFromJson(data)
-	if err != nil {
-		return err
-	}
-
-	viewName, err := j.getDestTableNameBySrcId(alterView.TableId)
-	if err != nil {
-		return err
-	}
-
-	return j.IDest.AlterViewDef(viewName, alterView)
 }
 
 // return: error && bool backToRunLoop
@@ -2526,6 +2622,10 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		return j.handleModifyTableAddOrDropInvertedIndices(binlog)
 	case festruct.TBinlogType_INDEX_CHANGE_JOB:
 		return j.handleIndexChangeJob(binlog)
+	case festruct.TBinlogType_RENAME_PARTITION:
+		return j.handleRenamePartition(binlog)
+	case festruct.TBinlogType_RENAME_ROLLUP:
+		return j.handleRenameRollup(binlog)
 	default:
 		return xerror.Errorf(xerror.Normal, "unknown binlog type: %v", binlog.GetType())
 	}

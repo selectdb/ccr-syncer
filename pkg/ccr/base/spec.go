@@ -1306,16 +1306,25 @@ func (s *Spec) AlterViewDef(viewName string, alterView *record.AlterView) error 
 func (s *Spec) AddPartition(destTableName string, addPartition *record.AddPartition) error {
 	addPartitionSql := addPartition.GetSql(destTableName)
 	addPartitionSql = correctAddPartitionSql(addPartitionSql, addPartition)
-	log.Infof("addPartitionSql: %s, original sql: %s", addPartitionSql, addPartition.Sql)
+	log.Infof("add partition sql: %s, original sql: %s", addPartitionSql, addPartition.Sql)
 	return s.DbExec(addPartitionSql)
 }
 
 func (s *Spec) DropPartition(destTableName string, dropPartition *record.DropPartition) error {
-	destDbName := utils.FormatKeywordName(s.Database)
 	destTableName = utils.FormatKeywordName(destTableName)
-	dropPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s", destDbName, destTableName, dropPartition.Sql)
-	log.Infof("dropPartitionSql: %s", dropPartitionSql)
-	return s.Exec(dropPartitionSql)
+	dropPartitionSql := fmt.Sprintf("ALTER TABLE %s %s", destTableName, dropPartition.Sql)
+	log.Infof("drop partition sql: %s", dropPartitionSql)
+	return s.DbExec(dropPartitionSql)
+}
+
+func (s *Spec) RenamePartition(destTableName, oldPartition, newPartition string) error {
+	destTableName = utils.FormatKeywordName(destTableName)
+	oldPartition = utils.FormatKeywordName(oldPartition)
+	newPartition = utils.FormatKeywordName(newPartition)
+	renamePartitionSql := fmt.Sprintf("ALTER TABLE %s RENAME PARTITION %s %s",
+		destTableName, oldPartition, newPartition)
+	log.Infof("rename partition sql: %s", renamePartitionSql)
+	return s.DbExec(renamePartitionSql)
 }
 
 func (s *Spec) LightningIndexChange(alias string, record *record.ModifyTableAddOrDropInvertedIndices) error {
@@ -1373,6 +1382,16 @@ func (s *Spec) BuildIndex(tableAlias string, buildIndex *record.IndexChangeJob) 
 
 	log.Infof("build index sql: %s", sql)
 	return s.DbExec(sql)
+}
+
+func (s *Spec) RenameRollup(destTableName, oldRollup, newRollup string) error {
+	destTableName = utils.FormatKeywordName(destTableName)
+	oldRollup = utils.FormatKeywordName(oldRollup)
+	newRollup = utils.FormatKeywordName(newRollup)
+	renameRollupSql := fmt.Sprintf("ALTER TABLE %s RENAME ROLLUP %s %s",
+		destTableName, oldRollup, newRollup)
+	log.Infof("rename rollup sql: %s", renameRollupSql)
+	return s.DbExec(renameRollupSql)
 }
 
 func (s *Spec) DesyncTables(tables ...string) error {

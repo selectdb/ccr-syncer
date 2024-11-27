@@ -9134,7 +9134,7 @@ func (p *TWorkloadGroupInfo) FastReadField12(buf []byte) (int, error) {
 		return offset, err
 	} else {
 		offset += l
-		p.SpillThresholdLowWatermark = &v
+		p.MemoryLowWatermark = &v
 
 	}
 	return offset, nil
@@ -9147,7 +9147,7 @@ func (p *TWorkloadGroupInfo) FastReadField13(buf []byte) (int, error) {
 		return offset, err
 	} else {
 		offset += l
-		p.SpillThresholdHighWatermark = &v
+		p.MemoryHighWatermark = &v
 
 	}
 	return offset, nil
@@ -9372,9 +9372,9 @@ func (p *TWorkloadGroupInfo) fastWriteField11(buf []byte, binaryWriter bthrift.B
 
 func (p *TWorkloadGroupInfo) fastWriteField12(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
-	if p.IsSetSpillThresholdLowWatermark() {
-		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "spill_threshold_low_watermark", thrift.I32, 12)
-		offset += bthrift.Binary.WriteI32(buf[offset:], *p.SpillThresholdLowWatermark)
+	if p.IsSetMemoryLowWatermark() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "memory_low_watermark", thrift.I32, 12)
+		offset += bthrift.Binary.WriteI32(buf[offset:], *p.MemoryLowWatermark)
 
 		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
 	}
@@ -9383,9 +9383,9 @@ func (p *TWorkloadGroupInfo) fastWriteField12(buf []byte, binaryWriter bthrift.B
 
 func (p *TWorkloadGroupInfo) fastWriteField13(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
-	if p.IsSetSpillThresholdHighWatermark() {
-		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "spill_threshold_high_watermark", thrift.I32, 13)
-		offset += bthrift.Binary.WriteI32(buf[offset:], *p.SpillThresholdHighWatermark)
+	if p.IsSetMemoryHighWatermark() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "memory_high_watermark", thrift.I32, 13)
+		offset += bthrift.Binary.WriteI32(buf[offset:], *p.MemoryHighWatermark)
 
 		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
 	}
@@ -9548,9 +9548,9 @@ func (p *TWorkloadGroupInfo) field11Length() int {
 
 func (p *TWorkloadGroupInfo) field12Length() int {
 	l := 0
-	if p.IsSetSpillThresholdLowWatermark() {
-		l += bthrift.Binary.FieldBeginLength("spill_threshold_low_watermark", thrift.I32, 12)
-		l += bthrift.Binary.I32Length(*p.SpillThresholdLowWatermark)
+	if p.IsSetMemoryLowWatermark() {
+		l += bthrift.Binary.FieldBeginLength("memory_low_watermark", thrift.I32, 12)
+		l += bthrift.Binary.I32Length(*p.MemoryLowWatermark)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -9559,9 +9559,9 @@ func (p *TWorkloadGroupInfo) field12Length() int {
 
 func (p *TWorkloadGroupInfo) field13Length() int {
 	l := 0
-	if p.IsSetSpillThresholdHighWatermark() {
-		l += bthrift.Binary.FieldBeginLength("spill_threshold_high_watermark", thrift.I32, 13)
-		l += bthrift.Binary.I32Length(*p.SpillThresholdHighWatermark)
+	if p.IsSetMemoryHighWatermark() {
+		l += bthrift.Binary.FieldBeginLength("memory_high_watermark", thrift.I32, 13)
+		l += bthrift.Binary.I32Length(*p.MemoryHighWatermark)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
