@@ -53,7 +53,7 @@ suite("test_ds_view_basic") {
     }
     def checkTableOrViewExists = { res, name -> Boolean
         for (List<Object> row : res) {
-            if ((row[0] as String).equals(name)) {
+            if ("${row[0]}".equals(name)) {
                 return true
             }
         }
@@ -99,8 +99,11 @@ suite("test_ds_view_basic") {
         select user_id, name from ${tableDuplicate0};
         """
 
+    def checkViewExistFunc = { res -> Boolean
+        return checkTableOrViewExists(res, "view_test_${suffix}")
+    }
     assertTrue(helper.checkShowTimesOf("SHOW VIEWS",
-        checkTableOrViewExists("view_test_${suffix}"), 30, func = "target_sql"))
+        checkViewExistFunc, 30, func = "target_sql"))
 
     explain {
         sql("select user_id, name from ${tableDuplicate0}")
@@ -113,7 +116,7 @@ suite("test_ds_view_basic") {
     def checkViewNotExistFunc = { res -> Boolean
         return !checkTableOrViewExists(res, "view_test_${suffix}")
     }
-    assertTrue(helper.checkShowTimesOf("SHOW VIEWS", checkViewNotExistFunc, 5, func = "target_sql"))
+    assertTrue(helper.checkShowTimesOf("SHOW VIEWS", checkViewNotExistFunc, 30, func = "target_sql"))
 
      logger.info("=== Test 2: delete job ===")
      test_num = 5
