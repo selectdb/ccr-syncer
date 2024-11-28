@@ -18,6 +18,25 @@
 import com.google.common.collect.Maps
 
 import java.util.Map
+import java.util.List
+
+class Describe {
+    String index
+    String field
+    String type
+    Boolean is_key
+
+    Describe(String index, String field, String type, Boolean is_key) {
+        this.index = index
+        this.field = field
+        this.type = type
+        this.is_key = is_key
+    }
+
+    String toString() {
+        return "index: ${index}, field: ${field}, type: ${type}, is_key: ${is_key}"
+    }
+}
 
 class Helper {
     def suite
@@ -376,6 +395,77 @@ class Helper {
             }
         }
         return true
+    }
+
+    Map<String, List<Describe>> get_table_describe(String table, String source = "sql") {
+        def res
+        if (source == "sql") {
+            res = suite.sql_return_maparray "DESC ${table} ALL"
+        } else {
+            res = suite.target_sql_return_maparray "DESC ${table} ALL"
+        }
+
+        def map = Maps.newHashMap()
+        def index = ""
+        for (def row : res) {
+            if (row.IndexName != "") {
+                index = row.IndexName
+            }
+            if (row.Field == "") {
+                continue
+            }
+
+            if (!map.containsKey(index)) {
+                map.put(index, [])
+            }
+            def is_key = false
+            if (row.Key == "true" || row.Key == "YES") {
+                is_key = true
+            }
+            map.get(index).add(new Describe(index, row.Field, row.Type, is_key))
+        }
+        return map
+    }
+
+    Boolean check_describes(Map<String, List<Describe>> expect, Map<String, List<Describe>> actual) {
+        if (actual.size() != expect.size()) {
+            return false
+        }
+
+        for (def key : expect.keySet()) {
+            if (!actual.containsKey(key)) {
+                return false
+            }
+            def expect_list = expect.get(key)
+            def actual_list = actual.get(key)
+            if (expect_list.size() != actual_list.size()) {
+                return false
+            }
+            for (int i = 0; i < expect_list.size(); ++i) {
+                if (expect_list[i].toString() != actual_list[i].toString()) {
+                    return false
+                }
+            }
+        }
+        return true
+    }
+
+    Boolean check_table_describe_times(String table, times = 30) {
+        while (times > 0) {
+            def upstream_describe = get_table_describe(table)
+            def downstream_describe = get_table_describe(table, "target")
+            if (check_describes(upstream_describe, downstream_describe)) {
+                return true
+            }
+            sleep(sync_gap_time)
+            times--
+        }
+
+        def upstream_describe = get_table_describe(table)
+        def downstream_describe = get_table_describe(table, "target")
+        logger.info("upstream describe: ${upstream_describe}")
+        logger.info("downstream describe: ${downstream_describe}")
+        return false
     }
 }
 
