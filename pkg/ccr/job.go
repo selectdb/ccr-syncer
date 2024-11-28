@@ -863,6 +863,12 @@ func (j *Job) fullSync() error {
 			if _, ok := tableCommitSeqMap[j.Src.TableId]; !ok {
 				return xerror.Errorf(xerror.Normal, "table id %d, commit seq not found", j.Src.TableId)
 			}
+		} else {
+			// save the view ids in the table commit seq map, to build the view mapping latter.
+			for _, view := range backupJobInfo.NewBackupObjects.Views {
+				tableNameMapping[view.Id] = view.Name
+				tableCommitSeqMap[view.Id] = snapshotResp.GetCommitSeq() // zero if not exists
+			}
 		}
 
 		inMemoryData := &inMemoryData{
@@ -1169,6 +1175,8 @@ func (j *Job) fullSync() error {
 					return err
 				}
 
+				log.Debugf("fullsync table mapping, src: %d, dest: %d, name: %s",
+					srcTableId, destTableId, srcTableName)
 				tableMapping[srcTableId] = destTableId
 			}
 
@@ -1256,7 +1264,7 @@ func (j *Job) getDestTableIdBySrc(srcTableId int64) (int64, error) {
 	}
 }
 
-func (j *Job) getDestTableNameBySrcId(srcTableId int64) (string, error) {
+func (j *Job) getDestNameBySrcId(srcTableId int64) (string, error) {
 	destTableId, err := j.getDestTableIdBySrc(srcTableId)
 	if err != nil {
 		return "", err
@@ -2100,7 +2108,7 @@ func (j *Job) handleRenameColumnRecord(commitSeq int64, renameColumn *record.Ren
 		destTableName = j.Dest.Table
 	} else {
 		var err error
-		destTableName, err = j.getDestTableNameBySrcId(renameColumn.TableId)
+		destTableName, err = j.getDestNameBySrcId(renameColumn.TableId)
 		if err != nil {
 			return err
 		}
@@ -2133,7 +2141,7 @@ func (j *Job) handleModifyCommentRecord(commitSeq int64, modifyComment *record.M
 		destTableName = j.Dest.Table
 	} else {
 		var err error
-		destTableName, err = j.getDestTableNameBySrcId(modifyComment.TblId)
+		destTableName, err = j.getDestNameBySrcId(modifyComment.TblId)
 		if err != nil {
 			return err
 		}
@@ -2250,7 +2258,7 @@ func (j *Job) handleRenameTableRecord(commitSeq int64, renameTable *record.Renam
 		destTableName = j.Dest.Table
 	} else {
 		var err error
-		destTableName, err = j.getDestTableNameBySrcId(renameTable.TableId)
+		destTableName, err = j.getDestNameBySrcId(renameTable.TableId)
 		if err != nil {
 			return err
 		}
@@ -2349,7 +2357,7 @@ func (j *Job) handleModifyTableAddOrDropInvertedIndicesRecord(commitSeq int64, r
 		destTableName = j.Dest.Table
 	} else {
 		var err error
-		destTableName, err = j.getDestTableNameBySrcId(record.TableId)
+		destTableName, err = j.getDestNameBySrcId(record.TableId)
 		if err != nil {
 			return err
 		}
@@ -2411,12 +2419,12 @@ func (j *Job) handleAlterViewDefRecord(commitSeq int64, alterView *record.AlterV
 		return nil
 	}
 
-	viewName, err := j.getDestTableNameBySrcId(alterView.TableId)
+	viewName, err := j.getDestNameBySrcId(alterView.TableId)
 	if err != nil {
 		return err
 	}
 
-	return j.IDest.AlterViewDef(viewName, alterView)
+	return j.IDest.AlterViewDef(j.Src.Database, viewName, alterView)
 }
 
 func (j *Job) handleRenamePartition(binlog *festruct.TBinlog) error {
@@ -2441,7 +2449,7 @@ func (j *Job) handleRenamePartitionRecord(commitSeq int64, renamePartition *reco
 		destTableName = j.Dest.Table
 	} else {
 		var err error
-		destTableName, err = j.getDestTableNameBySrcId(renamePartition.TableId)
+		destTableName, err = j.getDestNameBySrcId(renamePartition.TableId)
 		if err != nil {
 			return err
 		}
@@ -2486,7 +2494,7 @@ func (j *Job) handleRenameRollupRecord(commitSeq int64, renameRollup *record.Ren
 		destTableName = j.Dest.Table
 	} else {
 		var err error
-		destTableName, err = j.getDestTableNameBySrcId(renameRollup.TableId)
+		destTableName, err = j.getDestNameBySrcId(renameRollup.TableId)
 		if err != nil {
 			return err
 		}

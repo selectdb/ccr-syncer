@@ -45,7 +45,7 @@ type Specer interface {
 	ReplaceTable(fromName, toName string, swap bool) error
 	DropTable(tableName string, force bool) error
 	DropView(viewName string) error
-	AlterViewDef(viewName string, alterView *record.AlterView) error
+	AlterViewDef(srcDatabase, viewName string, alterView *record.AlterView) error
 
 	AddPartition(destTableName string, addPartition *record.AddPartition) error
 	DropPartition(destTableName string, dropPartition *record.DropPartition) error

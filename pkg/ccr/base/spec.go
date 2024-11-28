@@ -1296,9 +1296,25 @@ func (s *Spec) DropView(viewName string) error {
 	return s.DbExec(dropView)
 }
 
-func (s *Spec) AlterViewDef(viewName string, alterView *record.AlterView) error {
+func (s *Spec) AlterViewDef(srcDatabase, viewName string, alterView *record.AlterView) error {
+	// 1. remove database prefix
+	// CREATE VIEW `view_test_1159493057` AS
+	//	SELECT
+	//		`internal`.`regression_test_db_sync_view_alter`.`tbl_duplicate_0_1159493057`.`user_id` AS `k1`,
+	// 		`internal`.`regression_test_db_sync_view_alter`.`tbl_duplicate_0_1159493057`.`name` AS `name`,
+	// 		MAX(`internal`.`regression_test_db_sync_view_alter`.`tbl_duplicate_0_1159493057`.`age`) AS `v1`
+	//	FROM `internal`.`regression_test_db_sync_view_alter`.`tbl_duplicate_0_1159493057`
+	var def string
+	prefix := fmt.Sprintf("`internal`.`%s`.", srcDatabase)
+	if strings.Contains(alterView.InlineViewDef, prefix) {
+		def = strings.ReplaceAll(alterView.InlineViewDef, prefix, "")
+	} else {
+		prefix = fmt.Sprintf(" `%s`.", srcDatabase)
+		def = strings.ReplaceAll(alterView.InlineViewDef, prefix, " ")
+	}
+
 	viewName = utils.FormatKeywordName(viewName)
-	alterViewSql := fmt.Sprintf("ALTER VIEW %s AS %s", viewName, alterView.InlineViewDef)
+	alterViewSql := fmt.Sprintf("ALTER VIEW %s AS %s", viewName, def)
 	log.Infof("alter view sql: %s", alterViewSql)
 	return s.DbExec(alterViewSql)
 }

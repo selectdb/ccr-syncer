@@ -129,10 +129,9 @@ suite("test_ts_mv_create_drop") {
     sql """
         DROP MATERIALIZED VIEW ${tableName}_incr ON ${tableName}
         """
-    // FIXME(walter) support drop rollup binlog
-    // assertTrue(checkShowTimesOf("""
-    //                             SHOW CREATE MATERIALIZED VIEW ${tableName}_incr
-    //                             ON ${tableName}
-    //                             """,
-    //                             { res -> res.size() == 0 }, 30, "target"))
+    assertTrue(helper.checkShowTimesOf("""
+                                SHOW CREATE MATERIALIZED VIEW ${tableName}_incr
+                                ON ${tableName}
+                                """,
+                                { res -> res.size() == 0 }, 30, "target"))
 }
