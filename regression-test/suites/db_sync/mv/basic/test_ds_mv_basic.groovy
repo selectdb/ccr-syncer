@@ -92,6 +92,7 @@ suite("test_ds_mv_basic") {
         select user_id, name from ${tableDuplicate0};
         """
 
+    assertTrue(helper.checkShowTimesOf("SHOW VIEW FROM ${tableDuplicate0}", exist, 30, "target"))
     assertTrue(helper.checkRestoreFinishTimesOf("view_test_${suffix}", 30))
 
     explain {

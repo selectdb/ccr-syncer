@@ -99,7 +99,8 @@ suite("test_ds_view_basic") {
         select user_id, name from ${tableDuplicate0};
         """
 
-    assertTrue(helper.checkRestoreFinishTimesOf("view_test_${suffix}", 30))
+    assertTrue(helper.checkShowTimesOf("SHOW VIEWS",
+        checkTableOrViewExists("view_test_${suffix}"), 30, func = "target_sql"))
 
     explain {
         sql("select user_id, name from ${tableDuplicate0}")
