@@ -953,18 +953,23 @@ func (j *Job) fullSync() error {
 		}
 		if len(j.progress.TableAliases) > 0 {
 			tableRefs = make([]*festruct.TTableRef, 0)
+            viewMap := make(map[string]interface{})
+			for _, viewName := range inMemoryData.Views {
+				log.Debugf("fullsync alias with view ref %s", viewName)
+                viewMap[viewName] = nil
+				tableRef := &festruct.TTableRef{Table: utils.ThriftValueWrapper(viewName)}
+				tableRefs = append(tableRefs, tableRef)
+			}
 			for _, tableName := range tableNameMapping {
 				if alias, ok := j.progress.TableAliases[tableName]; ok {
 					log.Debugf("fullsync alias skip table ref %s because it has alias %s", tableName, alias)
 					continue
 				}
+                if _, ok := viewMap[tableName]; ok {
+                    continue
+                }
 				log.Debugf("fullsync alias with table ref %s", tableName)
 				tableRef := &festruct.TTableRef{Table: utils.ThriftValueWrapper(tableName)}
-				tableRefs = append(tableRefs, tableRef)
-			}
-			for _, viewName := range inMemoryData.Views {
-				log.Debugf("fullsync alias with view ref %s", viewName)
-				tableRef := &festruct.TTableRef{Table: utils.ThriftValueWrapper(viewName)}
 				tableRefs = append(tableRefs, tableRef)
 			}
 			for table, alias := range j.progress.TableAliases {
