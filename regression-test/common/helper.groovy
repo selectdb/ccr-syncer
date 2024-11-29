@@ -332,7 +332,7 @@ class Helper {
                 throw "request failed, error msg: ${object.error_msg}"
             }
             logger.info("job progress: ${object.job_progress}")
-            result = jsonSlurper.parseText object.job_progress
+            result = object.job_progress
         }
         return result
     }
