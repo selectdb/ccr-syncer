@@ -231,3 +231,15 @@ func WithStack(err error) error {
 		callers(4),
 	}
 }
+
+func IsCategory(err error, category ErrorCategory) bool {
+	if err == nil {
+		return false
+	}
+
+	if xerr, ok := err.(*XError); ok {
+		return xerr.category == category
+	}
+
+	return false
+}

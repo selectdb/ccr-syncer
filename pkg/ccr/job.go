@@ -1426,6 +1426,16 @@ func (j *Job) ingestBinlogForTxnInsert(txnId int64, tableRecords []*record.Table
 	return subTxnInfos, nil
 }
 
+func (j *Job) handleUpsertWithRetry(binlog *festruct.TBinlog) error {
+	err := j.handleUpsert(binlog)
+	if !xerror.IsCategory(err, xerror.Meta) {
+		return err
+	}
+
+	log.Warnf("a meta error occurred, retry to handle upsert binlog again, commitSeq: %d", binlog.GetCommitSeq())
+	return j.handleUpsert(binlog)
+}
+
 func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 	log.Infof("handle upsert binlog, sub sync state: %s, prevCommitSeq: %d, commitSeq: %d",
 		j.progress.SubSyncState, j.progress.PrevCommitSeq, j.progress.CommitSeq)
@@ -2707,7 +2717,7 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 
 	switch binlog.GetType() {
 	case festruct.TBinlogType_UPSERT:
-		return j.handleUpsert(binlog)
+		return j.handleUpsertWithRetry(binlog)
 	case festruct.TBinlogType_ADD_PARTITION:
 		return j.handleAddPartition(binlog)
 	case festruct.TBinlogType_CREATE_TABLE:
