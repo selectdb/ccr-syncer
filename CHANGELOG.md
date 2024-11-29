@@ -1,16 +1,45 @@
 # 更新日志
 
-## dev
+### Fix
+
+## 3.0.4/2.1.8
+
+注意：从这个版本开始 doris 和 ccr-syncer 的 2.0 版本将不再更新，需要使用 ccr-syncer 的需要先升级到 2.1 及以上版本。
 
 ### Fix
 
 - 修复 table name 中带 `-` 无法同步的问题 (selectdb/ccr-syncer#168)
 - 修复部分同步下可能同步多次增量数据的问题 (selectdb/ccr-syncer#186)
 - 修复 create 又立即 drop 的情况下无法找到 table 的问题 (selectdb/ccr-syncer#188)
+- 跳过不支持的 table 类型，比如 ES TABLE
+- 避免在同步快照、binlog 期间对上游 name 产生依赖 (selectdb/ccr-syncer#205, selectdb/ccr-syncer#239)
+- 修复全量同步期间 view 的别名问题 (selectdb/ccr-syncer#207)
+- 修复 add partition with keyword name 的问题 (selectdb/ccr-syncer#212)
+- 跳过 drop tmp partition (selectdb/ccr-syncer#214)
+- 修复快照过期的问题，过期后会重做 (selectdb/ccr-syncer#229)
+- 修复 rename 导致的上下游 index name 无法匹配的问题 (selectdb/ccr-syncer#235)
+- 修复并行创建 table/backup 时 table 丢失的问题 (selectdb/ccr-syncer#237)
+- 修复 partial snapshot 期间，上游 table/partition 已经被删除/重命名/替换的问题 (selectdb/ccr-syncer#240, selectdb/ccr-syncer#241, selectdb/ccr-syncer#249, selectdb/ccr-syncer#255)
+- 检查 database connection 错误 (selectdb/ccr-syncer#247)
+- 过滤已经被删除的 table (selectdb/ccr-syncer#248)
+- 修复 create table 时下游 table 已经存在的问题 (selectdb/ccr-syncer#161)
 
 ### Feature
 
 - 支持 atomic restore，全量同步期间下游仍然可读 (selectdb/ccr-syncer#166)
+- 支持处理包装在 barrier log 中的其他 binlog （主要用于在 2.0/2.1 上增加新增的 binlog 类型）(selectdb/ccr-syncer#208)
+- 支持 rename table (2.1) (selectdb/ccr-syncer#209)
+- 跳过 modify partition binlog (selectdb/ccr-syncer#213)
+- 支持 modify comment binlog (selectdb/ccr-syncer#140)
+- 支持 replace table binlog (selectdb/ccr-syncer#245)
+- 支持 drop view binlog (selectdb/ccr-syncer#138)
+- 支持 modify view def binlog (selectdb/ccr-syncer#184)
+- 支持 inverted index 相关 binlog (selectdb/ccr-syncer#252)
+- 支持 table sync 下的 txn insert (WIP) (selectdb/ccr-syncer#234, selectdb/ccr-syncer#259)
+- 支持 rename partition/rollup binlogs (selectdb/ccr-syncer#268)
+- 支持 add/drop rollup binlogs (selectdb/ccr-syncer#269)
+- 支持 modify view/comment in 2.1 (selectdb/ccr-syncer#270, selectdb/ccr-syncer#273)
+- 支持 table sync 下的 replace table (selectdb/ccr-syncer#279)
 
 ### Improve
 
@@ -19,6 +48,15 @@
 - 增加 monitor，在日志中 dump 内存使用率 (selectdb/ccr-syncer#181)
 - 过滤 schema change 删除的 indexes，避免全量同步 (selectdb/ccr-syncer#185)
 - 过滤 schema change 创建的 shadow indexes 的更新，避免全量同步 (selectdb/ccr-syncer#187)
+- 增加 `mysql_max_allowed_packet` 参数，控制 mysql sdk 允许发送的 packet 大小 (selectdb/ccr-syncer#196)
+- 限制一个 JOB 中单个 BE 的 ingest 并发数，减少对 BE 的连接数和文件描述符消耗 (selectdb/ccr-syncer#195)
+- 避免在获取 job status 等待锁 (selectdb/ccr-syncer#198)
+- 避免 backup/restore 任务阻塞查询 ccr job progress (selectdb/ccr-syncer#201, selectdb/ccr-syncer#206)
+- 避免将 snapshot job info 和 meta （这两个数据可能非常大）持久化到 mysql 中 (selectdb/ccr-syncer#204)
+- 上游 db 中没有 table 时，打印 info 而不是 error (selectdb/ccr-syncer#211)
+- 在 ccr syncer 重启后，复用由当前 job 发起的 backup/restore job (selectdb/ccr-syncer#218, selectdb/ccr-syncer#224, selectdb/ccr-syncer#226)
+- 支持读取压缩后的快照/恢复快照时压缩，避免碰到 thrift max message size 限制 (selectdb/ccr-syncer#223)
+- API job_progress 避免返回 persist data (selectdb/ccr-syncer#271)
 
 ## 2.0.15/2.1.6
 
