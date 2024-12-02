@@ -607,15 +607,18 @@ func (s *Spec) CreateTableOrView(createTable *record.CreateTable, srcDatabase st
 		originalNameNewStyle := "`internal`.`" + strings.TrimSpace(srcDatabase) + "`."
 		originalNameOldStyle := "`default_cluster:" + strings.TrimSpace(srcDatabase) + "`." // for Doris 2.0.x
 		replaceName := "`internal`.`" + strings.TrimSpace(s.Database) + "`."
-		createTable.Sql = strings.ReplaceAll(
-			strings.ReplaceAll(createTable.Sql, originalNameNewStyle, replaceName), originalNameOldStyle, replaceName)
-		log.Debugf("original create view sql is %s, after replace, now sql is %s", createSql, createTable.Sql)
+		createSql = strings.ReplaceAll(
+			strings.ReplaceAll(createSql, originalNameNewStyle, replaceName), originalNameOldStyle, replaceName)
+		log.Debugf("original create view sql is %s, after replace, now sql is %s", createTable.Sql, createSql)
 	}
 
-	sql := createTable.Sql
-	log.Infof("create table or view sql: %s", sql)
-	// HACK: for drop table
-	return s.DbExec(sql)
+	// Compatible with doris 2.1.x, see apache/doris#44834 for details.
+	for strings.Contains(createSql, "MAXVALUEMAXVALUE") {
+		createSql = strings.Replace(createSql, "MAXVALUEMAXVALUE", "MAXVALUE, MAXVALUE", -1)
+	}
+
+	log.Infof("create table or view sql: %s", createSql)
+	return s.DbExec(createSql)
 }
 
 func (s *Spec) CheckDatabaseExists() (bool, error) {
