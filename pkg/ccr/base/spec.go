@@ -618,7 +618,14 @@ func (s *Spec) CreateTableOrView(createTable *record.CreateTable, srcDatabase st
 	}
 
 	log.Infof("create table or view sql: %s", createSql)
-	return s.DbExec(createSql)
+
+	list := []string {}
+	if strings.Contains(createSql, "agg_state<") {
+		log.Infof("agg_state is exists in the create table sql, set enable_agg_state=true")
+		list = append(list, "SET enable_agg_state=true")
+	}
+	list = append(list, createSql)
+	return s.DbExec(list...)
 }
 
 func (s *Spec) CheckDatabaseExists() (bool, error) {
@@ -1144,15 +1151,17 @@ func (s *Spec) Exec(sql string) error {
 }
 
 // Db Exec sql
-func (s *Spec) DbExec(sql string) error {
+func (s *Spec) DbExec(sqls ... string) error {
 	db, err := s.ConnectDB()
 	if err != nil {
 		return err
 	}
 
-	_, err = db.Exec(sql)
-	if err != nil {
-		return xerror.Wrapf(err, xerror.Normal, "exec sql %s failed", sql)
+	for _, sql := range sqls {
+		_, err = db.Exec(sql)
+		if err != nil {
+			return xerror.Wrapf(err, xerror.Normal, "exec sql %s failed", sql)
+		}
 	}
 	return nil
 }

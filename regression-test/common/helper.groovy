@@ -467,6 +467,18 @@ class Helper {
         logger.info("downstream describe: ${downstream_describe}")
         return false
     }
+
+    Boolean check_table_exists(String table, times = 30) {
+        while (times > 0) {
+            def res = suite.target_sql "SHOW TABLES LIKE '${table}'"
+            if (res.size() > 0) {
+                return true
+            }
+            sleep(sync_gap_time)
+            times--
+        }
+        return false
+    }
 }
 
 new Helper(suite)
