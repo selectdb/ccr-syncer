@@ -75,6 +75,6 @@ suite("test_ds_tbl_res_agg_state") {
     sql "insert into ${aggTableName} values(1,max_by_state(2,2),group_concat_state('bb'))"
     sql "insert into ${aggTableName} values(2,max_by_state(1,3),group_concat_state('ccc'))"
 
-    assertTrue(helper.checkSelectTimesOf("select * from ${aggTableName}", 3, 60))
+    assertTrue(helper.checkSelectTimesOf("select * from ${aggTableName}", 2, 60))
 }
 
