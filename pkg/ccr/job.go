@@ -140,55 +140,43 @@ type Job struct {
 	lock sync.Mutex `json:"-"`
 }
 
-type jobContext struct {
+type JobContext struct {
 	context.Context
-	src              base.Spec
-	dest             base.Spec
-	db               storage.DB
-	skipError        bool
-	allowTableExists bool
-	factory          *Factory
-}
-
-func NewJobContext(src, dest base.Spec, skipError bool, allowTableExists bool, db storage.DB, factory *Factory) *jobContext {
-	return &jobContext{
-		Context:          context.Background(),
-		src:              src,
-		dest:             dest,
-		skipError:        skipError,
-		allowTableExists: allowTableExists,
-		db:               db,
-		factory:          factory,
-	}
+	Src              base.Spec
+	Dest             base.Spec
+	Db               storage.DB
+	SkipError        bool
+	AllowTableExists bool
+	Factory          *Factory
 }
 
 // new job
 func NewJobFromService(name string, ctx context.Context) (*Job, error) {
-	jobContext, ok := ctx.(*jobContext)
+	jobContext, ok := ctx.(*JobContext)
 	if !ok {
 		return nil, xerror.Errorf(xerror.Normal, "invalid context type: %T", ctx)
 	}
 
-	factory := jobContext.factory
-	src := jobContext.src
-	dest := jobContext.dest
+	factory := jobContext.Factory
+	src := jobContext.Src
+	dest := jobContext.Dest
 	job := &Job{
 		Name:      name,
 		Src:       src,
 		ISrc:      factory.NewSpecer(&src),
-		srcMeta:   factory.NewMeta(&jobContext.src),
+		srcMeta:   factory.NewMeta(&jobContext.Src),
 		Dest:      dest,
 		IDest:     factory.NewSpecer(&dest),
-		destMeta:  factory.NewMeta(&jobContext.dest),
-		SkipError: jobContext.skipError,
+		destMeta:  factory.NewMeta(&jobContext.Dest),
+		SkipError: jobContext.SkipError,
 		State:     JobRunning,
 
-		allowTableExists: jobContext.allowTableExists,
+		allowTableExists: jobContext.AllowTableExists,
 		factory:          factory,
 		forceFullsync:    false,
 
 		progress: nil,
-		db:       jobContext.db,
+		db:       jobContext.Db,
 		stop:     make(chan struct{}),
 
 		concurrencyManager: rpc.NewConcurrencyManager(),
@@ -3382,6 +3370,44 @@ func (j *Job) Status() *JobStatus {
 		State:         state,
 		ProgressState: progressState,
 	}
+}
+
+func (j *Job) UpdateHostMapping(srcHostMaps, destHostMaps map[string]string) error {
+	j.lock.Lock()
+	defer j.lock.Unlock()
+
+	oldSrcHostMapping := j.Src.HostMapping
+	if j.Src.HostMapping == nil {
+		j.Src.HostMapping = make(map[string]string)
+	}
+	for private, public := range srcHostMaps {
+		if public == "" {
+			delete(j.Src.HostMapping, private)
+		} else {
+			j.Src.HostMapping[private] = public
+		}
+	}
+
+	oldDestHostMapping := j.Dest.HostMapping
+	if j.Dest.HostMapping == nil {
+		j.Dest.HostMapping = make(map[string]string)
+	}
+	for private, public := range destHostMaps {
+		if public == "" {
+			delete(j.Dest.HostMapping, private)
+		} else {
+			j.Dest.HostMapping[private] = public
+		}
+	}
+
+	if err := j.persistJob(); err != nil {
+		j.Src.HostMapping = oldSrcHostMapping
+		j.Dest.HostMapping = oldDestHostMapping
+		return err
+	}
+
+	log.Debugf("update job %s src host mapping %+v, dest host mapping: %+v", j.Name, srcHostMaps, destHostMaps)
+	return nil
 }
 
 func isTxnCommitted(status *tstatus.TStatus) bool {

@@ -97,12 +97,12 @@ func (s *HttpService) versionHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("get version")
 
 	// Define the version result struct
-	type vesionResult struct {
+	type versionResult struct {
 		Version string `json:"version"`
 	}
 
 	// Create the result object with the current version
-	result := vesionResult{Version: version.GetVersion()}
+	result := versionResult{Version: version.GetVersion()}
 	writeJson(w, result)
 }
 
@@ -111,7 +111,15 @@ func (s *HttpService) versionHandler(w http.ResponseWriter, r *http.Request) {
 func createCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobManager) error {
 	log.Infof("create ccr %s", request)
 
-	ctx := ccr.NewJobContext(request.Src, request.Dest, request.SkipError, request.AllowTableExists, db, jobManager.GetFactory())
+	ctx := &ccr.JobContext{
+		Context:          context.Background(),
+		Src:              request.Src,
+		Dest:             request.Dest,
+		SkipError:        request.SkipError,
+		AllowTableExists: request.AllowTableExists,
+		Db:               db,
+		Factory:          jobManager.GetFactory(),
+	}
 	job, err := ccr.NewJobFromService(request.Name, ctx)
 	if err != nil {
 		return err
@@ -579,7 +587,7 @@ func (s *HttpService) jobDetailHandler(w http.ResponseWriter, r *http.Request) {
 
 	type result struct {
 		*defaultResult
-		JobDetail string `json:"job_detail"`
+		JobDetail *ccr.Job `json:"job_detail"`
 	}
 
 	var jobResult *result
@@ -610,16 +618,21 @@ func (s *HttpService) jobDetailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if jobDetail, err := s.db.GetJobInfo(request.Name); err != nil {
+	var jobDetail ccr.Job
+	if jobDetailStr, err := s.db.GetJobInfo(request.Name); err != nil {
 		log.Warnf("get job info failed: %+v", err)
-
+		jobResult = &result{
+			defaultResult: newErrorResult(err.Error()),
+		}
+	} else if err = json.Unmarshal([]byte(jobDetailStr), &jobDetail); err != nil {
+		log.Warnf("unmarshal job info failed: %+v", err)
 		jobResult = &result{
 			defaultResult: newErrorResult(err.Error()),
 		}
 	} else {
 		jobResult = &result{
 			defaultResult: newSuccessResult(),
-			JobDetail:     jobDetail,
+			JobDetail:     &jobDetail,
 		}
 	}
 }
@@ -690,6 +703,45 @@ func (s *HttpService) featuresHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *HttpService) updateHostMappingHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("update host mapping")
+
+	var result *defaultResult
+	defer func() { writeJson(w, result) }()
+
+	// Parse the JSON request body
+	var request struct {
+		CcrCommonRequest
+		SrcHostMapping  map[string]string `json:"src_host_mapping,required"`
+		DestHostMapping map[string]string `json:"dest_host_mapping,required"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Warnf("update host mapping failed: %+v", err)
+		result = newErrorResult(err.Error())
+		return
+	}
+
+	if request.Name == "" {
+		log.Warnf("update host mapping failed: name is empty")
+		result = newErrorResult("name is empty")
+		return
+	}
+
+	if len(request.SrcHostMapping) == 0 && len(request.DestHostMapping) == 0 {
+		log.Warnf("update host mapping failed: src/dest_host_mapping is empty")
+		result = newErrorResult("host_mapping is empty")
+		return
+	}
+
+	if err := s.jobManager.UpdateHostMapping(request.Name, request.SrcHostMapping, request.DestHostMapping); err != nil {
+		log.Warnf("update host mapping failed: %+v", err)
+		result = newErrorResult(err.Error())
+	} else {
+		result = newSuccessResult()
+	}
+}
+
 func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/version", s.versionHandler)
 	s.mux.HandleFunc("/create_ccr", s.createHandler)
@@ -705,6 +757,7 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/job_progress", s.jobProgressHandler)
 	s.mux.HandleFunc("/force_fullsync", s.forceFullsyncHandler)
 	s.mux.HandleFunc("/features", s.featuresHandler)
+	s.mux.HandleFunc("/update_host_mapping", s.updateHostMappingHandler)
 	s.mux.Handle("/metrics", promhttp.Handler())
 }
 

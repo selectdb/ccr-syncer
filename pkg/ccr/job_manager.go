@@ -255,3 +255,14 @@ func (jm *JobManager) UpdateJobSkipError(jobName string, skipError bool) error {
 		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
 	}
 }
+
+func (jm *JobManager) UpdateHostMapping(jobName string, srcHostMapping, destHostMapping map[string]string) error {
+	jm.lock.Lock()
+	defer jm.lock.Unlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return job.UpdateHostMapping(srcHostMapping, destHostMapping)
+	} else {
+		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
+	}
+}

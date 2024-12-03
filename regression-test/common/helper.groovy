@@ -85,10 +85,10 @@ class Helper {
 
         def gson = new com.google.gson.Gson()
 
-        Map<String, String> srcSpec = context.getSrcSpec(db)
+        Map<String, Object> srcSpec = context.getSrcSpec(db)
         srcSpec.put("table", table)
 
-        Map<String, String> destSpec = context.getDestSpec(db)
+        Map<String, Object> destSpec = context.getDestSpec(db)
         if (alias != null) {
             destSpec.put("table", alias)
         } else {
@@ -124,6 +124,16 @@ class Helper {
             endpoint syncerAddress
             body "${bodyJson}"
             op "post"
+            check { code, body ->
+                if (!"${code}".toString().equals("200")) {
+                    throw new Exception("request failed, code: ${code}, body: ${body}")
+                }
+                def jsonSlurper = new groovy.json.JsonSlurper()
+                def object = jsonSlurper.parseText "${body}"
+                if (!object.success) {
+                    throw new Exception("request failed, error msg: ${object.error_msg}")
+                }
+            }
         }
     }
 

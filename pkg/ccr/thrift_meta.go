@@ -249,7 +249,21 @@ func (tm *ThriftMeta) GetIndexNameMap(tableId, partitionId int64) (map[string]*I
 }
 
 func (tm *ThriftMeta) GetBackendMap() (map[int64]*base.Backend, error) {
-	return tm.meta.Backends, nil
+	if tm.meta.HostMapping == nil {
+		return tm.meta.Backends, nil
+	}
+
+	backends := make(map[int64]*base.Backend)
+	for id, backend := range tm.meta.Backends {
+		if host, ok := tm.meta.HostMapping[backend.Host]; ok {
+			backend.Host = host
+		} else {
+			return nil, xerror.Errorf(xerror.Normal,
+				"the public ip of host %s is not found, consider adding it via HTTP API /update_host_mapping", backend.Host)
+		}
+		backends[id] = backend
+	}
+	return backends, nil
 }
 
 // Whether the target partition are dropped

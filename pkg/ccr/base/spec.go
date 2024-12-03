@@ -220,6 +220,9 @@ type Spec struct {
 	Table    string `json:"table"`
 	TableId  int64  `json:"table_id"`
 
+	// The mapping of host private and public ip
+	HostMapping map[string]string `json:"host_mapping,omitempty"`
+
 	observers []utils.Observer[SpecEvent]
 }
 

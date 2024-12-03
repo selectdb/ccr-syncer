@@ -578,6 +578,17 @@ func (m *Meta) GetFrontends() ([]*base.Frontend, error) {
 		return nil, xerror.Wrap(err, xerror.Normal, query)
 	}
 
+	if len(m.HostMapping) != 0 {
+		for _, frontend := range frontends {
+			if host, ok := m.HostMapping[frontend.Host]; ok {
+				frontend.Host = host
+			} else {
+				return nil, xerror.Errorf(xerror.Normal,
+					"the public ip of host %s is not found, consider adding it via HTTP API /add_host_mapping", frontend.Host)
+			}
+		}
+	}
+
 	return frontends, nil
 }
 
@@ -585,7 +596,18 @@ func (m *Meta) GetBackends() ([]*base.Backend, error) {
 	if len(m.Backends) > 0 {
 		backends := make([]*base.Backend, 0, len(m.Backends))
 		for _, backend := range m.Backends {
-			backends = append(backends, backend)
+			backend := *backend	// copy
+			backends = append(backends, &backend)
+		}
+		if len(m.HostMapping) != 0 {
+			for _, backend := range backends {
+				if host, ok := m.HostMapping[backend.Host]; ok {
+					backend.Host = host
+				} else {
+					return nil, xerror.Errorf(xerror.Normal,
+						"the public ip of host %s is not found, consider adding it via HTTP API /add_host_mapping", backend.Host)
+				}
+			}
 		}
 		return backends, nil
 	}
