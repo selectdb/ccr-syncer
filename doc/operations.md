@@ -66,7 +66,7 @@ curl -X POST -H "Content-Type: application/json" -d {json_body} http://ccr_synce
     curl -L --post303 http://ccr_syncer_host:ccr_syncer_port/metrics
     ```
 - `update_host_mapping`
-    更新上游 BE 集群 private ip 到 public ip 的映射；如果参数中的 public ip 为空，则删除该 private 的映射
+    更新上游 FE/BE 集群 private ip 到 public ip 的映射；如果参数中的 public ip 为空，则删除该 private 的映射
     ```bash
     curl -X POST -L --post303 -H "Content-Type: application/json" -d '{
         "name": "job_name",
@@ -91,7 +91,7 @@ curl -X POST -H "Content-Type: application/json" -d {json_body} http://ccr_synce
 
 ccr syncer 支持将上下游部署到不同的网络环境中，并通过公网 IP 进行数据同步。
 
-具体方案：每个 job 会记录下上游 private IP 到 public IP 的映射关系（由用户提供），并在下游载入 binlog 前，将上游集群 BE 的 private 转换成对应的 public IP。
+具体方案：每个 job 会记录下上游 private IP 到 public IP 的映射关系（由用户提供），并在下游载入 binlog 前，将上游集群 FE/BE 的 private 转换成对应的 public IP。
 
 使用方式：创建 ccr job 时增加一个参数：
 ```bash
@@ -116,6 +116,8 @@ curl -X POST -H "Content-Type: application/json" -d '{
 ```
 
 `host_mapping` 用法与 `/update_host_mapping` 接口一致。
+
+> 注意：即使增加了 host_mapping 字段，**src/dest 中的 host 字段仍需要设置为 public ip**。
 
 相关操作：
 - 修改/删除/增加新映射，使用 `/update_host_mapping` 接口
