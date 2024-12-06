@@ -1095,8 +1095,13 @@ func (j *Job) fullSync() error {
 			var commitSeq int64 = math.MaxInt64
 			switch j.SyncType {
 			case DBSync:
-				for _, seq := range tableCommitSeqMap {
+				for tableId, seq := range tableCommitSeqMap {
+					if seq == 0 {
+						// Skip the views
+						continue
+					}
 					commitSeq = utils.Min(commitSeq, seq)
+					log.Debugf("fullsync table commit seq, table id: %d, commit seq: %d", tableId, seq)
 				}
 				if snapshotResp.GetCommitSeq() > 0 {
 					commitSeq = utils.Min(commitSeq, snapshotResp.GetCommitSeq())
