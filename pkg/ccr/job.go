@@ -2609,6 +2609,46 @@ func (j *Job) handleRecoverInfoRecord(commitSeq int64, recoverInfo *record.Recov
 	return j.newPartialSnapshot(recoverInfo.TableId, recoverInfo.TableName, nil, true)
 }
 
+func (j *Job) handleRestoreInfo(binlog *festruct.TBinlog) error {
+	log.Infof("handle restore info binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
+
+	data := binlog.GetData()
+	restoreInfo, err := record.NewRestoreInfoFromJson(data)
+	if err != nil {
+		return err
+	}
+	return j.handleRestoreInfoRecord(binlog.GetCommitSeq(), restoreInfo)
+}
+
+func (j *Job) handleRestoreInfoRecord(commitSeq int64, restoreInfo *record.RestoreInfo) error {
+	if len(restoreInfo.TableInfo) != 1 {
+		// for both table and db sync take a full snapshot.
+		log.Warnf("Lets do new snapshot")
+		return j.newSnapshot(commitSeq)
+	}
+
+	if len(restoreInfo.TableInfo) == 1 {
+		for tableId, tableName := range restoreInfo.TableInfo {
+			switch j.SyncType {
+			case TableSync:
+				log.Warnf("full snapshot, table:%d and name:%s",
+					tableId, tableName)
+				return j.newSnapshot(commitSeq)
+			case DBSync:
+				log.Warnf("new partial snapshot, table:%d and name:%s",
+					tableId, tableName)
+				replace := true // replace the old data to avoid blocking reading
+				return j.newPartialSnapshot(tableId, tableName, nil, replace)
+			default:
+				break
+			}
+		}
+	}
+	//This is unreachable.
+	return nil
+}
+
 func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 	data := binlog.GetData()
 	barrierLog, err := record.NewBarrierLogFromJson(data)
@@ -2693,6 +2733,12 @@ func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 			return err
 		}
 		return j.handleRecoverInfoRecord(commitSeq, recoverInfo)
+	case festruct.TBinlogType_RESTORE_INFO:
+		restoreInfo, err := record.NewRestoreInfoFromJson(barrierLog.Binlog)
+		if err != nil {
+			return err
+		}
+		return j.handleRestoreInfoRecord(commitSeq, restoreInfo)
 	case festruct.TBinlogType_BARRIER:
 		log.Info("handle barrier binlog, ignore it")
 	default:
@@ -2807,6 +2853,8 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		return j.handleDropRollup(binlog)
 	case festruct.TBinlogType_RECOVER_INFO:
 		return j.handleRecoverInfo(binlog)
+	case festruct.TBinlogType_RESTORE_INFO:
+		return j.handleRestoreInfo(binlog)
 	default:
 		return xerror.Errorf(xerror.Normal, "unknown binlog type: %v", binlog.GetType())
 	}
