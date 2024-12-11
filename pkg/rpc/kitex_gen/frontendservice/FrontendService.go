@@ -1023,7 +1023,7 @@ func TBinlogTypeFromString(s string) (TBinlogType, error) {
 	case "DROP_ROLLUP":
 		return TBinlogType_DROP_ROLLUP, nil
 	case "RECOVER_INFO":
-		return TBinlogType_RECOVER_INFO, nil		
+		return TBinlogType_RECOVER_INFO, nil
 	case "MIN_UNKNOWN":
 		return TBinlogType_MIN_UNKNOWN, nil
 	case "UNKNOWN_10":

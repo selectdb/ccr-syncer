@@ -36,6 +36,13 @@ func NewRecoverInfoFromJson(data string) (*RecoverInfo, error) {
 	return &recoverInfo, nil
 }
 
+func (c *RecoverInfo) IsRecoverTable() bool {
+	if c.PartitionName == "" || c.PartitionId == -1 {
+		return true
+	}
+	return false
+}
+
 // String
 func (c *RecoverInfo) String() string {
 	return fmt.Sprintf("RecoverInfo: DbId: %d, NewDbName: %s, TableId: %d, TableName: %s, NewTableName: %s, PartitionId: %d, PartitionName: %s, NewPartitionName: %s",
