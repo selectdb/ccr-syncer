@@ -20,14 +20,14 @@ type RpcFactory struct {
 	feRpcs     map[*base.Spec]IFeRpc
 	feRpcsLock sync.Mutex
 
-	beRpcs     map[*base.Backend]IBeRpc
+	beRpcs     map[base.Backend]IBeRpc
 	beRpcsLock sync.Mutex
 }
 
 func NewRpcFactory() IRpcFactory {
 	return &RpcFactory{
 		feRpcs: make(map[*base.Spec]IFeRpc),
-		beRpcs: make(map[*base.Backend]IBeRpc),
+		beRpcs: make(map[base.Backend]IBeRpc),
 	}
 }
 
@@ -57,7 +57,7 @@ func (rf *RpcFactory) NewFeRpc(spec *base.Spec) (IFeRpc, error) {
 
 func (rf *RpcFactory) NewBeRpc(be *base.Backend) (IBeRpc, error) {
 	rf.beRpcsLock.Lock()
-	if beRpc, ok := rf.beRpcs[be]; ok {
+	if beRpc, ok := rf.beRpcs[*be]; ok {
 		rf.beRpcsLock.Unlock()
 		return beRpc, nil
 	}
@@ -77,6 +77,6 @@ func (rf *RpcFactory) NewBeRpc(be *base.Backend) (IBeRpc, error) {
 
 	rf.beRpcsLock.Lock()
 	defer rf.beRpcsLock.Unlock()
-	rf.beRpcs[be] = beRpc
+	rf.beRpcs[*be] = beRpc
 	return beRpc, nil
 }
