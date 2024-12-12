@@ -2374,18 +2374,34 @@ func (j *Job) handleModifyTableAddOrDropInvertedIndicesRecord(commitSeq int64, r
 		return nil
 	}
 
-	var destTableName string
+	if record.IsDropInvertedIndex {
+		var destTableName string
+		if j.SyncType == TableSync {
+			destTableName = j.Dest.Table
+		} else {
+			var err error
+			destTableName, err = j.getDestNameBySrcId(record.TableId)
+			if err != nil {
+				return xerror.Errorf(xerror.Normal, "get dest table name by src id %d failed, err: %v", record.TableId, err)
+			}
+		}
+		return j.IDest.LightningIndexChange(destTableName, record)
+	}
+
+	// Get the source table name, and trigger a partial snapshot
+	var tableName string
 	if j.SyncType == TableSync {
-		destTableName = j.Dest.Table
+		tableName = j.Src.Table
 	} else {
-		var err error
-		destTableName, err = j.getDestNameBySrcId(record.TableId)
-		if err != nil {
-			return err
+		if name, err := j.getDestNameBySrcId(record.TableId); err != nil {
+			return xerror.Errorf(xerror.Normal, "get dest table name by src id %d failed, err: %v", record.TableId, err)
+		} else {
+			tableName = name
 		}
 	}
 
-	return j.IDest.LightningIndexChange(destTableName, record)
+	replace := true
+	return j.newPartialSnapshot(record.TableId, tableName, nil, replace)
 }
 
 func (j *Job) handleIndexChangeJob(binlog *festruct.TBinlog) error {
