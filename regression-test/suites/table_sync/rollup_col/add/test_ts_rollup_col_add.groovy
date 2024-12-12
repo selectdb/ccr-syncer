@@ -128,6 +128,6 @@ suite("test_ts_rollup_col_add") {
     assertTrue(helper.check_table_describe_times(tableName, 30))
 
     // no full sync triggered.
-    last_job_progress = helper.get_job_progress(tableName)
+    def last_job_progress = helper.get_job_progress(tableName)
     assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
 }

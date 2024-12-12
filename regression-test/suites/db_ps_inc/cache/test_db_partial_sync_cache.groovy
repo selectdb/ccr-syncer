@@ -70,7 +70,7 @@ suite("test_db_partial_sync_cache") {
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", insert_num, 60))
 
-    first_job_progress = helper.get_job_progress()
+    def first_job_progress = helper.get_job_progress()
 
     logger.info("=== Test 1: add first column case ===")
     // binlog type: ALTER_JOB, binlog data:
@@ -109,7 +109,7 @@ suite("test_db_partial_sync_cache") {
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", insert_num + 1, 60))
 
     // no full sync triggered.
-    last_job_progress = helper.get_job_progress()
+    def last_job_progress = helper.get_job_progress()
     assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
 }
 

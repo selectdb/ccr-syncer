@@ -67,7 +67,7 @@ suite("test_tbl_ps_inc_cache") {
     assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${tableName}\"", exist, 60, "target_sql"))
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", insert_num, 60))
 
-    first_job_progress = helper.get_job_progress(tableName)
+    def first_job_progress = helper.get_job_progress(tableName)
 
     logger.info("=== Test 1: add first column case ===")
     // binlog type: ALTER_JOB, binlog data:
@@ -109,7 +109,7 @@ suite("test_tbl_ps_inc_cache") {
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", insert_num + 1, 60))
 
     // no full sync triggered.
-    last_job_progress = helper.get_job_progress(tableName)
+    def last_job_progress = helper.get_job_progress(tableName)
     assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
 }
 
