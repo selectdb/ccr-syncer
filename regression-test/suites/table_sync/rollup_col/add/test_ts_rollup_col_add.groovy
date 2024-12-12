@@ -64,7 +64,7 @@ suite("test_ts_rollup_col_add") {
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
     assertTrue(helper.check_table_describe_times(tableName, 30))
 
-    first_job_progress = helper.get_job_progress(tableName)
+    def first_job_progress = helper.get_job_progress(tableName)
 
     logger.info("=== Test 1: add key column ===")
     // {

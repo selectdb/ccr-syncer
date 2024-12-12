@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_tbl_idx_bf_add_drop") {
+suite("test_ts_idx_bf_add_drop") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -124,5 +124,5 @@ suite("test_tbl_idx_bf_add_drop") {
         return false
     }
     def show_create_table = target_sql "SHOW CREATE TABLE ${tableName}"
-    assertTrue(checkBloomFilter3(show_create_table))
+    assertTrue(checkBloomFilter3(show_create_table), "create table: ${show_create_table}")
 }
