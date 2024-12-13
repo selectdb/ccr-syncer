@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_cds_tbl_rename_create") {
+suite('test_cds_tbl_rename_create') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
-            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
+            .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
     if (!helper.is_version_supported([30003, 20108, 20016])) {
         // at least doris 3.0.3, 2.1.8 and doris 2.0.16
@@ -26,8 +26,8 @@ suite("test_cds_tbl_rename_create") {
         return
     }
 
-    def oldTableName = "tbl_old_" + helper.randomSuffix()
-    def newTableName = "tbl_new_" + helper.randomSuffix()
+    def oldTableName = 'tbl_old_' + helper.randomSuffix()
+    def newTableName = 'tbl_new_' + helper.randomSuffix()
 
     def exist = { res -> Boolean
         return res.size() != 0
@@ -36,7 +36,7 @@ suite("test_cds_tbl_rename_create") {
         return res.size() == 0
     }
 
-    logger.info("=== Create a fake table ===")
+    logger.info('=== Create a fake table ===')
     sql """
         CREATE TABLE if NOT EXISTS ${oldTableName}_fake
         (
@@ -66,7 +66,7 @@ suite("test_cds_tbl_rename_create") {
 
     assertTrue(helper.checkRestoreFinishTimesOf("${oldTableName}_fake", 60))
 
-    logger.info(" ==== create table and rename ==== ")
+    logger.info(' ==== create table and rename ==== ')
 
     def first_job_progress = helper.get_job_progress()
 
@@ -102,13 +102,10 @@ suite("test_cds_tbl_rename_create") {
 
     helper.ccrJobResume()
 
-    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${newTableName}\"", exist, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${newTableName}\"", exist, 60, 'target'))
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${newTableName}", 6, 60))
 
     // no fullsync are triggered
     def last_job_progress = helper.get_job_progress()
     assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
 }
-
-
-

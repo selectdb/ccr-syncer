@@ -15,17 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_ds_mv_basic") {
+suite('test_ds_mv_basic') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
-            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
+            .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
     def createDuplicateTable = { tableName ->
-       sql """
+        sql """
             CREATE TABLE if NOT EXISTS ${tableName}
             (
                 user_id            BIGINT       NOT NULL COMMENT "用户 ID",
                 name               VARCHAR(20)           COMMENT "用户姓名",
-                age                INT                   COMMENT "用户年龄"            
+                age                INT                   COMMENT "用户年龄"
             )
             ENGINE=OLAP
             DUPLICATE KEY(user_id)
@@ -37,7 +37,7 @@ suite("test_ds_mv_basic") {
         """
     }
 
-    def checkRestoreRowsTimesOf = {rowSize, times -> Boolean
+    def checkRestoreRowsTimesOf = { rowSize, times -> Boolean
         Boolean ret = false
         while (times > 0) {
             def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
@@ -79,7 +79,7 @@ suite("test_ds_mv_basic") {
     assertTrue(helper.checkRestoreFinishTimesOf("${tableDuplicate0}", 30))
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate0}", 5, 30))
 
-    logger.info("=== Test1: create view and materialized view ===")
+    logger.info('=== Test1: create view and materialized view ===')
     sql """
         CREATE VIEW view_test_${suffix} (k1, name,  v1)
         AS
@@ -92,19 +92,21 @@ suite("test_ds_mv_basic") {
         select user_id, name from ${tableDuplicate0};
         """
 
-    assertTrue(helper.checkShowTimesOf("SHOW VIEW FROM ${tableDuplicate0}", exist, 30, "target"))
-    assertTrue(helper.checkRestoreFinishTimesOf("view_test_${suffix}", 30))
+    assertTrue(helper.checkShowTimesOf("SHOW VIEW FROM ${tableDuplicate0}", exist, 30, 'target'))
+    assertTrue(helper.checkShowTimesOf(
+        "SHOW CREATE MATERIALIZED VIEW user_id_name_${suffix} ON ${tableDuplicate0}",
+        exist, 30, 'target'))
 
     explain {
         sql("select user_id, name from ${tableDuplicate0}")
-        contains "user_id_name"
+        contains 'user_id_name'
     }
 
-     logger.info("=== Test 2: delete job ===")
-     test_num = 5
-     helper.ccrJobDelete()
+    logger.info('=== Test 2: delete job ===')
+    test_num = 5
+    helper.ccrJobDelete()
 
-   sql """
+    sql """
         INSERT INTO ${tableDuplicate0} VALUES (6, "Zhangsan", 31)
         """
 
