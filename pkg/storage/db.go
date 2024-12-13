@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"database/sql"
 	"errors"
 	"flag"
 )
@@ -11,18 +12,19 @@ var (
 )
 
 const (
-	InvalidCheckTimestamp    int64  = -1
-	remoteDBName             string = "ccr"
-	defaultMaxOpenConnctions int    = 20
+	InvalidCheckTimestamp int64  = -1
+	remoteDBName          string = "ccr"
+	defaultMaxOpenConns   int    = 20
+	defaultMaxIdleConns   int    = 5
 )
 
-var maxOpenConnctions int
+var maxOpenConns int
 var maxAllowedPacket int64
 
 func init() {
 	flag.Int64Var(&maxAllowedPacket, "mysql_max_allowed_packet", defaultMaxAllowedPacket,
 		"Config the max allowed packet to send to mysql server, the upper limit is 1GB")
-	flag.IntVar(&maxOpenConnctions, "max_open_connection", defaultMaxOpenConnctions,
+	flag.IntVar(&maxOpenConns, "db_max_open_conns", defaultMaxOpenConns,
 		"Config the max open connections for db user")
 }
 
@@ -60,4 +62,13 @@ type DB interface {
 
 	// GetAllData
 	GetAllData() (map[string][]string, error)
+}
+
+func SetDBOptions(db *sql.DB) {
+	db.SetMaxOpenConns(maxOpenConns)
+	if maxOpenConns > 0 {
+		db.SetMaxIdleConns(maxOpenConns / 4)
+	} else {
+		db.SetMaxIdleConns(defaultMaxIdleConns)
+	}
 }

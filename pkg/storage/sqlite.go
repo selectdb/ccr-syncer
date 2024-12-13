@@ -20,8 +20,7 @@ func NewSQLiteDB(dbPath string) (DB, error) {
 		return nil, xerror.Wrapf(err, xerror.DB, "sqlite: open sqlite3 path %s failed", dbPath)
 	}
 
-	db.SetMaxOpenConns(maxOpenConnctions)
-	db.SetMaxIdleConns(maxOpenConnctions / 4)
+	SetDBOptions(db)
 
 	// create table info && progress, if not exists
 	// all is tuple (string, string)
