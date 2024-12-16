@@ -1539,7 +1539,7 @@ func correctAddPartitionSql(addPartitionSql string, addPartition *record.AddPart
 
 func AddDBPrefixToCreateTableOrViewSql(dbName, createSql string) string {
 	// extract table/view name from create sql, and add db prefix
-	re := regexp.MustCompile("^\\s*CREATE\\s+(VIEW|TABLE)\\s+`([^`])`\\s+")
+	re := regexp.MustCompile("^\\s*CREATE\\s+(VIEW|TABLE)\\s+`([^`]+)`\\s+")
 	matches := re.FindStringSubmatch(createSql)
 	if len(matches) == 3 {
 		resource := matches[1]
