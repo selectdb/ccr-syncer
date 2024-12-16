@@ -1231,8 +1231,9 @@ func (s *Spec) LightningSchemaChange(srcDatabase, tableAlias string, lightningSc
 
 	// 2. handle alias
 	if tableAlias != "" {
+		tableAlias := utils.FormatKeywordName(tableAlias)
 		re := regexp.MustCompile(fmt.Sprintf("ALTER TABLE %s.`[^`]*`", dbName))
-		sql = re.ReplaceAllString(sql, fmt.Sprintf("ALTER TABLE `%s`", tableAlias))
+		sql = re.ReplaceAllString(sql, fmt.Sprintf("ALTER TABLE %s.%s", dbName, tableAlias))
 	}
 
 	// 3. compatible REPLACE_IF_NOT_NULL NULL DEFAULT "null"
