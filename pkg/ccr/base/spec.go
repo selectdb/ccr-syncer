@@ -1438,7 +1438,7 @@ func (s *Spec) BuildIndex(tableAlias string, buildIndex *record.IndexChangeJob) 
 	indexName = utils.FormatKeywordName(indexName)
 	tableAlias = utils.FormatKeywordName(tableAlias)
 	dbName := utils.FormatKeywordName(s.Database)
-	sql := fmt.Sprintf("BUILD INDEX %s ON %s.%s", dbName, indexName, tableAlias)
+	sql := fmt.Sprintf("BUILD INDEX %s ON %s.%s", indexName, dbName, tableAlias)
 	if buildIndex.PartitionName != "" {
 		sqlWithPart := fmt.Sprintf("%s PARTITION (%s)", sql, utils.FormatKeywordName(buildIndex.PartitionName))
 
