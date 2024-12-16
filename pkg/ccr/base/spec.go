@@ -1227,7 +1227,7 @@ func (s *Spec) LightningSchemaChange(srcDatabase, tableAlias string, lightningSc
 		match = fmt.Sprintf("`%s`.", srcDatabase)
 	}
 	dbName := utils.FormatKeywordName(s.Database)
-	sql := strings.Replace(rawSql, match, dbName, 1)
+	sql := strings.Replace(rawSql, match, fmt.Sprintf("%s.", dbName), 1)
 
 	// 2. handle alias
 	if tableAlias != "" {
