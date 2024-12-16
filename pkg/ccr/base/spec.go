@@ -630,7 +630,7 @@ func (s *Spec) CreateTableOrView(createTable *record.CreateTable, srcDatabase st
 		log.Debugf("original create view sql is %s, after replace, now sql is %s", createTable.Sql, createSql)
 	}
 
-	createSql = AddDBPrefixToCreateTableOrViewSql(createSql, s.Database)
+	createSql = AddDBPrefixToCreateTableOrViewSql(s.Database, createSql)
 
 	// Compatible with doris 2.1.x, see apache/doris#44834 for details.
 	for strings.Contains(createSql, "MAXVALUEMAXVALUE") {
