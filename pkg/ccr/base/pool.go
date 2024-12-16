@@ -39,6 +39,10 @@ func init() {
 	}
 }
 
+// GetMysqlDB get mysql db connection
+//
+// Do not set the DB name in the DSN, to limit the maximum num of open connections,
+// since it was cached via the DSN.
 func GetMysqlDB(dsn string) (*sql.DB, error) {
 	cachedSqlDbPool.mu.Lock()
 	defer cachedSqlDbPool.mu.Unlock()

@@ -63,9 +63,11 @@ func (addPartition *AddPartition) getDistributionColumns() []string {
 	return distributionColumns
 }
 
-func (addPartition *AddPartition) GetSql(destTableName string) string {
+func (addPartition *AddPartition) GetSql(destDbName, destTableName string) string {
+	destDbName = utils.FormatKeywordName(destDbName)
+	destTableName = utils.FormatKeywordName(destTableName)
 	// addPartitionSql = "ALTER TABLE " + sql
-	addPartitionSql := fmt.Sprintf("ALTER TABLE %s %s", utils.FormatKeywordName(destTableName), addPartition.Sql)
+	addPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s", destDbName, destTableName, addPartition.Sql)
 	// remove last ';' and add BUCKETS num
 	addPartitionSql = strings.TrimRight(addPartitionSql, ";")
 	// check contains BUCKETS num, ignore case
