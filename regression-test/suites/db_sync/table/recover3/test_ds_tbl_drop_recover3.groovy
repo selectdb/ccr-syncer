@@ -14,14 +14,21 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_ds_tbl_drop_recover3") {
+suite('test_ds_tbl_drop_recover3') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
-            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
+            .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
-    def tableName = "tbl_recover" + helper.randomSuffix()
+    if (!helper.is_version_supported([30099, 20199, 20099])) {
+        // not support doris 3.0/2.1/2.0
+        def version = helper.upstream_version()
+        logger.info("skip this suite because version is not supported, upstream version ${version}")
+        return
+    }
+
+    def tableName = 'tbl_recover' + helper.randomSuffix()
     def test_num = 0
     def insert_num = 3
-    def opPartitonName = "less"
+    def opPartitonName = 'less'
 
     def exist = { res -> Boolean
         return res.size() != 0
@@ -30,7 +37,7 @@ suite("test_ds_tbl_drop_recover3") {
         return res.size() == 0
     }
 
-    helper.disableDbBinlog();
+    helper.disableDbBinlog()
     helper.ccrJobDelete()
 
     sql """
@@ -53,8 +60,6 @@ suite("test_ds_tbl_drop_recover3") {
         )
     """
 
-
-
     for (int index = 0; index < insert_num; index++) {
         sql """
             INSERT INTO ${tableName}_1 VALUES (${test_num}, ${index})
@@ -66,16 +71,16 @@ suite("test_ds_tbl_drop_recover3") {
     """
     helper.enableDbBinlog()
     helper.ccrJobCreate()
-    int interations = 10;
-    for(int t = 0; t <= interations; t += 1){
+    int interations = 10
+    for (int t = 0; t <= interations; t += 1) {
         /* first iteration already deleted */
         sql """
         DROP TABLE if exists ${tableName}_1
         """
         sql """
         RECOVER TABLE ${tableName}_1
-        """    
-        test_num = t + 10;
+        """
+        test_num = t + 10
         for (int index = 0; index < insert_num; index++) {
             sql """
                 INSERT INTO ${tableName}_1 VALUES (${test_num}, ${index})
@@ -84,7 +89,7 @@ suite("test_ds_tbl_drop_recover3") {
     }
     // before validate, lets see restore is ok or not in target.
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_1", 60))
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}_1",36, 30))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}_1", 36, 30))
 
     order_qt_target_sql_content_2("SELECT * FROM ${tableName}_1")
     qt_sql_source_content_2("SELECT * FROM ${tableName}_1")
