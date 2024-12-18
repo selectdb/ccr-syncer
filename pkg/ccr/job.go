@@ -364,7 +364,7 @@ func (j *Job) handlePartialSyncTableNotFound() error {
 		log.Warnf("skip this partial sync because table %s has been dropped, table id: %d", table, tableId)
 		nextCommitSeq := j.progress.CommitSeq
 		if j.SyncType == DBSync {
-			j.progress.NextWithPersist(nextCommitSeq, DBIncrementalSync, Done, "")
+			j.progress.NextWithPersist(nextCommitSeq, DBTablesIncrementalSync, Done, "")
 		} else {
 			j.progress.NextWithPersist(nextCommitSeq, TableIncrementalSync, Done, "")
 		}
