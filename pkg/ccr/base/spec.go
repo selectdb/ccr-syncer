@@ -641,15 +641,7 @@ func (s *Spec) CreateTableOrView(createTable *record.CreateTable, srcDatabase st
 	}
 
 	log.Infof("create table or view sql: %s", createSql)
-
-	// FIXME(walter) avoid set session variables in the reusable connection.
-	list := []string{}
-	if strings.Contains(createSql, "agg_state<") {
-		log.Infof("agg_state is exists in the create table sql, set enable_agg_state=true")
-		list = append(list, "SET enable_agg_state=true")
-	}
-	list = append(list, createSql)
-	return s.Exec(list...)
+	return s.Exec(createSql)
 }
 
 func (s *Spec) CheckDatabaseExists() (bool, error) {
@@ -1161,17 +1153,15 @@ func (s *Spec) WaitTransactionDone(txnId int64) {
 }
 
 // Exec sql
-func (s *Spec) Exec(sqls ...string) error {
+func (s *Spec) Exec(sql string) error {
 	db, err := s.Connect()
 	if err != nil {
 		return err
 	}
 
-	for _, sql := range sqls {
-		_, err = db.Exec(sql)
-		if err != nil {
-			return xerror.Wrapf(err, xerror.Normal, "exec sql %s failed", sql)
-		}
+	_, err = db.Exec(sql)
+	if err != nil {
+		return xerror.Wrapf(err, xerror.Normal, "exec sql %s failed", sql)
 	}
 	return nil
 }

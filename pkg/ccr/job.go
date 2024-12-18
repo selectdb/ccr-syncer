@@ -1865,9 +1865,16 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 	}
 
 	if err = j.IDest.CreateTableOrView(createTable, j.Src.Database); err != nil {
-		if strings.Contains(err.Error(), "Can not found function") {
-			log.Warnf("skip creating table/view because the UDF function is not supported yet: %s", err.Error())
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "Can not found function") {
+			log.Warnf("skip creating table/view because the UDF function is not supported yet: %s", errMsg)
 			return nil
+		}
+		if len(createTable.TableName) > 0 && IsSessionVariableRequired(errMsg) { // ignore doris 2.0.3
+			log.Infof("a session variable is required to create table %s, force partial snapshot, commit seq: %d, msg: %s",
+				createTable.TableName, binlog.GetCommitSeq(), errMsg)
+			replace := false // new table no need to replace
+			return j.newPartialSnapshot(createTable.TableId, createTable.TableName, nil, replace)
 		}
 		return xerror.Wrapf(err, xerror.Normal, "create table %d", createTable.TableId)
 	}
@@ -3513,4 +3520,9 @@ func isStatusContainsAny(status *tstatus.TStatus, patterns ...string) bool {
 		}
 	}
 	return false
+}
+
+func IsSessionVariableRequired(msg string) bool {
+	re := regexp.MustCompile(`set enable_.+=.+`)
+	return re.MatchString(msg)
 }
