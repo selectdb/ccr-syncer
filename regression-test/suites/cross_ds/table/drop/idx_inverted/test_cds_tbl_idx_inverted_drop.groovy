@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite('test_cds_tbl_alter_drop') {
+suite('test_cds_tbl_idx_inverted_drop') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
@@ -26,8 +26,7 @@ suite('test_cds_tbl_alter_drop') {
         return
     }
 
-    def oldTableName = 'tbl_old_' + helper.randomSuffix()
-    def newTableName = 'tbl_new_' + helper.randomSuffix()
+    def tableName = 'tbl_' + helper.randomSuffix()
 
     def exist = { res -> Boolean
         return res.size() != 0
@@ -41,7 +40,7 @@ suite('test_cds_tbl_alter_drop') {
 
     logger.info('=== Create a fake table ===')
     sql """
-        CREATE TABLE if NOT EXISTS ${oldTableName}_fake
+        CREATE TABLE if NOT EXISTS ${tableName}_fake
         (
             `test` INT,
             `id` INT
@@ -67,7 +66,7 @@ suite('test_cds_tbl_alter_drop') {
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 
-    assertTrue(helper.checkRestoreFinishTimesOf("${oldTableName}_fake", 60))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_fake", 60))
 
     logger.info(' ==== create table and drop ==== ')
 
@@ -76,10 +75,11 @@ suite('test_cds_tbl_alter_drop') {
     helper.ccrJobPause()
 
     sql """
-        CREATE TABLE if NOT EXISTS ${oldTableName}
+        CREATE TABLE if NOT EXISTS ${tableName}
         (
             `test` INT,
-            `id` INT
+            `id` INT,
+            `value` STRING NULL
         )
         ENGINE=OLAP
         UNIQUE KEY(`test`, `id`)
@@ -98,34 +98,50 @@ suite('test_cds_tbl_alter_drop') {
         )
     """
 
-    sql "INSERT INTO ${oldTableName} VALUES (1, 100), (100, 1), (2, 200), (200, 2)"
-    sql "ALTER TABLE ${oldTableName} ADD COLUMN `new_col` INT KEY DEFAULT \"0\""
+    sql "INSERT INTO ${tableName} VALUES (1, 100, ''), (100, 1, ''), (2, 200, ''), (200, 2, '')"
+
+    logger.info('=== add inverted index ===')
+    sql """
+        CREATE INDEX idx_inverted ON ${tableName} (value) USING INVERTED
+        """
+    sql 'sync'
 
     assertTrue(helper.checkShowTimesOf("""
                                 SHOW ALTER TABLE COLUMN
                                 FROM ${context.dbName}
-                                WHERE TableName = "${oldTableName}" AND State = "FINISHED"
+                                WHERE TableName = "${tableName}" AND State = "FINISHED"
                                 """,
-                                exist, 30))
+                                has_count(1), 30))
 
-    // All binlogs of the dropped table should be ignored.
-    sql "ALTER TABLE ${oldTableName} ADD COLUMN `value_col` INT DEFAULT \"0\""
+    sql """ INSERT INTO ${tableName} VALUES (1, 1, "1") """
+
+    def show_indexes_result = sql "show indexes from ${tableName}"
+    logger.info("show indexes: ${show_indexes_result}")
+
+    // The drop index will be ignored since table is dropped
+    sql """
+        DROP INDEX idx_inverted ON ${tableName}
+        """
+    sql 'sync'
 
     assertTrue(helper.checkShowTimesOf("""
                                 SHOW ALTER TABLE COLUMN
                                 FROM ${context.dbName}
-                                WHERE TableName = "${oldTableName}" AND State = "FINISHED"
+                                WHERE TableName = "${tableName}" AND State = "FINISHED"
                                 """,
                                 has_count(2), 30))
 
-    sql "INSERT INTO ${oldTableName} VALUES (5, 500, 1, 2)"
-    sql "DROP TABLE ${oldTableName} FORCE"
-    sql "INSERT INTO ${oldTableName}_fake VALUES (5, 500)"
+    show_indexes_result = sql "show indexes from ${tableName}"
+    logger.info("show indexes: ${show_indexes_result}")
+
+    sql "INSERT INTO ${tableName} VALUES (5, 500, 'test')"
+    sql "DROP TABLE ${tableName} FORCE"
+    sql "INSERT INTO ${tableName}_fake VALUES (5, 500)"
 
     helper.ccrJobResume()
 
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${oldTableName}_fake", 1, 60))
-    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${oldTableName}\"", notExist, 60, 'target'))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}_fake", 1, 60))
+    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${tableName}\"", notExist, 60, 'target'))
 
     // no fullsync are triggered
     def last_job_progress = helper.get_job_progress()

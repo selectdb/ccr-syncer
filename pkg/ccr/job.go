@@ -359,15 +359,22 @@ func (j *Job) handlePartialSyncTableNotFound() error {
 
 	if dropped, err := j.isTableDropped(tableId); err != nil {
 		return err
+	} else if dropped && j.SyncType == TableSync {
+		return xerror.Errorf(xerror.Normal, "table sync but table %s has been dropped, table id %d",
+			table, tableId)
 	} else if dropped {
 		// skip this partial sync because table has been dropped
 		log.Warnf("skip this partial sync because table %s has been dropped, table id: %d", table, tableId)
 		nextCommitSeq := j.progress.CommitSeq
-		if j.SyncType == DBSync {
-			j.progress.NextWithPersist(nextCommitSeq, DBTablesIncrementalSync, Done, "")
-		} else {
-			j.progress.NextWithPersist(nextCommitSeq, TableIncrementalSync, Done, "")
+		// Since we don't know the commit seq of the drop table binlog, we set it to the max value to
+		// skip all binlogs.
+		//
+		// FIXME: it will skip drop table binlog too.
+		if len(j.progress.TableCommitSeqMap) == 0 {
+			j.progress.TableCommitSeqMap = make(map[int64]int64)
 		}
+		j.progress.TableCommitSeqMap[tableId] = math.MaxInt64
+		j.progress.NextWithPersist(nextCommitSeq, DBTablesIncrementalSync, Done, "")
 		return nil
 	} else if newTableName, err := j.srcMeta.GetTableNameById(tableId); err != nil {
 		return err
@@ -1931,11 +1938,17 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 		if _, ok := j.progress.TableMapping[dropTable.TableId]; !ok {
 			log.Warnf("the dest table is not found, skip drop table binlog, src table id: %d, commit seq: %d",
 				dropTable.TableId, binlog.GetCommitSeq())
+			// So that the sync state would convert to DBIncrementalSync,
+			// see handlePartialSyncTableNotFound for details.
+			delete(j.progress.TableCommitSeqMap, dropTable.TableId)
 			return nil
 		}
 	}
 
 	if j.isBinlogCommitted(dropTable.TableId, binlog.GetCommitSeq()) {
+		// So that the sync state would convert to DBIncrementalSync,
+		// see handlePartialSyncTableNotFound for details.
+		delete(j.progress.TableCommitSeqMap, dropTable.TableId)
 		return nil
 	}
 
