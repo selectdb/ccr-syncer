@@ -1083,6 +1083,7 @@ func (j *Job) fullSync() error {
 					}
 				}
 				log.Infof("the restore is cancelled, the unmatched %s %s is dropped, restore snapshot again", resource, tableName)
+				j.progress.NextSubVolatile(RestoreSnapshot, inMemoryData)
 				break
 			} else if err != nil {
 				j.progress.NextSubVolatile(RestoreSnapshot, inMemoryData)
