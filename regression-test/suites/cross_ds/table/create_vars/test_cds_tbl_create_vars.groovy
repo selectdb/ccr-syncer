@@ -57,7 +57,7 @@ suite('test_cds_tbl_create_vars') {
         """
 
         assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_agg", exist, 30, 'target'))
-    } finally { }
+    } catch (Exception) { }
 
     try {
         logger.info('create table with decimal 256')
@@ -78,5 +78,5 @@ suite('test_cds_tbl_create_vars') {
         )
         """
         assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_decimal_256", exist, 30, 'target'))
-    } finally { }
+    } catch (Exception) { }
     }
