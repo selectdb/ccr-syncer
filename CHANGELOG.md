@@ -7,7 +7,7 @@
 注意：从这个版本开始 doris 和 ccr-syncer 的 2.0 版本将不再更新，需要使用 ccr-syncer 的需要先升级到 2.1 及以上版本。
 
 
-这次引入了一个 behaviour change: 创建同步 JOB，需要上游的表开启 `light_schema_change` 属性 (selectdb/ccr-syncer#283)。
+这次引入了一个 behavior change: 创建同步 JOB，需要上游的表开启 `light_schema_change` 属性 (selectdb/ccr-syncer#283)。
 
 ### Fix
 
