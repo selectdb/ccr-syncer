@@ -567,12 +567,14 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 		}
 		rangeKey := partitionRecord.Range
 		if _, ok := srcPartitionMap[rangeKey]; !ok {
-			err = xerror.Errorf(xerror.Meta, "partition range: %v not in src cluster", rangeKey)
+			log.Debugf("the expected partition range: '%s', the source partition map: %v", rangeKey, srcPartitionMap)
+			err = xerror.Errorf(xerror.Meta, "partition range: %s not in src cluster", rangeKey)
 			j.setError(err)
 			return
 		}
 		if _, ok := destPartitionMap[rangeKey]; !ok {
-			err = xerror.Errorf(xerror.Meta, "partition range: %v not in dest cluster", rangeKey)
+			log.Debugf("the expected partition range: '%s', the dest partition map: %v", rangeKey, destPartitionMap)
+			err = xerror.Errorf(xerror.Meta, "partition range: %s not in dest cluster", rangeKey)
 			j.setError(err)
 			return
 		}

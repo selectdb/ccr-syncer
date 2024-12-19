@@ -15,15 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_ts_part_add") {
+suite('test_ts_part_add') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
-            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
+            .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
-    def baseTableName = "test_" + helper.randomSuffix()
-    def test_num = 0
-    def insert_num = 5
-    def opPartitonName = "less0"
-
+    def baseTableName = 'test_' + helper.randomSuffix()
     def exist = { res -> Boolean
         return res.size() != 0
     }
@@ -31,7 +27,7 @@ suite("test_ts_part_add") {
         return res.size() == 0
     }
 
-    logger.info("=== Test 1: Add range partition ===")
+    logger.info('=== Test 1: Add range partition ===')
     def tableName = "${baseTableName}_range"
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
@@ -66,30 +62,37 @@ suite("test_ts_part_add") {
                                 FROM ${tableName}
                                 WHERE PartitionName = "p3"
                                 """,
-                                exist, 60, "target"))
+                                exist, 60, 'target'))
 
     def show_result = target_sql """SHOW PARTITIONS FROM ${tableName} WHERE PartitionName = "p3" """
     logger.info("show partition: ${show_result}")
     // columns Range
-    assertTrue(show_result[0][6].contains("100"))
-    assertTrue(show_result[0][6].contains("200"))
+    assertTrue(show_result[0][6].contains('100'))
+    assertTrue(show_result[0][6].contains('200'))
 
-    logger.info("=== Test 2: Add list partition ===")
+    sql """
+        INSERT INTO ${tableName} PARTITION (p3) VALUES (1, 150)
+        """
+    assertTrue(helper.checkSelectTimesOf(""" SELECT * FROM ${tableName} """, 1, 60))
+
+    logger.info('=== Test 2: Add list partition ===')
     tableName = "${baseTableName}_list"
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (
             `test` INT,
-            `id` INT NOT NULL
+            `id1` INT NOT NULL,
+            `id2` INT NOT NULL,
+            `id3` INT NOT NULL
         )
         ENGINE=OLAP
-        UNIQUE KEY(`test`, `id`)
-        PARTITION BY LIST(`id`)
+        UNIQUE KEY(`test`, `id1`, `id2`, `id3`)
+        PARTITION BY LIST(`id1`, `id2`, `id3`)
         (
-            PARTITION `p1` VALUES IN ("0", "1", "2"),
-            PARTITION `p2` VALUES IN ("100", "200", "300")
+            PARTITION `p1` VALUES IN (("0", "1", "2"), ("1", "2", "3"), ("2", "3", "4")),
+            PARTITION `p2` VALUES IN (("100", "200", "300"), ("200", "300", "400"), ("300", "400", "500"))
         )
-        DISTRIBUTED BY HASH(id) BUCKETS AUTO
+        DISTRIBUTED BY HASH(id1) BUCKETS AUTO
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true"
@@ -100,7 +103,7 @@ suite("test_ts_part_add") {
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 60))
 
     sql """
-        ALTER TABLE ${tableName} ADD PARTITION p3 VALUES IN ("500", "600", "700")
+        ALTER TABLE ${tableName} ADD PARTITION p3 VALUES IN (("500", "600", "700"), ("600", "700", "800"), ("700", "800", "900"))
         """
 
     assertTrue(helper.checkShowTimesOf("""
@@ -108,13 +111,14 @@ suite("test_ts_part_add") {
                                 FROM ${tableName}
                                 WHERE PartitionName = "p3"
                                 """,
-                                exist, 60, "target"))
+                                exist, 60, 'target'))
     show_result = target_sql """SHOW PARTITIONS FROM ${tableName} WHERE PartitionName = "p3" """
     logger.info("show partition: ${show_result}")
-    // columns Range
-    assertTrue(show_result[0][6].contains("500"))
-    assertTrue(show_result[0][6].contains("600"))
-    assertTrue(show_result[0][6].contains("700"))
+
+    sql """
+        INSERT INTO ${tableName} VALUES ("1", "500", "600", "700")
+        """
+    assertTrue(helper.checkSelectTimesOf(""" SELECT * FROM ${tableName} """, 1, 60))
 
     // NOTE: ccr synder does not support syncing temp partition now.
     // logger.info("=== Test 3: Add temp partition ===")
@@ -164,7 +168,7 @@ suite("test_ts_part_add") {
     //                             """,
     //                             exist, 60, "target"))
 
-    logger.info("=== Test 4: Add unpartitioned partition ===")
+    logger.info('=== Test 4: Add unpartitioned partition ===')
     tableName = "${baseTableName}_unpart"
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
@@ -199,5 +203,10 @@ suite("test_ts_part_add") {
                                 SELECT * FROM ${tableName}
                                 WHERE id = 100
                                 """,
-                                exist, 60, "target"))
+                                exist, 60, 'target'))
+
+    sql """
+        INSERT INTO ${tableName} VALUES (1, 200);
+       """
+    assertTrue(helper.checkSelectTimesOf(""" SELECT * FROM ${tableName} """, 1, 60))
 }

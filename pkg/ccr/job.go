@@ -1437,6 +1437,12 @@ func (j *Job) handleUpsertWithRetry(binlog *festruct.TBinlog) error {
 	}
 
 	log.Warnf("a meta error occurred, retry to handle upsert binlog again, commitSeq: %d", binlog.GetCommitSeq())
+	if j.progress.SubSyncState == RollbackTransaction {
+		// rollback transaction firstly
+		if err = j.handleUpsert(nil); err != nil {
+			return err
+		}
+	}
 	return j.handleUpsert(binlog)
 }
 
@@ -1674,7 +1680,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		destRpc, err := j.factory.NewFeRpc(dest)
 		if err != nil {
 			rollback(err, inMemoryData)
-			break
+			return err
 		}
 
 		isTxnInsert := inMemoryData.IsTxnInsert
@@ -1687,7 +1693,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		}
 		if err != nil {
 			rollback(err, inMemoryData)
-			break
+			return err
 		}
 
 		if statusCode := resp.Status.GetStatusCode(); statusCode == tstatus.TStatusCode_PUBLISH_TIMEOUT {
@@ -1695,7 +1701,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		} else if statusCode != tstatus.TStatusCode_OK {
 			err := xerror.Errorf(xerror.Normal, "commit txn failed, status: %v", resp.Status)
 			rollback(err, inMemoryData)
-			break
+			return err
 		}
 
 		log.Infof("TxnId: %d committed, resp: %v", txnId, resp)

@@ -16,7 +16,7 @@ type PartitionRecord struct {
 }
 
 func (p PartitionRecord) String() string {
-	return fmt.Sprintf("PartitionRecord{Id: %d, Range: %s, Version: %d, IsTemp: %v, Stid: %d}",
+	return fmt.Sprintf("PartitionRecord{Id: %d, Range: '%s', Version: %d, IsTemp: %v, Stid: %d}",
 		p.Id, p.Range, p.Version, p.IsTemp, p.Stid)
 }
 
