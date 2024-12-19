@@ -1,23 +1,30 @@
 # CCR Syncer
+
 CCR（Cross Cluster Replication）也就是跨集群数据复制，能够在库/表级别将源集群的数据变更同步到目标集群，可用于提升在线服务的数据可用性、隔离在离线负载、建设两地三中心等。
+
 ## 原理
-### 名词解释  
-**源集群 (srcCluster)**：业务写入数据的集群  
-**目标集群 (destCluster)**：跨集群复制的目标集群  
-**binlog**：源集群变更日志，记录了源集群的数据修改和操作，是目标集群数据重放和恢复的凭据  
+### 名词解释
+
+**源集群 (srcCluster)**：业务写入数据的集群
+**目标集群 (destCluster)**：跨集群复制的目标集群
+**binlog**：源集群变更日志，记录了源集群的数据修改和操作，是目标集群数据重放和恢复的凭据
 **Syncer**：一个轻量的CCR任务控制节点，可以单节点部署，也可以多节点高可用部署
+
 ### 架构说明
-![framework](doc/pic/framework.png)  
-Syncer从源集群批量获取库/表的binlog，并根据binlog中的信息在目标集群重放，从而实现数据的全量/增量复制。  
-如果binlog是数据变更，则通知目标集群从源集群拉取数据。  
-如果binlog是元数据变更，则在目标集群发起对应的操作。  
+
+![framework](doc/pic/framework.png)
+Syncer从源集群批量获取库/表的binlog，并根据binlog中的信息在目标集群重放，从而实现数据的全量/增量复制。
+如果binlog是数据变更，则通知目标集群从源集群拉取数据。
+如果binlog是元数据变更，则在目标集群发起对应的操作。
+
 ## 使用说明
-1. 在fe.conf、be.conf中打开binlog feature配置项  
+
+1. 在fe.conf、be.conf中打开binlog feature配置项
     ```bash
     enable_feature_binlog = true
     ```
 2. 部署源、目标doris集群
-3. 部署Syncer  
+3. 部署Syncer
     ```bash
     git clone https://github.com/selectdb/ccr-syncer
     cd ccr-syncer
@@ -43,7 +50,7 @@ Syncer从源集群批量获取库/表的binlog，并根据binlog中的信息在�
     -- enable table binlog
     ALTER TABLE table_name SET ("binlog.enable" = "true");
     ```
-    如果是库同步，则需要打开库中所有表的`binlog.enable`，这个过程可以通过脚本快速完成，脚本的使用方法见[脚本说明文档](doc/db_enable_binlog.md)  
+    如果是库同步，则需要打开库中所有表的`binlog.enable`，这个过程可以通过脚本快速完成，脚本的使用方法见[脚本说明文档](doc/db_enable_binlog.md)
 5. 向Syncer发起同步任务
     ```bash
     curl -X POST -H "Content-Type: application/json" -d '{
@@ -74,7 +81,6 @@ Syncer从源集群批量获取库/表的binlog，并根据binlog中的信息在�
     - user、password：syncer以何种身份去开启事务、拉取数据等
     - database、table：
         - 如果是db级别的同步，则填入dbName，tableName为空
-        - 如果是表级别同步，则需要填入dbName、tableName  
-
+        - 如果是表级别同步，则需要填入dbName、tableName
 
     其他操作详见[操作列表](doc/operations.md)

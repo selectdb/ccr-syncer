@@ -10,6 +10,8 @@ curl -X POST -H "Content-Type: application/json" -d {json_body} http://ccr_synce
 
 ### operators
 
+- `version`
+    查看 ccr syncer 的版本
 - `create_ccr`
     创建CCR任务，详见[README](../README.md)。
 - `get_lag`
@@ -60,6 +62,30 @@ curl -X POST -H "Content-Type: application/json" -d {json_body} http://ccr_synce
         "name": "job_name"
     }' http://ccr_syncer_host:ccr_syncer_port/job_progress
     ```
+- `job_status`
+    展示job状态
+    ```
+    curl -X POST -L --post303 -H "Content-Type: application/json" -d '{
+        "name": "job_name"
+    }' http://ccr_syncer_host:ccr_syncer_port/job_status
+    ```
+    返回结果：
+    ```json
+    {
+        "name": "job_name",
+        "state": "running", // or paused
+        "progress_state": "progress_state"
+    }
+    ```
+    其中 progress_state 有下面几种情况：
+    - DBFullSync
+    - DBTablesIncrementalSync
+    - DBIncrementalSync
+    - DBPartialSync
+    - TableFullSync
+    - TableIncrementalSync
+    - TablePartialSync
+    full sync 和 partial sync 分别表示通过快照同步全量/部分 table；incremental sync 表示通过 binlog 同步增量变更；一个比较特殊的时 DBTablesIncrementalSync，表示已经完成了全量/部分同步，由于某些 table 的进度比其他 table 快，因此增量同步期间需要跳过这部分已经同步完成的 binlog。
 - `metrics`
     获取golang以及ccr job的metrics信息
     ```bash
