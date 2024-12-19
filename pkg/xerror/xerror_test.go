@@ -120,3 +120,20 @@ func TestPanicf(t *testing.T) {
 	assert.Equal(t, xerr.Category(), Normal)
 	assert.Equal(t, xerr.err.Error(), errMsg)
 }
+
+func TestIsCategory(t *testing.T) {
+	errMsg := "test error"
+	err := Errorf(Normal, errMsg)
+	assert.NotNil(t, err)
+
+	assert.True(t, IsCategory(err, Normal))
+	assert.False(t, IsCategory(err, DB))
+
+	err = Wrap(err, Meta, "wrapped error")
+	assert.True(t, IsCategory(err, Meta))
+	assert.False(t, IsCategory(err, Normal))
+
+	err = fmt.Errorf("invalid error")
+	assert.False(t, IsCategory(err, Meta))
+	assert.False(t, IsCategory(err, Normal))
+}

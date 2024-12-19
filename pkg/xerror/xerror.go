@@ -1,6 +1,7 @@
 package xerror
 
 import (
+	"errors"
 	stderrors "errors"
 	"fmt"
 )
@@ -237,9 +238,13 @@ func IsCategory(err error, category ErrorCategory) bool {
 		return false
 	}
 
-	if xerr, ok := err.(*XError); ok {
-		return xerr.category == category
+	var xerr *XError
+	if !errors.As(err, &xerr) {
+		return false
+	}
+	if xerr.IsPanic() {
+		return false
 	}
 
-	return false
+	return xerr.Category() == category
 }
