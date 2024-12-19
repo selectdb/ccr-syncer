@@ -6,8 +6,24 @@
 
 注意：从这个版本开始 doris 和 ccr-syncer 的 2.0 版本将不再更新，需要使用 ccr-syncer 的需要先升级到 2.1 及以上版本。
 
+
+这次引入了一个 behaviour change: 创建同步 JOB，需要上游的表开启 `light_schema_change` 属性 (selectdb/ccr-syncer#283)。
+
 ### Fix
 
+- 过滤 partial sync 期间删除的 table (selectdb/ccr-syncer#330)
+- 过滤依赖 UDF 的建表语句 (selectdb/ccr-syncer#328)
+- 修复 view signature not matched 导致 fullsync 无法继续的问题 (selectdb/ccr-syncer#329)
+- 修复 create table sql 的语法错误 (selectdb/ccr-syncer#292)
+- 修复 syncer crash 导致 database deadlock 的问题 (selectdb/ccr-syncer#294)
+- 修复 alter column default value CURRENT_TIMESTAMP 的语法错误 (selectdb/ccr-syncer#293)
+- 修复 inverted index 上下游 ID 不一致的问题，需要修改 doris 配置 `restore_reset_index_id=false` (selectdb/ccr-syncer#306, selectdb/ccr-syncer#332)
+- 修复 RPC 连接泄漏的问题 (selectdb/ccr-syncer#299)
+- 修复 fullsync with views commit seq 没有更新的问题 (selectdb/ccr-syncer#297)
+- 支持同时 add/drop 多个 inverted index (selectdb/ccr-syncer#296)
+- 通过 partial sync 同步部分依赖 session variable 的 create table sql (selectdb/ccr-syncer#286,selectdb/ccr-syncer#331)
+- 修复 create table 语句 infinity partition key 语法错误的问题 (selectdb/ccr-syncer#284)
+- 修复处理 upsert binlog 时因 fe meta 变化而触发全量同步的问题 (selectdb/ccr-syncer#282)
 - 修复 table name 中带 `-` 无法同步的问题 (selectdb/ccr-syncer#168)
 - 修复部分同步下可能同步多次增量数据的问题 (selectdb/ccr-syncer#186)
 - 修复 create 又立即 drop 的情况下无法找到 table 的问题 (selectdb/ccr-syncer#188)
@@ -26,6 +42,8 @@
 
 ### Feature
 
+- 支持在创建 job 时设置上 reuse_binlog_label，ingest 时会直接使用上游的 label (selectdb/ccr-syncer#324)
+- 支持在创建 job 时设置上 private/public IP 的映射 (selectdb/ccr-syncer#288)
 - 支持 atomic restore，全量同步期间下游仍然可读 (selectdb/ccr-syncer#166)
 - 支持处理包装在 barrier log 中的其他 binlog （主要用于在 2.0/2.1 上增加新增的 binlog 类型）(selectdb/ccr-syncer#208)
 - 支持 rename table (2.1) (selectdb/ccr-syncer#209)
@@ -43,6 +61,8 @@
 
 ### Improve
 
+- 允许设置 mysql/doris connection 数量限制 (selectdb/ccr-syncer#305,selectdb/ccr-syncer#314,selectdb/ccr-syncer#317)
+- 优化 /get_lag 接口，避免阻塞 (selectdb/ccr-syncer#311)
 - 支持同步 rename column，需要 doris xxxx (selectdb/ccr-syncer#139)
 - 支持在全量同步过程中，遇到 table signature 不匹配时，使用 alias 替代 drop (selectdb/ccr-syncer#179)
 - 增加 monitor，在日志中 dump 内存使用率 (selectdb/ccr-syncer#181)
