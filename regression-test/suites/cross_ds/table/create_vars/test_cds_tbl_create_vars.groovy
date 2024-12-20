@@ -57,7 +57,9 @@ suite('test_cds_tbl_create_vars') {
         """
 
         assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_agg", exist, 30, 'target'))
-    } catch (Exception) { }
+    } catch (Exception e) {
+        logger.warn("create table with agg state failed: ${e}")
+    }
 
     try {
         logger.info('create table with decimal 256')
@@ -78,5 +80,31 @@ suite('test_cds_tbl_create_vars') {
         )
         """
         assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_decimal_256", exist, 30, 'target'))
-    } catch (Exception) { }
+    } catch (Exception e) {
+        logger.warn("create table with decimal 256 failed: ${e}")
     }
+
+    try {
+        logger.info('create table with unicode column name')
+        sql '''set enable_unicode_name_support=true'''
+        sql """
+        CREATE TABLE ${tableName}_unicode_column (
+            `k1` int NULL,
+            `名称` text NULL,
+            `k3` char(50) NULL,
+            `k4` varchar(200) NULL,
+            `k5` datetime NULL
+        ) ENGINE=OLAP
+        DUPLICATE KEY(`k1`)
+        DISTRIBUTED BY RANDOM BUCKETS 1
+        PROPERTIES (
+        "replication_allocation" = "tag.location.default: 1",
+        "light_schema_change" = "true",
+        "binlog.enable" = "true"
+        );
+        """
+        assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_unicode_column", exist, 30, 'target'))
+    } catch (Exception e) {
+        logger.warn("create table with unicode column failed: ${e}")
+    }
+}
