@@ -15,16 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_ts_rollup_add_drop") {
+suite('test_ts_rollup_add_drop') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
-            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
+            .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
-    if (helper.has_feature("feature_skip_rollup_binlogs")) {
-        logger.info("skip this suite because feature_skip_rollup_binlogs is enabled")
+    if (helper.has_feature('feature_skip_rollup_binlogs')) {
+        logger.info('skip this suite because feature_skip_rollup_binlogs is enabled')
         return
     }
 
-    def tableName = "tbl_" + helper.randomSuffix()
+    def tableName = 'tbl_' + helper.randomSuffix()
     def test_num = 0
     def insert_num = 5
 
@@ -65,7 +65,7 @@ suite("test_ts_rollup_add_drop") {
                                 rollupFullFinished, 30))
     sql """ALTER TABLE ${tableName} set ("binlog.enable" = "true")"""
 
-    logger.info("=== Test 1: full update rollup ===")
+    logger.info('=== Test 1: full update rollup ===')
     helper.ccrJobCreate(tableName)
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
@@ -80,10 +80,10 @@ suite("test_ts_rollup_add_drop") {
         return false
     }
     assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${tableName} ALL",
-                                hasRollupFull, 30, "target"))
+                                hasRollupFull, 30, 'target'))
 
-
-    logger.info("=== Test 2: incremental update rollup ===")
+    logger.info('=== Test 2: incremental update rollup ===')
+    // {"type":"ROLLUP","dbId":10140,"tableId":10143,"tableName":"tbl_1627689326","jobId":10167,"jobState":"FINISHED","rawSql":""}
     sql """
         ALTER TABLE ${tableName}
         ADD ROLLUP rollup_${tableName}_incr (id, col1, col3)
@@ -97,9 +97,14 @@ suite("test_ts_rollup_add_drop") {
         return false
     }
     assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${tableName} ALL",
-                                hasRollupIncremental, 30, "target"))
+                                hasRollupIncremental, 30, 'target'))
 
-    logger.info("=== Test 3: drop rollup")
+    logger.info('=== Test 3: drop rollup')
+    // binlog type: DROP_ROLLUP,
+    // binlog data: {
+    // "dbId":10140,"tableId":10143,"tableName":"tbl_1627689326","indexId":10168,"indexName":"rollup_tbl_1627689326_incr",
+    // "isView":false,"forceDrop":true,"recycleTime":0
+    // }
     sql """
         ALTER TABLE ${tableName} DROP ROLLUP rollup_${tableName}_incr
         """
@@ -113,5 +118,5 @@ suite("test_ts_rollup_add_drop") {
         return true
     }
     assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${tableName} ALL",
-                                hasRollupIncrementalDropped, 30, "target"))
+                                hasRollupIncrementalDropped, 30, 'target'))
 }

@@ -126,6 +126,8 @@ suite("test_ts_mv_create_drop") {
 
     logger.info("=== Test 3: drop materialized view ===")
 
+    // binlog type: DROP_ROLLUP
+    // {"dbId":10236,"tableId":10239,"tableName":"tbl_1844086835","indexId":10264,"indexName":"tbl_1844086835_incr","isView":false,"forceDrop":false,"recycleTime":0}
     sql """
         DROP MATERIALIZED VIEW ${tableName}_incr ON ${tableName}
         """

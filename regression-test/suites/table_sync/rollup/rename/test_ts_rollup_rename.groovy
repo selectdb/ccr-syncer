@@ -83,6 +83,8 @@ suite("test_ts_rollup_rename") {
                                 hasRollupFull, 30, "target"))
 
     logger.info("=== Test 2: Rename rollup ===")
+    //  binlog type: RENAME_ROLLUP
+    // binlog data: {"db":10208,"tb":10211,"ind":10216,"p":-1,"nT":"","oT":"","nR":"rollup_tbl_525975341_full_new","oR":"rollup_tbl_525975341_full","nP":"","oP":""} 
     sql """
         ALTER TABLE ${tableName}
         RENAME ROLLUP rollup_${tableName}_full rollup_${tableName}_full_new
