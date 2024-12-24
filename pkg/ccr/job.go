@@ -2399,33 +2399,27 @@ func (j *Job) handleReplaceTableRecord(commitSeq int64, record *record.ReplaceTa
 		// if original table already committed, new partial snapshot with the new table
 		// if new table already committed, new partial snapshot with the original table
 		// if both table are committed, skip this binlog
-		originTableCommitted, newTableCommitted := false, false
-		if seq, ok := j.progress.TableCommitSeqMap[record.OriginTableId]; ok && seq >= commitSeq {
-			originTableCommitted = true
-		}
-		if seq, ok := j.progress.TableCommitSeqMap[record.NewTableId]; ok && seq >= commitSeq {
-			newTableCommitted = true
-		}
-		if originTableCommitted && newTableCommitted {
-			log.Infof("filter replace table binlog, both tables are committed, origin table id: %d, new table id: %d, commit seq: %d",
-				record.OriginTableId, record.NewTableId, commitSeq)
+		originTableSynced := j.progress.TableCommitSeqMap[record.OriginTableId] >= commitSeq
+		newTableSynced := j.progress.TableCommitSeqMap[record.NewTableId] >= commitSeq
+		if originTableSynced && newTableSynced {
+			log.Infof("filter replace table binlog, both tables are synced, origin table %s id: %d, new table %s id: %d, commit seq: %d",
+				record.OriginTableName, record.OriginTableId, record.NewTableName, record.NewTableId, commitSeq)
 			return nil
-		} else if originTableCommitted && !record.SwapTable {
-			log.Infof("filter replace table binlog, the origin table %s already committed, commit seq: %d, swap = false",
-				record.OriginTableId, commitSeq)
+		} else if originTableSynced && !record.SwapTable {
+			log.Infof("filter replace table binlog, the origin table %s id %d already synced, commit seq: %d, swap = false",
+				record.OriginTableName, record.OriginTableId, commitSeq)
 			return nil
-		} else if originTableCommitted && record.SwapTable {
-			log.Infof("force new partial snapshot, origin table %s already committed, commit seq: %d",
-				record.OriginTableName, commitSeq)
+		} else if originTableSynced && record.SwapTable {
+			log.Infof("force new partial snapshot, origin table %s id %d already synced, commit seq: %d",
+				record.OriginTableName, record.OriginTableId, commitSeq)
 			return j.newPartialSnapshot(record.NewTableId, record.OriginTableName, nil, false)
-		} else if newTableCommitted && !record.SwapTable {
-			// the origin table has been dropped, ignore this binlog
-			log.Infof("filter replace table binlog, the new table %s already committed, commit seq: %d, swap = false",
-				record.NewTableName, commitSeq)
+		} else if newTableSynced && !record.SwapTable {
+			log.Infof("filter replace table binlog, the new table %s id %d already synced, commit seq: %d, swap = false",
+				record.NewTableName, record.NewTableId, commitSeq)
 			return nil
-		} else if newTableCommitted && record.SwapTable {
-			log.Infof("force new partial snapshot, new table %s already committed, commit seq: %d",
-				record.NewTableName, commitSeq)
+		} else if newTableSynced && record.SwapTable {
+			log.Infof("force new partial snapshot, new table %s id %d already synced, commit seq: %d",
+				record.NewTableName, record.NewTableId, commitSeq)
 			return j.newPartialSnapshot(record.OriginTableId, record.NewTableName, nil, false)
 		}
 	}
