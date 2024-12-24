@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite('test_cds_ps_tbl_replace_1') {
+suite('test_cds_ps_tbl_recover') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
@@ -86,41 +86,40 @@ suite('test_cds_ps_tbl_replace_1') {
     helper.ccrJobCreate()
 
     assertTrue(helper.checkRestoreFinishTimesOf(tableNameA, 60))
+    sql "INSERT INTO ${tableNameA} VALUES (1, 100)"
 
     def first_job_progress = helper.get_job_progress()
 
     helper.ccrJobPause()
 
-    logger.info(' === Add a key column to trigger a patrial sync === ')
-    sql "ALTER TABLE ${tableNameA} ADD COLUMN `new_col` INT KEY DEFAULT \"0\""
-
-    assertTrue(helper.checkShowTimesOf("""
-                                SHOW ALTER TABLE COLUMN
-                                FROM ${context.dbName}
-                                WHERE TableName = "${tableNameA}" AND State = "FINISHED"
-                                """,
-                                exist, 30))
-
-    sql "INSERT INTO ${tableNameA} VALUES (1, 100, 100), (100, 1, 1), (2, 200, 200), (200, 2, 2)"
-
-    logger.info(' === Replace table A with table B, swap = false')
+    logger.info(' === Replace table A with table B, then recover table A as table B')
+    sql """ DROP TABLE ${tableNameB} """
+    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE '${tableNameB}'", notExist, 30))
     sql """
-        ALTER TABLE ${tableNameB} REPLACE WITH TABLE ${tableNameA} PROPERTIES ("swap"="false")
+        RECOVER TABLE ${tableNameB}
         """
 
-    sql "INSERT INTO ${tableNameB} VALUES (5, 500, 500)"
+    sql """
+        ALTER TABLE ${tableNameA} REPLACE WITH TABLE ${tableNameB} PROPERTIES ("swap" = "false")
+        """
+    sql """
+        RECOVER TABLE ${tableNameA} AS ${tableNameB}
+        """
 
-    // tableNameA was dropped here
-    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE '${tableNameA}'", notExist, 30))
+    sql "INSERT INTO ${tableNameA} VALUES (5, 500)"
+    sql "INSERT INTO ${tableNameB} VALUES (5, 500)"
 
     helper.ccrJobResume()
 
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableNameB}", 5, 60))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableNameA}", 1, 60))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableNameB}", 2, 60))
 
-    // TODO: check tableNameA is not exists in the downstream
-    // BUG
+    // FIXME
+    // [2024-12-24 11:19:12.067] DEBUG table commit seq map: map[27308:3734], table name mapping: map[27308:tbl_b_301944667] job=test_cds_ps_tbl_recover line=ccr/job.go:524
+    // [2024-12-24 11:19:12.067]  WARN partial sync table tbl_b_301944667 id not match, force full sync. table id 27415, backup object id 27308 job=test_cds_ps_tbl_recover line=ccr/job.go:528
+    // [2024-12-24 11:19:12.067]  INFO new snapshot, commitSeq: 3712 job=test_cds_ps_tbl_recover line=ccr/job.go:3150
 
-    // // no fullsync are triggered
-    // def last_job_progress = helper.get_job_progress()
-    // assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
+// // no fullsync are triggered
+// def last_job_progress = helper.get_job_progress()
+// assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
 }

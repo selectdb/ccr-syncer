@@ -110,6 +110,8 @@ suite('test_cds_ps_tbl_replace') {
 
     sql "INSERT INTO ${tableNameA} VALUES (5, 500)"
 
+    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE '${tableNameB}'", notExist, 60))
+
     helper.ccrJobResume()
 
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableNameA}", 1, 60))

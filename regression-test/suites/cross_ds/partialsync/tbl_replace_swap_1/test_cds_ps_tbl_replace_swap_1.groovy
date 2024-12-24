@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite('test_cds_ps_tbl_replace_1') {
+suite('test_cds_ps_tbl_replace_swap_1') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
@@ -105,22 +105,24 @@ suite('test_cds_ps_tbl_replace_1') {
 
     logger.info(' === Replace table A with table B, swap = false')
     sql """
-        ALTER TABLE ${tableNameB} REPLACE WITH TABLE ${tableNameA} PROPERTIES ("swap"="false")
+        ALTER TABLE ${tableNameB} REPLACE WITH TABLE ${tableNameA} PROPERTIES ("swap"="true")
         """
 
+    sql "INSERT INTO ${tableNameA} VALUES (5, 500)"
     sql "INSERT INTO ${tableNameB} VALUES (5, 500, 500)"
-
-    // tableNameA was dropped here
-    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE '${tableNameA}'", notExist, 30))
 
     helper.ccrJobResume()
 
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableNameA}", 1, 60))
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableNameB}", 5, 60))
 
-    // TODO: check tableNameA is not exists in the downstream
-    // BUG
+    // FIXME
+    // [2024-12-24 08:41:26.148] DEBUG table commit seq map: map[10230:1056], table name mapping: map[10230:tbl_a_1697608570] job=test_cds_ps_tbl_replace_swap_1 line=ccr/job.go:524
+    // [2024-12-24 08:41:26.148]  WARN partial sync table tbl_a_1697608570 id not match, force full sync. table id 10123, backup object id 10230 job=test_cds_ps_tbl_replace_swap_1 line=ccr/job.go:528
+    // [2024-12-24 08:41:26.148]  INFO new snapshot, commitSeq: 1037 job=test_cds_ps_tbl_replace_swap_1 line=ccr/job.go:3119
 
     // // no fullsync are triggered
     // def last_job_progress = helper.get_job_progress()
     // assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
 }
+
