@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite('test_cds_ps_tbl_recover') {
+suite('test_cds_tbl_recover_replace') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
@@ -88,30 +88,38 @@ suite('test_cds_ps_tbl_recover') {
     assertTrue(helper.checkRestoreFinishTimesOf(tableNameA, 60))
     sql "INSERT INTO ${tableNameA} VALUES (1, 100)"
 
-    def first_job_progress = helper.get_job_progress()
-
     helper.ccrJobPause()
-
-    sql """ DROP TABLE ${tableNameB} """
-    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE '${tableNameB}'", notExist, 30))
-    sql """
-        RECOVER TABLE ${tableNameB}
-        """
-
+    logger.info(' === Replace table A with table B, then recover table A as table B')
     sql """
         ALTER TABLE ${tableNameA} REPLACE WITH TABLE ${tableNameB} PROPERTIES ("swap" = "false")
         """
+    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE '${tableNameB}'", notExist, 30))
+
     sql """
         RECOVER TABLE ${tableNameA} AS ${tableNameB}
         """
 
-    sql "INSERT INTO ${tableNameA} VALUES (5, 500)"
-    sql "INSERT INTO ${tableNameB} VALUES (5, 500)"
+    // tableNameB was renamed to tableNameA
+    sql """
+        ALTER TABLE ${tableNameA} REPLACE WITH TABLE ${tableNameB} PROPERTIES ("swap" = "false")
+        """
 
+    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE '${tableNameB}'", notExist, 30))
+
+    sql "INSERT INTO ${tableNameA} VALUES (5, 500)"
     helper.ccrJobResume()
 
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableNameA}", 1, 60))
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableNameB}", 2, 60))
+    // [2024-12-24 11:56:33.218]  WARN force new partial snapshot, since table 37663 has renamed from tbl_b_104306046 to tbl_a_735009328 job=test_cds_tbl_recover_replace line=ccr/job.go:399
+    // [2024-12-24 11:56:33.218]  INFO new partial snapshot, commitSeq: 4568, table id: 37663, table: tbl_a_735009328, alias: __ccr_tbl_a_735009328_1735041393 job=test_cds_tbl_recover_replace line=ccr/job.go:3200
+
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableNameA}", 2, 60))
+
+    sql """
+        RECOVER TABLE ${tableNameA} AS ${tableNameB}
+        """
+    sql "INSERT INTO ${tableNameB} VALUES (5, 500)"
+
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableNameB}", 1, 60))
 
     // FIXME
     // [2024-12-24 11:19:12.067] DEBUG table commit seq map: map[27308:3734], table name mapping: map[27308:tbl_b_301944667] job=test_cds_ps_tbl_recover line=ccr/job.go:524
@@ -122,3 +130,4 @@ suite('test_cds_ps_tbl_recover') {
 // def last_job_progress = helper.get_job_progress()
 // assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
 }
+
