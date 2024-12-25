@@ -33,14 +33,15 @@ type TableMeta struct {
 	DatabaseMeta      *DatabaseMeta
 	Id                int64
 	BaseIndexId       int64
-	Name              string                    // maybe dirty, such after rename
+	Name              string // maybe dirty, such after rename
+	Type              string
 	PartitionIdMap    map[int64]*PartitionMeta  // partitionId -> partitionMeta
 	PartitionRangeMap map[string]*PartitionMeta // partitionRange -> partitionMeta
 }
 
 // Stringer
 func (t *TableMeta) String() string {
-	return fmt.Sprintf("TableMeta{(id:%d), (name:%s)}", t.Id, t.Name)
+	return fmt.Sprintf("TableMeta{(id:%d), (name:%s), (type:%s)}", t.Id, t.Name, t.Type)
 }
 
 type PartitionMeta struct {

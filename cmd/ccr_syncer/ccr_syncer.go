@@ -283,4 +283,3 @@ func main() {
 	// Step 11: wait for all task done
 	wg.Wait()
 }
-

@@ -62,6 +62,8 @@ var (
 	featureCompressedSnapshot           bool
 	featureSkipRollupBinlogs            bool
 	featureTxnInsert                    bool
+
+	ErrMaterializedViewTable = xerror.NewWithoutStack(xerror.Meta, "Not support table type: materialized view")
 )
 
 func init() {
@@ -792,7 +794,14 @@ func (j *Job) fullSync() error {
 			if err != nil {
 				return err
 			}
-			if len(tables) == 0 {
+			count := 0
+			for _, table := range tables {
+				// See fe/fe-core/src/main/java/org/apache/doris/backup/BackupHandler.java:backup() for details
+				if table.Type == record.TableTypeOlap || table.Type == record.TableTypeView {
+					count += 1
+				}
+			}
+			if count == 0 {
 				log.Warnf("full sync but source db is empty! retry later")
 				return nil
 			}
@@ -1291,11 +1300,16 @@ func (j *Job) getDestTableIdBySrc(srcTableId int64) (int64, error) {
 
 	// WARNING: the table name might be changed, and the TableMapping has been updated in time,
 	// only keep this for compatible.
-	srcTableName, err := j.srcMeta.GetTableNameById(srcTableId)
+	srcTable, err := j.srcMeta.GetTable(srcTableId)
 	if err != nil {
 		return 0, err
 	}
 
+	if srcTable.Type == record.TableTypeMaterializedView {
+		return 0, ErrMaterializedViewTable
+	}
+
+	srcTableName := srcTable.Name
 	if destTableId, err := j.destMeta.GetTableId(srcTableName); err != nil {
 		return 0, err
 	} else {
@@ -1558,19 +1572,30 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			return nil
 		}
 
-		log.Debugf("tableRecords: %v", tableRecords)
 		destTableIds := make([]int64, 0, len(tableRecords))
 		if j.SyncType == DBSync {
+			savedRecords := make([]*record.TableRecord, 0, len(tableRecords))
 			for _, tableRecord := range tableRecords {
-				if destTableId, err := j.getDestTableIdBySrc(tableRecord.Id); err != nil {
+				if destTableId, err := j.getDestTableIdBySrc(tableRecord.Id); err == ErrMaterializedViewTable {
+					// ignore the upsert of materialized view table.
+					continue
+				} else if err != nil {
 					return err
 				} else {
+					savedRecords = append(savedRecords, tableRecord)
 					destTableIds = append(destTableIds, destTableId)
 				}
 			}
+			tableRecords = savedRecords
 		} else {
 			destTableIds = append(destTableIds, j.Dest.TableId)
 		}
+		if len(tableRecords) == 0 {
+			log.Debug("no related table records")
+			return nil
+		}
+
+		log.Debugf("handle upsert, table records: %v", tableRecords)
 		inMemoryData := &inMemoryData{
 			CommitSeq:    upsert.CommitSeq,
 			DestTableIds: destTableIds,
@@ -1793,7 +1818,10 @@ func (j *Job) handleAddPartition(binlog *festruct.TBinlog) error {
 		destTableName = j.Dest.Table
 	} else if j.SyncType == DBSync {
 		destTableId, err := j.getDestTableIdBySrc(addPartition.TableId)
-		if err != nil {
+		if err == ErrMaterializedViewTable {
+			log.Warnf("skip add partition for materialized view table %d", addPartition.TableId)
+			return nil
+		} else if err != nil {
 			return err
 		}
 
@@ -1831,7 +1859,10 @@ func (j *Job) handleDropPartition(binlog *festruct.TBinlog) error {
 		destTableName = j.Dest.Table
 	} else if j.SyncType == DBSync {
 		destTableId, err := j.getDestTableIdBySrc(dropPartition.TableId)
-		if err != nil {
+		if err == ErrMaterializedViewTable {
+			log.Warnf("skip drop partition for materialized view table %d", dropPartition.TableId)
+			return nil
+		} else if err != nil {
 			return err
 		}
 
@@ -1863,11 +1894,14 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
+	if createTable.IsCreateMaterializedView() {
+		log.Warnf("create async materialized view is not supported yet, skip this binlog")
+		return nil
+	}
+
 	if featureCreateViewDropExists {
-		viewRegex := regexp.MustCompile(`(?i)^CREATE(\s+)VIEW`)
-		isCreateView := viewRegex.MatchString(createTable.Sql)
 		tableName := strings.TrimSpace(createTable.TableName)
-		if isCreateView && len(tableName) > 0 {
+		if createTable.IsCreateView() && len(tableName) > 0 {
 			// drop view if exists
 			log.Infof("feature_create_view_drop_exists is enabled, try drop view %s before creating", tableName)
 			if err = j.IDest.DropView(tableName); err != nil {
@@ -2035,6 +2069,13 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 	data := binlog.GetData()
 	alterJob, err := record.NewAlterJobV2FromJson(data)
 	if err != nil {
+		return err
+	}
+
+	if _, err := j.getDestTableIdBySrc(alterJob.TableId); err == ErrMaterializedViewTable {
+		log.Warnf("skip alter job for materialized view table %d", alterJob.TableId)
+		return nil
+	} else if err != nil {
 		return err
 	}
 
@@ -2286,6 +2327,13 @@ func (j *Job) handleReplacePartitions(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
+	if _, err := j.getDestTableIdBySrc(replacePartition.TableId); err == ErrMaterializedViewTable {
+		log.Warnf("skip replace partitions for materialized view table %d", replacePartition.TableId)
+		return nil
+	} else if err != nil {
+		return err
+	}
+
 	if !replacePartition.StrictRange {
 		log.Warnf("replacing partitions with non strict range is not supported yet, replace partition record: %s", string(data))
 		return j.newSnapshot(j.progress.CommitSeq)
@@ -2348,7 +2396,10 @@ func (j *Job) handleRenameTableRecord(commitSeq int64, renameTable *record.Renam
 	} else {
 		var err error
 		destTableName, err = j.getDestNameBySrcId(renameTable.TableId)
-		if err != nil {
+		if err == ErrMaterializedViewTable {
+			log.Warnf("skip rename table for materialized view table %d", renameTable.TableId)
+			return nil
+		} else if err != nil {
 			return err
 		}
 	}
@@ -2393,6 +2444,13 @@ func (j *Job) handleReplaceTableRecord(commitSeq int64, record *record.ReplaceTa
 			record.OriginTableName, record.OriginTableId, record.NewTableId, record.SwapTable)
 		j.Src.TableId = record.NewTableId
 		return j.newSnapshot(commitSeq)
+	}
+
+	if _, err := j.getDestTableIdBySrc(record.OriginTableId); err == ErrMaterializedViewTable {
+		log.Warnf("skip replace table for materialized view table %d", record.OriginTableId)
+		return nil
+	} else if err != nil {
+		return err
 	}
 
 	if j.progress.SyncState == DBTablesIncrementalSync {

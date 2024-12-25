@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 )
@@ -32,6 +33,9 @@ type CreateTable struct {
 	// Below fields was added in doris 2.0.3: https://github.com/apache/doris/pull/26901
 	DbName    string `json:"dbName"`
 	TableName string `json:"tableName"`
+
+	// Below fields was added in doris 2.1.8/3.0.4: https://github.com/apache/doris/pull/44735
+	TableType string `json:"tableType"`
 }
 
 func NewCreateTableFromJson(data string) (*CreateTable, error) {
@@ -67,4 +71,13 @@ func (c *CreateTable) String() string {
 func (c *CreateTable) IsCreateTableWithInvertedIndex() bool {
 	indexRegex := regexp.MustCompile(`INDEX (.*?) USING INVERTED`)
 	return indexRegex.MatchString(c.Sql)
+}
+
+// Is asynchronous materialized view?
+func (c *CreateTable) IsCreateMaterializedView() bool {
+	if c.TableType == TableTypeMaterializedView {
+		return true
+	}
+
+	return strings.Contains(c.Sql, "ENGINE=MATERIALIZED_VIEW")
 }

@@ -19,97 +19,154 @@ suite('test_ds_mv_basic') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
-    def createDuplicateTable = { tableName ->
-        sql """
-            CREATE TABLE if NOT EXISTS ${tableName}
-            (
-                user_id            BIGINT       NOT NULL COMMENT "用户 ID",
-                name               VARCHAR(20)           COMMENT "用户姓名",
-                age                INT                   COMMENT "用户年龄"
-            )
-            ENGINE=OLAP
-            DUPLICATE KEY(user_id)
-            DISTRIBUTED BY HASH(user_id) BUCKETS 10
-            PROPERTIES (
-                "replication_allocation" = "tag.location.default: 1",
-                "binlog.enable" = "true"
-            )
-        """
-    }
-
-    def checkRestoreRowsTimesOf = { rowSize, times -> Boolean
-        Boolean ret = false
-        while (times > 0) {
-            def sqlInfo = target_sql "SHOW RESTORE FROM TEST_${context.dbName}"
-            if (sqlInfo.size() == rowSize) {
-                ret = true
-                break
-            } else if (--times > 0 && sqlInfo.size < rowSize) {
-                sleep(sync_gap_time)
-            }
-        }
-
-        return ret
-    }
-
-    def exist = { res -> Boolean
-        return res.size() != 0
-    }
-    def notExist = { res -> Boolean
-        return res.size() == 0
-    }
-
     def suffix = helper.randomSuffix()
-    def tableDuplicate0 = "tbl_duplicate_0_${suffix}"
-    createDuplicateTable(tableDuplicate0)
+    def tableName1 = "tbl_1_${suffix}"
+    def tableName2 = "tbl_2_${suffix}"
+    def mvName = "mv_${suffix}"
+
+    def notExist = { result -> result.size() == 0 }
+
     sql """
-        INSERT INTO ${tableDuplicate0} VALUES
-        (1, "Emily", 25),
-        (2, "Benjamin", 35),
-        (3, "Olivia", 28),
-        (4, "Alexander", 60),
-        (5, "Ava", 17);
+        CREATE TABLE `${tableName1}` (
+          `user_id` LARGEINT NOT NULL,
+          `o_date` DATE NOT NULL,
+          `num` SMALLINT NOT NULL
+        ) ENGINE=OLAP
+        COMMENT 'OLAP'
+        AUTO PARTITION BY RANGE (date_trunc(`o_date`, 'day'))
+        ()
+        DISTRIBUTED BY HASH(`user_id`) BUCKETS 2
+        PROPERTIES (
+            'replication_num' = '1',
+            'binlog.enable' = 'true'
+        )
         """
+    sql """
+        CREATE TABLE `${tableName2}` (
+          `user_id` LARGEINT NOT NULL,
+          `age` SMALLINT NOT NULL
+        ) ENGINE=OLAP
+        AUTO PARTITION BY LIST(`age`)
+        ()
+        DISTRIBUTED BY HASH(`user_id`) BUCKETS 2
+        PROPERTIES (
+            'replication_num' = '1',
+            'binlog.enable' = 'true'
+        );
+    """
 
-    sql "ALTER DATABASE ${context.dbName} SET properties (\"binlog.enable\" = \"true\")"
+    sql """ INSERT INTO ${tableName1} VALUES (1, "2017-01-01", 100) """
+    sql """ INSERT INTO ${tableName1} VALUES (2, "2017-01-02", 101) """
 
+    sql """ INSERT INTO ${tableName2} VALUES (1, '1') """
+    sql """ INSERT INTO ${tableName2} VALUES (2, '2') """
+
+    helper.enableDbBinlog()
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 
-    assertTrue(helper.checkRestoreFinishTimesOf("${tableDuplicate0}", 30))
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate0}", 5, 30))
-
-    logger.info('=== Test1: create view and materialized view ===')
-    sql """
-        CREATE VIEW view_test_${suffix} (k1, name,  v1)
-        AS
-        SELECT user_id as k1, name,  SUM(age) FROM ${tableDuplicate0}
-        GROUP BY k1,name;
-        """
+    assertTrue(helper.checkRestoreFinishTimesOf(tableName1, 60))
+    def first_job_progress = helper.get_job_progress()
 
     sql """
-        create materialized view user_id_name_${suffix} as
-        select user_id, name from ${tableDuplicate0};
-        """
+    CREATE MATERIALIZED VIEW ${mvName}
+    BUILD DEFERRED REFRESH AUTO ON MANUAL
+    partition by(`age`)
+    DISTRIBUTED BY RANDOM BUCKETS 2
+    PROPERTIES (
+    'replication_num' = '1'
+    )
+    AS
+    SELECT
+        ${tableName1}.o_date as order_date,
+        ${tableName2}.user_id as user_id,
+        ${tableName1}.num,
+        ${tableName2}.age
+    FROM ${tableName1} join ${tableName2} on ${tableName1}.user_id=${tableName2}.user_id;
+    """
+    sql """ REFRESH MATERIALIZED VIEW ${mvName} AUTO """
 
-    assertTrue(helper.checkShowTimesOf("SHOW VIEW FROM ${tableDuplicate0}", exist, 30, 'target'))
+    sql """ INSERT INTO ${tableName1} VALUES (3, "2017-02-03", 300) """
+    sql """ INSERT INTO ${tableName2} VALUES (3, '3') """
+    sql """ REFRESH MATERIALIZED VIEW ${mvName} AUTO """
+
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName1}", 3, 30))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName2}", 3, 30))
+
+    // TODO: we don't support sync materialized view yet
+    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE '${mvName}'", notExist, 30, 'target'))
+
+    sql """ PAUSE MATERIALIZED VIEW JOB ON ${mvName} """
+    sql """ INSERT INTO ${tableName1} VALUES (4, "2017-04-05", 400) """
+    sql """ INSERT INTO ${tableName2} VALUES (4, '4') """
+
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName1}", 4, 30))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName2}", 4, 30))
+
+    sql """ RESUME MATERIALIZED VIEW JOB ON ${mvName} """
+
+    sql """ REFRESH MATERIALIZED VIEW ${mvName} AUTO """
+
+    sql """ ALTER MATERIALIZED VIEW ${mvName} RENAME new_${mvName} """
+
+    sql """ INSERT INTO ${tableName1} VALUES (5, "2017-06-05", 500) """
+    sql """ INSERT INTO ${tableName2} VALUES (5, '5') """
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName1}", 5, 30))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName2}", 5, 30))
+
+    sql """
+    CREATE MATERIALIZED VIEW ${mvName}
+    BUILD DEFERRED REFRESH AUTO ON MANUAL
+    partition by(`age`)
+    DISTRIBUTED BY RANDOM BUCKETS 2
+    PROPERTIES (
+    'replication_num' = '1'
+    )
+    AS
+    SELECT
+        ${tableName1}.o_date as order_date,
+        ${tableName2}.user_id as user_id,
+        ${tableName1}.num,
+        ${tableName2}.age
+    FROM ${tableName1} join ${tableName2} on ${tableName1}.user_id=${tableName2}.user_id;
+    """
+
+    sql """
+    ALTER MATERIALIZED VIEW ${mvName}
+    REPLACE WITH MATERIALIZED VIEW new_${mvName} PROPERTIES ('swap' = 'true')
+    """
+    sql """ INSERT INTO ${tableName1} VALUES (7, "2017-07-05", 700) """
+    sql """ INSERT INTO ${tableName2} VALUES (7, '7') """
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName1}", 6, 30))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName2}", 6, 30))
+
+    sql """ ALTER MATERIALIZED VIEW new_${mvName} SET ("grace_period"="3000"); """
+    sql """ INSERT INTO ${tableName1} VALUES (8, "2017-08-05", 800) """
+    sql """ INSERT INTO ${tableName2} VALUES (8, '8') """
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName1}", 7, 30))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName2}", 7, 30))
+
+    sql """ DROP MATERIALIZED VIEW new_${mvName} """
+    sql """ INSERT INTO ${tableName1} VALUES (9, "2017-09-05", 900) """
+    sql """ INSERT INTO ${tableName2} VALUES (9, '9') """
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName1}", 8, 30))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName2}", 8, 30))
+
+    // try drop base table partitions
+    def partitions = sql_return_maparray """ SHOW PARTITIONS FROM ${tableName2} """
+    def partitionName = partitions[0].PartitionName
+    sql """ ALTER TABLE ${tableName2} DROP PARTITION ${partitionName} """
     assertTrue(helper.checkShowTimesOf(
-        "SHOW CREATE MATERIALIZED VIEW user_id_name_${suffix} ON ${tableDuplicate0}",
-        exist, 30, 'target'))
+        """ SHOW PARTITIONS FROM ${tableName2} WHERE PartitionName = "${partitionName}" """, notExist, 30))
+    def result = sql """ SELECT * FROM ${tableName2} """
+    def count = result.size()
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName2}", count, 30))
 
-    explain {
-        sql("select user_id, name from ${tableDuplicate0}")
-        contains 'user_id_name'
-    }
+    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE 'new_${mvName}'", notExist, 30))
+    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE 'new_${mvName}'", notExist, 30, 'target'))
 
-    logger.info('=== Test 2: delete job ===')
-    test_num = 5
-    helper.ccrJobDelete()
-
-    sql """
-        INSERT INTO ${tableDuplicate0} VALUES (6, "Zhangsan", 31)
-        """
-
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate0}", 5, 5))
+    // no fullsync are triggered
+    def last_job_progress = helper.get_job_progress()
+    assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
 }
 

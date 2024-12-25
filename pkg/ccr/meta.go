@@ -37,9 +37,6 @@ const (
 	degree = 128
 
 	showErrMsg = "show proc '/dbs/' failed"
-
-	TABLE_TYPE_OLAP = "OLAP"
-	TABLE_TYPE_VIEW = "VIEW"
 )
 
 // All Update* functions force to update meta from fe
@@ -185,16 +182,21 @@ func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) 
 		if err != nil {
 			return nil, xerror.Wrapf(err, xerror.Normal, query)
 		}
+		parsedTableType, err := rowParser.GetString("Type")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, query)
+		}
 
 		// match parsedDbname == dbname, return dbId
 		if parsedTableName == tableName || parsedTableId == tableId {
 			fullTableName := m.GetFullTableName(parsedTableName)
-			log.Debugf("found table:%s, tableId:%d", fullTableName, parsedTableId)
+			log.Debugf("found table:%s, tableId:%d, type:%s", fullTableName, parsedTableId, parsedTableType)
 			m.TableName2IdMap[fullTableName] = parsedTableId
 			tableMeta := &TableMeta{
 				DatabaseMeta:   &m.DatabaseMeta,
 				Id:             parsedTableId,
 				Name:           parsedTableName,
+				Type:           parsedTableType,
 				PartitionIdMap: make(map[int64]*PartitionMeta),
 			}
 			m.Tables[parsedTableId] = tableMeta
@@ -1084,17 +1086,13 @@ func (m *Meta) GetTables() (map[int64]*TableMeta, error) {
 		fullTableName := m.GetFullTableName(tableName)
 		log.Debugf("found table: %s, id: %d, type: %s", fullTableName, tableId, tableType)
 
-		if tableType != TABLE_TYPE_OLAP && tableType != TABLE_TYPE_VIEW {
-			// See fe/fe-core/src/main/java/org/apache/doris/backup/BackupHandler.java:backup() for details
-			continue
-		}
-
 		// match parsedDbname == dbname, return dbId
 		tableName2IdMap[fullTableName] = tableId
 		tables[tableId] = &TableMeta{
 			DatabaseMeta:   &m.DatabaseMeta,
 			Id:             tableId,
 			Name:           tableName,
+			Type:           tableType,
 			PartitionIdMap: make(map[int64]*PartitionMeta),
 		}
 	}
