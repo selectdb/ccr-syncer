@@ -253,7 +253,7 @@ class Helper {
     // Check N times whether the num of rows of the downstream data is expected.
     Boolean checkSelectTimesOf(sqlString, rowSize, times) {
         def tmpRes = []
-        while (--times > 0) {
+        while (times-- > 0) {
             try {
                 tmpRes = suite.target_sql "${sqlString}"
                 if (tmpRes.size() == rowSize) {
