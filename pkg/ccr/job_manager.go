@@ -210,13 +210,6 @@ func (jm *JobManager) Resume(jobName string) error {
 	})
 }
 
-func (jm *JobManager) ForceFullsync(jobName string) error {
-	return jm.dealJob(jobName, func(job *Job) error {
-		job.ForceFullsync()
-		return nil
-	})
-}
-
 func (jm *JobManager) GetJobStatus(jobName string) (*JobStatus, error) {
 	jm.lock.RLock()
 	defer jm.lock.RUnlock()
@@ -250,23 +243,23 @@ func (jm *JobManager) ListJobs() []*JobStatus {
 	return jobs
 }
 
-func (jm *JobManager) UpdateJobSkipError(jobName string, skipError bool) error {
-	jm.lock.Lock()
-	defer jm.lock.Unlock()
-
-	if job, ok := jm.jobs[jobName]; ok {
-		return job.UpdateSkipError(skipError)
-	} else {
-		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
-	}
-}
-
 func (jm *JobManager) UpdateHostMapping(jobName string, srcHostMapping, destHostMapping map[string]string) error {
 	jm.lock.Lock()
 	defer jm.lock.Unlock()
 
 	if job, ok := jm.jobs[jobName]; ok {
 		return job.UpdateHostMapping(srcHostMapping, destHostMapping)
+	} else {
+		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
+	}
+}
+
+func (jm *JobManager) SkipBinlog(jobName string, skipCommitSeq int64, skipBy string) error {
+	jm.lock.Lock()
+	defer jm.lock.Unlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return job.SkipBinlog(skipCommitSeq, skipBy)
 	} else {
 		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
 	}

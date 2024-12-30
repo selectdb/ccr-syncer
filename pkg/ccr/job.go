@@ -48,7 +48,10 @@ import (
 )
 
 const (
-	SYNC_DURATION = time.Second * 3
+	SyncDuration = time.Second * 3
+
+	SkipBySilence  = "silence"
+	SkipByFullSync = "fullsync"
 )
 
 var (
@@ -128,23 +131,32 @@ func (j JobState) String() string {
 	}
 }
 
-type Job struct {
-	SyncType         SyncType    `json:"sync_type"`
-	Name             string      `json:"name"`
-	Src              base.Spec   `json:"src"`
-	ISrc             base.Specer `json:"-"`
-	srcMeta          Metaer      `json:"-"`
-	Dest             base.Spec   `json:"dest"`
-	IDest            base.Specer `json:"-"`
-	destMeta         Metaer      `json:"-"`
-	SkipError        bool        `json:"skip_error"`
-	State            JobState    `json:"state"`
-	ReuseBinlogLabel bool        `json:"reuse_binlog_label"`
-
-	factory *Factory `json:"-"`
+type JobExtra struct {
+	// Reuse the upstream txn label as the downstream txn label.
+	ReuseBinlogLabel bool `json:"reuse_binlog_label,omitempty"`
 
 	allowTableExists bool `json:"-"` // Only for FirstRun(), don't need to persist.
-	forceFullsync    bool `json:"-"` // Force job step fullsync, for test only.
+
+	// Skip a specified binlog or binlogs, don't need to persist.
+	// if the SkipCommitSeq is not specified, trigger a fullsync unconditionally.
+	SkipBinlog    bool   `json:"skip_binlog,omitempty"`
+	SkipCommitSeq int64  `json:"skip_commit_seq,omitempty"`
+	SkipBy        string `json:"skip_by,omitempty"`
+}
+
+type Job struct {
+	Name     string      `json:"name"`
+	SyncType SyncType    `json:"sync_type"`
+	Src      base.Spec   `json:"src"`
+	ISrc     base.Specer `json:"-"`
+	srcMeta  Metaer      `json:"-"`
+	Dest     base.Spec   `json:"dest"`
+	IDest    base.Specer `json:"-"`
+	destMeta Metaer      `json:"-"`
+	State    JobState    `json:"state"`
+	Extra    JobExtra    `json:"extra"`
+
+	factory *Factory `json:"-"`
 
 	progress   *JobProgress `json:"-"`
 	db         storage.DB   `json:"-"`
@@ -181,20 +193,22 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 	src := jobContext.Src
 	dest := jobContext.Dest
 	job := &Job{
-		Name:             name,
-		Src:              src,
-		ISrc:             factory.NewSpecer(&src),
-		srcMeta:          factory.NewMeta(&jobContext.Src),
-		Dest:             dest,
-		IDest:            factory.NewSpecer(&dest),
-		destMeta:         factory.NewMeta(&jobContext.Dest),
-		SkipError:        jobContext.SkipError,
-		State:            JobRunning,
-		ReuseBinlogLabel: jobContext.ReuseBinlogLabel,
+		Name:     name,
+		Src:      src,
+		ISrc:     factory.NewSpecer(&src),
+		srcMeta:  factory.NewMeta(&jobContext.Src),
+		Dest:     dest,
+		IDest:    factory.NewSpecer(&dest),
+		destMeta: factory.NewMeta(&jobContext.Dest),
+		State:    JobRunning,
 
-		allowTableExists: jobContext.AllowTableExists,
-		factory:          factory,
-		forceFullsync:    false,
+		Extra: JobExtra{
+			allowTableExists: jobContext.AllowTableExists,
+			ReuseBinlogLabel: jobContext.ReuseBinlogLabel,
+			SkipBinlog:       false,
+		},
+
+		factory: factory,
 
 		progress: nil,
 		db:       jobContext.Db,
@@ -265,28 +279,6 @@ func (j *Job) valid() error {
 		return xerror.New(xerror.Normal, "src/dest are not both db or table sync")
 	}
 
-	return nil
-}
-
-func (j *Job) RecoverDatabaseSync() error {
-	return nil
-}
-
-// database old data sync
-func (j *Job) DatabaseOldDataSync() error {
-	// Step 1: drop all tables
-	err := j.IDest.ClearDB()
-	if err != nil {
-		return err
-	}
-
-	// Step 2: make snapshot
-
-	return nil
-}
-
-// database sync
-func (j *Job) DatabaseSync() error {
 	return nil
 }
 
@@ -1566,6 +1558,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		tableRecords, err := j.getRelatedTableRecords(upsert)
 		if err != nil {
 			log.Errorf("get related table records failed, err: %+v", err)
+			return err
 		}
 		if len(tableRecords) == 0 {
 			log.Debug("no related table records")
@@ -1620,7 +1613,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		}
 
 		var label string
-		if j.ReuseBinlogLabel {
+		if j.Extra.ReuseBinlogLabel {
 			label = inMemoryData.Label
 		} else {
 			label = j.newLabel(commitSeq)
@@ -1642,7 +1635,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			if isTableNotFound(beginTxnResp.GetStatus()) && j.SyncType == DBSync {
 				// It might caused by the staled TableMapping entries.
 				// In order to rebuild the dest table ids, this progress should be rollback.
-				j.progress.Rollback(j.SkipError)
+				j.progress.Rollback()
 				for _, tableRecord := range inMemoryData.TableRecords {
 					delete(j.progress.TableMapping, tableRecord.Id)
 				}
@@ -1783,7 +1776,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		}
 
 		log.Infof("rollback TxnId: %d resp: %v", txnId, resp)
-		j.progress.Rollback(j.SkipError)
+		j.progress.Rollback()
 		return nil
 
 	default:
@@ -2915,6 +2908,17 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		return xerror.Errorf(xerror.Normal, "invalid binlog: %v", binlog)
 	}
 
+	if !j.progress.IsDone() {
+		return xerror.Errorf(xerror.Normal, "the progress isn't done, need rollback, commit seq: %d", j.progress.CommitSeq)
+	}
+
+	// Skip binlog conditionally
+	if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipBySilence && j.Extra.SkipCommitSeq == binlog.GetCommitSeq() {
+		log.Warnf("silently skip binlog %d by user, binlog type: %s, binlog data: %s",
+			binlog.GetCommitSeq(), binlog.GetType(), binlog.GetData())
+		return nil
+	}
+
 	log.Debugf("binlog type: %s, binlog data: %s", binlog.GetType(), binlog.GetData())
 
 	// Step 2: update job progress
@@ -2984,7 +2988,7 @@ func (j *Job) recoverIncrementalSync() error {
 	case BinlogUpsert:
 		return j.handleUpsert(nil)
 	default:
-		j.progress.Rollback(j.SkipError)
+		j.progress.Rollback()
 	}
 
 	return nil
@@ -2998,6 +3002,12 @@ func (j *Job) incrementalSync() error {
 		return j.recoverIncrementalSync()
 	}
 
+	// Force fullsync unconditionally
+	if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipByFullSync {
+		log.Warnf("skip binlog via fullsync by user, commit seq %d", j.progress.CommitSeq)
+	    return j.newSnapshot(j.progress.CommitSeq)
+	}
+
 	// Step 1: get binlog
 	log.Debug("start incremental sync")
 	src := &j.Src
@@ -3009,13 +3019,6 @@ func (j *Job) incrementalSync() error {
 
 	// Step 2: handle all binlog
 	for {
-		if j.forceFullsync {
-			log.Warnf("job is forced to step fullsync by user")
-			j.forceFullsync = false
-			_ = j.newSnapshot(j.progress.CommitSeq)
-			return nil
-		}
-
 		// The CommitSeq is equals to PrevCommitSeq in here.
 		commitSeq := j.progress.CommitSeq
 		log.Debugf("src: %s, commitSeq: %v", src, commitSeq)
@@ -3125,6 +3128,30 @@ func (j *Job) sync() error {
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
+	// Update the skip state
+	if j.Extra.SkipBinlog {
+		committed := false
+		switch j.Extra.SkipBy {
+		case SkipBySilence:
+			if j.Extra.SkipCommitSeq <= j.progress.CommitSeq {
+				// The binlog has been committed.
+				committed = true
+			}
+		case SkipByFullSync:
+			if j.progress.SyncState == DBFullSync || j.progress.SyncState == TableFullSync {
+				// The fullsync has been triggered.
+				committed = true
+			}
+		}
+		if committed {
+			j.Extra.SkipBinlog = false
+			if err := j.persistJob(); err != nil {
+				return err
+			}
+		}
+	}
+
+	j.updateJobStatus()
 	switch j.SyncType {
 	case TableSync:
 		return j.tableSync()
@@ -3157,14 +3184,12 @@ func (j *Job) handleError(err error) error {
 }
 
 func (j *Job) run() {
-	ticker := time.NewTicker(SYNC_DURATION)
+	ticker := time.NewTicker(SyncDuration)
 	defer ticker.Stop()
 
 	var panicError error
 
 	for {
-		j.updateJobStatus()
-
 		// do maybeDeleted first to avoid mark job deleted after job stopped & before job run & close stop chan gap in Delete, so job will not run
 		if j.maybeDeleted() {
 			return
@@ -3346,24 +3371,6 @@ func (j *Job) Desync() error {
 	}
 }
 
-func (j *Job) UpdateSkipError(skipError bool) error {
-	j.lock.Lock()
-	defer j.lock.Unlock()
-
-	originSkipError := j.SkipError
-	if originSkipError == skipError {
-		return nil
-	}
-
-	j.SkipError = skipError
-	if err := j.persistJob(); err != nil {
-		j.SkipError = originSkipError
-		return err
-	} else {
-		return nil
-	}
-}
-
 // stop job
 func (j *Job) Stop() {
 	close(j.stop)
@@ -3484,7 +3491,7 @@ func (j *Job) FirstRun() error {
 	} else {
 		j.Dest.DbId = destDbId
 	}
-	if j.SyncType == TableSync && !j.allowTableExists {
+	if j.SyncType == TableSync && !j.Extra.allowTableExists {
 		dest_table_exists, err := j.IDest.CheckTableExists()
 		if err != nil {
 			return err
@@ -3533,14 +3540,6 @@ func (j *Job) Resume() error {
 	log.Infof("resume job %s", j.Name)
 
 	return j.changeJobState(JobRunning)
-}
-
-func (j *Job) ForceFullsync() {
-	log.Infof("force job %s step full sync", j.Name)
-
-	j.lock.Lock()
-	defer j.lock.Unlock()
-	j.forceFullsync = true
 }
 
 type RawJobStatus struct {
@@ -3607,6 +3606,23 @@ func (j *Job) UpdateHostMapping(srcHostMaps, destHostMaps map[string]string) err
 	}
 
 	log.Debugf("update job %s src host mapping %+v, dest host mapping: %+v", j.Name, srcHostMaps, destHostMaps)
+	return nil
+}
+
+func (j *Job) SkipBinlog(skipCommitSeq int64, skipBy string) error {
+	j.lock.Lock()
+	defer j.lock.Unlock()
+
+	savedExtra := j.Extra
+	j.Extra.SkipBinlog = true
+	j.Extra.SkipCommitSeq = skipCommitSeq
+	j.Extra.SkipBy = skipBy
+	if err := j.persistJob(); err != nil {
+		j.Extra = savedExtra
+		return err
+	}
+
+	log.Infof("skip binlog by %s, commit seq %d, job %s", skipBy, skipCommitSeq, j.Name)
 	return nil
 }
 

@@ -190,6 +190,7 @@ type JobProgress struct {
 	// Some fields to save the unix epoch time of the key timepoint.
 	CreatedAt              int64 `json:"created_at,omitempty"`
 	FullSyncStartAt        int64 `json:"full_sync_start_at,omitempty"`
+	PartialSyncStartAt     int64 `json:"partial_sync_start_at,omitempty"`
 	IncrementalSyncStartAt int64 `json:"incremental_sync_start_at,omitempty"`
 	IngestBinlogAt         int64 `json:"ingest_binlog_at,omitempty"`
 }
@@ -330,6 +331,10 @@ func (j *JobProgress) NextWithPersist(commitSeq int64, syncState SyncState, subS
 		j.FullSyncStartAt = time.Now().Unix()
 		j.IncrementalSyncStartAt = 0
 		j.IngestBinlogAt = 0
+	} else if subSyncState == BeginCreateSnapshot && (syncState == TablePartialSync || syncState == DBPartialSync) {
+		j.PartialSyncStartAt = time.Now().Unix()
+		j.IncrementalSyncStartAt = 0
+		j.IngestBinlogAt = 0
 	} else if subSyncState == Done && (syncState == TableIncrementalSync || syncState == DBIncrementalSync) {
 		j.IncrementalSyncStartAt = time.Now().Unix()
 		j.IngestBinlogAt = 0
@@ -362,15 +367,12 @@ func (j *JobProgress) Done() {
 	j.Persist()
 }
 
-func (j *JobProgress) Rollback(skipError bool) {
+func (j *JobProgress) Rollback() {
 	log.Debugf("job %s step rollback", j.JobName)
 
 	j.SubSyncState = Done
 	// if rollback, then prev commit seq is the last commit seq
-	// but if skip error, we can consume the binlog then prev commit seq is the last commit seq
-	if !skipError {
-		j.CommitSeq = j.PrevCommitSeq
-	}
+	j.CommitSeq = j.PrevCommitSeq
 
 	xmetrics.Rollback(j.JobName, j.PrevCommitSeq)
 	j.Persist()
