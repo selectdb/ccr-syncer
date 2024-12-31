@@ -501,6 +501,70 @@ class Helper {
         }
         return false
     }
+
+    void addFailpoint(String failpoint, def value, String tableName = "") {
+        def gson = new com.google.gson.Gson()
+        def request_body = [
+            name: get_ccr_job_name(tableName),
+            failpoint: failpoint,
+        ]
+        if (value != null) {
+            request_body.put("value", value)
+        }
+        def add_failpoint_uri = { check_func ->
+            suite.httpTest {
+                uri "/failpoint"
+                endpoint syncerAddress
+                body gson.toJson(request_body)
+                op "post"
+                check check_func
+            }
+        }
+
+        add_failpoint_uri.call() { code, body ->
+            if (!"${code}".toString().equals("200")) {
+                throw "request failed, code: ${code}, body: ${body}"
+            }
+            def jsonSlurper = new groovy.json.JsonSlurper()
+            def object = jsonSlurper.parseText "${body}"
+            if (!object.success) {
+                throw "request failed, error msg: ${object.error_msg}"
+            }
+        }
+    }
+
+    void removeFailpoint(String failpoint, String tableName = "") {
+        addFailpoint(failpoint, null, tableName)
+    }
+
+    void forceSkipBinlogBy(String skipBy, Integer commitSeq = 0, String tableName = "") {
+        def gson = new com.google.gson.Gson()
+        def request_body = [
+            name: get_ccr_job_name(tableName),
+            skip_commit_seq: commitSeq,
+            skip_by: skipBy,
+        ]
+        def skip_binlog_uri = { check_func ->
+            suite.httpTest {
+                uri "/job_skip_binlog"
+                endpoint syncerAddress
+                body gson.toJson(request_body)
+                op "post"
+                check check_func
+            }
+        }
+
+        skip_binlog_uri.call() { code, body ->
+            if (!"${code}".toString().equals("200")) {
+                throw "request failed, code: ${code}, body: ${body}"
+            }
+            def jsonSlurper = new groovy.json.JsonSlurper()
+            def object = jsonSlurper.parseText "${body}"
+            if (!object.success) {
+                throw "request failed, error msg: ${object.error_msg}"
+            }
+        }
+    }
 }
 
 new Helper(suite)

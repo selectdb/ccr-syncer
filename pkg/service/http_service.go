@@ -30,6 +30,7 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/ccr"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	"github.com/selectdb/ccr_syncer/pkg/storage"
+	"github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/version"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
@@ -820,6 +821,46 @@ func (s *HttpService) skipBinlogHandler(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+func (s *HttpService) failpointHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("inject failpoint")
+
+	var result *defaultResult
+	defer func() { writeJson(w, result) }()
+
+	// Parse the JSON request body
+	var request struct {
+		Name      string      `json:"name,required"` // the ccr job name
+		Failpoint string      `json:"failpoint,required"`
+		Value     interface{} `json:"value"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Warnf("inject failpoint failed: %+v", err)
+		result = newErrorResult(err.Error())
+		return
+	}
+
+	if request.Name == "" {
+		log.Warnf("inject failpoint failed: job name is empty")
+		result = newErrorResult("job name is empty")
+		return
+	} else if request.Failpoint == "" {
+		log.Infof("disable all failpoints")
+		utils.DisableFailpoint()
+	} else if request.Value != nil {
+		log.Infof("inject failpoint %s with value %+v, job %s",
+			request.Failpoint, request.Value, request.Name)
+		utils.InjectJobFailpoint(request.Name, request.Failpoint, request.Value)
+		if !utils.IsFailpointEnabled() {
+			utils.EnableFailpoint()
+		}
+	} else {
+		utils.RemoveJobFailpoint(request.Name, request.Failpoint)
+	}
+
+	result = newSuccessResult()
+}
+
 func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/version", s.versionHandler)
 	s.mux.HandleFunc("/create_ccr", s.createHandler)
@@ -836,6 +877,7 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/features", s.featuresHandler)
 	s.mux.HandleFunc("/update_host_mapping", s.updateHostMappingHandler)
 	s.mux.HandleFunc("/job_skip_binlog", s.skipBinlogHandler)
+	s.mux.HandleFunc("/failpoint", s.failpointHandler)
 	s.mux.Handle("/metrics", promhttp.Handler())
 }
 

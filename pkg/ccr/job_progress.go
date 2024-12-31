@@ -172,6 +172,7 @@ type JobProgress struct {
 	// The commit seq where the target cluster has synced.
 	PrevCommitSeq int64           `json:"prev_commit_seq"`
 	CommitSeq     int64           `json:"commit_seq"`
+	LastCommitSeq int64           `json:"last_commit_seq"` // the last commit seq try to sync
 	TableMapping  map[int64]int64 `json:"table_mapping"`
 	// the upstream table id to name mapping, build during the fullsync,
 	// keep snapshot to avoid rename. it might be staled.
@@ -270,6 +271,7 @@ func (j *JobProgress) GetTableId(tableName string) (int64, bool) {
 
 func (j *JobProgress) StartHandle(commitSeq int64) {
 	j.CommitSeq = commitSeq
+	j.LastCommitSeq = commitSeq
 
 	j.Persist()
 }

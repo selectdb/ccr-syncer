@@ -2912,6 +2912,12 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		return xerror.Errorf(xerror.Normal, "the progress isn't done, need rollback, commit seq: %d", j.progress.CommitSeq)
 	}
 
+	log.Debugf("binlog type: %s, binlog data: %s", binlog.GetType(), binlog.GetData())
+
+	// Step 2: update job progress
+	j.progress.StartHandle(binlog.GetCommitSeq())
+	xmetrics.HandlingBinlog(j.Name, binlog.GetCommitSeq())
+
 	// Skip binlog conditionally
 	if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipBySilence && j.Extra.SkipCommitSeq == binlog.GetCommitSeq() {
 		log.Warnf("silently skip binlog %d by user, binlog type: %s, binlog data: %s",
@@ -2919,11 +2925,10 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	log.Debugf("binlog type: %s, binlog data: %s", binlog.GetType(), binlog.GetData())
-
-	// Step 2: update job progress
-	j.progress.StartHandle(binlog.GetCommitSeq())
-	xmetrics.HandlingBinlog(j.Name, binlog.GetCommitSeq())
+	if utils.HasJobFailpoint(j.Name, "handle_binlog_failed") {
+		log.Warnf("fail to handle binlog by failpoint, binlog type: %s, binlog data: %s", binlog.GetType(), binlog.GetData())
+		return xerror.Errorf(xerror.Normal, "fail to handle binlog by failpoint")
+	}
 
 	switch binlog.GetType() {
 	case festruct.TBinlogType_UPSERT:
