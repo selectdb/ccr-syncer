@@ -3005,7 +3005,7 @@ func (j *Job) incrementalSync() error {
 	// Force fullsync unconditionally
 	if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipByFullSync {
 		log.Warnf("skip binlog via fullsync by user, commit seq %d", j.progress.CommitSeq)
-	    return j.newSnapshot(j.progress.CommitSeq)
+		return j.newSnapshot(j.progress.CommitSeq)
 	}
 
 	// Step 1: get binlog
