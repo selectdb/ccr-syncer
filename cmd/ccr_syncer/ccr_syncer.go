@@ -23,7 +23,6 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -80,25 +79,12 @@ func init() {
 	flag.IntVar(&syncer.Port, "port", 9190, "syncer port")
 	flag.IntVar(&syncer.Ppof_port, "pprof_port", 6060, "pprof port used for memory analyze")
 	flag.BoolVar(&syncer.Pprof, "pprof", false, "use pprof or not")
-	flag.Parse()
-
-	utils.InitLog()
 }
 
-func (syncer *Syncer) parseConfigFile() bool {
-	if syncer == nil {
-		log.Errorf("syncer is null")
-		return false
-	}
-	if syncer.Config_file == "" {
-		log.Infof("config file is empty, use default value for db_host, db_port, db_user, db_password and db_name")
-		return true
-	}
-
+func parseConfigFile() error {
 	file, err := os.Open(syncer.Config_file)
 	if err != nil {
-		fmt.Errorf("can not open the config file : %v", err)
-		return false
+		return fmt.Errorf("open config file %s: %v", syncer.Config_file, err)
 	}
 	defer file.Close()
 
@@ -106,82 +92,62 @@ func (syncer *Syncer) parseConfigFile() bool {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-
-		if len(line) == 0 || strings.HasPrefix(line, "#") {
+		if len(line) == 0 || strings.HasPrefix(line, "#") { // skip empty or comment lines
 			continue
 		}
 
 		// split the line by '='
 		parts := strings.SplitN(line, "=", 2)
 		if len(parts) != 2 {
-			log.Errorf("invalid line %s, it must have only one '='", line)
-			continue
+			return fmt.Errorf("invalid line '%s', it must have only one '='", line)
 		}
 
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
-		log.Infof("config file key is %s, value is %s", key, value)
+		if key == "config_file" { // skip config_file itself
+			continue
+		}
 
-		switch key {
-		case "db_type":
-			syncer.Db_type = value
-		case "db_host":
-			syncer.Db_host = value
-		case "db_port":
-			port, err := strconv.Atoi(value)
-			if err != nil {
-				log.Errorf("strconv convert strings to int failed")
-				continue
-			}
-			syncer.Db_port = port
-		case "db_user":
-			syncer.Db_user = value
-		case "db_password":
-			syncer.Db_password = value
-		case "db_name":
-			syncer.Db_name = value
-		default:
-			log.Warnf("invalid config, key : %s, value : %s", key, value)
+		log.Infof("config %s=%s", key, value)
+		if err := flag.Set(key, value); err != nil {
+			return fmt.Errorf("set flag key value '%s': %v", line, err)
 		}
 	}
 
-	return configCheck(syncer)
-}
-
-func configCheck(syncer *Syncer) bool {
-	if syncer == nil {
-		log.Warnf("syncer is null when configCheck")
-		return false
-	}
-
-	if syncer.Db_user != "" && syncer.Db_type == "sqlite3" {
-		log.Errorf("sqlite3 is only for local for now")
-		return false
-	}
-	return true
+	return nil
 }
 
 func main() {
+	flag.Parse()
 	if printVersion {
 		fmt.Println(version.GetVersion())
 		os.Exit(0)
 	}
 
+	utils.InitLog()
+
 	// print version
 	log.Infof("ccr start, version: %s", version.GetVersion())
 
+	// Step 0: parse config file if exists
+	if syncer.Config_file != "" {
+		log.Infof("parse config file: %s", syncer.Config_file)
+		if err := parseConfigFile(); err != nil {
+			fmt.Printf("parse config file error: %v\n", err)
+			fmt.Printf("Usage of: %s\n", os.Args[0])
+			flag.PrintDefaults()
+			log.Fatalf("parse config file error: %+v", err)
+		}
+	}
+
 	// Step 1: Check db
-	if dbPath == "" {
-		log.Fatal("db_dir is empty")
-	}
-	// check config
-	if syncer.parseConfigFile() == false {
-		log.Fatal("parseConfigFile failed, so exit")
-	}
 	var db storage.DB
 	var err error
 	switch syncer.Db_type {
 	case "sqlite3":
+		if dbPath == "" {
+			log.Fatal("the db_dir is empty when db_type is sqlite3")
+		}
 		db, err = storage.NewSQLiteDB(dbPath)
 	case "mysql":
 		db, err = storage.NewMysqlDB(syncer.Db_host, syncer.Db_port, syncer.Db_user, syncer.Db_password, syncer.Db_name)
