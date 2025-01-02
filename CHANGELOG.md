@@ -11,6 +11,11 @@
 
 ### Fix
 
+- 修复 alter table 时 default value 和 varchar 冲突的问题 (selectdb/ccr-syncer#361, selectdb/ccr-syncer#362)
+- 创建 table 时使用默认的 storage medium (selectdb/ccr-syncer#358)
+- 过滤所有 materialized view 相关的 binlog (selectdb/ccr-syncer#350)
+- 修复 replace table 部分同步问题 (selectdb/ccr-syncer#348)
+- 支持同步 unicode column name (selectdb/ccr-syncer#341)
 - 过滤 partial sync 期间删除的 table (selectdb/ccr-syncer#330)
 - 过滤依赖 UDF 的建表语句 (selectdb/ccr-syncer#328)
 - 修复 view signature not matched 导致 fullsync 无法继续的问题 (selectdb/ccr-syncer#329)
@@ -42,6 +47,8 @@
 
 ### Feature
 
+- 支持同步 modify table property binlog，过滤不支持的属性 (selectdb/ccr-syncer#353)
+- 支持从 config file 中读取 flags (selectdb/ccr-syncer#340, selectdb/ccr-syncer#357)
 - 支持在创建 job 时设置上 reuse_binlog_label，ingest 时会直接使用上游的 label (selectdb/ccr-syncer#324)
 - 支持在创建 job 时设置上 private/public IP 的映射 (selectdb/ccr-syncer#288)
 - 支持 atomic restore，全量同步期间下游仍然可读 (selectdb/ccr-syncer#166)
@@ -61,6 +68,8 @@
 
 ### Improve
 
+- 增加 API /job_skip_binlog，用于在同步出现问题时跳过 (selectdb/ccr-syncer#356)
+- 允许配置 ccr store 的 db name (selectdb/ccr-syncer#355)
 - 允许设置 mysql/doris connection 数量限制 (selectdb/ccr-syncer#305,selectdb/ccr-syncer#314,selectdb/ccr-syncer#317)
 - 优化 /get_lag 接口，避免阻塞 (selectdb/ccr-syncer#311)
 - 支持同步 rename column，需要 doris xxxx (selectdb/ccr-syncer#139)
