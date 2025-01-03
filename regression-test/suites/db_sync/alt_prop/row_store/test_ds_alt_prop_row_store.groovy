@@ -19,6 +19,9 @@ suite("test_ds_alt_prop_row_store") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    logger.info("doris version: 2.1 unsupported: row store")
+    return
+
     def dbName = context.dbName
     def tableName = "tbl_" + helper.randomSuffix()
 

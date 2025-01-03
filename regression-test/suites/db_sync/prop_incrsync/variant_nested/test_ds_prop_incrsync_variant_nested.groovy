@@ -19,6 +19,9 @@ suite("test_ds_prop_incrsync_incsync_variant_nested") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    logger.info("doris version: 2.1 unsupported: variant nested")
+    return
+
     def dbName = context.dbName
     def tableNameFull = "tbl_full"
     def tableNameIncrement = "tbl_incr"

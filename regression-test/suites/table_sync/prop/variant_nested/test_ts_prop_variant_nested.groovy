@@ -19,6 +19,9 @@ suite("test_ts_prop_variant_nested") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    logger.info("doris version: 2.1 unsupported: variant nested")
+    return
+
     def dbName = context.dbName
     def tableName = "tbl_" + helper.randomSuffix()
     def test_num = 0

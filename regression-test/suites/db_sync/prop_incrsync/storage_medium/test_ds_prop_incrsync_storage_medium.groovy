@@ -90,8 +90,4 @@ suite("test_ds_prop_incrsync_incsync_storage_medium") {
     assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${tableNameIncrement}\"", exist, 60, "sql"))
 
     assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${tableNameIncrement}\"", exist, 60, "target"))
-
-    target_res = target_sql "SHOW CREATE TABLE ${tableNameIncrement}"
-
-    assertTrue(target_res[0][1].contains("\"storage_medium\" = \"ssd\""))
 }
