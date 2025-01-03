@@ -32,12 +32,16 @@ var (
 	logLevel        string
 	logFilename     string
 	logAlsoToStderr bool
+	logRetainNum    int
+	logRetainDays   int
 )
 
 func init() {
 	flag.StringVar(&logLevel, "log_level", "trace", "log level")
 	flag.StringVar(&logFilename, "log_filename", "", "log filename")
 	flag.BoolVar(&logAlsoToStderr, "log_also_to_stderr", false, "log also to stderr")
+	flag.IntVar(&logRetainNum, "log_retain_num", 30, "log retain number")
+	flag.IntVar(&logRetainDays, "log_retain_days", 7, "log retain days")
 }
 
 func InitLog() {
@@ -70,8 +74,8 @@ func InitLog() {
 	output := &lumberjack.Logger{
 		Filename:   logFilename,
 		MaxSize:    1024, // 1GB
-		MaxAge:     7,
-		MaxBackups: 30,
+		MaxAge:     logRetainDays,
+		MaxBackups: logRetainNum,
 		LocalTime:  true,
 		Compress:   false,
 	}
