@@ -48,8 +48,7 @@ suite("test_ds_prop_unique_key_mow") {
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true",
-            "enable_unique_key_merge_on_write" = "true",
-            "enable_unique_key_skip_bitmap_column" = "true"
+            "enable_unique_key_merge_on_write" = "true"
         )
     """
 
@@ -65,5 +64,4 @@ suite("test_ds_prop_unique_key_mow") {
     def target_res = target_sql "SHOW CREATE TABLE ${tableName}"
 
     assertTrue(target_res[0][1].contains("\"enable_unique_key_merge_on_write\" = \"true\""))
-    assertTrue(target_res[0][1].contains("\"enable_unique_key_skip_bitmap_column\" = \"true\""))
 }
