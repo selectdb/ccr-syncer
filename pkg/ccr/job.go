@@ -1305,7 +1305,9 @@ func (j *Job) getDestTableIdBySrc(srcTableId int64) (int64, error) {
 	}
 
 	srcTableName := srcTable.Name
-	if destTableId, err := j.destMeta.GetTableId(srcTableName); err != nil {
+	if j.isTableSyncWithAlias() {
+		return j.Dest.TableId, nil
+	} else if destTableId, err := j.destMeta.GetTableId(srcTableName); err != nil {
 		return 0, err
 	} else {
 		j.progress.TableMapping[srcTableId] = destTableId
