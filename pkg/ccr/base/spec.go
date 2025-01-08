@@ -1288,7 +1288,7 @@ func (s *Spec) ModifyComment(destTableName string, modifyComment *record.ModifyC
 		modifySql = sb.String()
 	} else if modifyComment.Type == "TABLE" {
 		modifySql = fmt.Sprintf("ALTER TABLE %s.%s MODIFY COMMENT '%s'",
-			dbName, destTableName, utils.EscapeStringValue(modifyComment.TblComment))
+			dbName, destTableName, utils.EscapeStringValue(modifyComment.TableComment))
 	} else {
 		return xerror.Errorf(xerror.Normal, "unsupported modify comment type: %s", modifyComment.Type)
 	}
