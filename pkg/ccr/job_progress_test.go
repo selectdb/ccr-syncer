@@ -89,6 +89,7 @@ func TestJobProgress_MarshalJSON(t *testing.T) {
   "job_sync_id":0,
   "prev_commit_seq": 0,
   "commit_seq": 1,
+  "last_commit_seq": 0,
   "table_mapping": null,
   "table_commit_seq_map": {
     "1": 2
@@ -115,7 +116,7 @@ func TestJobProgress_MarshalJSON(t *testing.T) {
 				PersistData:       tt.fields.PersistData,
 				TableAliases:      tt.fields.TableAliases,
 			}
-			got, err := json.Marshal(jp)
+			got, err := json.MarshalIndent(jp, "", "")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("JobProgress.MarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
 				return
