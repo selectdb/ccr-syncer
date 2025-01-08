@@ -1315,8 +1315,11 @@ func (j *Job) isMaterializedViewTable(srcTableId int64) (bool, error) {
 	return false, nil
 }
 
-// only called by DBSync, TableSync tableId is in Src/Dest Spec
 func (j *Job) getDestTableIdBySrc(srcTableId int64) (int64, error) {
+	if j.SyncType == TableSync {
+		return j.Dest.TableId, nil
+	}
+
 	if j.progress.TableMapping != nil {
 		if destTableId, ok := j.progress.TableMapping[srcTableId]; ok {
 			return destTableId, nil
@@ -1332,16 +1335,9 @@ func (j *Job) getDestTableIdBySrc(srcTableId int64) (int64, error) {
 	srcTable, err := j.srcMeta.GetTable(srcTableId)
 	if err != nil {
 		return 0, err
-	}
-
-	if srcTable.Type == record.TableTypeMaterializedView {
+	} else if srcTable.Type == record.TableTypeMaterializedView {
 		return 0, ErrMaterializedViewTable
-	}
-
-	srcTableName := srcTable.Name
-	if j.isTableSyncWithAlias() {
-		return j.Dest.TableId, nil
-	} else if destTableId, err := j.destMeta.GetTableId(srcTableName); err != nil {
+	} else if destTableId, err := j.destMeta.GetTableId(srcTable.Name); err != nil {
 		return 0, err
 	} else {
 		j.progress.TableMapping[srcTableId] = destTableId
@@ -1350,6 +1346,10 @@ func (j *Job) getDestTableIdBySrc(srcTableId int64) (int64, error) {
 }
 
 func (j *Job) getDestNameBySrcId(srcTableId int64) (string, error) {
+	if j.SyncType == TableSync {
+		return j.Dest.Table, nil
+	}
+
 	destTableId, err := j.getDestTableIdBySrc(srcTableId)
 	if err != nil {
 		return "", err
@@ -1361,7 +1361,8 @@ func (j *Job) getDestNameBySrcId(srcTableId int64) (string, error) {
 	}
 
 	if name == "" {
-		return "", xerror.Errorf(xerror.Normal, "dest table name not found, dest table id: %d", destTableId)
+		return "", xerror.Errorf(xerror.Normal,
+			"dest table name not found, src table id: %d, dest table id: %d", srcTableId, destTableId)
 	}
 
 	return name, nil
@@ -1854,17 +1855,9 @@ func (j *Job) handleAddPartition(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	var destTableName string
-	if j.SyncType == TableSync {
-		destTableName = j.Dest.Table
-	} else if j.SyncType == DBSync {
-		if destTableId, err := j.getDestTableIdBySrc(addPartition.TableId); err != nil {
-			return err
-		} else if destTableName, err = j.destMeta.GetTableNameById(destTableId); err != nil {
-			return err
-		} else if destTableName == "" {
-			return xerror.Errorf(xerror.Normal, "tableId %d not found in destMeta", destTableId)
-		}
+	destTableName, err := j.getDestNameBySrcId(addPartition.TableId)
+	if err != nil {
+		return err
 	}
 	return j.IDest.AddPartition(destTableName, addPartition)
 }
@@ -1896,17 +1889,9 @@ func (j *Job) handleDropPartition(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	var destTableName string
-	if j.SyncType == TableSync {
-		destTableName = j.Dest.Table
-	} else if j.SyncType == DBSync {
-		if destTableId, err := j.getDestTableIdBySrc(dropPartition.TableId); err != nil {
-			return err
-		} else if destTableName, err = j.destMeta.GetTableNameById(destTableId); err != nil {
-			return err
-		} else if destTableName == "" {
-			return xerror.Errorf(xerror.Normal, "tableId %d not found in destMeta", destTableId)
-		}
+	destTableName, err := j.getDestNameBySrcId(dropPartition.TableId)
+	if err != nil {
+		return err
 	}
 	return j.IDest.DropPartition(destTableName, dropPartition)
 }
@@ -2115,15 +2100,9 @@ func (j *Job) handleModifyProperty(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	var destTableName string
-	if j.SyncType == TableSync {
-		destTableName = j.Dest.Table
-	} else {
-		var err error
-		destTableName, err = j.getDestNameBySrcId(modifyProperty.TableId)
-		if err != nil {
-			return err
-		}
+	destTableName, err := j.getDestNameBySrcId(modifyProperty.TableId)
+	if err != nil {
+		return err
 	}
 	return j.Dest.ModifyTableProperty(destTableName, modifyProperty)
 }
@@ -2300,15 +2279,9 @@ func (j *Job) handleRenameColumnRecord(commitSeq int64, renameColumn *record.Ren
 		return nil
 	}
 
-	var destTableName string
-	if j.SyncType == TableSync {
-		destTableName = j.Dest.Table
-	} else {
-		var err error
-		destTableName, err = j.getDestNameBySrcId(renameColumn.TableId)
-		if err != nil {
-			return err
-		}
+	destTableName, err := j.getDestNameBySrcId(renameColumn.TableId)
+	if err != nil {
+		return err
 	}
 
 	return j.IDest.RenameColumn(destTableName, renameColumn)
@@ -2329,19 +2302,13 @@ func (j *Job) handleModifyComment(binlog *festruct.TBinlog) error {
 }
 
 func (j *Job) handleModifyCommentRecord(commitSeq int64, modifyComment *record.ModifyComment) error {
-	if j.isBinlogCommitted(modifyComment.TblId, commitSeq) {
+	if j.isBinlogCommitted(modifyComment.TableId, commitSeq) {
 		return nil
 	}
 
-	var destTableName string
-	if j.SyncType == TableSync {
-		destTableName = j.Dest.Table
-	} else {
-		var err error
-		destTableName, err = j.getDestNameBySrcId(modifyComment.TblId)
-		if err != nil {
-			return err
-		}
+	destTableName, err := j.getDestNameBySrcId(modifyComment.TableId)
+	if err != nil {
+		return err
 	}
 
 	return j.IDest.ModifyComment(destTableName, modifyComment)
@@ -2464,15 +2431,9 @@ func (j *Job) handleRenameTableRecord(commitSeq int64, renameTable *record.Renam
 		return nil
 	}
 
-	var destTableName string
-	if j.SyncType == TableSync {
-		destTableName = j.Dest.Table
-	} else {
-		var err error
-		destTableName, err = j.getDestNameBySrcId(renameTable.TableId)
-		if err != nil {
-			return err
-		}
+	destTableName, err := j.getDestNameBySrcId(renameTable.TableId)
+	if err != nil {
+		return err
 	}
 
 	if renameTable.NewTableName != "" && renameTable.OldTableName == "" {
@@ -2483,7 +2444,7 @@ func (j *Job) handleRenameTableRecord(commitSeq int64, renameTable *record.Renam
 		renameTable.OldTableName = destTableName
 	}
 
-	err := j.IDest.RenameTable(destTableName, renameTable)
+	err = j.IDest.RenameTable(destTableName, renameTable)
 	if err != nil {
 		return err
 	}
@@ -2595,22 +2556,18 @@ func (j *Job) handleModifyTableAddOrDropInvertedIndicesRecord(commitSeq int64, r
 	}
 
 	if record.IsDropInvertedIndex {
-		var destTableName string
-		if j.SyncType == TableSync {
-			destTableName = j.Dest.Table
-		} else {
-			var err error
-			destTableName, err = j.getDestNameBySrcId(record.TableId)
-			if err != nil {
-				return xerror.Errorf(xerror.Normal, "get dest table name by src id %d failed, err: %v", record.TableId, err)
-			}
+		destTableName, err := j.getDestNameBySrcId(record.TableId)
+		if err != nil {
+			return err
 		}
+
 		return j.IDest.LightningIndexChange(destTableName, record)
 	}
 
 	// Get the source table name, and trigger a partial snapshot
 	var tableName string
 	if j.SyncType == TableSync {
+		// for table sync with alias
 		tableName = j.Src.Table
 	} else {
 		if name, err := j.getDestNameBySrcId(record.TableId); err != nil {
@@ -2702,15 +2659,9 @@ func (j *Job) handleRenamePartitionRecord(commitSeq int64, renamePartition *reco
 		return nil
 	}
 
-	var destTableName string
-	if j.SyncType == TableSync {
-		destTableName = j.Dest.Table
-	} else {
-		var err error
-		destTableName, err = j.getDestNameBySrcId(renamePartition.TableId)
-		if err != nil {
-			return err
-		}
+	destTableName, err := j.getDestNameBySrcId(renamePartition.TableId)
+	if err != nil {
+		return err
 	}
 
 	newPartition := renamePartition.NewPartitionName
@@ -2747,15 +2698,9 @@ func (j *Job) handleRenameRollupRecord(commitSeq int64, renameRollup *record.Ren
 		return nil
 	}
 
-	var destTableName string
-	if j.SyncType == TableSync {
-		destTableName = j.Dest.Table
-	} else {
-		var err error
-		destTableName, err = j.getDestNameBySrcId(renameRollup.TableId)
-		if err != nil {
-			return err
-		}
+	destTableName, err := j.getDestNameBySrcId(renameRollup.TableId)
+	if err != nil {
+		return nil
 	}
 
 	newRollup := renameRollup.NewRollupName

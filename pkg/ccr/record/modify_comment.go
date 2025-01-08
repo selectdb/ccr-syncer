@@ -26,9 +26,9 @@ import (
 type ModifyComment struct {
 	Type         string            `json:"type"`
 	DbId         int64             `json:"dbId"`
-	TblId        int64             `json:"tblId"`
+	TableId      int64             `json:"tblId"`
 	ColToComment map[string]string `json:"colToComment"`
-	TblComment   string            `json:"tblComment"`
+	TableComment string            `json:"tblComment"`
 }
 
 func NewModifyCommentFromJson(data string) (*ModifyComment, error) {
@@ -38,7 +38,7 @@ func NewModifyCommentFromJson(data string) (*ModifyComment, error) {
 		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal modify comment error")
 	}
 
-	if modifyComment.TblId == 0 {
+	if modifyComment.TableId == 0 {
 		return nil, xerror.Errorf(xerror.Normal, "table id not found")
 	}
 
@@ -47,5 +47,5 @@ func NewModifyCommentFromJson(data string) (*ModifyComment, error) {
 
 // Stringer
 func (r *ModifyComment) String() string {
-	return fmt.Sprintf("ModifyComment: Type: %s, DbId: %d, TblId: %d, ColToComment: %v, TblComment: %s", r.Type, r.DbId, r.TblId, r.ColToComment, r.TblComment)
+	return fmt.Sprintf("ModifyComment: Type: %s, DbId: %d, TableId: %d, ColToComment: %v, TableComment: %s", r.Type, r.DbId, r.TableId, r.ColToComment, r.TableComment)
 }
