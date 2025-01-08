@@ -3161,7 +3161,7 @@ func (j *Job) sync() error {
 		committed := false
 		switch j.Extra.SkipBy {
 		case SkipBySilence:
-			if j.Extra.SkipCommitSeq <= j.progress.CommitSeq {
+			if j.Extra.SkipCommitSeq <= j.progress.PrevCommitSeq {
 				// The binlog has been committed.
 				committed = true
 			}
@@ -3173,6 +3173,8 @@ func (j *Job) sync() error {
 		}
 		if committed {
 			j.Extra.SkipBinlog = false
+			log.Infof("reset skip binlog, skip by: %s, skip commit seq: %d, prev commit seq: %d",
+				j.Extra.SkipBy, j.Extra.SkipCommitSeq, j.progress.PrevCommitSeq)
 			if err := j.persistJob(); err != nil {
 				return err
 			}
