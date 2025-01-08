@@ -104,10 +104,24 @@ suite("test_tbl_idx_ngbf_add_drop") {
         ALTER TABLE ${tableName}
         DROP INDEX idx_ngrambf
         """
-    sql "INSERT INTO ${tableName} VALUES (1, 1, '1', '1')"
+    def checkNgramBf1NotExists = { inputRes -> Boolean
+        for (List<Object> row : inputRes) {
+            if (row[2] == "idx_ngrambf" && row[10] == "NGRAM_BF") {
+                return false
+            }
+        }
+        return true
+    }
+    assertTrue(helper.checkShowTimesOf("""
+                                SHOW INDEXES FROM ${context.dbName}.${tableName}
+                                """,
+                                checkNgramBf1NotExists, 30, "sql"))
+    assertTrue(helper.checkShowTimesOf("""
+                                SHOW INDEXES FROM TEST_${context.dbName}.${tableName}
+                                """,
+                                checkNgramBf1NotExists, 30, "target"))
 
+    sql "INSERT INTO ${tableName} VALUES (1, 1, '1', '1')"
     assertTrue(helper.checkSelectTimesOf(
         """ SELECT * FROM ${tableName} """, insert_num + 1, 30))
-    def show_indexes_result = target_sql "show indexes from ${tableName}"
-    assertFalse(checkNgramBf(show_indexes_result))
 }
