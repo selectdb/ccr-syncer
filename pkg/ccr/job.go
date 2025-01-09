@@ -664,7 +664,10 @@ func (j *Job) partialSync() error {
 		}
 
 		restoreFinished, err := j.IDest.CheckRestoreFinished(restoreSnapshotName)
-		if err != nil {
+		if errors.Is(err, base.ErrRestoreSignatureNotMatched) {
+			log.Warnf("snapshot %s signature not match, retry partial sync with replace", restoreSnapshotName)
+			return j.newPartialSnapshot(tableId, table, nil, true)
+		} else if err != nil {
 			j.progress.NextSubVolatile(RestoreSnapshot, inMemoryData)
 			return err
 		}
