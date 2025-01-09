@@ -986,9 +986,12 @@ func (j *Job) fullSync() error {
 				Table:     &j.Src.Table,
 				AliasName: &j.Dest.Table,
 			}
+			if alias, ok := j.progress.TableAliases[j.Dest.Table]; ok {
+				log.Infof("fullsync alias dest table %s to %s", j.Dest.Table, alias)
+				tableRef.AliasName = &alias
+			}
 			tableRefs = append(tableRefs, tableRef)
-		}
-		if len(j.progress.TableAliases) > 0 {
+		} else if len(j.progress.TableAliases) > 0 {
 			tableRefs = make([]*festruct.TTableRef, 0)
 			viewMap := make(map[string]interface{})
 			for _, viewName := range inMemoryData.Views {
