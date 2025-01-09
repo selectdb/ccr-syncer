@@ -19,6 +19,12 @@ suite("test_ds_alt_prop_skip_bitmap_column") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    if (!helper.is_version_supported([30099, 20199, 20099])) {
+        def version = helper.upstream_version()
+        logger.info("skip this suite because version is not supported, upstream version ${version}")
+        return
+    }
+
     def dbName = context.dbName
     def tableName = "tbl"
     def test_num = 0
