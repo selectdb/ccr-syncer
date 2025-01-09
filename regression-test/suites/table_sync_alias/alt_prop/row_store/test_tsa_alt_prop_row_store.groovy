@@ -19,6 +19,13 @@ suite("test_tsa_alt_prop_row_store") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    if (!helper.is_version_supported([30004, 20199, 20099])) {
+        // disable in 2.1/2.0
+        def version = helper.upstream_version()
+        logger.info("skip this suite because version is not supported, upstream version ${version}")
+        return
+    }
+
     def dbName = context.dbName
     def tableName = "tbl_" + helper.randomSuffix()
     def aliasTableName = "tbl_alias_" + helper.randomSuffix()
