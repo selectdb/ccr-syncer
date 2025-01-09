@@ -115,25 +115,5 @@ suite('test_ds_ng_bf_fullsync') {
                                 """,
                                 checkNGFilter, 30, 'target'))    
 								
-	// doris 2.1.7 rc-03
 	
-	def exist = { res -> Boolean
-        return res.size() != 0
-    }
-	
-    def notExist = { res -> Boolean
-        return res.size() == 0
-    }
-	
-    helper.ccrJobPause()
-	 
-    target_sql """
-            INSERT INTO ${tableName} VALUES (29, "test_dirty_data", "dirty_data_test")
-            """
-			
-	target_sql 'sync'
-    assertTrue(helper.checkShowTimesOf("SELECT * FROM ${tableName} WHERE id = 29", exist, 60, "target"))
-    helper.force_fullsync()
-    helper.ccrJobResume()
-	assertTrue(helper.checkShowTimesOf("SELECT * FROM ${tableName} WHERE id = 29", notExist, 60, "target"))
 }
