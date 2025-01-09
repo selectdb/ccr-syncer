@@ -18,6 +18,12 @@ suite("test_ds_tbl_res_agg_state") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    if (!helper.is_version_supported([30004, 20199, 20099])) {
+        def version = helper.upstream_version()
+        logger.info("skip this suite because version is not supported, upstream version ${version}")
+        return
+    }
+
     def tableName = "tbl_" + helper.randomSuffix()
     def aggTableName = "agg_" + helper.randomSuffix()
     def test_num = 0
