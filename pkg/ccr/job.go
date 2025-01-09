@@ -169,6 +169,7 @@ type Job struct {
 	stop      chan struct{} `json:"-"`
 	isDeleted atomic.Bool   `json:"-"`
 
+	asyncMvTableCache  map[int64]struct{}      `json:"-"`
 	concurrencyManager *rpc.ConcurrencyManager `json:"-"`
 
 	lock sync.Mutex `json:"-"`
@@ -1281,8 +1282,44 @@ func (j *Job) newLabel(commitSeq int64) string {
 	}
 }
 
-// only called by DBSync, TableSync tableId is in Src/Dest Spec
+func (j *Job) isMaterializedViewTable(srcTableId int64) (bool, error) {
+	// 1. skip the OLAP tables
+	if j.SyncType == TableSync && srcTableId == j.Src.TableId {
+		return false, nil
+	}
+
+	if _, ok := j.progress.TableMapping[srcTableId]; ok {
+		return false, nil
+	}
+
+	// 2. query the cached mv tables
+	if _, ok := j.asyncMvTableCache[srcTableId]; ok {
+		return true, nil
+	}
+
+	// 3. query table from src cluster
+	srcTable, err := j.srcMeta.GetTable(srcTableId)
+	if err != nil {
+		return false, err
+	}
+
+	// 4. cache the table if it is a materialized view table
+	if srcTable.Type == record.TableTypeMaterializedView {
+		if j.asyncMvTableCache == nil {
+			j.asyncMvTableCache = make(map[int64]struct{})
+		}
+		j.asyncMvTableCache[srcTableId] = struct{}{}
+		return true, nil
+	}
+
+	return false, nil
+}
+
 func (j *Job) getDestTableIdBySrc(srcTableId int64) (int64, error) {
+	if j.SyncType == TableSync {
+		return j.Dest.TableId, nil
+	}
+
 	if j.progress.TableMapping != nil {
 		if destTableId, ok := j.progress.TableMapping[srcTableId]; ok {
 			return destTableId, nil
@@ -1298,14 +1335,9 @@ func (j *Job) getDestTableIdBySrc(srcTableId int64) (int64, error) {
 	srcTable, err := j.srcMeta.GetTable(srcTableId)
 	if err != nil {
 		return 0, err
-	}
-
-	if srcTable.Type == record.TableTypeMaterializedView {
+	} else if srcTable.Type == record.TableTypeMaterializedView {
 		return 0, ErrMaterializedViewTable
-	}
-
-	srcTableName := srcTable.Name
-	if destTableId, err := j.destMeta.GetTableId(srcTableName); err != nil {
+	} else if destTableId, err := j.destMeta.GetTableId(srcTable.Name); err != nil {
 		return 0, err
 	} else {
 		j.progress.TableMapping[srcTableId] = destTableId
@@ -1314,6 +1346,10 @@ func (j *Job) getDestTableIdBySrc(srcTableId int64) (int64, error) {
 }
 
 func (j *Job) getDestNameBySrcId(srcTableId int64) (string, error) {
+	if j.SyncType == TableSync {
+		return j.Dest.Table, nil
+	}
+
 	destTableId, err := j.getDestTableIdBySrc(srcTableId)
 	if err != nil {
 		return "", err
@@ -1325,7 +1361,8 @@ func (j *Job) getDestNameBySrcId(srcTableId int64) (string, error) {
 	}
 
 	if name == "" {
-		return "", xerror.Errorf(xerror.Normal, "dest table name not found, dest table id: %d", destTableId)
+		return "", xerror.Errorf(xerror.Normal,
+			"dest table name not found, src table id: %d, dest table id: %d", srcTableId, destTableId)
 	}
 
 	return name, nil
@@ -1572,10 +1609,12 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		if j.SyncType == DBSync {
 			savedRecords := make([]*record.TableRecord, 0, len(tableRecords))
 			for _, tableRecord := range tableRecords {
-				if destTableId, err := j.getDestTableIdBySrc(tableRecord.Id); err == ErrMaterializedViewTable {
+				if isAsyncMv, err := j.isMaterializedViewTable(tableRecord.Id); err != nil {
+					return err
+				} else if isAsyncMv {
 					// ignore the upsert of materialized view table.
 					continue
-				} else if err != nil {
+				} else if destTableId, err := j.getDestTableIdBySrc(tableRecord.Id); err != nil {
 					return err
 				} else {
 					savedRecords = append(savedRecords, tableRecord)
@@ -1804,28 +1843,21 @@ func (j *Job) handleAddPartition(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
+	if isAsyncMv, err := j.isMaterializedViewTable(addPartition.TableId); err != nil {
+		return err
+	} else if isAsyncMv {
+		log.Warnf("skip add partition for materialized view table %d", addPartition.TableId)
+		return nil
+	}
+
 	if addPartition.IsTemp {
 		log.Infof("skip add temporary partition because backup/restore table with temporary partitions is not supported yet")
 		return nil
 	}
 
-	var destTableName string
-	if j.SyncType == TableSync {
-		destTableName = j.Dest.Table
-	} else if j.SyncType == DBSync {
-		destTableId, err := j.getDestTableIdBySrc(addPartition.TableId)
-		if err == ErrMaterializedViewTable {
-			log.Warnf("skip add partition for materialized view table %d", addPartition.TableId)
-			return nil
-		} else if err != nil {
-			return err
-		}
-
-		if destTableName, err = j.destMeta.GetTableNameById(destTableId); err != nil {
-			return err
-		} else if destTableName == "" {
-			return xerror.Errorf(xerror.Normal, "tableId %d not found in destMeta", destTableId)
-		}
+	destTableName, err := j.getDestNameBySrcId(addPartition.TableId)
+	if err != nil {
+		return err
 	}
 	return j.IDest.AddPartition(destTableName, addPartition)
 }
@@ -1850,23 +1882,16 @@ func (j *Job) handleDropPartition(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	var destTableName string
-	if j.SyncType == TableSync {
-		destTableName = j.Dest.Table
-	} else if j.SyncType == DBSync {
-		destTableId, err := j.getDestTableIdBySrc(dropPartition.TableId)
-		if err == ErrMaterializedViewTable {
-			log.Warnf("skip drop partition for materialized view table %d", dropPartition.TableId)
-			return nil
-		} else if err != nil {
-			return err
-		}
+	if isAsyncMv, err := j.isMaterializedViewTable(dropPartition.TableId); err != nil {
+		return err
+	} else if isAsyncMv {
+		log.Warnf("skip drop partition for materialized view table %d", dropPartition.TableId)
+		return nil
+	}
 
-		if destTableName, err = j.destMeta.GetTableNameById(destTableId); err != nil {
-			return err
-		} else if destTableName == "" {
-			return xerror.Errorf(xerror.Normal, "tableId %d not found in destMeta", destTableId)
-		}
+	destTableName, err := j.getDestNameBySrcId(dropPartition.TableId)
+	if err != nil {
+		return err
 	}
 	return j.IDest.DropPartition(destTableName, dropPartition)
 }
@@ -2075,15 +2100,9 @@ func (j *Job) handleModifyProperty(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	var destTableName string
-	if j.SyncType == TableSync {
-		destTableName = j.Dest.Table
-	} else {
-		var err error
-		destTableName, err = j.getDestNameBySrcId(modifyProperty.TableId)
-		if err != nil {
-			return err
-		}
+	destTableName, err := j.getDestNameBySrcId(modifyProperty.TableId)
+	if err != nil {
+		return err
 	}
 	return j.Dest.ModifyTableProperty(destTableName, modifyProperty)
 }
@@ -2099,11 +2118,11 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	if _, err := j.getDestTableIdBySrc(alterJob.TableId); err == ErrMaterializedViewTable {
+	if isAsyncMv, err := j.isMaterializedViewTable(alterJob.TableId); err != nil {
+		return err
+	} else if isAsyncMv {
 		log.Warnf("skip alter job for materialized view table %d", alterJob.TableId)
 		return nil
-	} else if err != nil {
-		return err
 	}
 
 	if featureSkipRollupBinlogs && alterJob.Type == record.ALTER_JOB_ROLLUP {
@@ -2260,15 +2279,9 @@ func (j *Job) handleRenameColumnRecord(commitSeq int64, renameColumn *record.Ren
 		return nil
 	}
 
-	var destTableName string
-	if j.SyncType == TableSync {
-		destTableName = j.Dest.Table
-	} else {
-		var err error
-		destTableName, err = j.getDestNameBySrcId(renameColumn.TableId)
-		if err != nil {
-			return err
-		}
+	destTableName, err := j.getDestNameBySrcId(renameColumn.TableId)
+	if err != nil {
+		return err
 	}
 
 	return j.IDest.RenameColumn(destTableName, renameColumn)
@@ -2289,19 +2302,13 @@ func (j *Job) handleModifyComment(binlog *festruct.TBinlog) error {
 }
 
 func (j *Job) handleModifyCommentRecord(commitSeq int64, modifyComment *record.ModifyComment) error {
-	if j.isBinlogCommitted(modifyComment.TblId, commitSeq) {
+	if j.isBinlogCommitted(modifyComment.TableId, commitSeq) {
 		return nil
 	}
 
-	var destTableName string
-	if j.SyncType == TableSync {
-		destTableName = j.Dest.Table
-	} else {
-		var err error
-		destTableName, err = j.getDestNameBySrcId(modifyComment.TblId)
-		if err != nil {
-			return err
-		}
+	destTableName, err := j.getDestNameBySrcId(modifyComment.TableId)
+	if err != nil {
+		return err
 	}
 
 	return j.IDest.ModifyComment(destTableName, modifyComment)
@@ -2354,11 +2361,11 @@ func (j *Job) handleReplacePartitions(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	if _, err := j.getDestTableIdBySrc(replacePartition.TableId); err == ErrMaterializedViewTable {
+	if isAsyncMv, err := j.isMaterializedViewTable(replacePartition.TableId); err != nil {
+		return err
+	} else if isAsyncMv {
 		log.Warnf("skip replace partitions for materialized view table %d", replacePartition.TableId)
 		return nil
-	} else if err != nil {
-		return err
 	}
 
 	if !replacePartition.StrictRange {
@@ -2417,18 +2424,16 @@ func (j *Job) handleRenameTableRecord(commitSeq int64, renameTable *record.Renam
 		return nil
 	}
 
-	var destTableName string
-	if j.SyncType == TableSync {
-		destTableName = j.Dest.Table
-	} else {
-		var err error
-		destTableName, err = j.getDestNameBySrcId(renameTable.TableId)
-		if err == ErrMaterializedViewTable {
-			log.Warnf("skip rename table for materialized view table %d", renameTable.TableId)
-			return nil
-		} else if err != nil {
-			return err
-		}
+	if isAsyncMv, err := j.isMaterializedViewTable(renameTable.TableId); err != nil {
+		return err
+	} else if isAsyncMv {
+		log.Warnf("skip rename table for materialized view table %d", renameTable.TableId)
+		return nil
+	}
+
+	destTableName, err := j.getDestNameBySrcId(renameTable.TableId)
+	if err != nil {
+		return err
 	}
 
 	if renameTable.NewTableName != "" && renameTable.OldTableName == "" {
@@ -2439,7 +2444,7 @@ func (j *Job) handleRenameTableRecord(commitSeq int64, renameTable *record.Renam
 		renameTable.OldTableName = destTableName
 	}
 
-	err := j.IDest.RenameTable(destTableName, renameTable)
+	err = j.IDest.RenameTable(destTableName, renameTable)
 	if err != nil {
 		return err
 	}
@@ -2473,11 +2478,11 @@ func (j *Job) handleReplaceTableRecord(commitSeq int64, record *record.ReplaceTa
 		return j.newSnapshot(commitSeq)
 	}
 
-	if _, err := j.getDestTableIdBySrc(record.OriginTableId); err == ErrMaterializedViewTable {
+	if isAsyncMv, err := j.isMaterializedViewTable(record.OriginTableId); err != nil {
+		return err
+	} else if isAsyncMv {
 		log.Warnf("skip replace table for materialized view table %d", record.OriginTableId)
 		return nil
-	} else if err != nil {
-		return err
 	}
 
 	if j.progress.SyncState == DBTablesIncrementalSync {
@@ -2551,22 +2556,18 @@ func (j *Job) handleModifyTableAddOrDropInvertedIndicesRecord(commitSeq int64, r
 	}
 
 	if record.IsDropInvertedIndex {
-		var destTableName string
-		if j.SyncType == TableSync {
-			destTableName = j.Dest.Table
-		} else {
-			var err error
-			destTableName, err = j.getDestNameBySrcId(record.TableId)
-			if err != nil {
-				return xerror.Errorf(xerror.Normal, "get dest table name by src id %d failed, err: %v", record.TableId, err)
-			}
+		destTableName, err := j.getDestNameBySrcId(record.TableId)
+		if err != nil {
+			return err
 		}
+
 		return j.IDest.LightningIndexChange(destTableName, record)
 	}
 
 	// Get the source table name, and trigger a partial snapshot
 	var tableName string
 	if j.SyncType == TableSync {
+		// for table sync with alias
 		tableName = j.Src.Table
 	} else {
 		if name, err := j.getDestNameBySrcId(record.TableId); err != nil {
@@ -2658,15 +2659,9 @@ func (j *Job) handleRenamePartitionRecord(commitSeq int64, renamePartition *reco
 		return nil
 	}
 
-	var destTableName string
-	if j.SyncType == TableSync {
-		destTableName = j.Dest.Table
-	} else {
-		var err error
-		destTableName, err = j.getDestNameBySrcId(renamePartition.TableId)
-		if err != nil {
-			return err
-		}
+	destTableName, err := j.getDestNameBySrcId(renamePartition.TableId)
+	if err != nil {
+		return err
 	}
 
 	newPartition := renamePartition.NewPartitionName
@@ -2703,15 +2698,9 @@ func (j *Job) handleRenameRollupRecord(commitSeq int64, renameRollup *record.Ren
 		return nil
 	}
 
-	var destTableName string
-	if j.SyncType == TableSync {
-		destTableName = j.Dest.Table
-	} else {
-		var err error
-		destTableName, err = j.getDestNameBySrcId(renameRollup.TableId)
-		if err != nil {
-			return err
-		}
+	destTableName, err := j.getDestNameBySrcId(renameRollup.TableId)
+	if err != nil {
+		return nil
 	}
 
 	newRollup := renameRollup.NewRollupName
@@ -3172,7 +3161,7 @@ func (j *Job) sync() error {
 		committed := false
 		switch j.Extra.SkipBy {
 		case SkipBySilence:
-			if j.Extra.SkipCommitSeq <= j.progress.CommitSeq {
+			if j.Extra.SkipCommitSeq <= j.progress.PrevCommitSeq {
 				// The binlog has been committed.
 				committed = true
 			}
@@ -3184,6 +3173,8 @@ func (j *Job) sync() error {
 		}
 		if committed {
 			j.Extra.SkipBinlog = false
+			log.Infof("reset skip binlog, skip by: %s, skip commit seq: %d, prev commit seq: %d",
+				j.Extra.SkipBy, j.Extra.SkipCommitSeq, j.progress.PrevCommitSeq)
 			if err := j.persistJob(); err != nil {
 				return err
 			}
