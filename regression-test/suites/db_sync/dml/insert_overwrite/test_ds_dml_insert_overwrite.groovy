@@ -124,6 +124,34 @@ suite("test_ds_dml_insert_overwrite") {
 
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${uniqueTable} WHERE test=3", 5, 60))
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${uniqueTable}", 5, 60))
+	
+	logger.info("=== Test 4: pause job --> insert overwrite --> force full sync --> resume")
+	helper.ccrJobPause()
+	
+	target_sql """
+        INSERT OVERWRITE TABLE ${uniqueTable} VALUES
+		(5, 0)
+        """
+	target_sql "sync"
+	
+	assertTrue(helper.checkShowTimesOf("SELECT * FROM ${uniqueTable} WHERE test=5", exist, 60, "target"))
+	
+	sql """
+    INSERT OVERWRITE TABLE ${uniqueTable} VALUES
+        (4, 0),
+        (4, 1),
+        (4, 2),
+        (4, 3),
+        (4, 4)
+    """
+    sql "sync"
+	
+	helper.force_fullsync()
+	helper.ccrJobResume()
+	
+	assertTrue(helper.checkShowTimesOf("SELECT * FROM ${uniqueTable} WHERE test=4", exist, 60, "sql"))
+	assertTrue(helper.checkShowTimesOf("SELECT * FROM ${uniqueTable} WHERE test=4", exist, 60, "target"))
+	assertTrue(helper.checkShowTimesOf("SELECT * FROM ${uniqueTable} WHERE test=5", notExist, 60, "target"))
 }
 
 
