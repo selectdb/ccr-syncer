@@ -61,6 +61,7 @@ suite("test_ds_rollup_col_drop") {
                                 """,
                                 has_count(1), 30))
 
+    helper.enableDbBinlog()
     helper.ccrJobDelete()
     helper.ccrJobCreate()
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))

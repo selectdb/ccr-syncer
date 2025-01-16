@@ -66,6 +66,7 @@ suite('test_ds_rollup_add_drop') {
     sql """ALTER TABLE ${tableName} set ("binlog.enable" = "true")"""
 
     logger.info('=== Test 1: full update rollup ===')
+    helper.enableDbBinlog()
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 
