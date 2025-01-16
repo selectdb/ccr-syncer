@@ -108,7 +108,7 @@ func parseConfigFile() error {
 			continue
 		}
 
-		log.Infof("config %s=%s", key, value)
+		log.Infof("force set config %s=%s", key, value)
 		if err := flag.Set(key, value); err != nil {
 			return fmt.Errorf("set flag key value '%s': %v", line, err)
 		}

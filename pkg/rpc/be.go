@@ -38,7 +38,7 @@ type BeRpc struct {
 }
 
 func (beRpc *BeRpc) IngestBinlog(req *bestruct.TIngestBinlogRequest) (*bestruct.TIngestBinlogResult_, error) {
-	log.Debugf("IngestBinlog req: %+v, txnId: %d, be: %v", req, req.GetTxnId(), beRpc.backend)
+	log.Tracef("IngestBinlog req: %+v, txnId: %d, be: %v", req, req.GetTxnId(), beRpc.backend)
 
 	client := beRpc.client
 	if result, err := client.IngestBinlog(context.Background(), req); err != nil {

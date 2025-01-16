@@ -40,7 +40,7 @@ const (
 	// Database sync state machine states
 	DBFullSync              SyncState = 0
 	DBTablesIncrementalSync SyncState = 1
-	DBSpecificTableFullSync SyncState = 2
+	DBSpecificTableFullSync SyncState = 2 // Deprecated by DBPartialSync
 	DBIncrementalSync       SyncState = 3
 	DBPartialSync           SyncState = 4 // sync partitions
 
@@ -367,7 +367,8 @@ func (j *JobProgress) IsDone() bool { return j.SubSyncState == Done && j.PrevCom
 
 // TODO(Drogon): check reset some fields
 func (j *JobProgress) Done() {
-	log.Debugf("job %s step next", j.JobName)
+	log.Debugf("job %s step next, sync state: %s, commitSeq: %d, prevCommitSeq: %d",
+		j.JobName, j.SyncState, j.CommitSeq, j.PrevCommitSeq)
 
 	j.SubSyncState = Done
 	j.PrevCommitSeq = j.CommitSeq
@@ -378,7 +379,7 @@ func (j *JobProgress) Done() {
 }
 
 func (j *JobProgress) Rollback() {
-	log.Debugf("job %s step rollback", j.JobName)
+	log.Infof("rollback progress, set commitSeq from %d to %d", j.CommitSeq, j.PrevCommitSeq)
 
 	j.SubSyncState = Done
 	// if rollback, then prev commit seq is the last commit seq
@@ -391,7 +392,8 @@ func (j *JobProgress) Rollback() {
 // write progress to db, busy loop until success
 // TODO: add timeout check
 func (j *JobProgress) Persist() {
-	log.Trace("update job progress")
+	log.Tracef("update job progress, state: %s, subState: %s, commitSeq: %d, prevCommitSeq: %d",
+		j.SyncState, j.SubSyncState, j.CommitSeq, j.PrevCommitSeq)
 
 	for {
 		// Step 1: to json

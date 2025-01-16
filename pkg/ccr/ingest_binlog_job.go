@@ -115,10 +115,11 @@ type tabletIngestBinlogHandler struct {
 // handle Replica
 func (h *tabletIngestBinlogHandler) handleReplica(srcReplica, destReplica *ReplicaMeta) bool {
 	destReplicaId := destReplica.Id
-	log.Debugf("handle dest replica id: %d", destReplicaId)
+	log.Tracef("txn %d tablet ingest binlog: handle dest replica id: %d, dest tablet id %d",
+		h.ingestJob.txnId, destReplicaId, h.destTablet.Id)
 
 	if h.cancel.Load() {
-		log.Infof("job canceled, replica id: %d", destReplicaId)
+		log.Infof("txn %d job canceled, replica id: %d", h.ingestJob.txnId, destReplicaId)
 		return true
 	}
 
@@ -188,7 +189,7 @@ func (h *tabletIngestBinlogHandler) handleReplica(srcReplica, destReplica *Repli
 			return
 		}
 
-		log.Debugf("ingest resp: %v", resp)
+		log.Tracef("txn %d tablet ingest binlog resp: %v", j.txnId, resp)
 		if !resp.IsSetStatus() {
 			err = xerror.Errorf(xerror.BE, "ingest resp status not set, req: %+v", req)
 			j.setError(err)
@@ -211,7 +212,8 @@ func (h *tabletIngestBinlogHandler) handleReplica(srcReplica, destReplica *Repli
 }
 
 func (h *tabletIngestBinlogHandler) handle() {
-	log.Debugf("handle tablet ingest binlog, src tablet id: %d, dest tablet id: %d", h.srcTablet.Id, h.destTablet.Id)
+	log.Tracef("txn %d, tablet ingest binlog, src tablet id: %d, dest tablet id: %d, total %d replicas",
+		h.ingestJob.txnId, h.srcTablet.Id, h.destTablet.Id, h.srcTablet.ReplicaMetas.Len())
 
 	// all src replicas version > binlogVersion
 	srcReplicas := make([]*ReplicaMeta, 0, h.srcTablet.ReplicaMetas.Len())
@@ -365,10 +367,10 @@ type prepareIndexArg struct {
 }
 
 func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
-	log.Debugf("prepareIndex: %v", arg)
+	log.Tracef("txn %d ingest binlog: prepare index %s, src %d, dest %d",
+		j.txnId, arg.srcIndexMeta.Name, arg.srcIndexMeta.Id, arg.destIndexMeta.Id)
 
 	// Step 1: check tablets
-	log.Debugf("arg %+v", arg)
 	srcTablets, err := j.srcMeta.GetTablets(arg.srcTableId, arg.srcPartitionId, arg.srcIndexMeta.Id)
 	if err != nil {
 		j.setError(err)
@@ -387,7 +389,7 @@ func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 	}
 
 	if srcTablets.Len() == 0 {
-		log.Warn("src tablets length: 0, skip")
+		log.Warnf("txn %d ingest binlog: src tablets length: 0, skip", j.txnId)
 		return
 	}
 
@@ -430,7 +432,7 @@ func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 }
 
 func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partitionRecord record.PartitionRecord, indexIds []int64) {
-	log.Debugf("partitionRecord: %v", partitionRecord)
+	log.Tracef("txn %d ingest binlog: prepare partition: %v", j.txnId, partitionRecord)
 	// 废弃 preparePartition， 上面index的那部分是这里的实现
 	// 还是要求一下和下游对齐的index length，这个是不可以recover的
 	// 思考那些是recover用的，主要就是tablet那块的
@@ -491,7 +493,6 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 		}
 
 		srcIndexName := getSrcIndexName(job, srcIndexMeta)
-		log.Debugf("src idx id %d, name %s", indexId, srcIndexName)
 		if _, ok := destIndexNameMap[srcIndexName]; !ok {
 			j.setError(xerror.Errorf(xerror.Meta,
 				"index name %v not found in dest meta, is base index: %t, src index id: %d",
@@ -511,12 +512,12 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 	}
 	for _, indexId := range indexIds {
 		if j.srcMeta.IsIndexDropped(indexId) {
-			log.Infof("skip the dropped index %d", indexId)
+			log.Infof("txn %d ingest binlog: skip the dropped index %d", j.txnId, indexId)
 			continue
 		}
 		if featureFilterShadowIndexesUpsert {
 			if _, ok := j.ccrJob.progress.ShadowIndexes[indexId]; ok {
-				log.Infof("skip the shadow index %d", indexId)
+				log.Infof("txn %d ingest binlog: skip the shadow index %d", j.txnId, indexId)
 				continue
 			}
 		}
@@ -530,9 +531,9 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 }
 
 func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
-	log.Debugf("tableRecord: %v", tableRecord)
+	log.Tracef("txn %d ingest binlog: prepare table: %d", j.txnId, tableRecord.Id)
 	if j.srcMeta.IsTableDropped(tableRecord.Id) {
-		log.Infof("skip the dropped table %d", tableRecord.Id)
+		log.Infof("txn %d ingest binlog: skip the dropped table %d", j.txnId, tableRecord.Id)
 		return
 	}
 
@@ -604,8 +605,8 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 			continue
 		}
 		if j.srcMeta.IsPartitionDropped(partitionRecord.Id) {
-			log.Infof("skip the dropped partition %d, range: %s, version: %d",
-				partitionRecord.Id, partitionRecord.Range, partitionRecord.Version)
+			log.Infof("txn %d skip the dropped partition %d, range: %s, version: %d",
+				j.txnId, partitionRecord.Id, partitionRecord.Range, partitionRecord.Version)
 			continue
 		}
 		j.preparePartition(srcTableId, destTableId, partitionRecord, tableRecord.IndexIds)
@@ -613,7 +614,7 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 }
 
 func (j *IngestBinlogJob) prepareBackendMap() {
-	log.Debug("prepareBackendMap")
+	log.Tracef("txn %d ingest binlog: prepare backend map", j.txnId)
 
 	var err error
 	j.srcBackendMap, err = j.srcMeta.GetBackendMap()
@@ -630,7 +631,7 @@ func (j *IngestBinlogJob) prepareBackendMap() {
 }
 
 func (j *IngestBinlogJob) prepareTabletIngestJobs() {
-	log.Debugf("prepareTabletIngestJobs, table length: %d", len(j.tableRecords))
+	log.Tracef("txn %d ingest binlog: prepare tablet ingest jobs, table length: %d", j.txnId, len(j.tableRecords))
 
 	j.tabletIngestJobs = make([]*tabletIngestBinlogHandler, 0)
 	for _, tableRecord := range j.tableRecords {
@@ -642,8 +643,7 @@ func (j *IngestBinlogJob) prepareTabletIngestJobs() {
 }
 
 func (j *IngestBinlogJob) runTabletIngestJobs() {
-	log.Debugf("runTabletIngestJobs, job length: %d", len(j.tabletIngestJobs))
-
+	log.Infof("txn %d ingest binlog: run %d tablet ingest jobs", j.txnId, len(j.tabletIngestJobs))
 	for _, tabletIngestJob := range j.tabletIngestJobs {
 		j.wg.Add(1)
 		go func(tabletIngestJob *tabletIngestBinlogHandler) {
@@ -655,7 +655,7 @@ func (j *IngestBinlogJob) runTabletIngestJobs() {
 }
 
 func (j *IngestBinlogJob) prepareMeta() {
-	log.Debug("prepareMeta")
+	log.Tracef("txn %d ingest binlog: prepare meta with %d table records", j.txnId, len(j.tableRecords))
 	srcTableIds := make([]int64, 0, len(j.tableRecords))
 	job := j.ccrJob
 	factory := j.factory

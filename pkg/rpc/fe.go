@@ -240,7 +240,6 @@ type call0Result struct {
 func (r *retryWithMasterRedirectAndCachedClientsRpc) call0(masterClient IFeRpc) *call0Result {
 	caller := r.caller
 	resp, err := caller(masterClient)
-	log.Tracef("call resp: %.128v, error: %+v", resp, err)
 
 	// Step 1: check error
 	if err != nil {
@@ -308,7 +307,6 @@ func (r *retryWithMasterRedirectAndCachedClientsRpc) call() (resultType, error) 
 
 	// Step 1: try master
 	result := r.call0(masterClient)
-	log.Tracef("call0 result: %+v", result)
 	if result.err == nil {
 		return result.resp, nil
 	}
@@ -538,7 +536,7 @@ func (rpc *singleFeClient) Address() string {
 //	    11: optional string token
 //	}
 func (rpc *singleFeClient) BeginTransaction(spec *base.Spec, label string, tableIds []int64) (*festruct.TBeginTxnResult_, error) {
-	log.Debugf("Call BeginTransaction, addr: %s, spec: %s, label: %s, tableIds: %v", rpc.Address(), spec, label, tableIds)
+	log.Tracef("Call BeginTransaction, addr: %s, spec: %s, label: %s, tableIds: %v", rpc.Address(), spec, label, tableIds)
 
 	client := rpc.client
 	req := &festruct.TBeginTxnRequest{
@@ -547,7 +545,7 @@ func (rpc *singleFeClient) BeginTransaction(spec *base.Spec, label string, table
 	setAuthInfo(req, spec)
 	req.TableIds = tableIds
 
-	log.Debugf("BeginTransaction user %s, label: %s, tableIds: %v", req.GetUser(), label, tableIds)
+	log.Tracef("BeginTransaction user %s, label: %s, tableIds: %v", req.GetUser(), label, tableIds)
 	if result, err := client.BeginTxn(context.Background(), req); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "BeginTransaction error: %v, req: %+v", err, req)
 	} else {
@@ -556,7 +554,7 @@ func (rpc *singleFeClient) BeginTransaction(spec *base.Spec, label string, table
 }
 
 func (rpc *singleFeClient) BeginTransactionForTxnInsert(spec *base.Spec, label string, tableIds []int64, stidNum int64) (*festruct.TBeginTxnResult_, error) {
-	log.Debugf("Call BeginTransactionForTxnInsert, addr: %s, spec: %s, label: %s, tableIds: %v", rpc.Address(), spec, label, tableIds)
+	log.Tracef("Call BeginTransactionForTxnInsert, addr: %s, spec: %s, label: %s, tableIds: %v", rpc.Address(), spec, label, tableIds)
 
 	client := rpc.client
 	req := &festruct.TBeginTxnRequest{
@@ -566,7 +564,7 @@ func (rpc *singleFeClient) BeginTransactionForTxnInsert(spec *base.Spec, label s
 	req.TableIds = tableIds
 	req.SubTxnNum = stidNum
 
-	log.Debugf("BeginTransactionForTxnInsert user %s, label: %s, tableIds: %v", req.GetUser(), label, tableIds)
+	log.Tracef("BeginTransactionForTxnInsert user %s, label: %s, tableIds: %v", req.GetUser(), label, tableIds)
 	if result, err := client.BeginTxn(context.Background(), req); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "BeginTransactionForTxnInsert error: %v, req: %+v", err, req)
 	} else {
@@ -589,7 +587,7 @@ func (rpc *singleFeClient) BeginTransactionForTxnInsert(spec *base.Spec, label s
 //	    12: optional i64 db_id
 //	}
 func (rpc *singleFeClient) CommitTransaction(spec *base.Spec, txnId int64, commitInfos []*festruct_types.TTabletCommitInfo) (*festruct.TCommitTxnResult_, error) {
-	log.Debugf("Call CommitTransaction, addr: %s spec: %s, txnId: %d, commitInfos: %v", rpc.Address(), spec, txnId, commitInfos)
+	log.Tracef("Call CommitTransaction, addr: %s spec: %s, txnId: %d, commitInfos: %v", rpc.Address(), spec, txnId, commitInfos)
 
 	client := rpc.client
 	req := &festruct.TCommitTxnRequest{}
@@ -605,7 +603,7 @@ func (rpc *singleFeClient) CommitTransaction(spec *base.Spec, txnId int64, commi
 }
 
 func (rpc *singleFeClient) CommitTransactionForTxnInsert(spec *base.Spec, txnId int64, isTxnInsert bool, subTxnInfos []*festruct.TSubTxnInfo) (*festruct.TCommitTxnResult_, error) {
-	log.Debugf("Call CommitTransactionForTxnInsert, addr: %s spec: %s, txnId: %d, subTxnInfos: %v", rpc.Address(), spec, txnId, subTxnInfos)
+	log.Tracef("Call CommitTransactionForTxnInsert, addr: %s spec: %s, txnId: %d, subTxnInfos: %v", rpc.Address(), spec, txnId, subTxnInfos)
 
 	client := rpc.client
 	req := &festruct.TCommitTxnRequest{}
@@ -635,7 +633,7 @@ func (rpc *singleFeClient) CommitTransactionForTxnInsert(spec *base.Spec, txnId 
 //	    12: optional i64 db_id
 //	}
 func (rpc *singleFeClient) RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.TRollbackTxnResult_, error) {
-	log.Debugf("Call RollbackTransaction, addr: %s, spec: %s, txnId: %d", rpc.Address(), spec, txnId)
+	log.Tracef("Call RollbackTransaction, addr: %s, spec: %s, txnId: %d", rpc.Address(), spec, txnId)
 
 	client := rpc.client
 	req := &festruct.TRollbackTxnRequest{}
@@ -660,7 +658,7 @@ func (rpc *singleFeClient) RollbackTransaction(spec *base.Spec, txnId int64) (*f
 //	    8: required i64 prev_commit_seq
 //	}
 func (rpc *singleFeClient) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogResult_, error) {
-	log.Debugf("Call GetBinlog, addr: %s, spec: %s, commit seq: %d", rpc.Address(), spec, commitSeq)
+	log.Tracef("Call GetBinlog, addr: %s, spec: %s, commit seq: %d", rpc.Address(), spec, commitSeq)
 
 	client := rpc.client
 	req := &festruct.TGetBinlogRequest{
@@ -675,7 +673,7 @@ func (rpc *singleFeClient) GetBinlog(spec *base.Spec, commitSeq int64) (*festruc
 		}
 	}
 
-	log.Debugf("GetBinlog user %s, db %s, tableId %d, prev seq: %d", req.GetUser(), req.GetDb(),
+	log.Tracef("GetBinlog user %s, db %s, tableId %d, prev seq: %d", req.GetUser(), req.GetDb(),
 		req.GetTableId(), req.GetPrevCommitSeq())
 	if resp, err := client.GetBinlog(context.Background(), req); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "GetBinlog error: %v, req: %+v", err, req)
@@ -685,7 +683,7 @@ func (rpc *singleFeClient) GetBinlog(spec *base.Spec, commitSeq int64) (*festruc
 }
 
 func (rpc *singleFeClient) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogLagResult_, error) {
-	log.Debugf("Call GetBinlogLag, addr: %s, spec: %s, commit seq: %d", rpc.Address(), spec, commitSeq)
+	log.Tracef("Call GetBinlogLag, addr: %s, spec: %s, commit seq: %d", rpc.Address(), spec, commitSeq)
 
 	client := rpc.client
 	req := &festruct.TGetBinlogRequest{
@@ -701,7 +699,7 @@ func (rpc *singleFeClient) GetBinlogLag(spec *base.Spec, commitSeq int64) (*fest
 		}
 	}
 
-	log.Debugf("GetBinlog user %s, db %s, tableId %d, prev seq: %d", req.GetUser(), req.GetDb(),
+	log.Tracef("GetBinlog user %s, db %s, tableId %d, prev seq: %d", req.GetUser(), req.GetDb(),
 		req.GetTableId(), req.GetPrevCommitSeq())
 	if resp, err := client.GetBinlogLag(context.Background(), req); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "GetBinlogLag error: %v, req: %+v", err, req)
@@ -723,7 +721,7 @@ func (rpc *singleFeClient) GetBinlogLag(spec *base.Spec, commitSeq int64) (*fest
 //	    10: optional bool enable_compress
 //	}
 func (rpc *singleFeClient) GetSnapshot(spec *base.Spec, labelName string, compress bool) (*festruct.TGetSnapshotResult_, error) {
-	log.Debugf("Call GetSnapshot, addr: %s, spec: %s, label: %s", rpc.Address(), spec, labelName)
+	log.Tracef("Call GetSnapshot, addr: %s, spec: %s, label: %s", rpc.Address(), spec, labelName)
 
 	client := rpc.client
 	snapshotType := festruct.TSnapshotType_LOCAL
@@ -737,7 +735,7 @@ func (rpc *singleFeClient) GetSnapshot(spec *base.Spec, labelName string, compre
 	}
 	setAuthInfo(req, spec)
 
-	log.Debugf("GetSnapshotRequest user %s, db %s, table %s, label name %s, snapshot name %s, snapshot type %d, enable compress %t",
+	log.Tracef("GetSnapshotRequest user %s, db %s, table %s, label name %s, snapshot name %s, snapshot type %d, enable compress %t",
 		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), req.GetSnapshotName(), req.GetSnapshotType(), req.GetEnableCompress())
 	if resp, err := client.GetSnapshot(context.Background(), req); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "GetSnapshot error: %v, req: %+v", err, req)
@@ -768,7 +766,7 @@ func (rpc *singleFeClient) GetSnapshot(spec *base.Spec, labelName string, compre
 // Restore Snapshot rpc
 func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, restoreReq *RestoreSnapshotRequest) (*festruct.TRestoreSnapshotResult_, error) {
 	// NOTE: ignore meta, because it's too large
-	log.Debugf("Call RestoreSnapshot, addr: %s, spec: %s", rpc.Address(), spec)
+	log.Tracef("Call RestoreSnapshot, addr: %s, spec: %s", rpc.Address(), spec)
 
 	client := rpc.client
 	repoName := "__keep_on_local__"
@@ -819,7 +817,7 @@ func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, restoreReq *RestoreS
 }
 
 func (rpc *singleFeClient) GetMasterToken(spec *base.Spec) (*festruct.TGetMasterTokenResult_, error) {
-	log.Debugf("Call GetMasterToken, addr: %s, spec: %s", rpc.Address(), spec)
+	log.Tracef("Call GetMasterToken, addr: %s, spec: %s", rpc.Address(), spec)
 
 	client := rpc.client
 	req := &festruct.TGetMasterTokenRequest{
@@ -828,7 +826,7 @@ func (rpc *singleFeClient) GetMasterToken(spec *base.Spec) (*festruct.TGetMaster
 		Password: &spec.Password,
 	}
 
-	log.Debugf("GetMasterToken user: %s", *req.User)
+	log.Tracef("GetMasterToken user: %s", *req.User)
 	if resp, err := client.GetMasterToken(context.Background(), req); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "GetMasterToken failed, req: %+v", req)
 	} else {
@@ -857,13 +855,13 @@ func (rpc *singleFeClient) getMeta(spec *base.Spec, reqTables []*festruct.TGetMe
 }
 
 func (rpc *singleFeClient) GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error) {
-	log.Debugf("GetMetaDb, addr: %s, spec: %s", rpc.Address(), spec)
+	log.Tracef("GetMetaDb, addr: %s, spec: %s", rpc.Address(), spec)
 
 	return rpc.getMeta(spec, nil)
 }
 
 func (rpc *singleFeClient) GetTableMeta(spec *base.Spec, tableIds []int64) (*festruct.TGetMetaResult_, error) {
-	log.Debugf("GetMetaTable, addr: %s, tableIds: %v", rpc.Address(), tableIds)
+	log.Tracef("GetMetaTable, addr: %s, tableIds: %v", rpc.Address(), tableIds)
 
 	reqTables := make([]*festruct.TGetMetaTable, 0, len(tableIds))
 	for _, tableId := range tableIds {
@@ -877,7 +875,7 @@ func (rpc *singleFeClient) GetTableMeta(spec *base.Spec, tableIds []int64) (*fes
 }
 
 func (rpc *singleFeClient) GetBackends(spec *base.Spec) (*festruct.TGetBackendMetaResult_, error) {
-	log.Debugf("GetBackends, addr: %s, spec: %s", rpc.Address(), spec)
+	log.Tracef("GetBackends, addr: %s, spec: %s", rpc.Address(), spec)
 
 	client := rpc.client
 	req := &festruct.TGetBackendMetaRequest{

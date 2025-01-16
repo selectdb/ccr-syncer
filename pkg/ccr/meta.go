@@ -140,7 +140,7 @@ func (m *Meta) GetFullTableName(tableName string) string {
 
 // Update table meta, return xerror.Meta category if no such table exists.
 func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) {
-	log.Infof("UpdateTable tableName: %s, tableId: %d", tableName, tableId)
+	log.Tracef("UpdateTable tableName: %s, tableId: %d", tableName, tableId)
 
 	dbId, err := m.GetDbId()
 	if err != nil {
@@ -161,7 +161,7 @@ func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) 
 	}
 
 	query := fmt.Sprintf("show proc '/dbs/%d/'", dbId)
-	log.Infof("UpdateTable Sql: %s", query)
+	log.Tracef("UpdateTable Sql: %s", query)
 	rows, err := db.Query(query)
 	if err != nil {
 		return nil, xerror.Wrap(err, xerror.Normal, query)
@@ -190,7 +190,7 @@ func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) 
 		// match parsedDbname == dbname, return dbId
 		if parsedTableName == tableName || parsedTableId == tableId {
 			fullTableName := m.GetFullTableName(parsedTableName)
-			log.Debugf("found table:%s, tableId:%d, type:%s", fullTableName, parsedTableId, parsedTableType)
+			log.Tracef("update table found table:%s, tableId:%d, type:%s", fullTableName, parsedTableId, parsedTableType)
 			m.TableName2IdMap[fullTableName] = parsedTableId
 			tableMeta := &TableMeta{
 				DatabaseMeta:   &m.DatabaseMeta,
