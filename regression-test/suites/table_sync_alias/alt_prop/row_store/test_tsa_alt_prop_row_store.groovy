@@ -81,7 +81,7 @@ suite("test_tsa_alt_prop_row_store") {
             `id` INT
         )
         ENGINE=OLAP
-        AGGREGATE KEY(`test`, `id`)
+        DUPLICATE KEY(`test`, `id`)
         PARTITION BY RANGE(`id`)
         (
         )
