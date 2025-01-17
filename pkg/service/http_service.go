@@ -25,6 +25,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/selectdb/ccr_syncer/pkg/ccr"
@@ -222,7 +223,12 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 
 	type result struct {
 		*defaultResult
-		Lag int64 `json:"lag"`
+		Lag                  int64   `json:"lag"`
+		FirstCommitSeq       int64   `json:"first_commit_seq"`
+		LastCommitSeq        int64   `json:"last_commit_seq"`
+		FirstBinlogTimestamp string  `json:"first_binlog_timestamp"`
+		LastBinlogTimestamp  string  `json:"last_binlog_timestamp"`
+		TimeInterval         float64 `json:"time_interval"`
 	}
 	var lagResult *result
 	defer func() { writeJson(w, lagResult) }()
@@ -308,10 +314,31 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	lag := resp.GetLag()
+	firstCommitSeq := resp.GetFirstCommitSeq()
+	lastCommitSeq := resp.GetLastCommitSeq()
+	var firstBinlogTimestamp, lastBinlogTimestamp string
+
+	if ts := resp.GetFirstBinlogTimestamp(); ts != -1 {
+		firstBinlogTimestamp = ConvertTimestampToString(resp.GetFirstBinlogTimestamp())
+	} else {
+		firstBinlogTimestamp = "1970-01-01 08:00:00"
+	}
+	if ts := resp.GetLastBinlogTimestamp(); ts != -1 {
+		lastBinlogTimestamp = ConvertTimestampToString(resp.GetLastBinlogTimestamp())
+	} else {
+		lastBinlogTimestamp = "1970-01-01 08:00:00"
+	}
+
+	timeInterval := CalculateTimeDifferenceInSeconds(lastBinlogTimestamp, firstBinlogTimestamp)
 
 	lagResult = &result{
-		defaultResult: newSuccessResult(),
-		Lag:           lag,
+		defaultResult:        newSuccessResult(),
+		Lag:                  lag,
+		FirstCommitSeq:       firstCommitSeq,
+		LastCommitSeq:        lastCommitSeq,
+		FirstBinlogTimestamp: firstBinlogTimestamp,
+		LastBinlogTimestamp:  lastBinlogTimestamp,
+		TimeInterval:         timeInterval,
 	}
 }
 
@@ -906,4 +933,15 @@ func (s *HttpService) Stop() error {
 		return xerror.Wrapf(err, xerror.Normal, "http server close failed")
 	}
 	return nil
+}
+
+func ConvertTimestampToString(timestamp int64) string {
+	return time.Unix(0, timestamp*int64(time.Millisecond)).Format(time.DateTime)
+}
+
+func CalculateTimeDifferenceInSeconds(timeStr1, timeStr2 string) float64 {
+	t1, _ := time.Parse(time.DateTime, timeStr1)
+	t2, _ := time.Parse(time.DateTime, timeStr2)
+	diff := t1.Sub(t2)
+	return diff.Seconds()
 }
