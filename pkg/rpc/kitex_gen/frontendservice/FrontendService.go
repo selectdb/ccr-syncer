@@ -62575,9 +62575,13 @@ func (p *TGetMasterTokenResult_) Field3DeepEqual(src *types.TNetworkAddress) boo
 }
 
 type TGetBinlogLagResult_ struct {
-	Status        *status.TStatus        `thrift:"status,1,optional" frugal:"1,optional,status.TStatus" json:"status,omitempty"`
-	Lag           *int64                 `thrift:"lag,2,optional" frugal:"2,optional,i64" json:"lag,omitempty"`
-	MasterAddress *types.TNetworkAddress `thrift:"master_address,3,optional" frugal:"3,optional,types.TNetworkAddress" json:"master_address,omitempty"`
+	Status               *status.TStatus        `thrift:"status,1,optional" frugal:"1,optional,status.TStatus" json:"status,omitempty"`
+	Lag                  *int64                 `thrift:"lag,2,optional" frugal:"2,optional,i64" json:"lag,omitempty"`
+	MasterAddress        *types.TNetworkAddress `thrift:"master_address,3,optional" frugal:"3,optional,types.TNetworkAddress" json:"master_address,omitempty"`
+	FirstCommitSeq       *int64                 `thrift:"first_commit_seq,4,optional" frugal:"4,optional,i64" json:"first_commit_seq,omitempty"`
+	LastCommitSeq        *int64                 `thrift:"last_commit_seq,5,optional" frugal:"5,optional,i64" json:"last_commit_seq,omitempty"`
+	FirstBinlogTimestamp *int64                 `thrift:"first_binlog_timestamp,6,optional" frugal:"6,optional,i64" json:"first_binlog_timestamp,omitempty"`
+	LastBinlogTimestamp  *int64                 `thrift:"last_binlog_timestamp,7,optional" frugal:"7,optional,i64" json:"last_binlog_timestamp,omitempty"`
 }
 
 func NewTGetBinlogLagResult_() *TGetBinlogLagResult_ {
@@ -62613,6 +62617,42 @@ func (p *TGetBinlogLagResult_) GetMasterAddress() (v *types.TNetworkAddress) {
 	}
 	return p.MasterAddress
 }
+
+var TGetBinlogLagResult__FirstCommitSeq_DEFAULT int64
+
+func (p *TGetBinlogLagResult_) GetFirstCommitSeq() (v int64) {
+	if !p.IsSetFirstCommitSeq() {
+		return TGetBinlogLagResult__FirstCommitSeq_DEFAULT
+	}
+	return *p.FirstCommitSeq
+}
+
+var TGetBinlogLagResult__LastCommitSeq_DEFAULT int64
+
+func (p *TGetBinlogLagResult_) GetLastCommitSeq() (v int64) {
+	if !p.IsSetLastCommitSeq() {
+		return TGetBinlogLagResult__LastCommitSeq_DEFAULT
+	}
+	return *p.LastCommitSeq
+}
+
+var TGetBinlogLagResult__FirstBinlogTimestamp_DEFAULT int64
+
+func (p *TGetBinlogLagResult_) GetFirstBinlogTimestamp() (v int64) {
+	if !p.IsSetFirstBinlogTimestamp() {
+		return TGetBinlogLagResult__FirstBinlogTimestamp_DEFAULT
+	}
+	return *p.FirstBinlogTimestamp
+}
+
+var TGetBinlogLagResult__LastBinlogTimestamp_DEFAULT int64
+
+func (p *TGetBinlogLagResult_) GetLastBinlogTimestamp() (v int64) {
+	if !p.IsSetLastBinlogTimestamp() {
+		return TGetBinlogLagResult__LastBinlogTimestamp_DEFAULT
+	}
+	return *p.LastBinlogTimestamp
+}
 func (p *TGetBinlogLagResult_) SetStatus(val *status.TStatus) {
 	p.Status = val
 }
@@ -62622,11 +62662,27 @@ func (p *TGetBinlogLagResult_) SetLag(val *int64) {
 func (p *TGetBinlogLagResult_) SetMasterAddress(val *types.TNetworkAddress) {
 	p.MasterAddress = val
 }
+func (p *TGetBinlogLagResult_) SetFirstCommitSeq(val *int64) {
+	p.FirstCommitSeq = val
+}
+func (p *TGetBinlogLagResult_) SetLastCommitSeq(val *int64) {
+	p.LastCommitSeq = val
+}
+func (p *TGetBinlogLagResult_) SetFirstBinlogTimestamp(val *int64) {
+	p.FirstBinlogTimestamp = val
+}
+func (p *TGetBinlogLagResult_) SetLastBinlogTimestamp(val *int64) {
+	p.LastBinlogTimestamp = val
+}
 
 var fieldIDToName_TGetBinlogLagResult_ = map[int16]string{
 	1: "status",
 	2: "lag",
 	3: "master_address",
+	4: "first_commit_seq",
+	5: "last_commit_seq",
+	6: "first_binlog_timestamp",
+	7: "last_binlog_timestamp",
 }
 
 func (p *TGetBinlogLagResult_) IsSetStatus() bool {
@@ -62639,6 +62695,22 @@ func (p *TGetBinlogLagResult_) IsSetLag() bool {
 
 func (p *TGetBinlogLagResult_) IsSetMasterAddress() bool {
 	return p.MasterAddress != nil
+}
+
+func (p *TGetBinlogLagResult_) IsSetFirstCommitSeq() bool {
+	return p.FirstCommitSeq != nil
+}
+
+func (p *TGetBinlogLagResult_) IsSetLastCommitSeq() bool {
+	return p.LastCommitSeq != nil
+}
+
+func (p *TGetBinlogLagResult_) IsSetFirstBinlogTimestamp() bool {
+	return p.FirstBinlogTimestamp != nil
+}
+
+func (p *TGetBinlogLagResult_) IsSetLastBinlogTimestamp() bool {
+	return p.LastBinlogTimestamp != nil
 }
 
 func (p *TGetBinlogLagResult_) Read(iprot thrift.TProtocol) (err error) {
@@ -62679,6 +62751,38 @@ func (p *TGetBinlogLagResult_) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -62740,6 +62844,50 @@ func (p *TGetBinlogLagResult_) ReadField3(iprot thrift.TProtocol) error {
 	p.MasterAddress = _field
 	return nil
 }
+func (p *TGetBinlogLagResult_) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FirstCommitSeq = _field
+	return nil
+}
+func (p *TGetBinlogLagResult_) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.LastCommitSeq = _field
+	return nil
+}
+func (p *TGetBinlogLagResult_) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FirstBinlogTimestamp = _field
+	return nil
+}
+func (p *TGetBinlogLagResult_) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.LastBinlogTimestamp = _field
+	return nil
+}
 
 func (p *TGetBinlogLagResult_) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -62757,6 +62905,22 @@ func (p *TGetBinlogLagResult_) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 	}
@@ -62834,6 +62998,82 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 
+func (p *TGetBinlogLagResult_) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFirstCommitSeq() {
+		if err = oprot.WriteFieldBegin("first_commit_seq", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.FirstCommitSeq); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *TGetBinlogLagResult_) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLastCommitSeq() {
+		if err = oprot.WriteFieldBegin("last_commit_seq", thrift.I64, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.LastCommitSeq); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *TGetBinlogLagResult_) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFirstBinlogTimestamp() {
+		if err = oprot.WriteFieldBegin("first_binlog_timestamp", thrift.I64, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.FirstBinlogTimestamp); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *TGetBinlogLagResult_) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLastBinlogTimestamp() {
+		if err = oprot.WriteFieldBegin("last_binlog_timestamp", thrift.I64, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.LastBinlogTimestamp); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
 func (p *TGetBinlogLagResult_) String() string {
 	if p == nil {
 		return "<nil>"
@@ -62855,6 +63095,18 @@ func (p *TGetBinlogLagResult_) DeepEqual(ano *TGetBinlogLagResult_) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.MasterAddress) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.FirstCommitSeq) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.LastCommitSeq) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.FirstBinlogTimestamp) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.LastBinlogTimestamp) {
 		return false
 	}
 	return true
@@ -62882,6 +63134,54 @@ func (p *TGetBinlogLagResult_) Field2DeepEqual(src *int64) bool {
 func (p *TGetBinlogLagResult_) Field3DeepEqual(src *types.TNetworkAddress) bool {
 
 	if !p.MasterAddress.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TGetBinlogLagResult_) Field4DeepEqual(src *int64) bool {
+
+	if p.FirstCommitSeq == src {
+		return true
+	} else if p.FirstCommitSeq == nil || src == nil {
+		return false
+	}
+	if *p.FirstCommitSeq != *src {
+		return false
+	}
+	return true
+}
+func (p *TGetBinlogLagResult_) Field5DeepEqual(src *int64) bool {
+
+	if p.LastCommitSeq == src {
+		return true
+	} else if p.LastCommitSeq == nil || src == nil {
+		return false
+	}
+	if *p.LastCommitSeq != *src {
+		return false
+	}
+	return true
+}
+func (p *TGetBinlogLagResult_) Field6DeepEqual(src *int64) bool {
+
+	if p.FirstBinlogTimestamp == src {
+		return true
+	} else if p.FirstBinlogTimestamp == nil || src == nil {
+		return false
+	}
+	if *p.FirstBinlogTimestamp != *src {
+		return false
+	}
+	return true
+}
+func (p *TGetBinlogLagResult_) Field7DeepEqual(src *int64) bool {
+
+	if p.LastBinlogTimestamp == src {
+		return true
+	} else if p.LastBinlogTimestamp == nil || src == nil {
+		return false
+	}
+	if *p.LastBinlogTimestamp != *src {
 		return false
 	}
 	return true
