@@ -42,7 +42,7 @@ type TableRecord struct {
 	IndexIds         []int64           `json:"indexIds"`
 }
 
-func (t TableRecord) String() string {
+func (t *TableRecord) String() string {
 	return fmt.Sprintf("TableRecord{Id: %d, PartitionRecords: %v, IndexIds: %v}", t.Id, t.PartitionRecords, t.IndexIds)
 }
 

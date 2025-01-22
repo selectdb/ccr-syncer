@@ -392,7 +392,7 @@ func (s *Spec) CheckTablePropertyValid() ([]string, error) {
 }
 
 func (s *Spec) IsEnableRestoreSnapshotCompression() (bool, error) {
-	log.Debugf("check frontend enable restore snapshot compression")
+	log.Tracef("check frontend enable restore snapshot compression")
 
 	db, err := s.Connect()
 	if err != nil {
@@ -429,7 +429,7 @@ func (s *Spec) IsEnableRestoreSnapshotCompression() (bool, error) {
 }
 
 func (s *Spec) GetAllTables() ([]string, error) {
-	log.Debugf("get all tables in database %s", s.Database)
+	log.Tracef("get all tables in database %s", s.Database)
 
 	db, err := s.Connect()
 	if err != nil {
@@ -496,7 +496,7 @@ func (s *Spec) queryResult(querySQL string, queryColumn string, errMsg string) (
 }
 
 func (s *Spec) GetAllViewsFromTable(tableName string) ([]string, error) {
-	log.Debugf("get all view from table %s", tableName)
+	log.Tracef("get all view from table %s", tableName)
 
 	var results []string
 	// first, query information_schema.tables with table_schema and table_type, get all views' name
@@ -635,7 +635,7 @@ func (s *Spec) CreateTableOrView(createTable *record.CreateTable, srcDatabase st
 	//	When create view, the db name of sql is source db name, we should use dest db name to create view
 	createSql := createTable.Sql
 	if createTable.IsCreateView() {
-		log.Debugf("create view, use dest db name to replace source db name")
+		log.Tracef("create view, use dest db name to replace source db name")
 
 		// replace `internal`.`source_db_name`. or `default_cluster:source_db_name`. to `internal`.`dest_db_name`.
 		originalNameNewStyle := "`internal`.`" + strings.TrimSpace(srcDatabase) + "`."
@@ -733,7 +733,7 @@ func (s *Spec) CheckTableExistsByName(tableName string) (bool, error) {
 }
 
 func (s *Spec) CancelRestoreIfExists(snapshotName string) error {
-	log.Debugf("cancel restore %s, db name: %s", snapshotName, s.Database)
+	log.Tracef("cancel restore %s, db name: %s", snapshotName, s.Database)
 
 	db, err := s.Connect()
 	if err != nil {
@@ -806,11 +806,6 @@ func (s *Spec) CreatePartialSnapshot(snapshotName, table string, partitions []st
 		return xerror.Errorf(xerror.Normal, "source db is empty! you should have at least one table")
 	}
 
-	// table refs = table
-	tableRef := utils.FormatKeywordName(table)
-
-	log.Infof("create partial snapshot %s.%s", s.Database, snapshotName)
-
 	db, err := s.Connect()
 	if err != nil {
 		return err
@@ -820,10 +815,12 @@ func (s *Spec) CreatePartialSnapshot(snapshotName, table string, partitions []st
 	if len(partitions) > 0 {
 		partitionRefs = " PARTITION (`" + strings.Join(partitions, "`,`") + "`)"
 	}
+	tableRef := utils.FormatKeywordName(table)
 	backupSnapshotSql := fmt.Sprintf(
 		"BACKUP SNAPSHOT %s.%s TO `__keep_on_local__` ON (%s%s) PROPERTIES (\"type\" = \"full\")",
 		utils.FormatKeywordName(s.Database), snapshotName, tableRef, partitionRefs)
-	log.Debugf("backup partial snapshot sql: %s", backupSnapshotSql)
+	log.Infof("create partial snapshot %s.%s, backup snapshot sql: %s",
+		s.Database, snapshotName, backupSnapshotSql)
 	_, err = db.Exec(backupSnapshotSql)
 	if err != nil {
 		if strings.Contains(err.Error(), "Unknown table") {
@@ -840,7 +837,7 @@ func (s *Spec) CreatePartialSnapshot(snapshotName, table string, partitions []st
 
 // TODO: Add TaskErrMsg
 func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, string, error) {
-	log.Debugf("check backup state of snapshot %s", snapshotName)
+	log.Tracef("check backup state of snapshot %s", snapshotName)
 
 	db, err := s.Connect()
 	if err != nil {
@@ -878,7 +875,7 @@ func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, string, er
 }
 
 func (s *Spec) CheckBackupFinished(snapshotName string) (bool, error) {
-	log.Debugf("check backup state, spec: %s, snapshot: %s", s.String(), snapshotName)
+	log.Tracef("check backup state, spec: %s, snapshot: %s", s.String(), snapshotName)
 
 	// Retry network related error to avoid full sync when the target network is interrupted, process is restarted.
 	if backupState, status, err := s.checkBackupFinished(snapshotName); err != nil && !isNetworkRelated(err) {
@@ -899,7 +896,7 @@ func (s *Spec) CheckBackupFinished(snapshotName string) (bool, error) {
 // Get the valid (running or finished) backup job with a unique prefix to indicate
 // if a backup job needs to be issued again.
 func (s *Spec) GetValidBackupJob(snapshotNamePrefix string) (string, error) {
-	log.Debugf("get valid backup job if exists, database: %s, label prefix: %s", s.Database, snapshotNamePrefix)
+	log.Tracef("get valid backup job if exists, database: %s, label prefix: %s", s.Database, snapshotNamePrefix)
 
 	db, err := s.Connect()
 	if err != nil {
@@ -908,7 +905,7 @@ func (s *Spec) GetValidBackupJob(snapshotNamePrefix string) (string, error) {
 
 	query := fmt.Sprintf("SHOW BACKUP FROM %s WHERE SnapshotName LIKE \"%s%%\"",
 		utils.FormatKeywordName(s.Database), snapshotNamePrefix)
-	log.Infof("show backup state sql: %s", query)
+	log.Debugf("show backup state sql: %s", query)
 	rows, err := db.Query(query)
 	if err != nil {
 		return "", xerror.Wrap(err, xerror.Normal, "query backup state failed")
@@ -952,7 +949,7 @@ func (s *Spec) GetValidBackupJob(snapshotNamePrefix string) (string, error) {
 // Get the valid (running or finished) restore job with a unique prefix to indicate
 // if a restore job needs to be issued again.
 func (s *Spec) GetValidRestoreJob(snapshotNamePrefix string) (string, error) {
-	log.Debugf("get valid restore job if exists, label prefix: %s", snapshotNamePrefix)
+	log.Tracef("get valid restore job if exists, label prefix: %s", snapshotNamePrefix)
 
 	db, err := s.Connect()
 	if err != nil {
@@ -961,7 +958,7 @@ func (s *Spec) GetValidRestoreJob(snapshotNamePrefix string) (string, error) {
 
 	query := fmt.Sprintf("SHOW RESTORE FROM %s WHERE Label LIKE \"%s%%\"",
 		utils.FormatKeywordName(s.Database), snapshotNamePrefix)
-	log.Infof("show restore state sql: %s", query)
+	log.Debugf("show restore state sql: %s", query)
 	rows, err := db.Query(query)
 	if err != nil {
 		return "", xerror.Wrap(err, xerror.Normal, "query restore state failed")
@@ -1039,7 +1036,7 @@ func (s *Spec) queryRestoreInfo(db *sql.DB, snapshotName string) (*RestoreInfo, 
 }
 
 func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, string, error) {
-	log.Debugf("check restore state %s", snapshotName)
+	log.Tracef("check restore state %s", snapshotName)
 
 	db, err := s.Connect()
 	if err != nil {
@@ -1059,7 +1056,7 @@ func (s *Spec) checkRestoreFinished(snapshotName string) (RestoreState, string, 
 }
 
 func (s *Spec) CheckRestoreFinished(snapshotName string) (bool, error) {
-	log.Debugf("check restore state is finished, spec: %s, snapshot: %s", s.String(), snapshotName)
+	log.Tracef("check restore state is finished, spec: %s, snapshot: %s", s.String(), snapshotName)
 
 	// Retry network related error to avoid full sync when the target network is interrupted, process is restarted.
 	if restoreState, status, err := s.checkRestoreFinished(snapshotName); err != nil && !isNetworkRelated(err) {
@@ -1080,7 +1077,7 @@ func (s *Spec) CheckRestoreFinished(snapshotName string) (bool, error) {
 }
 
 func (s *Spec) GetRestoreSignatureNotMatchedTableOrView(snapshotName string) (string, bool, error) {
-	log.Debugf("get restore signature not matched table, spec: %s, snapshot: %s", s.String(), snapshotName)
+	log.Tracef("get restore signature not matched table, spec: %s, snapshot: %s", s.String(), snapshotName)
 
 	for i := 0; i < MAX_CHECK_RETRY_TIMES; i++ {
 		if restoreState, status, err := s.checkRestoreFinished(snapshotName); err != nil {
@@ -1226,7 +1223,7 @@ func (s *Spec) Update(event SpecEvent) {
 }
 
 func (s *Spec) LightningSchemaChange(srcDatabase, tableAlias string, lightningSchemaChange *record.ModifyTableAddOrDropColumns) error {
-	log.Debugf("lightningSchemaChange %v", lightningSchemaChange)
+	log.Tracef("lighting schema change %v", lightningSchemaChange)
 
 	rawSql := lightningSchemaChange.RawSql
 

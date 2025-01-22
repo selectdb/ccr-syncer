@@ -97,6 +97,15 @@ func TestJobProgress_MarshalJSON(t *testing.T) {
   "data": "test-data",
   "table_aliases": {
     "table": "alias"
+  },
+  "full_sync_info": {
+	"prev_commit_seq": 0,
+	"commit_seq": 0,
+	"sub_sync_state": {
+	  "state": 0,
+	  "binlog_type": 0
+  	},
+  	"info": ""
   }
 }`,
 			wantErr: false,

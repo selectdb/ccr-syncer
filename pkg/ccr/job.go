@@ -299,7 +299,7 @@ func (j *Job) genExtraInfo() (*base.ExtraInfo, error) {
 		return nil, err
 	}
 
-	log.Debugf("found backends: %v", backends)
+	log.Tracef("found backends: %v", backends)
 
 	beNetworkMap := make(map[int64]base.NetworkAddr)
 	for _, backend := range backends {
@@ -356,7 +356,7 @@ func (j *Job) addExtraInfo(jobInfo []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("extraInfo: %v", extraInfo)
+	log.Tracef("snapshot extra info: %v", extraInfo)
 	jobInfoMap["extra_info"] = extraInfo
 
 	jobInfoBytes, err := json.Marshal(jobInfoMap)
@@ -439,13 +439,14 @@ func (j *Job) partialSync() error {
 				return err
 			}
 			if snapshotName != "" {
-				log.Infof("partial sync status: find a valid backup job %s", snapshotName)
+				log.Infof("partial sync status: there has a exist backup job %s", snapshotName)
 				j.progress.NextSubVolatile(WaitBackupDone, snapshotName)
 				return nil
 			}
 		}
 
 		snapshotName := NewLabelWithTs(prefix)
+		log.Infof("partial sync status: create snapshot %s", snapshotName)
 		err := j.ISrc.CreatePartialSnapshot(snapshotName, table, partitions)
 		if err != nil && err == base.ErrBackupPartitionNotFound {
 			log.Warnf("partial sync status: partition not found in the upstream, step to table partial sync")
@@ -470,7 +471,7 @@ func (j *Job) partialSync() error {
 		}
 
 		if !backupFinished {
-			log.Infof("partial sync status: backup job %s is running", snapshotName)
+			// CheckBackupFinished already logs the info
 			return nil
 		}
 
@@ -487,7 +488,7 @@ func (j *Job) partialSync() error {
 			return err
 		}
 
-		log.Debugf("partial sync begin get snapshot %s", snapshotName)
+		log.Tracef("partial sync begin get snapshot %s", snapshotName)
 		compress := false // partial snapshot no need to compress
 		snapshotResp, err := srcRpc.GetSnapshot(src, snapshotName, compress)
 		if err != nil {
@@ -496,7 +497,7 @@ func (j *Job) partialSync() error {
 
 		if snapshotResp.Status.GetStatusCode() == tstatus.TStatusCode_SNAPSHOT_NOT_EXIST ||
 			snapshotResp.Status.GetStatusCode() == tstatus.TStatusCode_SNAPSHOT_EXPIRED {
-			log.Warnf("get snapshot %s: %s (%s), retry with new partial sync", snapshotName,
+			log.Warnf("force new partial sync, because get snapshot %s: %s (%s)", snapshotName,
 				utils.FirstOr(snapshotResp.Status.GetErrorMsgs(), "unknown"),
 				snapshotResp.Status.GetStatusCode())
 			replace := len(j.progress.TableAliases) > 0
@@ -510,7 +511,7 @@ func (j *Job) partialSync() error {
 			return xerror.New(xerror.Normal, "jobInfo is not set")
 		}
 
-		log.Tracef("job: %.128s", snapshotResp.GetJobInfo())
+		log.Tracef("partial sync snapshot job: %.128s", snapshotResp.GetJobInfo())
 
 		backupJobInfo, err := NewBackupJobInfoFromJson(snapshotResp.GetJobInfo())
 		if err != nil {
@@ -552,8 +553,8 @@ func (j *Job) partialSync() error {
 		snapshotResp := inMemoryData.SnapshotResp
 		jobInfo := snapshotResp.GetJobInfo()
 
-		log.Infof("partial sync snapshot response meta size: %d, job info size: %d, expired at: %d",
-			len(snapshotResp.Meta), len(snapshotResp.JobInfo), snapshotResp.GetExpiredAt())
+		log.Infof("partial snapshot %s response meta size: %d, job info size: %d, expired at: %d",
+			inMemoryData.SnapshotName, len(snapshotResp.Meta), len(snapshotResp.JobInfo), snapshotResp.GetExpiredAt())
 
 		jobInfoBytes, err := j.addExtraInfo(jobInfo)
 		if err != nil {
@@ -587,7 +588,7 @@ func (j *Job) partialSync() error {
 				return nil
 			}
 			if name != "" {
-				log.Infof("partial sync status: find a valid restore job %s", name)
+				log.Infof("partial sync status: there has a exist restore job %s", name)
 				inMemoryData.RestoreLabel = name
 				j.progress.NextSubVolatile(WaitRestoreDone, inMemoryData)
 				break
@@ -603,7 +604,7 @@ func (j *Job) partialSync() error {
 		if err != nil {
 			return err
 		}
-		log.Debugf("partial sync begin restore snapshot %s to %s", snapshotName, restoreSnapshotName)
+		log.Infof("partial sync begin restore snapshot %s to %s", snapshotName, restoreSnapshotName)
 
 		var tableRefs []*festruct.TTableRef
 
@@ -644,7 +645,7 @@ func (j *Job) partialSync() error {
 		if restoreResp.Status.GetStatusCode() != tstatus.TStatusCode_OK {
 			return xerror.Errorf(xerror.Normal, "restore snapshot failed, status: %v", restoreResp.Status)
 		}
-		log.Infof("partial sync restore snapshot resp: %v", restoreResp)
+		log.Tracef("partial sync restore snapshot resp: %v", restoreResp)
 		inMemoryData.RestoreLabel = restoreSnapshotName
 
 		j.progress.NextSubVolatile(WaitRestoreDone, inMemoryData)
@@ -657,17 +658,18 @@ func (j *Job) partialSync() error {
 		snapshotResp := inMemoryData.SnapshotResp
 
 		if snapshotResp.GetExpiredAt() > 0 && time.Now().UnixMilli() > snapshotResp.GetExpiredAt() {
-			log.Infof("partial sync snapshot %s is expired, cancel and retry with new partial sync", restoreSnapshotName)
+			log.Warnf("cancel the expired restore job %s", restoreSnapshotName)
 			if err := j.IDest.CancelRestoreIfExists(restoreSnapshotName); err != nil {
 				return err
 			}
+			log.Infof("force partial sync, because the snapshot %s is expired", restoreSnapshotName)
 			replace := len(j.progress.TableAliases) > 0
 			return j.newPartialSnapshot(tableId, table, partitions, replace)
 		}
 
 		restoreFinished, err := j.IDest.CheckRestoreFinished(restoreSnapshotName)
 		if errors.Is(err, base.ErrRestoreSignatureNotMatched) {
-			log.Warnf("snapshot %s signature not match, retry partial sync with replace", restoreSnapshotName)
+			log.Warnf("force partial sync with replace, because the snapshot %s signature is not matched", restoreSnapshotName)
 			return j.newPartialSnapshot(tableId, table, nil, true)
 		} else if err != nil {
 			j.progress.NextSubVolatile(RestoreSnapshot, inMemoryData)
@@ -675,7 +677,7 @@ func (j *Job) partialSync() error {
 		}
 
 		if !restoreFinished {
-			log.Infof("partial sync status: restore job %s is running", restoreSnapshotName)
+			// CheckRestoreFinished already logs the info
 			return nil
 		}
 
@@ -782,7 +784,7 @@ func (j *Job) fullSync() error {
 				return err
 			}
 			if snapshotName != "" {
-				log.Infof("fullsync status: find a valid backup job %s", snapshotName)
+				log.Infof("fullsync status: there has a exist backup job %s", snapshotName)
 				j.progress.NextSubVolatile(WaitBackupDone, snapshotName)
 				return nil
 			}
@@ -813,6 +815,7 @@ func (j *Job) fullSync() error {
 		}
 
 		snapshotName := NewLabelWithTs(prefix)
+		log.Infof("fullsync status: create snapshot %s", snapshotName)
 		if err := j.ISrc.CreateSnapshot(snapshotName, backupTableList); err != nil {
 			return err
 		}
@@ -828,7 +831,7 @@ func (j *Job) fullSync() error {
 			return err
 		}
 		if !backupFinished {
-			log.Infof("fullsync status: backup job %s is running", snapshotName)
+			// CheckBackupFinished already logs the info
 			return nil
 		}
 
@@ -845,7 +848,7 @@ func (j *Job) fullSync() error {
 			return err
 		}
 
-		log.Debugf("fullsync begin get snapshot %s", snapshotName)
+		log.Tracef("fullsync begin get snapshot %s", snapshotName)
 		compress := false
 		snapshotResp, err := srcRpc.GetSnapshot(src, snapshotName, compress)
 		if err != nil {
@@ -854,10 +857,10 @@ func (j *Job) fullSync() error {
 
 		if snapshotResp.Status.GetStatusCode() == tstatus.TStatusCode_SNAPSHOT_NOT_EXIST ||
 			snapshotResp.Status.GetStatusCode() == tstatus.TStatusCode_SNAPSHOT_EXPIRED {
-			info := fmt.Sprintf("get snapshot %s: %s (%s), retry with new full sync", snapshotName,
+			info := fmt.Sprintf("get snapshot %s: %s (%s)", snapshotName,
 				utils.FirstOr(snapshotResp.Status.GetErrorMsgs(), "unknown"),
 				snapshotResp.Status.GetStatusCode())
-			log.Warnf("%s", info)
+			log.Warnf("force full sync, because %s", info)
 			return j.newSnapshot(j.progress.CommitSeq, info)
 		} else if snapshotResp.Status.GetStatusCode() != tstatus.TStatusCode_OK {
 			err = xerror.Errorf(xerror.FE, "get snapshot failed, status: %v", snapshotResp.Status)
@@ -865,7 +868,7 @@ func (j *Job) fullSync() error {
 		}
 
 		if !snapshotResp.IsSetJobInfo() {
-			return xerror.New(xerror.Normal, "jobInfo is not set")
+			return xerror.New(xerror.Normal, "jobInfo of the snapshot resp is not set")
 		}
 
 		if snapshotResp.GetCompressed() {
@@ -881,7 +884,7 @@ func (j *Job) fullSync() error {
 			}
 		}
 
-		log.Tracef("fullsync snapshot job: %.128s", snapshotResp.GetJobInfo())
+		log.Tracef("fullsync snapshot job info: %.128s", snapshotResp.GetJobInfo())
 		backupJobInfo, err := NewBackupJobInfoFromJson(snapshotResp.GetJobInfo())
 		if err != nil {
 			return err
@@ -929,14 +932,15 @@ func (j *Job) fullSync() error {
 		snapshotResp := inMemoryData.SnapshotResp
 		jobInfo := snapshotResp.GetJobInfo()
 
-		log.Infof("snapshot response meta size: %d, job info size: %d, expired at: %d, commit seq: %d",
-			len(snapshotResp.Meta), len(snapshotResp.JobInfo), snapshotResp.GetExpiredAt(), snapshotResp.GetCommitSeq())
+		log.Infof("snapshot %s response meta size: %d, job info size: %d, expired at: %d, commit seq: %d",
+			inMemoryData.SnapshotName, len(snapshotResp.Meta), len(snapshotResp.JobInfo),
+			snapshotResp.GetExpiredAt(), snapshotResp.GetCommitSeq())
 
 		jobInfoBytes, err := j.addExtraInfo(jobInfo)
 		if err != nil {
 			return err
 		}
-		log.Debugf("job info size: %d, bytes: %.128s", len(jobInfoBytes), string(jobInfoBytes))
+		log.Debugf("fullsync job info size: %d, bytes: %.128s", len(jobInfoBytes), string(jobInfoBytes))
 		snapshotResp.SetJobInfo(jobInfoBytes)
 
 		j.progress.NextSubVolatile(RestoreSnapshot, inMemoryData)
@@ -963,7 +967,7 @@ func (j *Job) fullSync() error {
 				return nil
 			}
 			if restoreSnapshotName != "" {
-				log.Infof("fullsync status: find a valid restore job %s", restoreSnapshotName)
+				log.Infof("fullsync status: there has a exist restore job %s", restoreSnapshotName)
 				inMemoryData.RestoreLabel = restoreSnapshotName
 				j.progress.NextSubVolatile(WaitRestoreDone, inMemoryData)
 				break
@@ -980,7 +984,7 @@ func (j *Job) fullSync() error {
 		if err != nil {
 			return err
 		}
-		log.Debugf("begin restore snapshot %s to %s", snapshotName, restoreSnapshotName)
+		log.Infof("fullsync status: begin restore snapshot %s to %s", snapshotName, restoreSnapshotName)
 
 		var tableRefs []*festruct.TTableRef
 		if j.isTableSyncWithAlias() {
@@ -1060,7 +1064,7 @@ func (j *Job) fullSync() error {
 		if restoreResp.Status.GetStatusCode() != tstatus.TStatusCode_OK {
 			return xerror.Errorf(xerror.Normal, "restore snapshot failed, status: %v", restoreResp.Status)
 		}
-		log.Infof("resp: %v", restoreResp)
+		log.Tracef("fullsync restore snapshot resp: %v", restoreResp)
 
 		inMemoryData.RestoreLabel = restoreSnapshotName
 		j.progress.NextSubVolatile(WaitRestoreDone, inMemoryData)
@@ -1074,11 +1078,12 @@ func (j *Job) fullSync() error {
 		snapshotResp := inMemoryData.SnapshotResp
 
 		if snapshotResp.GetExpiredAt() > 0 && time.Now().UnixMilli() > snapshotResp.GetExpiredAt() {
-			info := fmt.Sprintf("snapshot %s is expired, cancel and retry with new full sync", restoreSnapshotName)
-			log.Infof("%s", info)
+			log.Warnf("cancel the expired restore job %s", restoreSnapshotName)
 			if err := j.IDest.CancelRestoreIfExists(restoreSnapshotName); err != nil {
 				return err
 			}
+			info := fmt.Sprintf("the snapshot %s is expired", restoreSnapshotName)
+			log.Infof("force full sync, because %s", info)
 			return j.newSnapshot(j.progress.CommitSeq, info)
 		}
 
@@ -1130,7 +1135,7 @@ func (j *Job) fullSync() error {
 			}
 
 			if !restoreFinished {
-				log.Infof("fullsync status: restore job %s is running", restoreSnapshotName)
+				// CheckRestoreFinished already logs the info
 				return nil
 			}
 
@@ -1477,7 +1482,7 @@ func (j *Job) getRelatedTableRecords(upsert *record.Upsert) ([]*record.TableReco
 
 // Table ingestBinlog
 func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*ttypes.TTabletCommitInfo, error) {
-	log.Infof("ingestBinlog, txnId: %d", txnId)
+	log.Tracef("txn %d ingest binlog", txnId)
 
 	job, err := j.jobFactory.CreateJob(NewIngestContext(txnId, tableRecords, j.progress.TableMapping), j, "IngestBinlog")
 	if err != nil {
@@ -1586,14 +1591,14 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 	}
 
 	rollback := func(err error, inMemoryData *inMemoryData) {
-		log.Errorf("need rollback, err: %+v", err)
+		log.Errorf("txn %d need rollback, commitSeq: %d, label: %s, err: %+v",
+			inMemoryData.TxnId, inMemoryData.CommitSeq, inMemoryData.Label, err)
 		j.progress.NextSubCheckpoint(RollbackTransaction, inMemoryData)
 	}
 
 	committed := func() {
-		log.Infof("txn committed, commitSeq: %d, cleanup", j.progress.CommitSeq)
-
 		inMemoryData := j.progress.InMemoryData.(*inMemoryData)
+		log.Debugf("txn %d committed, commitSeq: %d, cleanup", inMemoryData.TxnId, j.progress.CommitSeq)
 		commitSeq := j.progress.CommitSeq
 		destTableIds := inMemoryData.DestTableIds
 		if j.SyncType == DBSync && len(j.progress.TableCommitSeqMap) > 0 {
@@ -1626,7 +1631,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		if err != nil {
 			return err
 		}
-		log.Debugf("upsert: %v", upsert)
+		log.Tracef("upsert: %v", upsert)
 
 		// Step 1: get related tableRecords
 		var isTxnInsert bool = false
@@ -1690,7 +1695,6 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		commitSeq := inMemoryData.CommitSeq
 		sourceStids := inMemoryData.SourceStids
 		isTxnInsert := inMemoryData.IsTxnInsert
-		log.Debugf("begin txn, dest: %v, commitSeq: %d", dest, commitSeq)
 
 		destRpc, err := j.factory.NewFeRpc(dest)
 		if err != nil {
@@ -1703,6 +1707,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		} else {
 			label = j.newLabel(commitSeq)
 		}
+		log.Tracef("begin txn, label: %s, dest: %v, commitSeq: %d", label, dest, commitSeq)
 
 		var beginTxnResp *festruct.TBeginTxnResult_
 		if isTxnInsert {
@@ -1711,11 +1716,11 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		} else {
 			beginTxnResp, err = destRpc.BeginTransaction(dest, label, inMemoryData.DestTableIds)
 		}
-
 		if err != nil {
 			return err
 		}
-		log.Debugf("resp: %v", beginTxnResp)
+		log.Tracef("begin txn resp: %v", beginTxnResp)
+
 		if beginTxnResp.GetStatus().GetStatusCode() != tstatus.TStatusCode_OK {
 			if isTableNotFound(beginTxnResp.GetStatus()) && j.SyncType == DBSync {
 				// It might caused by the staled TableMapping entries.
@@ -1731,16 +1736,17 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		if isTxnInsert {
 			destStids := beginTxnResp.GetSubTxnIds()
 			inMemoryData.DestStids = destStids
-			log.Debugf("TxnId: %d, DbId: %d, destStids: %v", txnId, beginTxnResp.GetDbId(), destStids)
+			log.Infof("begin txn %d, label: %s, db: %d, destStids: %v",
+				txnId, label, beginTxnResp.GetDbId(), destStids)
 		} else {
-			log.Debugf("TxnId: %d, DbId: %d", txnId, beginTxnResp.GetDbId())
+			log.Infof("begin txn %d, label: %s, db: %d", txnId, label, beginTxnResp.GetDbId())
 		}
 
 		inMemoryData.TxnId = txnId
 		j.progress.NextSubCheckpoint(IngestBinlog, inMemoryData)
 
 	case IngestBinlog:
-		log.Debug("ingest binlog")
+		log.Trace("ingest binlog")
 		if err := updateInMemory(); err != nil {
 			return err
 		}
@@ -1790,7 +1796,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 
 	case CommitTransaction:
 		// Step 4: commit txn
-		log.Debug("commit txn")
+		log.Tracef("commit txn")
 		if err := updateInMemory(); err != nil {
 			return err
 		}
@@ -1816,6 +1822,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			rollback(err, inMemoryData)
 			return err
 		}
+		log.Tracef("commit txn %d resp: %v", txnId, resp)
 
 		if statusCode := resp.Status.GetStatusCode(); statusCode == tstatus.TStatusCode_PUBLISH_TIMEOUT {
 			dest.WaitTransactionDone(txnId)
@@ -1825,13 +1832,12 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			return err
 		}
 
-		log.Infof("TxnId: %d committed, resp: %v", txnId, resp)
+		log.Infof("commit txn %d success", txnId)
 		committed()
-
 		return nil
 
 	case RollbackTransaction:
-		log.Debugf("Rollback txn")
+		log.Tracef("Rollback txn")
 		// Not Step 5: just rollback txn
 		if err := updateInMemory(); err != nil {
 			return err
@@ -1862,7 +1868,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			}
 		}
 
-		log.Infof("rollback TxnId: %d resp: %v", txnId, resp)
+		log.Infof("rollback txn %d success", txnId)
 		j.progress.Rollback()
 		return nil
 
@@ -2935,7 +2941,7 @@ func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 
 // return: error && bool backToRunLoop
 func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
-	log.Infof("handle binlogs, binlogs size: %d", len(binlogs))
+	log.Tracef("handle binlogs, binlogs size: %d", len(binlogs))
 
 	for _, binlog := range binlogs {
 		// Step 1: dispatch handle binlog
@@ -2947,7 +2953,7 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 
 		// Step 2: check job state, if not incrementalSync, such as DBPartialSync, break
 		if !j.isIncrementalSync() {
-			log.Debugf("job state is not incremental sync, back to run loop, job state: %s", j.progress.SyncState)
+			log.Tracef("job state is not incremental sync, back to run loop, job state: %s", j.progress.SyncState)
 			return nil, true
 		}
 
@@ -2964,6 +2970,7 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 			}
 
 			if reachSwitchToDBIncrementalSync {
+				log.Infof("all table commit seq reach the commit seq, switch to incremental sync, commit seq: %d", commitSeq)
 				j.progress.TableCommitSeqMap = nil
 				j.progress.NextWithPersist(j.progress.CommitSeq, DBIncrementalSync, Done, "")
 			}
@@ -2986,7 +2993,8 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		return xerror.Errorf(xerror.Normal, "the progress isn't done, need rollback, commit seq: %d", j.progress.CommitSeq)
 	}
 
-	log.Debugf("binlog type: %s, binlog data: %s", binlog.GetType(), binlog.GetData())
+	log.Debugf("binlog type: %s, commit seq: %d, binlog data: %s",
+		binlog.GetType(), binlog.GetCommitSeq(), binlog.GetData())
 
 	// Step 2: update job progress
 	j.progress.StartHandle(binlog.GetCommitSeq())
@@ -3083,13 +3091,13 @@ func (j *Job) incrementalSync() error {
 
 	// Force fullsync unconditionally
 	if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipByFullSync {
-		info := fmt.Sprintf("skip binlog via fullsync by user, commit seq %d", j.progress.CommitSeq)
-		log.Warnf("%s", info)
+		info := fmt.Sprintf("the user required skipping the binlog, commit seq %d", j.progress.CommitSeq)
+		log.Warnf("force full sync, because %s", info)
 		return j.newSnapshot(j.progress.CommitSeq, info)
 	}
 
 	// Step 1: get binlog
-	log.Debug("start incremental sync")
+	log.Trace("start incremental sync")
 	src := &j.Src
 	srcRpc, err := j.factory.NewFeRpc(src)
 	if err != nil {
@@ -3101,13 +3109,13 @@ func (j *Job) incrementalSync() error {
 	for {
 		// The CommitSeq is equals to PrevCommitSeq in here.
 		commitSeq := j.progress.CommitSeq
-		log.Debugf("src: %s, commitSeq: %v", src, commitSeq)
+		log.Tracef("src: %s, commitSeq: %d", src, commitSeq)
 
 		getBinlogResp, err := srcRpc.GetBinlog(src, commitSeq)
 		if err != nil {
 			return err
 		}
-		log.Debugf("resp: %v", getBinlogResp)
+		log.Tracef("get binlog resp: %v", getBinlogResp)
 
 		// Step 2.1: check binlog status
 		status := getBinlogResp.GetStatus()
@@ -3159,13 +3167,13 @@ func (j *Job) recoverJobProgress() error {
 func (j *Job) tableSync() error {
 	switch j.progress.SyncState {
 	case TableFullSync:
-		log.Debug("table full sync")
+		log.Trace("run table full sync")
 		return j.fullSync()
 	case TableIncrementalSync:
-		log.Debug("table incremental sync")
+		log.Trace("run table incremental sync")
 		return j.incrementalSync()
 	case TablePartialSync:
-		log.Debug("table partial sync")
+		log.Trace("run table partial sync")
 		return j.partialSync()
 	default:
 		return xerror.Errorf(xerror.Normal, "unknown sync state: %v", j.progress.SyncState)
@@ -3173,31 +3181,25 @@ func (j *Job) tableSync() error {
 }
 
 func (j *Job) dbTablesIncrementalSync() error {
-	log.Debug("db tables incremental sync")
-
 	return j.incrementalSync()
-}
-
-func (j *Job) dbSpecificTableFullSync() error {
-	log.Debug("db specific table full sync")
-
-	return nil
 }
 
 func (j *Job) dbSync() error {
 	switch j.progress.SyncState {
 	case DBFullSync:
-		log.Debug("db full sync")
+		log.Trace("run db full sync")
 		return j.fullSync()
 	case DBTablesIncrementalSync:
+		log.Trace("run db tables incremental sync")
 		return j.dbTablesIncrementalSync()
 	case DBSpecificTableFullSync:
-		return j.dbSpecificTableFullSync()
+		log.Trace("run db specific table full sync")
+		return nil
 	case DBIncrementalSync:
-		log.Debug("db incremental sync")
+		log.Trace("run db incremental sync")
 		return j.incrementalSync()
 	case DBPartialSync:
-		log.Debug("db partial sync")
+		log.Trace("run db partial sync")
 		return j.partialSync()
 	default:
 		return xerror.Errorf(xerror.Normal, "unknown db sync state: %v", j.progress.SyncState)
@@ -3307,7 +3309,8 @@ func (j *Job) run() {
 }
 
 func (j *Job) newSnapshot(commitSeq int64, fullSyncInfo string) error {
-	log.Infof("new snapshot, commitSeq: %d", commitSeq)
+	log.Infof("new snapshot, commitSeq: %d, prevCommitSeq: %d, prevSyncState: %s, prevSubSyncState: %s",
+		commitSeq, j.progress.PrevCommitSeq, j.progress.SyncState, j.progress.SubSyncState)
 
 	if fullSyncInfo != "" {
 		j.progress.SetFullSyncInfo(fullSyncInfo)
@@ -3325,7 +3328,7 @@ func (j *Job) newSnapshot(commitSeq int64, fullSyncInfo string) error {
 		return nil
 	default:
 		err := xerror.Panicf(xerror.Normal, "unknown table sync type: %v", j.SyncType)
-		log.Fatalf("run %+v", err)
+		log.Fatalf("new snapshot: %+v", err)
 		return err
 	}
 }
@@ -3392,11 +3395,10 @@ func (j *Job) Run() error {
 	var err error
 	for i := 0; i < 3; i++ {
 		isProgressExist, err = j.db.IsProgressExist(j.Name)
-		if err != nil {
-			log.Errorf("check progress exist failed, error: %+v", err)
-			continue
+		if err == nil {
+			break
 		}
-		break
+		log.Errorf("check progress exist failed, error: %+v", err)
 	}
 	if err != nil {
 		return err
@@ -3508,7 +3510,7 @@ func (j *Job) updateFrontends() error {
 }
 
 func (j *Job) FirstRun() error {
-	log.Infof("first run check job, src: %s, dest: %s", &j.Src, &j.Dest)
+	log.Infof("first run check job, name: %s, src: %s, dest: %s", j.Name, &j.Src, &j.Dest)
 
 	// Step 0: get all frontends
 	if err := j.updateFrontends(); err != nil {
