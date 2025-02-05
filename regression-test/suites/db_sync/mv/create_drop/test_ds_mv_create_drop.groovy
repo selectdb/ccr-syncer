@@ -62,7 +62,7 @@ suite("test_ds_mv_create_drop") {
 
 
     logger.info("=== Test 1: full update rollup ===")
-
+    helper.enableDbBinlog()
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 

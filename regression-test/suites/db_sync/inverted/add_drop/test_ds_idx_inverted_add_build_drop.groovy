@@ -14,7 +14,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_ds_idx_inverted_add_build_drop") {
+suite("test_ds_inverted_add_drop") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -62,6 +62,7 @@ suite("test_ds_idx_inverted_add_build_drop") {
     def show_indexes_result = sql "show indexes from ${tableName}"
     logger.info("show indexes: ${show_indexes_result}")
 
+    helper.enableDbBinlog()
     helper.ccrJobDelete()
     helper.ccrJobCreate()
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))

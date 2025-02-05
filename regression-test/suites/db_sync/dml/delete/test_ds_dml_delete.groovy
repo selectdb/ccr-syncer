@@ -23,6 +23,7 @@ suite("test_ds_dml_delete") {
     def test_num = 0
     def insert_num = 29
 
+
     sql """
         CREATE TABLE if NOT EXISTS ${tableName} 
         (
@@ -48,6 +49,7 @@ suite("test_ds_dml_delete") {
     """
     sql """ALTER TABLE ${tableName} set ("binlog.enable" = "true")"""
 
+    helper.enableDbBinlog()
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 

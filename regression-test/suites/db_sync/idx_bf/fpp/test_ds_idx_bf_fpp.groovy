@@ -48,6 +48,7 @@ suite("test_ds_idx_bf_fpp") {
     sql "sync"
 
     logger.info("=== Test 1: full update bloom filter ===")
+    helper.enableDbBinlog()
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 
