@@ -115,14 +115,28 @@ type TTabletInfo struct {
 	CooldownTerm        *int64                 `thrift:"cooldown_term,19,optional" frugal:"19,optional,i64" json:"cooldown_term,omitempty"`
 	CooldownMetaId      *types.TUniqueId       `thrift:"cooldown_meta_id,20,optional" frugal:"20,optional,types.TUniqueId" json:"cooldown_meta_id,omitempty"`
 	VisibleVersionCount *int64                 `thrift:"visible_version_count,21,optional" frugal:"21,optional,i64" json:"visible_version_count,omitempty"`
+	LocalIndexSize      int64                  `thrift:"local_index_size,22,optional" frugal:"22,optional,i64" json:"local_index_size,omitempty"`
+	LocalSegmentSize    int64                  `thrift:"local_segment_size,23,optional" frugal:"23,optional,i64" json:"local_segment_size,omitempty"`
+	RemoteIndexSize     int64                  `thrift:"remote_index_size,24,optional" frugal:"24,optional,i64" json:"remote_index_size,omitempty"`
+	RemoteSegmentSize   int64                  `thrift:"remote_segment_size,25,optional" frugal:"25,optional,i64" json:"remote_segment_size,omitempty"`
 	IsPersistent        *bool                  `thrift:"is_persistent,1000,optional" frugal:"1000,optional,bool" json:"is_persistent,omitempty"`
 }
 
 func NewTTabletInfo() *TTabletInfo {
-	return &TTabletInfo{}
+	return &TTabletInfo{
+
+		LocalIndexSize:    0,
+		LocalSegmentSize:  0,
+		RemoteIndexSize:   0,
+		RemoteSegmentSize: 0,
+	}
 }
 
 func (p *TTabletInfo) InitDefault() {
+	p.LocalIndexSize = 0
+	p.LocalSegmentSize = 0
+	p.RemoteIndexSize = 0
+	p.RemoteSegmentSize = 0
 }
 
 func (p *TTabletInfo) GetTabletId() (v types.TTabletId) {
@@ -266,6 +280,42 @@ func (p *TTabletInfo) GetVisibleVersionCount() (v int64) {
 	return *p.VisibleVersionCount
 }
 
+var TTabletInfo_LocalIndexSize_DEFAULT int64 = 0
+
+func (p *TTabletInfo) GetLocalIndexSize() (v int64) {
+	if !p.IsSetLocalIndexSize() {
+		return TTabletInfo_LocalIndexSize_DEFAULT
+	}
+	return p.LocalIndexSize
+}
+
+var TTabletInfo_LocalSegmentSize_DEFAULT int64 = 0
+
+func (p *TTabletInfo) GetLocalSegmentSize() (v int64) {
+	if !p.IsSetLocalSegmentSize() {
+		return TTabletInfo_LocalSegmentSize_DEFAULT
+	}
+	return p.LocalSegmentSize
+}
+
+var TTabletInfo_RemoteIndexSize_DEFAULT int64 = 0
+
+func (p *TTabletInfo) GetRemoteIndexSize() (v int64) {
+	if !p.IsSetRemoteIndexSize() {
+		return TTabletInfo_RemoteIndexSize_DEFAULT
+	}
+	return p.RemoteIndexSize
+}
+
+var TTabletInfo_RemoteSegmentSize_DEFAULT int64 = 0
+
+func (p *TTabletInfo) GetRemoteSegmentSize() (v int64) {
+	if !p.IsSetRemoteSegmentSize() {
+		return TTabletInfo_RemoteSegmentSize_DEFAULT
+	}
+	return p.RemoteSegmentSize
+}
+
 var TTabletInfo_IsPersistent_DEFAULT bool
 
 func (p *TTabletInfo) GetIsPersistent() (v bool) {
@@ -331,6 +381,18 @@ func (p *TTabletInfo) SetCooldownMetaId(val *types.TUniqueId) {
 func (p *TTabletInfo) SetVisibleVersionCount(val *int64) {
 	p.VisibleVersionCount = val
 }
+func (p *TTabletInfo) SetLocalIndexSize(val int64) {
+	p.LocalIndexSize = val
+}
+func (p *TTabletInfo) SetLocalSegmentSize(val int64) {
+	p.LocalSegmentSize = val
+}
+func (p *TTabletInfo) SetRemoteIndexSize(val int64) {
+	p.RemoteIndexSize = val
+}
+func (p *TTabletInfo) SetRemoteSegmentSize(val int64) {
+	p.RemoteSegmentSize = val
+}
 func (p *TTabletInfo) SetIsPersistent(val *bool) {
 	p.IsPersistent = val
 }
@@ -355,6 +417,10 @@ var fieldIDToName_TTabletInfo = map[int16]string{
 	19:   "cooldown_term",
 	20:   "cooldown_meta_id",
 	21:   "visible_version_count",
+	22:   "local_index_size",
+	23:   "local_segment_size",
+	24:   "remote_index_size",
+	25:   "remote_segment_size",
 	1000: "is_persistent",
 }
 
@@ -408,6 +474,22 @@ func (p *TTabletInfo) IsSetCooldownMetaId() bool {
 
 func (p *TTabletInfo) IsSetVisibleVersionCount() bool {
 	return p.VisibleVersionCount != nil
+}
+
+func (p *TTabletInfo) IsSetLocalIndexSize() bool {
+	return p.LocalIndexSize != TTabletInfo_LocalIndexSize_DEFAULT
+}
+
+func (p *TTabletInfo) IsSetLocalSegmentSize() bool {
+	return p.LocalSegmentSize != TTabletInfo_LocalSegmentSize_DEFAULT
+}
+
+func (p *TTabletInfo) IsSetRemoteIndexSize() bool {
+	return p.RemoteIndexSize != TTabletInfo_RemoteIndexSize_DEFAULT
+}
+
+func (p *TTabletInfo) IsSetRemoteSegmentSize() bool {
+	return p.RemoteSegmentSize != TTabletInfo_RemoteSegmentSize_DEFAULT
 }
 
 func (p *TTabletInfo) IsSetIsPersistent() bool {
@@ -592,6 +674,38 @@ func (p *TTabletInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 21:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField21(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 22:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField22(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 23:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField23(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 24:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField24(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 25:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField25(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -884,6 +998,50 @@ func (p *TTabletInfo) ReadField21(iprot thrift.TProtocol) error {
 	p.VisibleVersionCount = _field
 	return nil
 }
+func (p *TTabletInfo) ReadField22(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.LocalIndexSize = _field
+	return nil
+}
+func (p *TTabletInfo) ReadField23(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.LocalSegmentSize = _field
+	return nil
+}
+func (p *TTabletInfo) ReadField24(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.RemoteIndexSize = _field
+	return nil
+}
+func (p *TTabletInfo) ReadField25(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.RemoteSegmentSize = _field
+	return nil
+}
 func (p *TTabletInfo) ReadField1000(iprot thrift.TProtocol) error {
 
 	var _field *bool
@@ -976,6 +1134,22 @@ func (p *TTabletInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField21(oprot); err != nil {
 			fieldId = 21
+			goto WriteFieldError
+		}
+		if err = p.writeField22(oprot); err != nil {
+			fieldId = 22
+			goto WriteFieldError
+		}
+		if err = p.writeField23(oprot); err != nil {
+			fieldId = 23
+			goto WriteFieldError
+		}
+		if err = p.writeField24(oprot); err != nil {
+			fieldId = 24
+			goto WriteFieldError
+		}
+		if err = p.writeField25(oprot); err != nil {
+			fieldId = 25
 			goto WriteFieldError
 		}
 		if err = p.writeField1000(oprot); err != nil {
@@ -1357,6 +1531,82 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
 }
 
+func (p *TTabletInfo) writeField22(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLocalIndexSize() {
+		if err = oprot.WriteFieldBegin("local_index_size", thrift.I64, 22); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.LocalIndexSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
+}
+
+func (p *TTabletInfo) writeField23(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLocalSegmentSize() {
+		if err = oprot.WriteFieldBegin("local_segment_size", thrift.I64, 23); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.LocalSegmentSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
+}
+
+func (p *TTabletInfo) writeField24(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRemoteIndexSize() {
+		if err = oprot.WriteFieldBegin("remote_index_size", thrift.I64, 24); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.RemoteIndexSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 24 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 24 end error: ", p), err)
+}
+
+func (p *TTabletInfo) writeField25(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRemoteSegmentSize() {
+		if err = oprot.WriteFieldBegin("remote_segment_size", thrift.I64, 25); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.RemoteSegmentSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 25 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 25 end error: ", p), err)
+}
+
 func (p *TTabletInfo) writeField1000(oprot thrift.TProtocol) (err error) {
 	if p.IsSetIsPersistent() {
 		if err = oprot.WriteFieldBegin("is_persistent", thrift.BOOL, 1000); err != nil {
@@ -1445,6 +1695,18 @@ func (p *TTabletInfo) DeepEqual(ano *TTabletInfo) bool {
 		return false
 	}
 	if !p.Field21DeepEqual(ano.VisibleVersionCount) {
+		return false
+	}
+	if !p.Field22DeepEqual(ano.LocalIndexSize) {
+		return false
+	}
+	if !p.Field23DeepEqual(ano.LocalSegmentSize) {
+		return false
+	}
+	if !p.Field24DeepEqual(ano.RemoteIndexSize) {
+		return false
+	}
+	if !p.Field25DeepEqual(ano.RemoteSegmentSize) {
 		return false
 	}
 	if !p.Field1000DeepEqual(ano.IsPersistent) {
@@ -1643,6 +1905,34 @@ func (p *TTabletInfo) Field21DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.VisibleVersionCount != *src {
+		return false
+	}
+	return true
+}
+func (p *TTabletInfo) Field22DeepEqual(src int64) bool {
+
+	if p.LocalIndexSize != src {
+		return false
+	}
+	return true
+}
+func (p *TTabletInfo) Field23DeepEqual(src int64) bool {
+
+	if p.LocalSegmentSize != src {
+		return false
+	}
+	return true
+}
+func (p *TTabletInfo) Field24DeepEqual(src int64) bool {
+
+	if p.RemoteIndexSize != src {
+		return false
+	}
+	return true
+}
+func (p *TTabletInfo) Field25DeepEqual(src int64) bool {
+
+	if p.RemoteSegmentSize != src {
 		return false
 	}
 	return true

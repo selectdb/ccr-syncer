@@ -490,7 +490,7 @@ type TTabletSchema struct {
 	StoreRowColumn                bool                           `thrift:"store_row_column,16,optional" frugal:"16,optional,bool" json:"store_row_column,omitempty"`
 	EnableSingleReplicaCompaction bool                           `thrift:"enable_single_replica_compaction,17,optional" frugal:"17,optional,bool" json:"enable_single_replica_compaction,omitempty"`
 	SkipWriteIndexOnLoad          bool                           `thrift:"skip_write_index_on_load,18,optional" frugal:"18,optional,bool" json:"skip_write_index_on_load,omitempty"`
-	ClusterKeyIdxes               []int32                        `thrift:"cluster_key_idxes,19,optional" frugal:"19,optional,list<i32>" json:"cluster_key_idxes,omitempty"`
+	ClusterKeyUids                []int32                        `thrift:"cluster_key_uids,19,optional" frugal:"19,optional,list<i32>" json:"cluster_key_uids,omitempty"`
 	RowStoreColCids               []int32                        `thrift:"row_store_col_cids,20,optional" frugal:"20,optional,list<i32>" json:"row_store_col_cids,omitempty"`
 	RowStorePageSize              int64                          `thrift:"row_store_page_size,21,optional" frugal:"21,optional,i64" json:"row_store_page_size,omitempty"`
 	VariantEnableFlattenNested    bool                           `thrift:"variant_enable_flatten_nested,22,optional" frugal:"22,optional,bool" json:"variant_enable_flatten_nested,omitempty"`
@@ -663,13 +663,13 @@ func (p *TTabletSchema) GetSkipWriteIndexOnLoad() (v bool) {
 	return p.SkipWriteIndexOnLoad
 }
 
-var TTabletSchema_ClusterKeyIdxes_DEFAULT []int32
+var TTabletSchema_ClusterKeyUids_DEFAULT []int32
 
-func (p *TTabletSchema) GetClusterKeyIdxes() (v []int32) {
-	if !p.IsSetClusterKeyIdxes() {
-		return TTabletSchema_ClusterKeyIdxes_DEFAULT
+func (p *TTabletSchema) GetClusterKeyUids() (v []int32) {
+	if !p.IsSetClusterKeyUids() {
+		return TTabletSchema_ClusterKeyUids_DEFAULT
 	}
-	return p.ClusterKeyIdxes
+	return p.ClusterKeyUids
 }
 
 var TTabletSchema_RowStoreColCids_DEFAULT []int32
@@ -761,8 +761,8 @@ func (p *TTabletSchema) SetEnableSingleReplicaCompaction(val bool) {
 func (p *TTabletSchema) SetSkipWriteIndexOnLoad(val bool) {
 	p.SkipWriteIndexOnLoad = val
 }
-func (p *TTabletSchema) SetClusterKeyIdxes(val []int32) {
-	p.ClusterKeyIdxes = val
+func (p *TTabletSchema) SetClusterKeyUids(val []int32) {
+	p.ClusterKeyUids = val
 }
 func (p *TTabletSchema) SetRowStoreColCids(val []int32) {
 	p.RowStoreColCids = val
@@ -796,7 +796,7 @@ var fieldIDToName_TTabletSchema = map[int16]string{
 	16: "store_row_column",
 	17: "enable_single_replica_compaction",
 	18: "skip_write_index_on_load",
-	19: "cluster_key_idxes",
+	19: "cluster_key_uids",
 	20: "row_store_col_cids",
 	21: "row_store_page_size",
 	22: "variant_enable_flatten_nested",
@@ -855,8 +855,8 @@ func (p *TTabletSchema) IsSetSkipWriteIndexOnLoad() bool {
 	return p.SkipWriteIndexOnLoad != TTabletSchema_SkipWriteIndexOnLoad_DEFAULT
 }
 
-func (p *TTabletSchema) IsSetClusterKeyIdxes() bool {
-	return p.ClusterKeyIdxes != nil
+func (p *TTabletSchema) IsSetClusterKeyUids() bool {
+	return p.ClusterKeyUids != nil
 }
 
 func (p *TTabletSchema) IsSetRowStoreColCids() bool {
@@ -1386,7 +1386,7 @@ func (p *TTabletSchema) ReadField19(iprot thrift.TProtocol) error {
 	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
-	p.ClusterKeyIdxes = _field
+	p.ClusterKeyUids = _field
 	return nil
 }
 func (p *TTabletSchema) ReadField20(iprot thrift.TProtocol) error {
@@ -1911,14 +1911,14 @@ WriteFieldEndError:
 }
 
 func (p *TTabletSchema) writeField19(oprot thrift.TProtocol) (err error) {
-	if p.IsSetClusterKeyIdxes() {
-		if err = oprot.WriteFieldBegin("cluster_key_idxes", thrift.LIST, 19); err != nil {
+	if p.IsSetClusterKeyUids() {
+		if err = oprot.WriteFieldBegin("cluster_key_uids", thrift.LIST, 19); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteListBegin(thrift.I32, len(p.ClusterKeyIdxes)); err != nil {
+		if err := oprot.WriteListBegin(thrift.I32, len(p.ClusterKeyUids)); err != nil {
 			return err
 		}
-		for _, v := range p.ClusterKeyIdxes {
+		for _, v := range p.ClusterKeyUids {
 			if err := oprot.WriteI32(v); err != nil {
 				return err
 			}
@@ -2089,7 +2089,7 @@ func (p *TTabletSchema) DeepEqual(ano *TTabletSchema) bool {
 	if !p.Field18DeepEqual(ano.SkipWriteIndexOnLoad) {
 		return false
 	}
-	if !p.Field19DeepEqual(ano.ClusterKeyIdxes) {
+	if !p.Field19DeepEqual(ano.ClusterKeyUids) {
 		return false
 	}
 	if !p.Field20DeepEqual(ano.RowStoreColCids) {
@@ -2272,10 +2272,10 @@ func (p *TTabletSchema) Field18DeepEqual(src bool) bool {
 }
 func (p *TTabletSchema) Field19DeepEqual(src []int32) bool {
 
-	if len(p.ClusterKeyIdxes) != len(src) {
+	if len(p.ClusterKeyUids) != len(src) {
 		return false
 	}
-	for i, v := range p.ClusterKeyIdxes {
+	for i, v := range p.ClusterKeyUids {
 		_src := src[i]
 		if v != _src {
 			return false

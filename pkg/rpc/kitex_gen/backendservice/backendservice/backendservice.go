@@ -26,7 +26,6 @@ func NewServiceInfo() *kitex.ServiceInfo {
 	methods := map[string]kitex.MethodInfo{
 		"exec_plan_fragment":           kitex.NewMethodInfo(execPlanFragmentHandler, newBackendServiceExecPlanFragmentArgs, newBackendServiceExecPlanFragmentResult, false),
 		"cancel_plan_fragment":         kitex.NewMethodInfo(cancelPlanFragmentHandler, newBackendServiceCancelPlanFragmentArgs, newBackendServiceCancelPlanFragmentResult, false),
-		"transmit_data":                kitex.NewMethodInfo(transmitDataHandler, newBackendServiceTransmitDataArgs, newBackendServiceTransmitDataResult, false),
 		"submit_tasks":                 kitex.NewMethodInfo(submitTasksHandler, newBackendServiceSubmitTasksArgs, newBackendServiceSubmitTasksResult, false),
 		"make_snapshot":                kitex.NewMethodInfo(makeSnapshotHandler, newBackendServiceMakeSnapshotArgs, newBackendServiceMakeSnapshotResult, false),
 		"release_snapshot":             kitex.NewMethodInfo(releaseSnapshotHandler, newBackendServiceReleaseSnapshotArgs, newBackendServiceReleaseSnapshotResult, false),
@@ -102,24 +101,6 @@ func newBackendServiceCancelPlanFragmentArgs() interface{} {
 
 func newBackendServiceCancelPlanFragmentResult() interface{} {
 	return backendservice.NewBackendServiceCancelPlanFragmentResult()
-}
-
-func transmitDataHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*backendservice.BackendServiceTransmitDataArgs)
-	realResult := result.(*backendservice.BackendServiceTransmitDataResult)
-	success, err := handler.(backendservice.BackendService).TransmitData(ctx, realArg.Params)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-func newBackendServiceTransmitDataArgs() interface{} {
-	return backendservice.NewBackendServiceTransmitDataArgs()
-}
-
-func newBackendServiceTransmitDataResult() interface{} {
-	return backendservice.NewBackendServiceTransmitDataResult()
 }
 
 func submitTasksHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -597,16 +578,6 @@ func (p *kClient) CancelPlanFragment(ctx context.Context, params *palointernalse
 	_args.Params = params
 	var _result backendservice.BackendServiceCancelPlanFragmentResult
 	if err = p.c.Call(ctx, "cancel_plan_fragment", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) TransmitData(ctx context.Context, params *palointernalservice.TTransmitDataParams) (r *palointernalservice.TTransmitDataResult_, err error) {
-	var _args backendservice.BackendServiceTransmitDataArgs
-	_args.Params = params
-	var _result backendservice.BackendServiceTransmitDataResult
-	if err = p.c.Call(ctx, "transmit_data", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

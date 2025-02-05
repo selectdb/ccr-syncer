@@ -3270,6 +3270,7 @@ type TDataStreamSink struct {
 	TabletSinkTxnId     *int64                                `thrift:"tablet_sink_txn_id,11,optional" frugal:"11,optional,i64" json:"tablet_sink_txn_id,omitempty"`
 	TabletSinkTupleId   *types.TTupleId                       `thrift:"tablet_sink_tuple_id,12,optional" frugal:"12,optional,i32" json:"tablet_sink_tuple_id,omitempty"`
 	TabletSinkExprs     []*exprs.TExpr                        `thrift:"tablet_sink_exprs,13,optional" frugal:"13,optional,list<exprs.TExpr>" json:"tablet_sink_exprs,omitempty"`
+	IsMerge             *bool                                 `thrift:"is_merge,14,optional" frugal:"14,optional,bool" json:"is_merge,omitempty"`
 }
 
 func NewTDataStreamSink() *TDataStreamSink {
@@ -3390,6 +3391,15 @@ func (p *TDataStreamSink) GetTabletSinkExprs() (v []*exprs.TExpr) {
 	}
 	return p.TabletSinkExprs
 }
+
+var TDataStreamSink_IsMerge_DEFAULT bool
+
+func (p *TDataStreamSink) GetIsMerge() (v bool) {
+	if !p.IsSetIsMerge() {
+		return TDataStreamSink_IsMerge_DEFAULT
+	}
+	return *p.IsMerge
+}
 func (p *TDataStreamSink) SetDestNodeId(val types.TPlanNodeId) {
 	p.DestNodeId = val
 }
@@ -3429,6 +3439,9 @@ func (p *TDataStreamSink) SetTabletSinkTupleId(val *types.TTupleId) {
 func (p *TDataStreamSink) SetTabletSinkExprs(val []*exprs.TExpr) {
 	p.TabletSinkExprs = val
 }
+func (p *TDataStreamSink) SetIsMerge(val *bool) {
+	p.IsMerge = val
+}
 
 var fieldIDToName_TDataStreamSink = map[int16]string{
 	1:  "dest_node_id",
@@ -3444,6 +3457,7 @@ var fieldIDToName_TDataStreamSink = map[int16]string{
 	11: "tablet_sink_txn_id",
 	12: "tablet_sink_tuple_id",
 	13: "tablet_sink_exprs",
+	14: "is_merge",
 }
 
 func (p *TDataStreamSink) IsSetOutputPartition() bool {
@@ -3492,6 +3506,10 @@ func (p *TDataStreamSink) IsSetTabletSinkTupleId() bool {
 
 func (p *TDataStreamSink) IsSetTabletSinkExprs() bool {
 	return p.TabletSinkExprs != nil
+}
+
+func (p *TDataStreamSink) IsSetIsMerge() bool {
+	return p.IsMerge != nil
 }
 
 func (p *TDataStreamSink) Read(iprot thrift.TProtocol) (err error) {
@@ -3616,6 +3634,14 @@ func (p *TDataStreamSink) Read(iprot thrift.TProtocol) (err error) {
 		case 13:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField14(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3840,6 +3866,17 @@ func (p *TDataStreamSink) ReadField13(iprot thrift.TProtocol) error {
 	p.TabletSinkExprs = _field
 	return nil
 }
+func (p *TDataStreamSink) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsMerge = _field
+	return nil
+}
 
 func (p *TDataStreamSink) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3897,6 +3934,10 @@ func (p *TDataStreamSink) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField13(oprot); err != nil {
 			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
 			goto WriteFieldError
 		}
 	}
@@ -4192,6 +4233,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
 
+func (p *TDataStreamSink) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsMerge() {
+		if err = oprot.WriteFieldBegin("is_merge", thrift.BOOL, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsMerge); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
+
 func (p *TDataStreamSink) String() string {
 	if p == nil {
 		return "<nil>"
@@ -4243,6 +4303,9 @@ func (p *TDataStreamSink) DeepEqual(ano *TDataStreamSink) bool {
 		return false
 	}
 	if !p.Field13DeepEqual(ano.TabletSinkExprs) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.IsMerge) {
 		return false
 	}
 	return true
@@ -4380,6 +4443,18 @@ func (p *TDataStreamSink) Field13DeepEqual(src []*exprs.TExpr) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *TDataStreamSink) Field14DeepEqual(src *bool) bool {
+
+	if p.IsMerge == src {
+		return true
+	} else if p.IsMerge == nil || src == nil {
+		return false
+	}
+	if *p.IsMerge != *src {
+		return false
 	}
 	return true
 }

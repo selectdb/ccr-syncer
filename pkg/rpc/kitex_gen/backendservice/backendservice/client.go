@@ -18,7 +18,6 @@ import (
 type Client interface {
 	ExecPlanFragment(ctx context.Context, params *palointernalservice.TExecPlanFragmentParams, callOptions ...callopt.Option) (r *palointernalservice.TExecPlanFragmentResult_, err error)
 	CancelPlanFragment(ctx context.Context, params *palointernalservice.TCancelPlanFragmentParams, callOptions ...callopt.Option) (r *palointernalservice.TCancelPlanFragmentResult_, err error)
-	TransmitData(ctx context.Context, params *palointernalservice.TTransmitDataParams, callOptions ...callopt.Option) (r *palointernalservice.TTransmitDataResult_, err error)
 	SubmitTasks(ctx context.Context, tasks []*agentservice.TAgentTaskRequest, callOptions ...callopt.Option) (r *agentservice.TAgentResult_, err error)
 	MakeSnapshot(ctx context.Context, snapshotRequest *agentservice.TSnapshotRequest, callOptions ...callopt.Option) (r *agentservice.TAgentResult_, err error)
 	ReleaseSnapshot(ctx context.Context, snapshotPath string, callOptions ...callopt.Option) (r *agentservice.TAgentResult_, err error)
@@ -83,11 +82,6 @@ func (p *kBackendServiceClient) ExecPlanFragment(ctx context.Context, params *pa
 func (p *kBackendServiceClient) CancelPlanFragment(ctx context.Context, params *palointernalservice.TCancelPlanFragmentParams, callOptions ...callopt.Option) (r *palointernalservice.TCancelPlanFragmentResult_, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.CancelPlanFragment(ctx, params)
-}
-
-func (p *kBackendServiceClient) TransmitData(ctx context.Context, params *palointernalservice.TTransmitDataParams, callOptions ...callopt.Option) (r *palointernalservice.TTransmitDataResult_, err error) {
-	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.TransmitData(ctx, params)
 }
 
 func (p *kBackendServiceClient) SubmitTasks(ctx context.Context, tasks []*agentservice.TAgentTaskRequest, callOptions ...callopt.Option) (r *agentservice.TAgentResult_, err error) {
