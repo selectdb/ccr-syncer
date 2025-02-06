@@ -118,6 +118,7 @@ struct TGetTablesParams {
   5: optional Types.TUserIdentity current_user_ident // to replace the user and user ip
   6: optional string type
   7: optional string catalog
+  8: optional string table
 }
 
 struct TTableStatus {
@@ -979,6 +980,7 @@ struct TGetBinlogRequest {
     7: optional string user_ip
     8: optional string token
     9: optional i64 prev_commit_seq
+    10: optional i64 num_acquired // the max num of binlogs in a batch
 }
 
 enum TBinlogType {

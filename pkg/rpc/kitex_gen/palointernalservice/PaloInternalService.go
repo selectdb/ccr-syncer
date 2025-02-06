@@ -1769,6 +1769,8 @@ type TQueryOptions struct {
 	EnableInvertedIndexQueryCache               bool            `thrift:"enable_inverted_index_query_cache,145,optional" frugal:"145,optional,bool" json:"enable_inverted_index_query_cache,omitempty"`
 	FuzzyDisableRuntimeFilterInBe               bool            `thrift:"fuzzy_disable_runtime_filter_in_be,146,optional" frugal:"146,optional,bool" json:"fuzzy_disable_runtime_filter_in_be,omitempty"`
 	ProfileLevel                                int32           `thrift:"profile_level,147,optional" frugal:"147,optional,i32" json:"profile_level,omitempty"`
+	MinScannerConcurrency                       int32           `thrift:"min_scanner_concurrency,148,optional" frugal:"148,optional,i32" json:"min_scanner_concurrency,omitempty"`
+	MinScanSchedulerConcurrency                 int32           `thrift:"min_scan_scheduler_concurrency,149,optional" frugal:"149,optional,i32" json:"min_scan_scheduler_concurrency,omitempty"`
 	DisableFileCache                            bool            `thrift:"disable_file_cache,1000,optional" frugal:"1000,optional,bool" json:"disable_file_cache,omitempty"`
 }
 
@@ -1902,6 +1904,8 @@ func NewTQueryOptions() *TQueryOptions {
 		EnableInvertedIndexQueryCache:               true,
 		FuzzyDisableRuntimeFilterInBe:               false,
 		ProfileLevel:                                1,
+		MinScannerConcurrency:                       1,
+		MinScanSchedulerConcurrency:                 0,
 		DisableFileCache:                            false,
 	}
 }
@@ -2034,6 +2038,8 @@ func (p *TQueryOptions) InitDefault() {
 	p.EnableInvertedIndexQueryCache = true
 	p.FuzzyDisableRuntimeFilterInBe = false
 	p.ProfileLevel = 1
+	p.MinScannerConcurrency = 1
+	p.MinScanSchedulerConcurrency = 0
 	p.DisableFileCache = false
 }
 
@@ -3279,6 +3285,24 @@ func (p *TQueryOptions) GetProfileLevel() (v int32) {
 	return p.ProfileLevel
 }
 
+var TQueryOptions_MinScannerConcurrency_DEFAULT int32 = 1
+
+func (p *TQueryOptions) GetMinScannerConcurrency() (v int32) {
+	if !p.IsSetMinScannerConcurrency() {
+		return TQueryOptions_MinScannerConcurrency_DEFAULT
+	}
+	return p.MinScannerConcurrency
+}
+
+var TQueryOptions_MinScanSchedulerConcurrency_DEFAULT int32 = 0
+
+func (p *TQueryOptions) GetMinScanSchedulerConcurrency() (v int32) {
+	if !p.IsSetMinScanSchedulerConcurrency() {
+		return TQueryOptions_MinScanSchedulerConcurrency_DEFAULT
+	}
+	return p.MinScanSchedulerConcurrency
+}
+
 var TQueryOptions_DisableFileCache_DEFAULT bool = false
 
 func (p *TQueryOptions) GetDisableFileCache() (v bool) {
@@ -3701,6 +3725,12 @@ func (p *TQueryOptions) SetFuzzyDisableRuntimeFilterInBe(val bool) {
 func (p *TQueryOptions) SetProfileLevel(val int32) {
 	p.ProfileLevel = val
 }
+func (p *TQueryOptions) SetMinScannerConcurrency(val int32) {
+	p.MinScannerConcurrency = val
+}
+func (p *TQueryOptions) SetMinScanSchedulerConcurrency(val int32) {
+	p.MinScanSchedulerConcurrency = val
+}
 func (p *TQueryOptions) SetDisableFileCache(val bool) {
 	p.DisableFileCache = val
 }
@@ -3844,6 +3874,8 @@ var fieldIDToName_TQueryOptions = map[int16]string{
 	145:  "enable_inverted_index_query_cache",
 	146:  "fuzzy_disable_runtime_filter_in_be",
 	147:  "profile_level",
+	148:  "min_scanner_concurrency",
+	149:  "min_scan_scheduler_concurrency",
 	1000: "disable_file_cache",
 }
 
@@ -4397,6 +4429,14 @@ func (p *TQueryOptions) IsSetFuzzyDisableRuntimeFilterInBe() bool {
 
 func (p *TQueryOptions) IsSetProfileLevel() bool {
 	return p.ProfileLevel != TQueryOptions_ProfileLevel_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetMinScannerConcurrency() bool {
+	return p.MinScannerConcurrency != TQueryOptions_MinScannerConcurrency_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetMinScanSchedulerConcurrency() bool {
+	return p.MinScanSchedulerConcurrency != TQueryOptions_MinScanSchedulerConcurrency_DEFAULT
 }
 
 func (p *TQueryOptions) IsSetDisableFileCache() bool {
@@ -5521,6 +5561,22 @@ func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
 		case 147:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField147(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 148:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField148(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 149:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField149(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7078,6 +7134,28 @@ func (p *TQueryOptions) ReadField147(iprot thrift.TProtocol) error {
 	p.ProfileLevel = _field
 	return nil
 }
+func (p *TQueryOptions) ReadField148(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.MinScannerConcurrency = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField149(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.MinScanSchedulerConcurrency = _field
+	return nil
+}
 func (p *TQueryOptions) ReadField1000(iprot thrift.TProtocol) error {
 
 	var _field bool
@@ -7646,6 +7724,14 @@ func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField147(oprot); err != nil {
 			fieldId = 147
+			goto WriteFieldError
+		}
+		if err = p.writeField148(oprot); err != nil {
+			fieldId = 148
+			goto WriteFieldError
+		}
+		if err = p.writeField149(oprot); err != nil {
+			fieldId = 149
 			goto WriteFieldError
 		}
 		if err = p.writeField1000(oprot); err != nil {
@@ -10292,6 +10378,44 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 147 end error: ", p), err)
 }
 
+func (p *TQueryOptions) writeField148(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMinScannerConcurrency() {
+		if err = oprot.WriteFieldBegin("min_scanner_concurrency", thrift.I32, 148); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.MinScannerConcurrency); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 148 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 148 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField149(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMinScanSchedulerConcurrency() {
+		if err = oprot.WriteFieldBegin("min_scan_scheduler_concurrency", thrift.I32, 149); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.MinScanSchedulerConcurrency); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 149 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 149 end error: ", p), err)
+}
+
 func (p *TQueryOptions) writeField1000(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDisableFileCache() {
 		if err = oprot.WriteFieldBegin("disable_file_cache", thrift.BOOL, 1000); err != nil {
@@ -10737,6 +10861,12 @@ func (p *TQueryOptions) DeepEqual(ano *TQueryOptions) bool {
 		return false
 	}
 	if !p.Field147DeepEqual(ano.ProfileLevel) {
+		return false
+	}
+	if !p.Field148DeepEqual(ano.MinScannerConcurrency) {
+		return false
+	}
+	if !p.Field149DeepEqual(ano.MinScanSchedulerConcurrency) {
 		return false
 	}
 	if !p.Field1000DeepEqual(ano.DisableFileCache) {
@@ -11757,6 +11887,20 @@ func (p *TQueryOptions) Field146DeepEqual(src bool) bool {
 func (p *TQueryOptions) Field147DeepEqual(src int32) bool {
 
 	if p.ProfileLevel != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field148DeepEqual(src int32) bool {
+
+	if p.MinScannerConcurrency != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field149DeepEqual(src int32) bool {
+
+	if p.MinScanSchedulerConcurrency != src {
 		return false
 	}
 	return true
