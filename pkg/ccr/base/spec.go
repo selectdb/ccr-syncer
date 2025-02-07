@@ -576,26 +576,6 @@ func (s *Spec) RenameTableWithName(oldName, newName string) error {
 	return s.Exec(sql)
 }
 
-func (s *Spec) dropTable(table string, force bool) error {
-	log.Infof("drop table %s.%s", s.Database, table)
-
-	db, err := s.Connect()
-	if err != nil {
-		return err
-	}
-
-	suffix := ""
-	if force {
-		suffix = "FORCE"
-	}
-	sql := fmt.Sprintf("DROP TABLE %s.%s %s", utils.FormatKeywordName(s.Database), utils.FormatKeywordName(table), suffix)
-	_, err = db.Exec(sql)
-	if err != nil {
-		return xerror.Wrapf(err, xerror.Normal, "drop table %s.%s failed, sql: %s", s.Database, table, sql)
-	}
-	return nil
-}
-
 func (s *Spec) ClearDB() error {
 	log.Infof("clear database %s", s.Database)
 
@@ -1329,7 +1309,7 @@ func (s *Spec) DropTable(tableName string, force bool) error {
 	}
 	dbName := utils.FormatKeywordName(s.Database)
 	tableName = utils.FormatKeywordName(tableName)
-	dropSql := fmt.Sprintf("DROP TABLE %s.%s %s", dbName, tableName, sqlSuffix)
+	dropSql := fmt.Sprintf("DROP TABLE IF EXISTS %s.%s %s", dbName, tableName, sqlSuffix)
 	log.Infof("drop table sql: %s", dropSql)
 	return s.Exec(dropSql)
 }
