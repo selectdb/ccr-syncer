@@ -104,7 +104,7 @@ type IFeRpc interface {
 	CommitTransaction(*base.Spec, int64, []*festruct_types.TTabletCommitInfo) (*festruct.TCommitTxnResult_, error)
 	CommitTransactionForTxnInsert(*base.Spec, int64, bool, []*festruct.TSubTxnInfo) (*festruct.TCommitTxnResult_, error)
 	RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.TRollbackTxnResult_, error)
-	GetBinlog(*base.Spec, int64) (*festruct.TGetBinlogResult_, error)
+	GetBinlog(*base.Spec, int64, int64) (*festruct.TGetBinlogResult_, error)
 	GetBinlogLag(*base.Spec, int64) (*festruct.TGetBinlogLagResult_, error)
 	GetSnapshot(*base.Spec, string, bool) (*festruct.TGetSnapshotResult_, error)
 	RestoreSnapshot(*base.Spec, *RestoreSnapshotRequest) (*festruct.TRestoreSnapshotResult_, error)
@@ -420,10 +420,10 @@ func (rpc *FeRpc) RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.T
 	return convertResult[festruct.TRollbackTxnResult_](result, err)
 }
 
-func (rpc *FeRpc) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogResult_, error) {
+func (rpc *FeRpc) GetBinlog(spec *base.Spec, commitSeq, numAcquired int64) (*festruct.TGetBinlogResult_, error) {
 	// return rpc.masterClient.GetBinlog(spec, commitSeq)
 	caller := func(client IFeRpc) (resultType, error) {
-		return client.GetBinlog(spec, commitSeq)
+		return client.GetBinlog(spec, commitSeq, numAcquired)
 	}
 	result, err := rpc.callWithMasterRedirect(caller)
 	return convertResult[festruct.TGetBinlogResult_](result, err)
@@ -669,12 +669,13 @@ func (rpc *singleFeClient) RollbackTransaction(spec *base.Spec, txnId int64) (*f
 //	    7: optional string token
 //	    8: required i64 prev_commit_seq
 //	}
-func (rpc *singleFeClient) GetBinlog(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogResult_, error) {
-	log.Debugf("Call GetBinlog, addr: %s, spec: %s, commit seq: %d", rpc.Address(), spec, commitSeq)
+func (rpc *singleFeClient) GetBinlog(spec *base.Spec, commitSeq, numAcquired int64) (*festruct.TGetBinlogResult_, error) {
+	log.Tracef("Call GetBinlog, addr: %s, spec: %s, commit seq: %d, num acquired: %d", rpc.Address(), spec, commitSeq, numAcquired)
 
 	client := rpc.client
 	req := &festruct.TGetBinlogRequest{
 		PrevCommitSeq: &commitSeq,
+		NumAcquired:   &numAcquired,
 	}
 	setAuthInfo(req, spec)
 

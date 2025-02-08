@@ -72,6 +72,8 @@ var (
 	featureFilterStorageMedium          bool
 	featureRestoreReplaceDiffSchema     bool
 
+	flagBinlogBatchSize int64
+
 	ErrMaterializedViewTable = xerror.NewWithoutStack(xerror.Meta, "Not support table type: materialized view")
 )
 
@@ -102,6 +104,8 @@ func init() {
 		"enable filter storage medium property")
 	flag.BoolVar(&featureRestoreReplaceDiffSchema, "feature_restore_replace_diff_schema", true,
 		"replace the table with different schema during restore")
+
+	flag.Int64Var(&flagBinlogBatchSize, "binlog_batch_size", 16, "the max num of binlogs to get in a batch")
 }
 
 type SyncType int
@@ -3089,7 +3093,7 @@ func (j *Job) incrementalSync() error {
 		commitSeq := j.progress.CommitSeq
 		log.Debugf("src: %s, commitSeq: %v", src, commitSeq)
 
-		getBinlogResp, err := srcRpc.GetBinlog(src, commitSeq)
+		getBinlogResp, err := srcRpc.GetBinlog(src, commitSeq, flagBinlogBatchSize)
 		if err != nil {
 			return err
 		}

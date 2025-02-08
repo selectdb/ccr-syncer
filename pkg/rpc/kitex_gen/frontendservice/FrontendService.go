@@ -4578,6 +4578,7 @@ type TGetTablesParams struct {
 	CurrentUserIdent *types.TUserIdentity `thrift:"current_user_ident,5,optional" frugal:"5,optional,types.TUserIdentity" json:"current_user_ident,omitempty"`
 	Type             *string              `thrift:"type,6,optional" frugal:"6,optional,string" json:"type,omitempty"`
 	Catalog          *string              `thrift:"catalog,7,optional" frugal:"7,optional,string" json:"catalog,omitempty"`
+	Table            *string              `thrift:"table,8,optional" frugal:"8,optional,string" json:"table,omitempty"`
 }
 
 func NewTGetTablesParams() *TGetTablesParams {
@@ -4649,6 +4650,15 @@ func (p *TGetTablesParams) GetCatalog() (v string) {
 	}
 	return *p.Catalog
 }
+
+var TGetTablesParams_Table_DEFAULT string
+
+func (p *TGetTablesParams) GetTable() (v string) {
+	if !p.IsSetTable() {
+		return TGetTablesParams_Table_DEFAULT
+	}
+	return *p.Table
+}
 func (p *TGetTablesParams) SetDb(val *string) {
 	p.Db = val
 }
@@ -4670,6 +4680,9 @@ func (p *TGetTablesParams) SetType(val *string) {
 func (p *TGetTablesParams) SetCatalog(val *string) {
 	p.Catalog = val
 }
+func (p *TGetTablesParams) SetTable(val *string) {
+	p.Table = val
+}
 
 var fieldIDToName_TGetTablesParams = map[int16]string{
 	1: "db",
@@ -4679,6 +4692,7 @@ var fieldIDToName_TGetTablesParams = map[int16]string{
 	5: "current_user_ident",
 	6: "type",
 	7: "catalog",
+	8: "table",
 }
 
 func (p *TGetTablesParams) IsSetDb() bool {
@@ -4707,6 +4721,10 @@ func (p *TGetTablesParams) IsSetType() bool {
 
 func (p *TGetTablesParams) IsSetCatalog() bool {
 	return p.Catalog != nil
+}
+
+func (p *TGetTablesParams) IsSetTable() bool {
+	return p.Table != nil
 }
 
 func (p *TGetTablesParams) Read(iprot thrift.TProtocol) (err error) {
@@ -4779,6 +4797,14 @@ func (p *TGetTablesParams) Read(iprot thrift.TProtocol) (err error) {
 		case 7:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4887,6 +4913,17 @@ func (p *TGetTablesParams) ReadField7(iprot thrift.TProtocol) error {
 	p.Catalog = _field
 	return nil
 }
+func (p *TGetTablesParams) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Table = _field
+	return nil
+}
 
 func (p *TGetTablesParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -4920,6 +4957,10 @@ func (p *TGetTablesParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
 			goto WriteFieldError
 		}
 	}
@@ -5073,6 +5114,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
 
+func (p *TGetTablesParams) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTable() {
+		if err = oprot.WriteFieldBegin("table", thrift.STRING, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Table); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
 func (p *TGetTablesParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -5106,6 +5166,9 @@ func (p *TGetTablesParams) DeepEqual(ano *TGetTablesParams) bool {
 		return false
 	}
 	if !p.Field7DeepEqual(ano.Catalog) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.Table) {
 		return false
 	}
 	return true
@@ -5186,6 +5249,18 @@ func (p *TGetTablesParams) Field7DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Catalog, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TGetTablesParams) Field8DeepEqual(src *string) bool {
+
+	if p.Table == src {
+		return true
+	} else if p.Table == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Table, *src) != 0 {
 		return false
 	}
 	return true
@@ -48412,6 +48487,7 @@ type TGetBinlogRequest struct {
 	UserIp        *string `thrift:"user_ip,7,optional" frugal:"7,optional,string" json:"user_ip,omitempty"`
 	Token         *string `thrift:"token,8,optional" frugal:"8,optional,string" json:"token,omitempty"`
 	PrevCommitSeq *int64  `thrift:"prev_commit_seq,9,optional" frugal:"9,optional,i64" json:"prev_commit_seq,omitempty"`
+	NumAcquired   *int64  `thrift:"num_acquired,10,optional" frugal:"10,optional,i64" json:"num_acquired,omitempty"`
 }
 
 func NewTGetBinlogRequest() *TGetBinlogRequest {
@@ -48501,6 +48577,15 @@ func (p *TGetBinlogRequest) GetPrevCommitSeq() (v int64) {
 	}
 	return *p.PrevCommitSeq
 }
+
+var TGetBinlogRequest_NumAcquired_DEFAULT int64
+
+func (p *TGetBinlogRequest) GetNumAcquired() (v int64) {
+	if !p.IsSetNumAcquired() {
+		return TGetBinlogRequest_NumAcquired_DEFAULT
+	}
+	return *p.NumAcquired
+}
 func (p *TGetBinlogRequest) SetCluster(val *string) {
 	p.Cluster = val
 }
@@ -48528,17 +48613,21 @@ func (p *TGetBinlogRequest) SetToken(val *string) {
 func (p *TGetBinlogRequest) SetPrevCommitSeq(val *int64) {
 	p.PrevCommitSeq = val
 }
+func (p *TGetBinlogRequest) SetNumAcquired(val *int64) {
+	p.NumAcquired = val
+}
 
 var fieldIDToName_TGetBinlogRequest = map[int16]string{
-	1: "cluster",
-	2: "user",
-	3: "passwd",
-	4: "db",
-	5: "table",
-	6: "table_id",
-	7: "user_ip",
-	8: "token",
-	9: "prev_commit_seq",
+	1:  "cluster",
+	2:  "user",
+	3:  "passwd",
+	4:  "db",
+	5:  "table",
+	6:  "table_id",
+	7:  "user_ip",
+	8:  "token",
+	9:  "prev_commit_seq",
+	10: "num_acquired",
 }
 
 func (p *TGetBinlogRequest) IsSetCluster() bool {
@@ -48575,6 +48664,10 @@ func (p *TGetBinlogRequest) IsSetToken() bool {
 
 func (p *TGetBinlogRequest) IsSetPrevCommitSeq() bool {
 	return p.PrevCommitSeq != nil
+}
+
+func (p *TGetBinlogRequest) IsSetNumAcquired() bool {
+	return p.NumAcquired != nil
 }
 
 func (p *TGetBinlogRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -48663,6 +48756,14 @@ func (p *TGetBinlogRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 9:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -48796,6 +48897,17 @@ func (p *TGetBinlogRequest) ReadField9(iprot thrift.TProtocol) error {
 	p.PrevCommitSeq = _field
 	return nil
 }
+func (p *TGetBinlogRequest) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.NumAcquired = _field
+	return nil
+}
 
 func (p *TGetBinlogRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -48837,6 +48949,10 @@ func (p *TGetBinlogRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField9(oprot); err != nil {
 			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 	}
@@ -49028,6 +49144,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
 
+func (p *TGetBinlogRequest) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNumAcquired() {
+		if err = oprot.WriteFieldBegin("num_acquired", thrift.I64, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.NumAcquired); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
 func (p *TGetBinlogRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -49067,6 +49202,9 @@ func (p *TGetBinlogRequest) DeepEqual(ano *TGetBinlogRequest) bool {
 		return false
 	}
 	if !p.Field9DeepEqual(ano.PrevCommitSeq) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.NumAcquired) {
 		return false
 	}
 	return true
@@ -49176,6 +49314,18 @@ func (p *TGetBinlogRequest) Field9DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.PrevCommitSeq != *src {
+		return false
+	}
+	return true
+}
+func (p *TGetBinlogRequest) Field10DeepEqual(src *int64) bool {
+
+	if p.NumAcquired == src {
+		return true
+	} else if p.NumAcquired == nil || src == nil {
+		return false
+	}
+	if *p.NumAcquired != *src {
 		return false
 	}
 	return true
