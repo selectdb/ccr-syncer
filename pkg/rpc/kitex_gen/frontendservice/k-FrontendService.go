@@ -42106,6 +42106,20 @@ func (p *TRestoreSnapshotRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 17:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField17(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -42392,6 +42406,19 @@ func (p *TRestoreSnapshotRequest) FastReadField16(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TRestoreSnapshotRequest) FastReadField17(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.ForceReplace = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TRestoreSnapshotRequest) FastWrite(buf []byte) int {
 	return 0
@@ -42405,6 +42432,7 @@ func (p *TRestoreSnapshotRequest) FastWriteNocopy(buf []byte, binaryWriter bthri
 		offset += p.fastWriteField14(buf[offset:], binaryWriter)
 		offset += p.fastWriteField15(buf[offset:], binaryWriter)
 		offset += p.fastWriteField16(buf[offset:], binaryWriter)
+		offset += p.fastWriteField17(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -42443,6 +42471,7 @@ func (p *TRestoreSnapshotRequest) BLength() int {
 		l += p.field14Length()
 		l += p.field15Length()
 		l += p.field16Length()
+		l += p.field17Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -42643,6 +42672,17 @@ func (p *TRestoreSnapshotRequest) fastWriteField16(buf []byte, binaryWriter bthr
 	return offset
 }
 
+func (p *TRestoreSnapshotRequest) fastWriteField17(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetForceReplace() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "force_replace", thrift.BOOL, 17)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.ForceReplace)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TRestoreSnapshotRequest) field1Length() int {
 	l := 0
 	if p.IsSetCluster() {
@@ -42823,6 +42863,17 @@ func (p *TRestoreSnapshotRequest) field16Length() int {
 	if p.IsSetCompressed() {
 		l += bthrift.Binary.FieldBeginLength("compressed", thrift.BOOL, 16)
 		l += bthrift.Binary.BoolLength(*p.Compressed)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TRestoreSnapshotRequest) field17Length() int {
+	l := 0
+	if p.IsSetForceReplace() {
+		l += bthrift.Binary.FieldBeginLength("force_replace", thrift.BOOL, 17)
+		l += bthrift.Binary.BoolLength(*p.ForceReplace)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

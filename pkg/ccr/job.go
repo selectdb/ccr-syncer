@@ -66,6 +66,7 @@ var (
 	featureSkipRollupBinlogs            bool
 	featureTxnInsert                    bool
 	featureFilterStorageMedium          bool
+	featureRestoreReplaceDiffSchema     bool
 
 	ErrMaterializedViewTable = xerror.NewWithoutStack(xerror.Meta, "Not support table type: materialized view")
 )
@@ -95,6 +96,8 @@ func init() {
 		"enable txn insert support")
 	flag.BoolVar(&featureFilterStorageMedium, "feature_filter_storage_medium", true,
 		"enable filter storage medium property")
+	flag.BoolVar(&featureRestoreReplaceDiffSchema, "feature_restore_replace_diff_schema", true,
+		"replace the table with different schema during restore")
 }
 
 type SyncType int
@@ -1056,6 +1059,9 @@ func (j *Job) fullSync() error {
 		}
 		if featureAtomicRestore {
 			restoreReq.AtomicRestore = true
+		}
+		if featureRestoreReplaceDiffSchema {
+			restoreReq.ForceReplace = true
 		}
 		restoreResp, err := destRpc.RestoreSnapshot(dest, &restoreReq)
 		if err != nil {

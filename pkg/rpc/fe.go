@@ -95,6 +95,7 @@ type RestoreSnapshotRequest struct {
 	CleanPartitions bool
 	CleanTables     bool
 	Compress        bool
+	ForceReplace    bool
 }
 
 type IFeRpc interface {
@@ -800,14 +801,15 @@ func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, restoreReq *RestoreS
 		CleanPartitions: &restoreReq.CleanPartitions,
 		AtomicRestore:   &restoreReq.AtomicRestore,
 		Compressed:      utils.ThriftValueWrapper(restoreReq.Compress),
+		ForceReplace:    &restoreReq.ForceReplace,
 	}
 	setAuthInfo(req, spec)
 
 	// NOTE: ignore meta, because it's too large
-	log.Debugf("RestoreSnapshotRequest user %s, db %s, table %s, label name %s, properties %v, clean tables: %t, clean partitions: %t, atomic restore: %t, compressed: %t",
+	log.Debugf("RestoreSnapshotRequest user %s, db %s, table %s, label name %s, properties %v, clean tables: %t, clean partitions: %t, atomic restore: %t, compressed: %t, forceReplace: %t",
 		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), properties,
 		restoreReq.CleanTables, restoreReq.CleanPartitions, restoreReq.AtomicRestore,
-		req.GetCompressed())
+		req.GetCompressed(), restoreReq.ForceReplace)
 
 	if resp, err := client.RestoreSnapshot(context.Background(), req); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "RestoreSnapshot failed")
