@@ -170,10 +170,11 @@ type JobProgress struct {
 	// The sync id of full/partial snapshot
 	SyncId int64 `json:"job_sync_id"`
 	// The commit seq where the target cluster has synced.
-	PrevCommitSeq int64           `json:"prev_commit_seq"`
-	CommitSeq     int64           `json:"commit_seq"`
-	LastCommitSeq int64           `json:"last_commit_seq"` // the last commit seq try to sync
-	TableMapping  map[int64]int64 `json:"table_mapping"`
+	PrevCommitSeq   int64           `json:"prev_commit_seq"`
+	CommitSeq       int64           `json:"commit_seq"`
+	LastCommitSeq   int64           `json:"last_commit_seq"` // the last commit seq try to sync
+	LockedCommitSeq int64           `json:"-"`
+	TableMapping    map[int64]int64 `json:"table_mapping"`
 	// the upstream table id to name mapping, build during the fullsync,
 	// keep snapshot to avoid rename. it might be staled.
 	TableNameMapping  map[int64]string    `json:"table_name_mapping,omitempty"`

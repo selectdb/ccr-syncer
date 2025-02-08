@@ -516,6 +516,7 @@ const (
 	TInvertedIndexFileStorageFormat_DEFAULT TInvertedIndexFileStorageFormat = 0
 	TInvertedIndexFileStorageFormat_V1      TInvertedIndexFileStorageFormat = 1
 	TInvertedIndexFileStorageFormat_V2      TInvertedIndexFileStorageFormat = 2
+	TInvertedIndexFileStorageFormat_V3      TInvertedIndexFileStorageFormat = 3
 )
 
 func (p TInvertedIndexFileStorageFormat) String() string {
@@ -526,6 +527,8 @@ func (p TInvertedIndexFileStorageFormat) String() string {
 		return "V1"
 	case TInvertedIndexFileStorageFormat_V2:
 		return "V2"
+	case TInvertedIndexFileStorageFormat_V3:
+		return "V3"
 	}
 	return "<UNSET>"
 }
@@ -538,6 +541,8 @@ func TInvertedIndexFileStorageFormatFromString(s string) (TInvertedIndexFileStor
 		return TInvertedIndexFileStorageFormat_V1, nil
 	case "V2":
 		return TInvertedIndexFileStorageFormat_V2, nil
+	case "V3":
+		return TInvertedIndexFileStorageFormat_V3, nil
 	}
 	return TInvertedIndexFileStorageFormat(0), fmt.Errorf("not a valid TInvertedIndexFileStorageFormat string")
 }
@@ -894,58 +899,6 @@ func (p *TTaskType) Scan(value interface{}) (err error) {
 }
 
 func (p *TTaskType) Value() (driver.Value, error) {
-	if p == nil {
-		return nil, nil
-	}
-	return int64(*p), nil
-}
-
-type TStmtType int64
-
-const (
-	TStmtType_QUERY   TStmtType = 0
-	TStmtType_DDL     TStmtType = 1
-	TStmtType_DML     TStmtType = 2
-	TStmtType_EXPLAIN TStmtType = 3
-)
-
-func (p TStmtType) String() string {
-	switch p {
-	case TStmtType_QUERY:
-		return "QUERY"
-	case TStmtType_DDL:
-		return "DDL"
-	case TStmtType_DML:
-		return "DML"
-	case TStmtType_EXPLAIN:
-		return "EXPLAIN"
-	}
-	return "<UNSET>"
-}
-
-func TStmtTypeFromString(s string) (TStmtType, error) {
-	switch s {
-	case "QUERY":
-		return TStmtType_QUERY, nil
-	case "DDL":
-		return TStmtType_DDL, nil
-	case "DML":
-		return TStmtType_DML, nil
-	case "EXPLAIN":
-		return TStmtType_EXPLAIN, nil
-	}
-	return TStmtType(0), fmt.Errorf("not a valid TStmtType string")
-}
-
-func TStmtTypePtr(v TStmtType) *TStmtType { return &v }
-func (p *TStmtType) Scan(value interface{}) (err error) {
-	var result sql.NullInt64
-	err = result.Scan(value)
-	*p = TStmtType(result.Int64)
-	return
-}
-
-func (p *TStmtType) Value() (driver.Value, error) {
 	if p == nil {
 		return nil, nil
 	}
@@ -2039,6 +1992,7 @@ const (
 	TMetadataType_WORKLOAD_SCHED_POLICY TMetadataType = 8
 	TMetadataType_PARTITIONS            TMetadataType = 9
 	TMetadataType_PARTITION_VALUES      TMetadataType = 10
+	TMetadataType_HUDI                  TMetadataType = 11
 )
 
 func (p TMetadataType) String() string {
@@ -2065,6 +2019,8 @@ func (p TMetadataType) String() string {
 		return "PARTITIONS"
 	case TMetadataType_PARTITION_VALUES:
 		return "PARTITION_VALUES"
+	case TMetadataType_HUDI:
+		return "HUDI"
 	}
 	return "<UNSET>"
 }
@@ -2093,6 +2049,8 @@ func TMetadataTypeFromString(s string) (TMetadataType, error) {
 		return TMetadataType_PARTITIONS, nil
 	case "PARTITION_VALUES":
 		return TMetadataType_PARTITION_VALUES, nil
+	case "HUDI":
+		return TMetadataType_HUDI, nil
 	}
 	return TMetadataType(0), fmt.Errorf("not a valid TMetadataType string")
 }
@@ -2143,6 +2101,43 @@ func (p *TIcebergQueryType) Scan(value interface{}) (err error) {
 }
 
 func (p *TIcebergQueryType) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
+type THudiQueryType int64
+
+const (
+	THudiQueryType_TIMELINE THudiQueryType = 0
+)
+
+func (p THudiQueryType) String() string {
+	switch p {
+	case THudiQueryType_TIMELINE:
+		return "TIMELINE"
+	}
+	return "<UNSET>"
+}
+
+func THudiQueryTypeFromString(s string) (THudiQueryType, error) {
+	switch s {
+	case "TIMELINE":
+		return THudiQueryType_TIMELINE, nil
+	}
+	return THudiQueryType(0), fmt.Errorf("not a valid THudiQueryType string")
+}
+
+func THudiQueryTypePtr(v THudiQueryType) *THudiQueryType { return &v }
+func (p *THudiQueryType) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = THudiQueryType(result.Int64)
+	return
+}
+
+func (p *THudiQueryType) Value() (driver.Value, error) {
 	if p == nil {
 		return nil, nil
 	}

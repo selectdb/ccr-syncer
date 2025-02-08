@@ -2158,6 +2158,20 @@ func (p *TDataStreamSink) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 14:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField14(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -2430,6 +2444,19 @@ func (p *TDataStreamSink) FastReadField13(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TDataStreamSink) FastReadField14(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.IsMerge = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TDataStreamSink) FastWrite(buf []byte) int {
 	return 0
@@ -2444,6 +2471,7 @@ func (p *TDataStreamSink) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binar
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 		offset += p.fastWriteField11(buf[offset:], binaryWriter)
 		offset += p.fastWriteField12(buf[offset:], binaryWriter)
+		offset += p.fastWriteField14(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
@@ -2475,6 +2503,7 @@ func (p *TDataStreamSink) BLength() int {
 		l += p.field11Length()
 		l += p.field12Length()
 		l += p.field13Length()
+		l += p.field14Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -2644,6 +2673,17 @@ func (p *TDataStreamSink) fastWriteField13(buf []byte, binaryWriter bthrift.Bina
 	return offset
 }
 
+func (p *TDataStreamSink) fastWriteField14(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetIsMerge() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "is_merge", thrift.BOOL, 14)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.IsMerge)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TDataStreamSink) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("dest_node_id", thrift.I32, 1)
@@ -2786,6 +2826,17 @@ func (p *TDataStreamSink) field13Length() int {
 			l += v.BLength()
 		}
 		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TDataStreamSink) field14Length() int {
+	l := 0
+	if p.IsSetIsMerge() {
+		l += bthrift.Binary.FieldBeginLength("is_merge", thrift.BOOL, 14)
+		l += bthrift.Binary.BoolLength(*p.IsMerge)
+
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l

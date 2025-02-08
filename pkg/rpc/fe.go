@@ -112,6 +112,7 @@ type IFeRpc interface {
 	GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error)
 	GetTableMeta(spec *base.Spec, tableIds []int64) (*festruct.TGetMetaResult_, error)
 	GetBackends(spec *base.Spec) (*festruct.TGetBackendMetaResult_, error)
+	LockBinlog(spec *base.Spec, jobUniqueId string, tableId int64, commitSeq int64) (*festruct.TLockBinlogResult_, error)
 
 	Address() string
 }
@@ -485,6 +486,14 @@ func (rpc *FeRpc) GetBackends(spec *base.Spec) (*festruct.TGetBackendMetaResult_
 	}
 	result, err := rpc.callWithMasterRedirect(caller)
 	return convertResult[festruct.TGetBackendMetaResult_](result, err)
+}
+
+func (rpc *FeRpc) LockBinlog(spec *base.Spec, jobUniqueId string, tableId int64, commitSeq int64) (*festruct.TLockBinlogResult_, error) {
+	caller := func(client IFeRpc) (resultType, error) {
+		return client.LockBinlog(spec, jobUniqueId, tableId, commitSeq)
+	}
+	result, err := rpc.callWithMasterRedirect(caller)
+	return convertResult[festruct.TLockBinlogResult_](result, err)
 }
 
 type Request interface {
@@ -890,6 +899,35 @@ func (rpc *singleFeClient) GetBackends(spec *base.Spec) (*festruct.TGetBackendMe
 
 	if resp, err := client.GetBackendMeta(context.Background(), req); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "GetBackendMeta failed, req: %+v", req)
+	} else {
+		return resp, nil
+	}
+}
+
+//	struct TLockBinlogRequest {
+//	    1: optional string cluster
+//	    2: optional string user
+//	    3: optional string passwd
+//	    4: optional string db
+//	    5: optional string table
+//	    6: optional i64 table_id
+//	    7: optional string token
+//	    8: optional string job_unique_id
+//	    9: optional i64 lock_commit_seq // if not set, lock the latest binlog
+//	}
+func (rpc *singleFeClient) LockBinlog(spec *base.Spec, jobUniqueId string, tableId int64, lockCommitSeq int64) (*festruct.TLockBinlogResult_, error) {
+	log.Tracef("Call LockBinlog, addr: %s, spec: %s, tableId: %d, jobUniqueId: %s, lockCommitSeq: %d", rpc.Address(), spec, tableId, jobUniqueId, lockCommitSeq)
+
+	client := rpc.client
+	req := &festruct.TLockBinlogRequest{
+		TableId:       &tableId,
+		JobUniqueId:   &jobUniqueId,
+		LockCommitSeq: &lockCommitSeq,
+	}
+	setAuthInfo(req, spec)
+
+	if resp, err := client.LockBinlog(context.Background(), req); err != nil {
+		return nil, xerror.Wrapf(err, xerror.RPC, "LockBinlog failed, req: %+v", req)
 	} else {
 		return resp, nil
 	}

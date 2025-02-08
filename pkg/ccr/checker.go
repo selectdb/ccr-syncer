@@ -109,7 +109,7 @@ func (c *Checker) next() {
 	case checkerStateUpdate:
 		c.state = checkerStateRefresh
 	case checkerStateCheck:
-		if c.deadSyncers != nil && len(c.deadSyncers) != 0 {
+		if len(c.deadSyncers) != 0 {
 			c.state = checkerStateRebalance
 		} else {
 			c.state = checkerStateFinish

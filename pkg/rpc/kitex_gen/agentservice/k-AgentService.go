@@ -734,7 +734,7 @@ func (p *TTabletSchema) FastReadField19(buf []byte) (int, error) {
 	if err != nil {
 		return offset, err
 	}
-	p.ClusterKeyIdxes = make([]int32, 0, size)
+	p.ClusterKeyUids = make([]int32, 0, size)
 	for i := 0; i < size; i++ {
 		var _elem int32
 		if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
@@ -746,7 +746,7 @@ func (p *TTabletSchema) FastReadField19(buf []byte) (int, error) {
 
 		}
 
-		p.ClusterKeyIdxes = append(p.ClusterKeyIdxes, _elem)
+		p.ClusterKeyUids = append(p.ClusterKeyUids, _elem)
 	}
 	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
 		return offset, err
@@ -1103,12 +1103,12 @@ func (p *TTabletSchema) fastWriteField18(buf []byte, binaryWriter bthrift.Binary
 
 func (p *TTabletSchema) fastWriteField19(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
-	if p.IsSetClusterKeyIdxes() {
-		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "cluster_key_idxes", thrift.LIST, 19)
+	if p.IsSetClusterKeyUids() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "cluster_key_uids", thrift.LIST, 19)
 		listBeginOffset := offset
 		offset += bthrift.Binary.ListBeginLength(thrift.I32, 0)
 		var length int
-		for _, v := range p.ClusterKeyIdxes {
+		for _, v := range p.ClusterKeyUids {
 			length++
 			offset += bthrift.Binary.WriteI32(buf[offset:], v)
 
@@ -1368,11 +1368,11 @@ func (p *TTabletSchema) field18Length() int {
 
 func (p *TTabletSchema) field19Length() int {
 	l := 0
-	if p.IsSetClusterKeyIdxes() {
-		l += bthrift.Binary.FieldBeginLength("cluster_key_idxes", thrift.LIST, 19)
-		l += bthrift.Binary.ListBeginLength(thrift.I32, len(p.ClusterKeyIdxes))
+	if p.IsSetClusterKeyUids() {
+		l += bthrift.Binary.FieldBeginLength("cluster_key_uids", thrift.LIST, 19)
+		l += bthrift.Binary.ListBeginLength(thrift.I32, len(p.ClusterKeyUids))
 		var tmpV int32
-		l += bthrift.Binary.I32Length(int32(tmpV)) * len(p.ClusterKeyIdxes)
+		l += bthrift.Binary.I32Length(int32(tmpV)) * len(p.ClusterKeyUids)
 		l += bthrift.Binary.ListEndLength()
 		l += bthrift.Binary.FieldEndLength()
 	}
