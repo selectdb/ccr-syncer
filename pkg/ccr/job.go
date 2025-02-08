@@ -18,10 +18,12 @@ package ccr
 
 import (
 	"context"
+	"crypto/md5"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"math"
 	"math/rand"
 	"regexp"
@@ -52,6 +54,8 @@ const (
 
 	SkipBySilence  = "silence"
 	SkipByFullSync = "fullsync"
+
+	LockLastBinlogCommitSeq = -1
 )
 
 var (
@@ -152,6 +156,7 @@ type JobExtra struct {
 
 type Job struct {
 	Name     string      `json:"name"`
+	Id       string      `json:"id"`
 	SyncType SyncType    `json:"sync_type"`
 	Src      base.Spec   `json:"src"`
 	ISrc     base.Specer `json:"-"`
@@ -199,8 +204,10 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 	factory := jobContext.Factory
 	src := jobContext.Src
 	dest := jobContext.Dest
+	id := getJobId(name, src, dest)
 	job := &Job{
 		Name:     name,
+		Id:       id,
 		Src:      src,
 		ISrc:     factory.NewSpecer(&src),
 		srcMeta:  factory.NewMeta(&jobContext.Src),
@@ -244,6 +251,10 @@ func NewJobFromJson(jsonData string, db storage.DB, factory *Factory) (*Job, err
 	err := json.Unmarshal([]byte(jsonData), &job)
 	if err != nil {
 		return nil, xerror.Wrapf(err, xerror.Normal, "unmarshal json failed, json: %s", jsonData)
+	}
+
+	if len(job.Id) == 0 {
+		job.Id = getJobId(job.Name, job.Src, job.Dest)
 	}
 
 	// recover all not json fields
@@ -793,6 +804,12 @@ func (j *Job) fullSync() error {
 			}
 		}
 
+		// Step 1.1: Lock the binlogs, to avoid the binlog is deleted during the full sync.
+		if err := j.lockBinlog(LockLastBinlogCommitSeq); err != nil {
+			return err
+		}
+
+		// Step 1.2: Check the tables in the source db, if the tables are empty, retry later.
 		backupTableList := make([]string, 0)
 		switch j.SyncType {
 		case DBSync:
@@ -817,6 +834,7 @@ func (j *Job) fullSync() error {
 			return xerror.Errorf(xerror.Normal, "invalid sync type %s", j.SyncType)
 		}
 
+		// Step 1.3: Create snapshot
 		snapshotName := NewLabelWithTs(prefix)
 		log.Infof("fullsync status: create snapshot %s", snapshotName)
 		if err := j.ISrc.CreateSnapshot(snapshotName, backupTableList); err != nil {
@@ -1427,7 +1445,7 @@ func (j *Job) getDbSyncTableRecords(upsert *record.Upsert) []*record.TableRecord
 	return tableRecords
 }
 
-func (j *Job) getStidsByDestTableId(destTableId int64, tableRecords []*record.TableRecord, stidMaps map[int64]int64) ([]int64, error) {
+func (j *Job) getStidsByDestTableId(destTableId int64, tableRecords []*record.TableRecord, stidMaps map[int64]int64) []int64 {
 	destStids := make([]int64, 0, 1)
 	uniqStids := make(map[int64]int64)
 
@@ -1458,7 +1476,7 @@ func (j *Job) getStidsByDestTableId(destTableId int64, tableRecords []*record.Ta
 		destStid := key
 		destStids = append(destStids, destStid)
 	}
-	return destStids, nil
+	return destStids
 }
 
 func (j *Job) getRelatedTableRecords(upsert *record.Upsert) ([]*record.TableRecord, error) {
@@ -1528,7 +1546,7 @@ func (j *Job) ingestBinlogForTxnInsert(txnId int64, tableRecords []*record.Table
 
 	stidToCommitInfos := ingestBinlogJob.SubTxnToCommitInfos()
 	subTxnInfos := make([]*festruct.TSubTxnInfo, 0, len(stidMap))
-	destStids, err := j.getStidsByDestTableId(destTableId, tableRecords, stidMap)
+	destStids := j.getStidsByDestTableId(destTableId, tableRecords, stidMap)
 
 	for _, destStid := range destStids {
 		destStid := destStid
@@ -3151,7 +3169,8 @@ func (j *Job) incrementalSync() error {
 		if err, backToRunLoop := j.handleBinlogs(binlogs); err != nil {
 			return err
 		} else if backToRunLoop {
-			return nil
+			// release the binlogs before PrevCommitSeq.
+			return j.lockBinlog(j.progress.PrevCommitSeq)
 		}
 	}
 }
@@ -3722,6 +3741,51 @@ func (j *Job) SkipBinlog(skipCommitSeq int64, skipBy string) error {
 	return nil
 }
 
+func (j *Job) lockBinlog(lockCommitSeq int64) error {
+	if lockCommitSeq != LockLastBinlogCommitSeq && j.progress.LockedCommitSeq+256 > lockCommitSeq {
+		// Avoid frequent lock binlog
+		return nil
+	}
+
+	var tableId int64
+	switch j.SyncType {
+	case TableSync:
+		tableId = j.Src.TableId
+	case DBSync:
+		tableId = -1
+	default:
+		return xerror.Errorf(xerror.Normal, "unknown table sync type: %v", j.SyncType)
+	}
+
+	src := &j.Src
+	srcRpc, err := j.factory.NewFeRpc(src)
+	if err != nil {
+		log.Errorf("new fe rpc failed, src: %v, err: %+v", src, err)
+		return err
+	}
+
+	jobUniqueId := fmt.Sprintf("%s_%s", j.Name, j.Id)
+	resp, err := srcRpc.LockBinlog(src, jobUniqueId, tableId, lockCommitSeq)
+	if err != nil {
+		log.Errorf("lock binlog failed, src: %v, err: %+v", src, err)
+		return err
+	} else if status := resp.GetStatus().GetStatusCode(); status != tstatus.TStatusCode_OK &&
+		status != tstatus.TStatusCode_BINLOG_NOT_FOUND_DB &&
+		status != tstatus.TStatusCode_BINLOG_NOT_FOUND_TABLE {
+		log.Errorf("lock binlog failed, src: %v, status: %+v", src, resp.GetStatus())
+		return xerror.Errorf(xerror.RPC, "lock binlog failed, status: %+v", resp.GetStatus())
+	} else if status != tstatus.TStatusCode_OK {
+		log.Warnf("lock binlog failed, src: %v, status: %+v", src, resp.GetStatus())
+		return nil
+	}
+
+	lockedCommitSeq := resp.GetLockedCommitSeq()
+	log.Debugf("lock binlog success, commit seq: %d, locked commit seq: %d", lockCommitSeq, lockedCommitSeq)
+
+	j.progress.LockedCommitSeq = lockedCommitSeq
+	return nil
+}
+
 func isTxnCommitted(status *tstatus.TStatus) bool {
 	return isStatusContainsAny(status, "is already COMMITTED")
 }
@@ -3769,4 +3833,12 @@ func IsSessionVariableRequired(msg string) bool {
 func FilterStorageMediumFromCreateTableSql(createSql string) string {
 	pattern := `"storage_medium"\s*=\s*"[^"]*"(,\s*)?`
 	return regexp.MustCompile(pattern).ReplaceAllString(createSql, "")
+}
+
+func getJobId(name string, src base.Spec, dest base.Spec) string {
+	h := md5.New()
+	io.WriteString(h, name)
+	io.WriteString(h, src.String())
+	io.WriteString(h, dest.String())
+	return fmt.Sprintf("%x", h.Sum(nil))
 }

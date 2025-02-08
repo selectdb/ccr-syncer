@@ -23,7 +23,6 @@ func NewServiceInfo() *kitex.ServiceInfo {
 	methods := map[string]kitex.MethodInfo{
 		"getDbNames":                kitex.NewMethodInfo(getDbNamesHandler, newFrontendServiceGetDbNamesArgs, newFrontendServiceGetDbNamesResult, false),
 		"getTableNames":             kitex.NewMethodInfo(getTableNamesHandler, newFrontendServiceGetTableNamesArgs, newFrontendServiceGetTableNamesResult, false),
-		"describeTable":             kitex.NewMethodInfo(describeTableHandler, newFrontendServiceDescribeTableArgs, newFrontendServiceDescribeTableResult, false),
 		"describeTables":            kitex.NewMethodInfo(describeTablesHandler, newFrontendServiceDescribeTablesArgs, newFrontendServiceDescribeTablesResult, false),
 		"showVariables":             kitex.NewMethodInfo(showVariablesHandler, newFrontendServiceShowVariablesArgs, newFrontendServiceShowVariablesResult, false),
 		"reportExecStatus":          kitex.NewMethodInfo(reportExecStatusHandler, newFrontendServiceReportExecStatusArgs, newFrontendServiceReportExecStatusResult, false),
@@ -48,6 +47,7 @@ func NewServiceInfo() *kitex.ServiceInfo {
 		"getBinlog":                 kitex.NewMethodInfo(getBinlogHandler, newFrontendServiceGetBinlogArgs, newFrontendServiceGetBinlogResult, false),
 		"getSnapshot":               kitex.NewMethodInfo(getSnapshotHandler, newFrontendServiceGetSnapshotArgs, newFrontendServiceGetSnapshotResult, false),
 		"restoreSnapshot":           kitex.NewMethodInfo(restoreSnapshotHandler, newFrontendServiceRestoreSnapshotArgs, newFrontendServiceRestoreSnapshotResult, false),
+		"lockBinlog":                kitex.NewMethodInfo(lockBinlogHandler, newFrontendServiceLockBinlogArgs, newFrontendServiceLockBinlogResult, false),
 		"waitingTxnStatus":          kitex.NewMethodInfo(waitingTxnStatusHandler, newFrontendServiceWaitingTxnStatusArgs, newFrontendServiceWaitingTxnStatusResult, false),
 		"streamLoadPut":             kitex.NewMethodInfo(streamLoadPutHandler, newFrontendServiceStreamLoadPutArgs, newFrontendServiceStreamLoadPutResult, false),
 		"streamLoadMultiTablePut":   kitex.NewMethodInfo(streamLoadMultiTablePutHandler, newFrontendServiceStreamLoadMultiTablePutArgs, newFrontendServiceStreamLoadMultiTablePutResult, false),
@@ -132,24 +132,6 @@ func newFrontendServiceGetTableNamesArgs() interface{} {
 
 func newFrontendServiceGetTableNamesResult() interface{} {
 	return frontendservice.NewFrontendServiceGetTableNamesResult()
-}
-
-func describeTableHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*frontendservice.FrontendServiceDescribeTableArgs)
-	realResult := result.(*frontendservice.FrontendServiceDescribeTableResult)
-	success, err := handler.(frontendservice.FrontendService).DescribeTable(ctx, realArg.Params)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-func newFrontendServiceDescribeTableArgs() interface{} {
-	return frontendservice.NewFrontendServiceDescribeTableArgs()
-}
-
-func newFrontendServiceDescribeTableResult() interface{} {
-	return frontendservice.NewFrontendServiceDescribeTableResult()
 }
 
 func describeTablesHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -582,6 +564,24 @@ func newFrontendServiceRestoreSnapshotArgs() interface{} {
 
 func newFrontendServiceRestoreSnapshotResult() interface{} {
 	return frontendservice.NewFrontendServiceRestoreSnapshotResult()
+}
+
+func lockBinlogHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*frontendservice.FrontendServiceLockBinlogArgs)
+	realResult := result.(*frontendservice.FrontendServiceLockBinlogResult)
+	success, err := handler.(frontendservice.FrontendService).LockBinlog(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newFrontendServiceLockBinlogArgs() interface{} {
+	return frontendservice.NewFrontendServiceLockBinlogArgs()
+}
+
+func newFrontendServiceLockBinlogResult() interface{} {
+	return frontendservice.NewFrontendServiceLockBinlogResult()
 }
 
 func waitingTxnStatusHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1226,16 +1226,6 @@ func (p *kClient) GetTableNames(ctx context.Context, params *frontendservice.TGe
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) DescribeTable(ctx context.Context, params *frontendservice.TDescribeTableParams) (r *frontendservice.TDescribeTableResult_, err error) {
-	var _args frontendservice.FrontendServiceDescribeTableArgs
-	_args.Params = params
-	var _result frontendservice.FrontendServiceDescribeTableResult
-	if err = p.c.Call(ctx, "describeTable", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
 func (p *kClient) DescribeTables(ctx context.Context, params *frontendservice.TDescribeTablesParams) (r *frontendservice.TDescribeTablesResult_, err error) {
 	var _args frontendservice.FrontendServiceDescribeTablesArgs
 	_args.Params = params
@@ -1470,6 +1460,16 @@ func (p *kClient) RestoreSnapshot(ctx context.Context, request *frontendservice.
 	_args.Request = request
 	var _result frontendservice.FrontendServiceRestoreSnapshotResult
 	if err = p.c.Call(ctx, "restoreSnapshot", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) LockBinlog(ctx context.Context, request *frontendservice.TLockBinlogRequest) (r *frontendservice.TLockBinlogResult_, err error) {
+	var _args frontendservice.FrontendServiceLockBinlogArgs
+	_args.Request = request
+	var _result frontendservice.FrontendServiceLockBinlogResult
+	if err = p.c.Call(ctx, "lockBinlog", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

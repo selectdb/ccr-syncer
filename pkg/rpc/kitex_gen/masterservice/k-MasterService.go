@@ -332,6 +332,62 @@ func (p *TTabletInfo) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 22:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField22(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 23:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField23(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 24:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField24(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 25:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField25(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 1000:
 			if fieldTypeId == thrift.BOOL {
 				l, err = p.FastReadField1000(buf[offset:])
@@ -684,6 +740,62 @@ func (p *TTabletInfo) FastReadField21(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TTabletInfo) FastReadField22(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.LocalIndexSize = v
+
+	}
+	return offset, nil
+}
+
+func (p *TTabletInfo) FastReadField23(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.LocalSegmentSize = v
+
+	}
+	return offset, nil
+}
+
+func (p *TTabletInfo) FastReadField24(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.RemoteIndexSize = v
+
+	}
+	return offset, nil
+}
+
+func (p *TTabletInfo) FastReadField25(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.RemoteSegmentSize = v
+
+	}
+	return offset, nil
+}
+
 func (p *TTabletInfo) FastReadField1000(buf []byte) (int, error) {
 	offset := 0
 
@@ -722,6 +834,10 @@ func (p *TTabletInfo) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWri
 		offset += p.fastWriteField16(buf[offset:], binaryWriter)
 		offset += p.fastWriteField19(buf[offset:], binaryWriter)
 		offset += p.fastWriteField21(buf[offset:], binaryWriter)
+		offset += p.fastWriteField22(buf[offset:], binaryWriter)
+		offset += p.fastWriteField23(buf[offset:], binaryWriter)
+		offset += p.fastWriteField24(buf[offset:], binaryWriter)
+		offset += p.fastWriteField25(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1000(buf[offset:], binaryWriter)
 		offset += p.fastWriteField7(buf[offset:], binaryWriter)
 		offset += p.fastWriteField8(buf[offset:], binaryWriter)
@@ -755,6 +871,10 @@ func (p *TTabletInfo) BLength() int {
 		l += p.field19Length()
 		l += p.field20Length()
 		l += p.field21Length()
+		l += p.field22Length()
+		l += p.field23Length()
+		l += p.field24Length()
+		l += p.field25Length()
 		l += p.field1000Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
@@ -966,6 +1086,50 @@ func (p *TTabletInfo) fastWriteField21(buf []byte, binaryWriter bthrift.BinaryWr
 	return offset
 }
 
+func (p *TTabletInfo) fastWriteField22(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetLocalIndexSize() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "local_index_size", thrift.I64, 22)
+		offset += bthrift.Binary.WriteI64(buf[offset:], p.LocalIndexSize)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TTabletInfo) fastWriteField23(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetLocalSegmentSize() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "local_segment_size", thrift.I64, 23)
+		offset += bthrift.Binary.WriteI64(buf[offset:], p.LocalSegmentSize)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TTabletInfo) fastWriteField24(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetRemoteIndexSize() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "remote_index_size", thrift.I64, 24)
+		offset += bthrift.Binary.WriteI64(buf[offset:], p.RemoteIndexSize)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TTabletInfo) fastWriteField25(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetRemoteSegmentSize() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "remote_segment_size", thrift.I64, 25)
+		offset += bthrift.Binary.WriteI64(buf[offset:], p.RemoteSegmentSize)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TTabletInfo) fastWriteField1000(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
 	if p.IsSetIsPersistent() {
@@ -1169,6 +1333,50 @@ func (p *TTabletInfo) field21Length() int {
 	if p.IsSetVisibleVersionCount() {
 		l += bthrift.Binary.FieldBeginLength("visible_version_count", thrift.I64, 21)
 		l += bthrift.Binary.I64Length(*p.VisibleVersionCount)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TTabletInfo) field22Length() int {
+	l := 0
+	if p.IsSetLocalIndexSize() {
+		l += bthrift.Binary.FieldBeginLength("local_index_size", thrift.I64, 22)
+		l += bthrift.Binary.I64Length(p.LocalIndexSize)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TTabletInfo) field23Length() int {
+	l := 0
+	if p.IsSetLocalSegmentSize() {
+		l += bthrift.Binary.FieldBeginLength("local_segment_size", thrift.I64, 23)
+		l += bthrift.Binary.I64Length(p.LocalSegmentSize)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TTabletInfo) field24Length() int {
+	l := 0
+	if p.IsSetRemoteIndexSize() {
+		l += bthrift.Binary.FieldBeginLength("remote_index_size", thrift.I64, 24)
+		l += bthrift.Binary.I64Length(p.RemoteIndexSize)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TTabletInfo) field25Length() int {
+	l := 0
+	if p.IsSetRemoteSegmentSize() {
+		l += bthrift.Binary.FieldBeginLength("remote_segment_size", thrift.I64, 25)
+		l += bthrift.Binary.I64Length(p.RemoteSegmentSize)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
