@@ -28,6 +28,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/avast/retry-go"
+	"github.com/hashicorp/go-metrics"
+	"github.com/hashicorp/go-metrics/prometheus"
 	"github.com/selectdb/ccr_syncer/pkg/ccr"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	"github.com/selectdb/ccr_syncer/pkg/rpc"
@@ -36,9 +39,6 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/version"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
-
-	"github.com/hashicorp/go-metrics"
-	"github.com/hashicorp/go-metrics/prometheus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -62,6 +62,8 @@ var (
 	syncer       Syncer
 	printVersion bool
 )
+
+const maxRetries = 5
 
 func init() {
 	flag.BoolVar(&printVersion, "version", false, "The program's version")
@@ -115,6 +117,15 @@ func parseConfigFile() error {
 	}
 
 	return nil
+}
+
+func retryWithAttempts(fn func() error, attempts uint, delay time.Duration) error {
+	return retry.Do(
+		fn,
+		retry.Delay(delay),
+		retry.Attempts(attempts),
+		retry.DelayType(retry.FixedDelay),
+	)
 }
 
 func main() {
@@ -174,9 +185,8 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-
-		if err := httpService.Start(); err != nil {
-			log.Fatalf("http service start error: %+v", err)
+		if err := retryWithAttempts(httpService.Start, maxRetries, time.Second); err != nil {
+			log.Fatalf("http service start error: %+v, try %v times", err, maxRetries)
 		}
 	}()
 	time.Sleep(1 * time.Second) // only for check http service start, if not, will log.Fatal
@@ -185,14 +195,20 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		jobManager.Start()
+
+		if err := retryWithAttempts(jobManager.Start, maxRetries, time.Second); err != nil {
+			log.Fatalf("job manager start error: %+v, try %v times", err, maxRetries)
+		}
 	}()
 
 	// Step 6: start checker
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		checker.Start()
+
+		if err := retryWithAttempts(checker.Start, maxRetries, time.Second); err != nil {
+			log.Fatalf("checker start error: %+v, try %v times", err, maxRetries)
+		}
 	}()
 
 	// Step 7: init metrics
