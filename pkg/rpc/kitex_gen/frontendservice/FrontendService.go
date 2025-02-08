@@ -57603,6 +57603,7 @@ type TRestoreSnapshotRequest struct {
 	CleanPartitions *bool             `thrift:"clean_partitions,14,optional" frugal:"14,optional,bool" json:"clean_partitions,omitempty"`
 	AtomicRestore   *bool             `thrift:"atomic_restore,15,optional" frugal:"15,optional,bool" json:"atomic_restore,omitempty"`
 	Compressed      *bool             `thrift:"compressed,16,optional" frugal:"16,optional,bool" json:"compressed,omitempty"`
+	ForceReplace    *bool             `thrift:"force_replace,17,optional" frugal:"17,optional,bool" json:"force_replace,omitempty"`
 }
 
 func NewTRestoreSnapshotRequest() *TRestoreSnapshotRequest {
@@ -57755,6 +57756,15 @@ func (p *TRestoreSnapshotRequest) GetCompressed() (v bool) {
 	}
 	return *p.Compressed
 }
+
+var TRestoreSnapshotRequest_ForceReplace_DEFAULT bool
+
+func (p *TRestoreSnapshotRequest) GetForceReplace() (v bool) {
+	if !p.IsSetForceReplace() {
+		return TRestoreSnapshotRequest_ForceReplace_DEFAULT
+	}
+	return *p.ForceReplace
+}
 func (p *TRestoreSnapshotRequest) SetCluster(val *string) {
 	p.Cluster = val
 }
@@ -57803,6 +57813,9 @@ func (p *TRestoreSnapshotRequest) SetAtomicRestore(val *bool) {
 func (p *TRestoreSnapshotRequest) SetCompressed(val *bool) {
 	p.Compressed = val
 }
+func (p *TRestoreSnapshotRequest) SetForceReplace(val *bool) {
+	p.ForceReplace = val
+}
 
 var fieldIDToName_TRestoreSnapshotRequest = map[int16]string{
 	1:  "cluster",
@@ -57821,6 +57834,7 @@ var fieldIDToName_TRestoreSnapshotRequest = map[int16]string{
 	14: "clean_partitions",
 	15: "atomic_restore",
 	16: "compressed",
+	17: "force_replace",
 }
 
 func (p *TRestoreSnapshotRequest) IsSetCluster() bool {
@@ -57885,6 +57899,10 @@ func (p *TRestoreSnapshotRequest) IsSetAtomicRestore() bool {
 
 func (p *TRestoreSnapshotRequest) IsSetCompressed() bool {
 	return p.Compressed != nil
+}
+
+func (p *TRestoreSnapshotRequest) IsSetForceReplace() bool {
+	return p.ForceReplace != nil
 }
 
 func (p *TRestoreSnapshotRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -58029,6 +58047,14 @@ func (p *TRestoreSnapshotRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 16:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField16(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 17:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField17(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -58269,6 +58295,17 @@ func (p *TRestoreSnapshotRequest) ReadField16(iprot thrift.TProtocol) error {
 	p.Compressed = _field
 	return nil
 }
+func (p *TRestoreSnapshotRequest) ReadField17(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ForceReplace = _field
+	return nil
+}
 
 func (p *TRestoreSnapshotRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -58338,6 +58375,10 @@ func (p *TRestoreSnapshotRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField16(oprot); err != nil {
 			fieldId = 16
+			goto WriteFieldError
+		}
+		if err = p.writeField17(oprot); err != nil {
+			fieldId = 17
 			goto WriteFieldError
 		}
 	}
@@ -58681,6 +58722,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
 }
 
+func (p *TRestoreSnapshotRequest) writeField17(oprot thrift.TProtocol) (err error) {
+	if p.IsSetForceReplace() {
+		if err = oprot.WriteFieldBegin("force_replace", thrift.BOOL, 17); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.ForceReplace); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
+}
+
 func (p *TRestoreSnapshotRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -58741,6 +58801,9 @@ func (p *TRestoreSnapshotRequest) DeepEqual(ano *TRestoreSnapshotRequest) bool {
 		return false
 	}
 	if !p.Field16DeepEqual(ano.Compressed) {
+		return false
+	}
+	if !p.Field17DeepEqual(ano.ForceReplace) {
 		return false
 	}
 	return true
@@ -58926,6 +58989,18 @@ func (p *TRestoreSnapshotRequest) Field16DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.Compressed != *src {
+		return false
+	}
+	return true
+}
+func (p *TRestoreSnapshotRequest) Field17DeepEqual(src *bool) bool {
+
+	if p.ForceReplace == src {
+		return true
+	} else if p.ForceReplace == nil || src == nil {
+		return false
+	}
+	if *p.ForceReplace != *src {
 		return false
 	}
 	return true
