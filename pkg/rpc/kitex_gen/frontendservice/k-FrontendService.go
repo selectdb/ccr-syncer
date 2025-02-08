@@ -2813,6 +2813,20 @@ func (p *TGetTablesParams) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField8(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -2939,6 +2953,19 @@ func (p *TGetTablesParams) FastReadField7(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TGetTablesParams) FastReadField8(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.Table = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TGetTablesParams) FastWrite(buf []byte) int {
 	return 0
@@ -2955,6 +2982,7 @@ func (p *TGetTablesParams) FastWriteNocopy(buf []byte, binaryWriter bthrift.Bina
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 		offset += p.fastWriteField7(buf[offset:], binaryWriter)
+		offset += p.fastWriteField8(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -2972,6 +3000,7 @@ func (p *TGetTablesParams) BLength() int {
 		l += p.field5Length()
 		l += p.field6Length()
 		l += p.field7Length()
+		l += p.field8Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -3054,6 +3083,17 @@ func (p *TGetTablesParams) fastWriteField7(buf []byte, binaryWriter bthrift.Bina
 	return offset
 }
 
+func (p *TGetTablesParams) fastWriteField8(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTable() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "table", thrift.STRING, 8)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.Table)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TGetTablesParams) field1Length() int {
 	l := 0
 	if p.IsSetDb() {
@@ -3124,6 +3164,17 @@ func (p *TGetTablesParams) field7Length() int {
 	if p.IsSetCatalog() {
 		l += bthrift.Binary.FieldBeginLength("catalog", thrift.STRING, 7)
 		l += bthrift.Binary.StringLengthNocopy(*p.Catalog)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TGetTablesParams) field8Length() int {
+	l := 0
+	if p.IsSetTable() {
+		l += bthrift.Binary.FieldBeginLength("table", thrift.STRING, 8)
+		l += bthrift.Binary.StringLengthNocopy(*p.Table)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -35121,6 +35172,20 @@ func (p *TGetBinlogRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 10:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -35273,6 +35338,19 @@ func (p *TGetBinlogRequest) FastReadField9(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TGetBinlogRequest) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.NumAcquired = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TGetBinlogRequest) FastWrite(buf []byte) int {
 	return 0
@@ -35284,6 +35362,7 @@ func (p *TGetBinlogRequest) FastWriteNocopy(buf []byte, binaryWriter bthrift.Bin
 	if p != nil {
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
+		offset += p.fastWriteField10(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -35310,6 +35389,7 @@ func (p *TGetBinlogRequest) BLength() int {
 		l += p.field7Length()
 		l += p.field8Length()
 		l += p.field9Length()
+		l += p.field10Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -35415,6 +35495,17 @@ func (p *TGetBinlogRequest) fastWriteField9(buf []byte, binaryWriter bthrift.Bin
 	return offset
 }
 
+func (p *TGetBinlogRequest) fastWriteField10(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetNumAcquired() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "num_acquired", thrift.I64, 10)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.NumAcquired)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TGetBinlogRequest) field1Length() int {
 	l := 0
 	if p.IsSetCluster() {
@@ -35508,6 +35599,17 @@ func (p *TGetBinlogRequest) field9Length() int {
 	if p.IsSetPrevCommitSeq() {
 		l += bthrift.Binary.FieldBeginLength("prev_commit_seq", thrift.I64, 9)
 		l += bthrift.Binary.I64Length(*p.PrevCommitSeq)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TGetBinlogRequest) field10Length() int {
+	l := 0
+	if p.IsSetNumAcquired() {
+		l += bthrift.Binary.FieldBeginLength("num_acquired", thrift.I64, 10)
+		l += bthrift.Binary.I64Length(*p.NumAcquired)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

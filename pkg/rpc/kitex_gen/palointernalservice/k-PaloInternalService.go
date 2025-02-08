@@ -3067,6 +3067,34 @@ func (p *TQueryOptions) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 148:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField148(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 149:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField149(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 1000:
 			if fieldTypeId == thrift.BOOL {
 				l, err = p.FastReadField1000(buf[offset:])
@@ -5037,6 +5065,34 @@ func (p *TQueryOptions) FastReadField147(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TQueryOptions) FastReadField148(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.MinScannerConcurrency = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField149(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.MinScanSchedulerConcurrency = v
+
+	}
+	return offset, nil
+}
+
 func (p *TQueryOptions) FastReadField1000(buf []byte) (int, error) {
 	offset := 0
 
@@ -5193,6 +5249,8 @@ func (p *TQueryOptions) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryW
 		offset += p.fastWriteField145(buf[offset:], binaryWriter)
 		offset += p.fastWriteField146(buf[offset:], binaryWriter)
 		offset += p.fastWriteField147(buf[offset:], binaryWriter)
+		offset += p.fastWriteField148(buf[offset:], binaryWriter)
+		offset += p.fastWriteField149(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1000(buf[offset:], binaryWriter)
 		offset += p.fastWriteField18(buf[offset:], binaryWriter)
 		offset += p.fastWriteField42(buf[offset:], binaryWriter)
@@ -5347,6 +5405,8 @@ func (p *TQueryOptions) BLength() int {
 		l += p.field145Length()
 		l += p.field146Length()
 		l += p.field147Length()
+		l += p.field148Length()
+		l += p.field149Length()
 		l += p.field1000Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
@@ -6865,6 +6925,28 @@ func (p *TQueryOptions) fastWriteField147(buf []byte, binaryWriter bthrift.Binar
 	if p.IsSetProfileLevel() {
 		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "profile_level", thrift.I32, 147)
 		offset += bthrift.Binary.WriteI32(buf[offset:], p.ProfileLevel)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField148(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetMinScannerConcurrency() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "min_scanner_concurrency", thrift.I32, 148)
+		offset += bthrift.Binary.WriteI32(buf[offset:], p.MinScannerConcurrency)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField149(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetMinScanSchedulerConcurrency() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "min_scan_scheduler_concurrency", thrift.I32, 149)
+		offset += bthrift.Binary.WriteI32(buf[offset:], p.MinScanSchedulerConcurrency)
 
 		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
 	}
@@ -8393,6 +8475,28 @@ func (p *TQueryOptions) field147Length() int {
 	if p.IsSetProfileLevel() {
 		l += bthrift.Binary.FieldBeginLength("profile_level", thrift.I32, 147)
 		l += bthrift.Binary.I32Length(p.ProfileLevel)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field148Length() int {
+	l := 0
+	if p.IsSetMinScannerConcurrency() {
+		l += bthrift.Binary.FieldBeginLength("min_scanner_concurrency", thrift.I32, 148)
+		l += bthrift.Binary.I32Length(p.MinScannerConcurrency)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field149Length() int {
+	l := 0
+	if p.IsSetMinScanSchedulerConcurrency() {
+		l += bthrift.Binary.FieldBeginLength("min_scan_scheduler_concurrency", thrift.I32, 149)
+		l += bthrift.Binary.I32Length(p.MinScanSchedulerConcurrency)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
