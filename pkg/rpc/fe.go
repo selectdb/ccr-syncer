@@ -67,7 +67,7 @@ func canUseNextAddr(err error) bool {
 		return true
 	}
 	if errors.Is(err, kerrors.ErrRemoteOrNetwork) {
-		return true
+		return !IsUnknownMethod(err)
 	}
 
 	errMsg := err.Error()
