@@ -3127,8 +3127,12 @@ func (j *Job) incrementalSync() error {
 		if err, backToRunLoop := j.handleBinlogs(binlogs); err != nil {
 			return err
 		} else if backToRunLoop {
-			// release the binlogs before PrevCommitSeq.
-			return j.lockBinlog(j.progress.PrevCommitSeq)
+			return nil
+		}
+
+		// release the binlogs before PrevCommitSeq.
+		if err = j.lockBinlog(j.progress.PrevCommitSeq); err != nil {
+			return err
 		}
 	}
 }
