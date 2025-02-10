@@ -3774,7 +3774,12 @@ func (j *Job) lockBinlog(lockCommitSeq int64) error {
 
 	jobUniqueId := fmt.Sprintf("%s_%s", j.Name, j.Id)
 	resp, err := srcRpc.LockBinlog(src, jobUniqueId, tableId, lockCommitSeq)
-	if err != nil {
+	if err != nil && rpc.IsUnknownMethod(err) {
+		// Keep compatibility with old version
+		log.Debugf("lock binlog failed, because of unknown method, src: %v", src)
+		j.progress.LockedCommitSeq = lockCommitSeq
+		return nil
+	} else if err != nil {
 		log.Errorf("lock binlog failed, src: %v, err: %+v", src, err)
 		return err
 	} else if status := resp.GetStatus().GetStatusCode(); status != tstatus.TStatusCode_OK &&
