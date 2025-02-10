@@ -54,8 +54,8 @@ class Helper {
         this.logger = suite.logger
 
         // Disable fuzzy config for the ccr test suites.
-        suite.sql """ ADMIN SET FRONTEND CONFIG ("random_add_cluster_keys_for_mow" = "false") """
-        suite.target_sql """ ADMIN SET FRONTEND CONFIG ("random_add_cluster_keys_for_mow" = "false") """
+        suite.try_sql """ ADMIN SET FRONTEND CONFIG ("random_add_cluster_keys_for_mow" = "false") """
+        suite.try_target_sql """ ADMIN SET FRONTEND CONFIG ("random_add_cluster_keys_for_mow" = "false") """
     }
 
     void set_alias(String alias) {
