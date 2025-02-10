@@ -30,6 +30,8 @@ suite("test_ds_tbl_diff_schema") {
         return res.size() == 0
     }
 
+    helper.enableDbBinlog()
+
     sql "DROP TABLE IF EXISTS ${tableName}"
     target_sql "DROP TABLE IF EXISTS ${tableName}"
 
