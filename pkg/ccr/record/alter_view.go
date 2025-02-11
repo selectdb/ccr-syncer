@@ -26,6 +26,7 @@ type AlterView struct {
 	TableId       int64  `json:"tableId"`
 	InlineViewDef string `json:"inlineViewDef"`
 	SqlMode       int64  `json:"sqlMode"`
+	Comment       string `json:"comment"`
 }
 
 func NewAlterViewFromJson(data string) (*AlterView, error) {
@@ -43,5 +44,5 @@ func NewAlterViewFromJson(data string) (*AlterView, error) {
 }
 
 func (a *AlterView) String() string {
-	return fmt.Sprintf("AlterView: DbId: %d, TableId: %d, InlineViewDef: %s, SqlMode: %d", a.DbId, a.TableId, a.InlineViewDef, a.SqlMode)
+	return fmt.Sprintf("AlterView: DbId: %d, TableId: %d, InlineViewDef: %s, SqlMode: %d, Comment: %s", a.DbId, a.TableId, a.InlineViewDef, a.SqlMode, a.Comment)
 }

@@ -1359,7 +1359,12 @@ func (s *Spec) AlterViewDef(srcDatabase, viewName string, alterView *record.Alte
 	def = strings.ReplaceAll(alterView.InlineViewDef, prefix, fmt.Sprintf(" %s.", dbName))
 
 	viewName = utils.FormatKeywordName(viewName)
-	alterViewSql := fmt.Sprintf("ALTER VIEW %s.%s AS %s", dbName, viewName, def)
+	alterViewSql := ""
+	if alterView.Comment != "" {
+		alterViewSql = fmt.Sprintf("ALTER VIEW %s.%s MODIFY COMMENT '%s'", dbName, viewName, utils.EscapeStringValue(alterView.Comment))
+	} else {
+		alterViewSql = fmt.Sprintf("ALTER VIEW %s.%s AS %s", dbName, viewName, def)
+	}
 	log.Infof("alter view sql: %s", alterViewSql)
 	return s.Exec(alterViewSql)
 }
