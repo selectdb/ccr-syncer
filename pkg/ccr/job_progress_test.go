@@ -90,6 +90,7 @@ func TestJobProgress_MarshalJSON(t *testing.T) {
   "prev_commit_seq": 0,
   "commit_seq": 1,
   "last_commit_seq": 0,
+  "unknown_commit_seq": 0,
   "table_mapping": null,
   "table_commit_seq_map": {
     "1": 2
