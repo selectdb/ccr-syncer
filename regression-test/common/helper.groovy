@@ -561,6 +561,25 @@ class Helper {
             }
         }
     }
+
+    Boolean checkJobInIncrementalSync(Integer times = 30, String tableName = "") {
+        def DB_TABLES_INCREMENTAL_SYNC = 1
+        def DB_INCREMENTAL_SYNC = 3
+        def TABLE_INCREMENTAL_SYNC = 501
+
+        def job_progress
+        for (int i = 0; i < times; i++) {
+            job_progress = get_job_progress(tableName)
+            if (job_progress != null && (job_progress.sync_state == DB_TABLES_INCREMENTAL_SYNC ||
+                    job_progress.sync_state == DB_INCREMENTAL_SYNC ||
+                    job_progress.sync_state == TABLE_INCREMENTAL_SYNC)) {
+                return true
+            }
+            sleep(sync_gap_time)
+        }
+        logger.info("last job progress: ${job_progress}")
+        return false
+    }
 }
 
 new Helper(suite)
