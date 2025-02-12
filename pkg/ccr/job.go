@@ -71,6 +71,7 @@ var (
 	featureTxnInsert                    bool
 	featureFilterStorageMedium          bool
 	featureRestoreReplaceDiffSchema     bool
+	featureIdempotentDDL                bool
 
 	flagBinlogBatchSize int64
 
@@ -104,6 +105,8 @@ func init() {
 		"enable filter storage medium property")
 	flag.BoolVar(&featureRestoreReplaceDiffSchema, "feature_restore_replace_diff_schema", true,
 		"replace the table with different schema during restore")
+	flag.BoolVar(&featureIdempotentDDL, "feature_idempotent_ddl", true,
+		"enable idempotent ddl by checking the dest table schema before rolling back")
 
 	flag.Int64Var(&flagBinlogBatchSize, "binlog_batch_size", 16, "the max num of binlogs to get in a batch")
 }
@@ -2084,7 +2087,6 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 		j.progress.TableNameMapping = make(map[int64]string)
 	}
 	j.progress.TableNameMapping[createTable.TableId] = srcTableName
-	j.progress.Done()
 	return nil
 }
 
@@ -3012,6 +3014,95 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 	return nil, false
 }
 
+// determineBinlogState determines whether the unknown binlog is committed or not.
+// The result is true if the binlog is committed, otherwise false.
+func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
+	commitSeq := binlog.GetCommitSeq()
+	if commitSeq != j.progress.UnknownCommitSeq {
+		panic("commit seq not match")
+	}
+
+	isIdempotent := func(binlogType festruct.TBinlogType) bool {
+		switch binlogType {
+		// Idempotent when EXISTS/NOT EXISTS
+		case festruct.TBinlogType_CREATE_TABLE:
+		case festruct.TBinlogType_DROP_PARTITION:
+		case festruct.TBinlogType_ADD_PARTITION:
+		case festruct.TBinlogType_DROP_TABLE:
+		case festruct.TBinlogType_DROP_ROLLUP:
+
+		// Idempotent when executing twice
+		case festruct.TBinlogType_MODIFY_VIEW_DEF:
+		case festruct.TBinlogType_TRUNCATE_TABLE:
+		case festruct.TBinlogType_MODIFY_COMMENT:
+		case festruct.TBinlogType_ALTER_DATABASE_PROPERTY:
+		case festruct.TBinlogType_MODIFY_TABLE_PROPERTY:
+		case festruct.TBinlogType_MODIFY_PARTITIONS:
+		case festruct.TBinlogType_INDEX_CHANGE_JOB:
+
+		default:
+			return false
+		}
+		return true
+	}
+
+	isSyncedBySnapshot := func(binlogType festruct.TBinlogType) bool {
+		// These binlog types will trigger partial snapshot, so we can skip them.
+		switch binlogType {
+		case festruct.TBinlogType_REPLACE_PARTITIONS:
+		case festruct.TBinlogType_RECOVER_INFO:
+		case festruct.TBinlogType_ALTER_JOB:
+		default:
+			return false
+		}
+		return true
+	}
+
+	binlogType := binlog.GetType()
+	if isIdempotent(binlogType) || isSyncedBySnapshot(binlogType) {
+		return false, nil
+	}
+
+	if binlogType == festruct.TBinlogType_REPLACE_TABLE {
+		// We can't determine whether the binlog is committed or not, trigger full sync.
+		return true, j.newSnapshot(commitSeq, "the REPLACE_TABLE binlog state is unknown")
+	} else if binlogType == festruct.TBinlogType_BARRIER {
+		// keep compatible with old version
+		barrierLog, err := record.NewBarrierLogFromJson(binlog.GetData())
+		if err != nil {
+			return false, err
+		}
+
+		if barrierLog.Binlog == "" {
+			return false, nil
+		}
+
+		binlogType := festruct.TBinlogType(barrierLog.BinlogType)
+		// TODO: handle barriers
+		_ = binlogType
+	}
+
+	switch binlogType {
+	case festruct.TBinlogType_DUMMY:
+		return true, nil
+	case festruct.TBinlogType_UPSERT:
+		return false, xerror.Errorf(xerror.Normal, "UPSERT binlog should not step into here, commit seq %d", commitSeq)
+
+	// TODO: check dest table
+	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS:
+	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_INVERTED_INDICES:
+	case festruct.TBinlogType_RENAME_TABLE:
+	case festruct.TBinlogType_RENAME_PARTITION:
+	case festruct.TBinlogType_RENAME_ROLLUP:
+	case festruct.TBinlogType_RENAME_COLUMN:
+
+	default:
+		return false, xerror.Errorf(xerror.Normal, "unknown binlog type: %v, commit seq %d, data %s",
+			binlogType, commitSeq, binlog.GetData())
+	}
+	return false, nil
+}
+
 func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 	if binlog == nil || !binlog.IsSetCommitSeq() {
 		return xerror.Errorf(xerror.Normal, "invalid binlog: %v", binlog)
@@ -3021,81 +3112,111 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		return xerror.Errorf(xerror.Normal, "the progress isn't done, need rollback, commit seq: %d", j.progress.CommitSeq)
 	}
 
-	log.Debugf("binlog type: %s, commit seq: %d, binlog data: %s",
-		binlog.GetType(), binlog.GetCommitSeq(), binlog.GetData())
+	commitSeq := binlog.GetCommitSeq()
+	binlogType := binlog.GetType()
+	log.Debugf("binlog type: %s, commit seq: %d, binlog data: %s", binlogType, commitSeq, binlog.GetData())
 
 	// Step 2: update job progress
-	j.progress.StartHandle(binlog.GetCommitSeq())
-	xmetrics.HandlingBinlog(j.Name, binlog.GetCommitSeq())
+	j.progress.StartHandle(commitSeq)
+	xmetrics.HandlingBinlog(j.Name, commitSeq)
 
 	// Skip binlog conditionally
-	if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipBySilence && j.Extra.SkipCommitSeq == binlog.GetCommitSeq() {
+	if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipBySilence && j.Extra.SkipCommitSeq == commitSeq {
 		log.Warnf("silently skip binlog %d by user, binlog type: %s, binlog data: %s",
-			binlog.GetCommitSeq(), binlog.GetType(), binlog.GetData())
+			commitSeq, binlogType, binlog.GetData())
 		return nil
 	}
 
 	if utils.HasJobFailpoint(j.Name, "handle_binlog_failed") {
-		log.Warnf("fail to handle binlog by failpoint, binlog type: %s, binlog data: %s", binlog.GetType(), binlog.GetData())
+		log.Warnf("fail to handle binlog by failpoint, binlog type: %s, binlog data: %s", binlogType, binlog.GetData())
 		return xerror.Errorf(xerror.Normal, "fail to handle binlog by failpoint")
 	}
 
-	switch binlog.GetType() {
-	case festruct.TBinlogType_UPSERT:
+	if binlogType == festruct.TBinlogType_UPSERT {
 		return j.handleUpsertWithRetry(binlog)
-	case festruct.TBinlogType_ADD_PARTITION:
-		return j.handleAddPartition(binlog)
-	case festruct.TBinlogType_CREATE_TABLE:
-		return j.handleCreateTable(binlog)
-	case festruct.TBinlogType_DROP_PARTITION:
-		return j.handleDropPartition(binlog)
-	case festruct.TBinlogType_DROP_TABLE:
-		return j.handleDropTable(binlog)
-	case festruct.TBinlogType_ALTER_JOB:
-		return j.handleAlterJob(binlog)
-	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS:
-		return j.handleLightningSchemaChange(binlog)
-	case festruct.TBinlogType_RENAME_COLUMN:
-		return j.handleRenameColumn(binlog)
-	case festruct.TBinlogType_MODIFY_COMMENT:
-		return j.handleModifyComment(binlog)
-	case festruct.TBinlogType_DUMMY:
-		return j.handleDummy(binlog)
-	case festruct.TBinlogType_ALTER_DATABASE_PROPERTY:
-		log.Info("handle alter database property binlog, ignore it")
-	case festruct.TBinlogType_MODIFY_TABLE_PROPERTY:
-		return j.handleModifyProperty(binlog)
-	case festruct.TBinlogType_BARRIER:
-		return j.handleBarrier(binlog)
-	case festruct.TBinlogType_TRUNCATE_TABLE:
-		return j.handleTruncateTable(binlog)
-	case festruct.TBinlogType_RENAME_TABLE:
-		return j.handleRenameTable(binlog)
-	case festruct.TBinlogType_REPLACE_PARTITIONS:
-		return j.handleReplacePartitions(binlog)
-	case festruct.TBinlogType_MODIFY_PARTITIONS:
-		return j.handleModifyPartitions(binlog)
-	case festruct.TBinlogType_REPLACE_TABLE:
-		return j.handleReplaceTable(binlog)
-	case festruct.TBinlogType_MODIFY_VIEW_DEF:
-		return j.handleAlterViewDef(binlog)
-	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_INVERTED_INDICES:
-		return j.handleModifyTableAddOrDropInvertedIndices(binlog)
-	case festruct.TBinlogType_INDEX_CHANGE_JOB:
-		return j.handleIndexChangeJob(binlog)
-	case festruct.TBinlogType_RENAME_PARTITION:
-		return j.handleRenamePartition(binlog)
-	case festruct.TBinlogType_RENAME_ROLLUP:
-		return j.handleRenameRollup(binlog)
-	case festruct.TBinlogType_DROP_ROLLUP:
-		return j.handleDropRollup(binlog)
-	case festruct.TBinlogType_RECOVER_INFO:
-		return j.handleRecoverInfo(binlog)
-	default:
-		return xerror.Errorf(xerror.Normal, "unknown binlog type: %v", binlog.GetType())
 	}
 
-	return nil
+	// handle ddl binlog
+	if featureIdempotentDDL && j.progress.UnknownCommitSeq == commitSeq {
+		// Need to determine the state unknown binlog.
+		if isCommitted, err := j.determineBinlogState(binlog); err != nil {
+			return err
+		} else if isCommitted {
+			return nil
+		}
+
+		// If the state unknown binlog is not committed, continue to handle the binlog.
+	}
+
+	if featureIdempotentDDL && utils.IsJobFailpointExpected(j.Name, "handle_binlog_idempotent:before", binlogType) {
+		log.Warnf("fail to handle binlog by failpoint, binlog type: %s, binlog data: %s", binlogType, binlog.GetData())
+		utils.RemoveJobFailpoint(j.Name, "handle_binlog_idempotent:before") // only work once
+		return xerror.Errorf(xerror.Normal, "fail to handle binlog by failpoint handle_binlog_idempotent:before")
+	}
+
+	var err error
+	switch binlogType {
+	case festruct.TBinlogType_ADD_PARTITION:
+		err = j.handleAddPartition(binlog)
+	case festruct.TBinlogType_CREATE_TABLE:
+		err = j.handleCreateTable(binlog)
+	case festruct.TBinlogType_DROP_PARTITION:
+		err = j.handleDropPartition(binlog)
+	case festruct.TBinlogType_DROP_TABLE:
+		err = j.handleDropTable(binlog)
+	case festruct.TBinlogType_ALTER_JOB:
+		err = j.handleAlterJob(binlog)
+	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS:
+		err = j.handleLightningSchemaChange(binlog)
+	case festruct.TBinlogType_RENAME_COLUMN:
+		err = j.handleRenameColumn(binlog)
+	case festruct.TBinlogType_MODIFY_COMMENT:
+		err = j.handleModifyComment(binlog)
+	case festruct.TBinlogType_DUMMY:
+		err = j.handleDummy(binlog)
+	case festruct.TBinlogType_ALTER_DATABASE_PROPERTY:
+		log.Infof("handle alter database property binlog, ignore it, commit seq %d", commitSeq)
+	case festruct.TBinlogType_MODIFY_TABLE_PROPERTY:
+		err = j.handleModifyProperty(binlog)
+	case festruct.TBinlogType_BARRIER:
+		err = j.handleBarrier(binlog)
+	case festruct.TBinlogType_TRUNCATE_TABLE:
+		err = j.handleTruncateTable(binlog)
+	case festruct.TBinlogType_RENAME_TABLE:
+		err = j.handleRenameTable(binlog)
+	case festruct.TBinlogType_REPLACE_PARTITIONS:
+		err = j.handleReplacePartitions(binlog)
+	case festruct.TBinlogType_MODIFY_PARTITIONS:
+		err = j.handleModifyPartitions(binlog)
+	case festruct.TBinlogType_REPLACE_TABLE:
+		err = j.handleReplaceTable(binlog)
+	case festruct.TBinlogType_MODIFY_VIEW_DEF:
+		err = j.handleAlterViewDef(binlog)
+	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_INVERTED_INDICES:
+		err = j.handleModifyTableAddOrDropInvertedIndices(binlog)
+	case festruct.TBinlogType_INDEX_CHANGE_JOB:
+		err = j.handleIndexChangeJob(binlog)
+	case festruct.TBinlogType_RENAME_PARTITION:
+		err = j.handleRenamePartition(binlog)
+	case festruct.TBinlogType_RENAME_ROLLUP:
+		err = j.handleRenameRollup(binlog)
+	case festruct.TBinlogType_DROP_ROLLUP:
+		err = j.handleDropRollup(binlog)
+	case festruct.TBinlogType_RECOVER_INFO:
+		err = j.handleRecoverInfo(binlog)
+	default:
+		return xerror.Errorf(xerror.Normal, "unknown binlog type: %v, commit seq %d, data %s",
+			binlogType, commitSeq, binlog.GetData())
+	}
+
+	if featureIdempotentDDL && err == nil && utils.IsJobFailpointExpected(
+		j.Name, "handle_binlog_idempotent:after", binlogType) {
+		log.Warnf("fail to handle binlog by failpoint, binlog type: %s, binlog data: %s", binlogType, binlog.GetData())
+		utils.RemoveJobFailpoint(j.Name, "handle_binlog_idempotent:after") // only work once
+		return xerror.Errorf(xerror.Normal, "fail to handle binlog by failpoint handle_binlog_idempotent:after")
+	}
+
+	return err
 }
 
 func (j *Job) recoverIncrementalSync() error {

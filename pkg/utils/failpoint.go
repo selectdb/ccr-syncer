@@ -61,6 +61,20 @@ func HasJobFailpoint(jobName, name string) bool {
 	return ok
 }
 
+func IsJobFailpointExpected[T fmt.Stringer](jobName, name string, value T) bool {
+	if !IsFailpointEnabled() {
+		return false
+	}
+
+	failpoint := getJobFailpointName(jobName, name)
+	v, ok := failpoints.Load(failpoint)
+	if !ok {
+		return false
+	}
+
+	return v == value.String()
+}
+
 func getJobFailpointName(jobName, name string) string {
 	return fmt.Sprintf("/job/%s/%s", jobName, name)
 }
