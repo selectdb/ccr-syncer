@@ -1143,6 +1143,7 @@ func (j *Job) fullSync() error {
 						j.progress.TableAliases = make(map[string]string)
 					}
 					j.progress.TableAliases[tableName] = TableAlias(tableName)
+					j.progress.NextSubCheckpoint(GetSnapshotInfo, inMemoryData.SnapshotName) // persist TableAliases
 					j.progress.NextSubVolatile(RestoreSnapshot, inMemoryData)
 					break
 				}
@@ -1167,6 +1168,13 @@ func (j *Job) fullSync() error {
 
 			if !restoreFinished {
 				// CheckRestoreFinished already logs the info
+				return nil
+			}
+
+			if utils.HasJobFailpoint(j.Name, "fullsync_restore_snapshot_rebooting") {
+				log.Infof("hit failpoint fullsync_restore_snapshot_rebooting, step to RestoreSnapshot")
+				utils.RemoveJobFailpoint(j.Name, "fullsync_restore_snapshot_rebooting")
+				j.recoverJobProgress()
 				return nil
 			}
 
