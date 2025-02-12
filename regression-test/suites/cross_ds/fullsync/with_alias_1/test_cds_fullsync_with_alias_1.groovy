@@ -15,12 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_cds_fullsync_with_alias") {
+suite("test_cds_fullsync_with_alias_1") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
     if (!helper.has_feature("feature_replace_not_matched_with_alias")) {
         logger.info("this case only works with feature_replace_not_matched_with_alias")
+        return
+    }
+
+    if (helper.has_feature("feature_restore_replace_diff_schema")) {
+        logger.info("this case only works without feature_restore_replace_diff_schema")
         return
     }
 
@@ -106,25 +111,20 @@ suite("test_cds_fullsync_with_alias") {
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_1", 60))
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", insert_num, 60))
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}_1", insert_num, 60))
+    assertTrue(helper.checkJobInIncrementalSync(60))
 
     logger.info("pause ccr job, change table1 schema and trigger fullsync, then the upsert of table2 should be synced")
     helper.ccrJobPause()
     helper.force_fullsync()
+    helper.addFailpoint("fullsync_restore_snapshot_rebooting", "true")
 
-    values.clear();
+    values.clear()
     for (int index = insert_num; index < insert_num * 2; index++) {
         values.add("(${test_num}, ${index})")
     }
 
     sql """ INSERT INTO ${tableName} VALUES ${values.join(",")} """
     sql """ INSERT INTO ${tableName}_1 VALUES ${values.join(",")} """
-
-    sql """
-        CREATE VIEW ${tableName}_view (k1, k2)
-        AS
-        SELECT test as k1, sum(id) as k2 FROM ${tableName}
-        GROUP BY test;
-        """
 
     sql """
         ALTER TABLE ${tableName}
@@ -152,9 +152,8 @@ suite("test_cds_fullsync_with_alias") {
     assertTrue(helper.checkShowTimesOf("SHOW COLUMNS FROM `${tableName}`", has_column_first, 60, "target_sql"))
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", insert_num * 2, 60))
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}_1", insert_num * 2, 60))
-    def view_size = target_sql "SHOW VIEW FROM ${tableName}"
-    assertTrue(view_size.size() == 1);
 }
+
 
 
 
