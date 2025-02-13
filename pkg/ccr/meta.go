@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"slices"
 	"sort"
 	"strconv"
 
@@ -1305,8 +1304,8 @@ func (m *Meta) DescribeTable(tableName string) ([]*ColumnDesc, error) {
 			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Extra failed, table: %s", tableName)
 		}
 
-		isNull := slices.Contains(TrueValues, null)
-		isKey := slices.Contains(TrueValues, key)
+		isNull := utils.Contains(TrueValues, null)
+		isKey := utils.Contains(TrueValues, key)
 		if defaultValue == "NULL" {
 			defaultValue = ""
 		}
