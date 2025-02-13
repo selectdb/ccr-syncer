@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite('test_ds_idem_create_table') {
+suite('test_ds_idem_add_value_column') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
@@ -57,39 +57,19 @@ suite('test_ds_idem_create_table') {
     //
     // The first failpoint is used to simulate the failure occurred before committed.
     // The second failpoint is used to simulate the failure of committed but rpc failed.
-    helper.addFailpoint('handle_binlog_idempotent:before', 'CREATE_TABLE')
-    helper.addFailpoint('handle_binlog_idempotent:after', 'CREATE_TABLE')
+    helper.addFailpoint('handle_binlog_idempotent:before', 'MODIFY_TABLE_ADD_OR_DROP_COLUMNS')
+    helper.addFailpoint('handle_binlog_idempotent:after', 'MODIFY_TABLE_ADD_OR_DROP_COLUMNS')
 
-    logger.info('create a new table')
     sql """
-        CREATE TABLE IF NOT EXISTS tbl_${suffix}_new
-        (
-            `test` INT,
-            `id` INT
-        )
-        ENGINE=OLAP
-        UNIQUE KEY(`test`, `id`)
-        PARTITION BY RANGE(id)
-        (
-            PARTITION `p1` VALUES LESS THAN ("100"),
-            PARTITION `p2` VALUES LESS THAN ("200")
-        )
-        DISTRIBUTED BY HASH(id) BUCKETS 1
-        PROPERTIES (
-            "replication_allocation" = "tag.location.default: 1",
-            "binlog.enable" = "true",
-            "binlog.ttl_seconds" = "180"
-        )
+        ALTER TABLE ${tableName}
+        ADD COLUMN `value` INT
     """
 
-    assertTrue(helper.checkShowTimesOf(
-        "SHOW TABLES LIKE 'tbl_${suffix }_new'", { r -> r.size() > 0 }, 30, 'target_sql'))
+    assertTrue(helper.check_table_describe_times("${tableName}", 60))
 
-    sql "INSERT INTO tbl_${suffix}_new VALUES (2, 10)"
-    
-    assertTrue(helper.checkSelectTimesOf("""
-                            SELECT * FROM tbl_${suffix }_new
-                            WHERE id = 10
-                            """,
-                            1, 60))
+    sql """
+        INSERT INTO ${tableName} VALUES (1, 1, 1)
+    """
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", 1, 60))
 }
+

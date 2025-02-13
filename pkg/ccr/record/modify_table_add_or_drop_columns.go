@@ -24,28 +24,31 @@ import (
 )
 
 type ModifyTableAddOrDropColumns struct {
-	DbId           int64                    `json:"dbId"`
-	TableId        int64                    `json:"tableId"`
-	RawSql         string                   `json:"rawSql"`
-	IndexSchemaMap map[int64][]ColumnSchema `json:"indexSchemaMap"`
+	DbId              int64                    `json:"dbId"`
+	TableId           int64                    `json:"tableId"`
+	BaseIndexId       int64                    `json:"baseIndexId"`
+	RawSql            string                   `json:"rawSql"`
+	IndexSchemaMap    map[int64][]ColumnSchema `json:"indexSchemaMap"`
+	OldIndexSchemaMap map[int64][]ColumnSchema `json:"oldIndexSchemaMap"`
+	IndexNameToId     map[string]int64         `json:"indexNameToId"`
 }
 
 type ColumnSchema struct {
 	Name         string     `json:"name"`
 	Type         ColumnType `json:"type"`
-	IsKey        bool       `json:"-"`
-	IsAllowNull  bool       `json:"-"`
+	IsKey        bool       `json:"isKey"`
+	IsAllowNull  bool       `json:"isAllowNull"`
 	DefaultValue string     `json:"defaultValue,omitempty"`
-	Comment      string     `json:"-"`
-	Visible      bool       `json:"-"`
+	Comment      string     `json:"comment"`
+	Visible      bool       `json:"visible"`
 }
 
 type ColumnType struct {
-	Clazz     string `json:"-"`
+	Clazz     string `json:"clazz"`
 	Type      string `json:"type"`
-	Len       int    `json:"-"`
-	Precision int    `json:"-"`
-	Scale     int    `json:"-"`
+	Len       int    `json:"len"`
+	Precision int    `json:"precision"`
+	Scale     int    `json:"scale"`
 }
 
 func NewModifyTableAddOrDropColumnsFromJson(data string) (*ModifyTableAddOrDropColumns, error) {
@@ -69,5 +72,6 @@ func NewModifyTableAddOrDropColumnsFromJson(data string) (*ModifyTableAddOrDropC
 
 // String
 func (c *ModifyTableAddOrDropColumns) String() string {
-	return fmt.Sprintf("ModifyTableAddOrDropColumns: DbId: %d, TableId: %d, RawSql: %s", c.DbId, c.TableId, c.RawSql)
+	return fmt.Sprintf("ModifyTableAddOrDropColumns: DbId: %d, TableId: %d, BaseIndexId: %d, RawSql: %s",
+		c.DbId, c.TableId, c.BaseIndexId, c.RawSql)
 }

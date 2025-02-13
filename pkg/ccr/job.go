@@ -1143,6 +1143,7 @@ func (j *Job) fullSync() error {
 						j.progress.TableAliases = make(map[string]string)
 					}
 					j.progress.TableAliases[tableName] = TableAlias(tableName)
+					j.progress.NextSubCheckpoint(GetSnapshotInfo, inMemoryData.SnapshotName) // persist TableAliases
 					j.progress.NextSubVolatile(RestoreSnapshot, inMemoryData)
 					break
 				}
@@ -1167,6 +1168,13 @@ func (j *Job) fullSync() error {
 
 			if !restoreFinished {
 				// CheckRestoreFinished already logs the info
+				return nil
+			}
+
+			if utils.HasJobFailpoint(j.Name, "fullsync_restore_snapshot_rebooting") {
+				log.Infof("hit failpoint fullsync_restore_snapshot_rebooting, step to RestoreSnapshot")
+				utils.RemoveJobFailpoint(j.Name, "fullsync_restore_snapshot_rebooting")
+				j.recoverJobProgress()
 				return nil
 			}
 
@@ -3014,6 +3022,56 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 	return nil, false
 }
 
+func (j *Job) isModifyTableColumnsCommitted(record *record.ModifyTableAddOrDropColumns) (bool, error) {
+	if record.BaseIndexId == 0 {
+		log.Warnf("modify table columns record has no base index id, assume it is not committed, table id %d", record.TableId)
+		return false, nil
+	}
+
+	tableName, err := j.getDestNameBySrcId(record.TableId)
+	if err != nil {
+		log.Errorf("get dest table name by src id %d failed, err: %v", record.TableId, err)
+		return false, err
+	}
+
+	columns, err := j.destMeta.DescribeTable(tableName)
+	if err != nil {
+		return false, err
+	}
+
+	destColumnMap := make(map[string]struct{})
+	for _, col := range columns {
+		destColumnMap[col.Name] = struct{}{}
+	}
+	columnSchema := record.IndexSchemaMap[record.BaseIndexId]
+	for _, c := range columnSchema {
+		if !c.Visible {
+			continue
+		}
+		exists := false
+		for _, col := range columns {
+			// To keep the logical simple, we don't compare the column type and other properties.
+			if c.Name == col.Name {
+				exists = true
+			}
+		}
+		if !exists {
+			log.Debugf("column %s not exists in dest table %s, it is not committed",
+				c.Name, tableName)
+			return false, nil
+		}
+		delete(destColumnMap, c.Name)
+	}
+
+	if len(destColumnMap) > 0 {
+		log.Debugf("the modify table columns binlog is not contains columns'%s' in dest table %s",
+			strings.Join(utils.Keys(destColumnMap), ","), tableName)
+		return false, nil
+	}
+
+	return true, nil
+}
+
 // determineBinlogState determines whether the unknown binlog is committed or not.
 // The result is true if the binlog is committed, otherwise false.
 func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
@@ -3029,7 +3087,6 @@ func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
 		case festruct.TBinlogType_DROP_PARTITION:
 		case festruct.TBinlogType_ADD_PARTITION:
 		case festruct.TBinlogType_DROP_TABLE:
-		case festruct.TBinlogType_DROP_ROLLUP:
 
 		// Idempotent when executing twice
 		case festruct.TBinlogType_MODIFY_VIEW_DEF:
@@ -3089,7 +3146,29 @@ func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
 		return false, xerror.Errorf(xerror.Normal, "UPSERT binlog should not step into here, commit seq %d", commitSeq)
 
 	// TODO: check dest table
+	case festruct.TBinlogType_DROP_ROLLUP:
+		dropRollup, err := record.NewDropRollupFromJson(binlog.GetData())
+		if err != nil {
+			return false, err
+		}
+		var destTableName string
+		if j.SyncType == TableSync {
+			destTableName = j.Dest.Table
+		} else {
+			destTableName = dropRollup.TableName
+		}
+		if exists, err := j.IDest.CheckRollupIndexExists(destTableName, dropRollup.IndexName); !exists {
+			return true, nil
+		} else if err != nil {
+			log.Warnf("check rollup index %s exists failed, err: %v", dropRollup.IndexName, err)
+			return false, err
+		}
 	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS:
+		modifyTableAddOrDropColumns, err := record.NewModifyTableAddOrDropColumnsFromJson(binlog.GetData())
+		if err != nil {
+			return false, nil
+		}
+		return j.isModifyTableColumnsCommitted(modifyTableAddOrDropColumns)
 	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_INVERTED_INDICES:
 	case festruct.TBinlogType_RENAME_TABLE:
 	case festruct.TBinlogType_RENAME_PARTITION:
@@ -3142,6 +3221,7 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		if isCommitted, err := j.determineBinlogState(binlog); err != nil {
 			return err
 		} else if isCommitted {
+			log.Infof("the binlog %s has been committed, commit seq %d", binlogType, commitSeq)
 			return nil
 		}
 
