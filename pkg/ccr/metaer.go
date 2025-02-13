@@ -82,6 +82,15 @@ type ReplicaMeta struct {
 	Version    int64
 }
 
+type ColumnDesc struct {
+	Name    string
+	Type    string
+	IsNull  bool
+	IsKey   bool
+	Default string
+	Extra   string
+}
+
 type MetaCleaner interface {
 	ClearDB(dbName string)
 	ClearTable(dbName string, tableName string)
@@ -108,6 +117,7 @@ type Metaer interface {
 	GetTableId(tableName string) (int64, error)
 	GetTableNameById(tableId int64) (string, error)
 	GetTables() (map[int64]*TableMeta, error)
+	DescribeTable(tableName string) ([]*ColumnDesc, error)
 
 	UpdatePartitions(tableId int64) error
 	GetPartitionIdMap(tableId int64) (map[int64]*PartitionMeta, error)
