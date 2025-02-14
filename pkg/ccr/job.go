@@ -3100,6 +3100,46 @@ func (j *Job) isDropRollupCommitted(record *record.DropRollup) (bool, error) {
 	return true, nil
 }
 
+func (j *Job) isModifyTableInvertedIndicesCommitted(record *record.ModifyTableAddOrDropInvertedIndices) (bool, error) {
+	tableName, err := j.getDestNameBySrcId(record.TableId)
+	if err != nil {
+		log.Errorf("get dest table name by src id %d failed, err: %v", record.TableId, err)
+		return false, err
+	}
+
+	indices, err := j.destMeta.ShowIndexes(tableName)
+	if err != nil {
+		return false, err
+	}
+
+	invertedIndices := make(map[string]struct{})
+	for _, index := range indices {
+		if index.IndexType == IndexTypeInverted {
+			invertedIndices[index.Name] = struct{}{}
+		}
+	}
+
+	if record.IsDropInvertedIndex {
+		for _, index := range record.AlternativeIndexes {
+			if _, ok := invertedIndices[index.GetIndexName()]; ok {
+				log.Infof("inverted index %s is not dropped in dest table %s, this binlog is not committed",
+					index.GetIndexName(), tableName)
+				return false, nil
+			}
+		}
+	} else {
+		for _, index := range record.AlternativeIndexes {
+			if _, ok := invertedIndices[index.GetIndexName()]; !ok {
+				log.Infof("inverted index %s is not added in dest table %s, this binlog is not committed",
+					index.GetIndexName(), tableName)
+				return false, nil
+			}
+		}
+	}
+
+	return true, nil
+}
+
 // determineBinlogState determines whether the unknown binlog is committed or not.
 // The result is true if the binlog is committed, otherwise false.
 func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
@@ -3188,6 +3228,11 @@ func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
 		}
 		return j.isModifyTableColumnsCommitted(modifyTableAddOrDropColumns)
 	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_INVERTED_INDICES:
+		modifyTableAddOrDropInvertedIndices, err := record.NewModifyTableAddOrDropInvertedIndicesFromJson(binlog.GetData())
+		if err != nil {
+			return false, nil
+		}
+		return j.isModifyTableInvertedIndicesCommitted(modifyTableAddOrDropInvertedIndices)
 	case festruct.TBinlogType_RENAME_TABLE:
 	case festruct.TBinlogType_RENAME_PARTITION:
 	case festruct.TBinlogType_RENAME_ROLLUP:

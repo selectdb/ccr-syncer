@@ -806,6 +806,54 @@ func (m *Meta) GetIndexNameMap(tableId int64, partitionId int64) (map[string]*In
 	}
 }
 
+func (m *Meta) ShowIndexes(tableName string) ([]*IndexDesc, error) {
+	conn, err := m.Connect()
+	if err != nil {
+		return nil, err
+	}
+
+	dbName := utils.FormatKeywordName(m.Database)
+	tableName = utils.FormatKeywordName(tableName)
+	query := fmt.Sprintf("SHOW INDEXES FROM %s.%s", dbName, tableName)
+	log.Debugf("show indexes sql: %s", query)
+
+	rows, err := conn.Query(query)
+	if err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "show indexes sql: %s", query)
+	}
+
+	defer rows.Close()
+	indexes := make([]*IndexDesc, 0)
+	for rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "parse describe table %s rows", tableName)
+		}
+
+		name, err := rowParser.GetString("Key_name")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "parse indexes Key_name failed")
+		}
+
+		indexType, err := rowParser.GetString("Index_type")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "parse indexes Index_type failed")
+		}
+
+		desc := IndexDesc{
+			Name:      name,
+			IndexType: indexType,
+		}
+		indexes = append(indexes, &desc)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "show indexes sql: %s", query)
+	}
+
+	return indexes, nil
+}
+
 func (m *Meta) updateReplica(index *IndexMeta) error {
 	indexId := index.Id
 	partitionId := index.PartitionMeta.Id
