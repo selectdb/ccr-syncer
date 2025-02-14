@@ -39,6 +39,10 @@ const (
 	showErrMsg = "show proc '/dbs/' failed"
 )
 
+var (
+	TrueValues = []string{"Yes", "yes", "YES", "OK", "ok", "True", "TRUE", "true"}
+)
+
 // All Update* functions force to update meta from fe
 // TODO: reduce code, need to each level contain up level reference to get id
 
@@ -1241,4 +1245,84 @@ func (m *Meta) IsTableDropped(partitionId int64) bool {
 
 func (m *Meta) IsIndexDropped(indexId int64) bool {
 	panic("IsIndexDropped is not supported, please use ThriftMeta instead")
+}
+
+// Describe table by sql
+// DESC ${tableName}
+func (m *Meta) DescribeTable(tableName string) ([]*ColumnDesc, error) {
+	db, err := m.Connect()
+	if err != nil {
+		return nil, err
+	}
+
+	dbName := utils.FormatKeywordName(m.Database)
+	tableName = utils.FormatKeywordName(tableName)
+	query := fmt.Sprintf("DESC %s.%s", dbName, tableName)
+	log.Debugf("describe table sql: %s", query)
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "describe table %s", tableName)
+	}
+
+	columns := make([]*ColumnDesc, 0)
+	defer rows.Close()
+	for rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "parse describe table %s rows", tableName)
+		}
+
+		name, err := rowParser.GetString("Field")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Field failed, table: %s", tableName)
+		}
+
+		// get Type, Null, Key, Default, Extra
+		typ, err := rowParser.GetString("Type")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Type failed, table: %s", tableName)
+		}
+
+		null, err := rowParser.GetString("Null")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Null failed, table: %s", tableName)
+		}
+
+		key, err := rowParser.GetString("Key")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Key failed, table: %s", tableName)
+		}
+
+		defaultValue, err := rowParser.GetString("Default")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Default failed, table: %s", tableName)
+		}
+
+		extra, err := rowParser.GetString("Extra")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Extra failed, table: %s", tableName)
+		}
+
+		isNull := utils.Contains(TrueValues, null)
+		isKey := utils.Contains(TrueValues, key)
+		if defaultValue == "NULL" {
+			defaultValue = ""
+		}
+		desc := &ColumnDesc{
+			Name:    name,
+			Type:    typ,
+			IsNull:  isNull,
+			IsKey:   isKey,
+			Default: defaultValue,
+			Extra:   extra,
+		}
+		columns = append(columns, desc)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "describe table %s", tableName)
+	}
+
+	return columns, nil
 }
