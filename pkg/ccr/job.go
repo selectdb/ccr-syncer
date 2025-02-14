@@ -3038,7 +3038,7 @@ func (j *Job) isModifyTableColumnsCommitted(record *record.ModifyTableAddOrDropC
 	if err != nil {
 		return false, err
 	}
-	var baseIndex *MaterializedIndexDesc = materializedIndexes[tableName]
+	baseIndex := materializedIndexes[tableName]
 
 	log.Debugf("desc all table: %v", baseIndex)
 
