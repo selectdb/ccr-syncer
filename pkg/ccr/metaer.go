@@ -24,6 +24,10 @@ import (
 	"github.com/tidwall/btree"
 )
 
+const (
+	IndexTypeInverted string = "INVERTED"
+)
+
 type DatabaseMeta struct {
 	Id     int64
 	Tables map[int64]*TableMeta // tableId -> tableMeta
@@ -99,6 +103,11 @@ type ColumnDesc struct {
 	Visible      bool
 }
 
+type IndexDesc struct {
+	Name      string
+	IndexType string
+}
+
 type MetaCleaner interface {
 	ClearDB(dbName string)
 	ClearTable(dbName string, tableName string)
@@ -140,6 +149,7 @@ type Metaer interface {
 	GetBackendId(host, portStr string) (int64, error)
 
 	UpdateIndexes(tableId, partitionId int64) error
+	ShowIndexes(tableName string) ([]*IndexDesc, error)
 
 	UpdateReplicas(tableId, partitionId int64) error
 	GetReplicas(tableId, partitionId int64) (*btree.Map[int64, *ReplicaMeta], error)

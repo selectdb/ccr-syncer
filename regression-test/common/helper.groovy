@@ -228,6 +228,37 @@ class Helper {
         return ret
     }
 
+    Boolean checkShowMapArrayResult(sqlString, myClosure, times, func = "sql") {
+        Boolean ret = false
+        List<List<Object>> res
+        while (times > 0) {
+            try {
+                if (func == "sql") {
+                    res = suite.sql_return_maparray "${sqlString}"
+                } else {
+                    res = suite.target_sql_return_maparray "${sqlString}"
+                }
+                if (myClosure.call(res)) {
+                    ret = true
+                }
+            } catch (Exception e) {
+                logger.info("exception", e)
+            }
+
+            if (ret) {
+                break
+            } else if (--times > 0) {
+                sleep(sync_gap_time)
+            }
+        }
+
+        if (!ret) {
+            logger.info("last select result: ${res}")
+        }
+
+        return ret
+    }
+
     // wait until all restore tasks of the dest cluster are finished.
     Boolean checkRestoreFinishTimesOf(checkTable, times) {
         Boolean ret = false
