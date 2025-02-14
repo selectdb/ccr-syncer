@@ -1363,7 +1363,7 @@ func (s *Spec) DropPartition(destTableName string, dropPartition *record.DropPar
 	if dropPartition.ForceDrop {
 		forceDrop = "FORCE"
 	}
-	dropPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s DROP PARTITION IF EXISTS %s %s", dbName, destTableName, dropPartition.PartitionName, forceDrop)
+	dropPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s DROP PARTITION IF EXISTS %s %s", dbName, destTableName, utils.FormatKeywordName(dropPartition.PartitionName), forceDrop)
 	log.Infof("drop partition sql: %s", dropPartitionSql)
 	return s.Exec(dropPartitionSql)
 }
