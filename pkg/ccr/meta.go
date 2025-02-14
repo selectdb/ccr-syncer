@@ -1247,9 +1247,9 @@ func (m *Meta) IsIndexDropped(indexId int64) bool {
 	panic("IsIndexDropped is not supported, please use ThriftMeta instead")
 }
 
-// Describe table by sql
-// DESC ${tableName}
-func (m *Meta) DescribeTable(tableName string) ([]*ColumnDesc, error) {
+// Describe table all by sql
+// DESC ${tableName} ALL
+func (m *Meta) DescribeTableAll(tableName string) (map[string]*MaterializedIndexDesc, error) {
 	db, err := m.Connect()
 	if err != nil {
 		return nil, err
@@ -1257,7 +1257,7 @@ func (m *Meta) DescribeTable(tableName string) ([]*ColumnDesc, error) {
 
 	dbName := utils.FormatKeywordName(m.Database)
 	tableName = utils.FormatKeywordName(tableName)
-	query := fmt.Sprintf("DESC %s.%s", dbName, tableName)
+	query := fmt.Sprintf("DESC %s.%s ALL", dbName, tableName)
 	log.Debugf("describe table sql: %s", query)
 
 	rows, err := db.Query(query)
@@ -1265,7 +1265,7 @@ func (m *Meta) DescribeTable(tableName string) ([]*ColumnDesc, error) {
 		return nil, xerror.Wrapf(err, xerror.Normal, "describe table %s", tableName)
 	}
 
-	columns := make([]*ColumnDesc, 0)
+	columns := make(map[string]*MaterializedIndexDesc, 0)
 	defer rows.Close()
 	for rows.Next() {
 		rowParser := utils.NewRowParser()
@@ -1278,10 +1278,41 @@ func (m *Meta) DescribeTable(tableName string) ([]*ColumnDesc, error) {
 			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Field failed, table: %s", tableName)
 		}
 
+		// mysql> desc t all;
+		// +-----------+---------------+-------+------+--------------+------+-------+---------+-------+---------+------------+-------------+
+		// | IndexName | IndexKeysType | Field | Type | InternalType | Null | Key   | Default | Extra | Visible | DefineExpr | WhereClause |
+		// +-----------+---------------+-------+------+--------------+------+-------+---------+-------+---------+------------+-------------+
+		// | t         | DUP_KEYS      | test  | int  | int          | Yes  | true  | NULL    |       | true    |            |             |
+		// |           |               | id    | int  | int          | Yes  | false | NULL    | NONE  | true    |            |             |
+		// |           |               |       |      |              |      |       |         |       |         |            |             |
+		// | ru1       | DUP_KEYS      | id    | int  | int          | Yes  | true  | NULL    |       | true    |            |             |
+		// +-----------+---------------+-------+------+--------------+------+-------+---------+-------+---------+------------+-------------+
+		// field is empty, skip scan
+		if name == "" {
+			continue
+		}
+
+		indexName := ""
+		indexName, err = rowParser.GetString("IndexName")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get IndexName failed, table: %s", tableName)
+		}
+
+		indexKeysType := ""
+		indexKeysType, err = rowParser.GetString("IndexKeysType")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get IndexKeysType failed, table: %s", tableName)
+		}
+
 		// get Type, Null, Key, Default, Extra
 		typ, err := rowParser.GetString("Type")
 		if err != nil {
 			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Type failed, table: %s", tableName)
+		}
+
+		internalType, err := rowParser.GetString("InternalType")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get InternalType failed, table: %s", tableName)
 		}
 
 		null, err := rowParser.GetString("Null")
@@ -1304,25 +1335,50 @@ func (m *Meta) DescribeTable(tableName string) ([]*ColumnDesc, error) {
 			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Extra failed, table: %s", tableName)
 		}
 
+		visible, err := rowParser.GetString("Visible")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Visible failed, table: %s", tableName)
+		}
+
+		isVisible := utils.Contains(TrueValues, visible)
 		isNull := utils.Contains(TrueValues, null)
 		isKey := utils.Contains(TrueValues, key)
 		if defaultValue == "NULL" {
 			defaultValue = ""
 		}
-		desc := &ColumnDesc{
-			Name:    name,
-			Type:    typ,
-			IsNull:  isNull,
-			IsKey:   isKey,
-			Default: defaultValue,
-			Extra:   extra,
+
+		if materializedIndex, ok := columns[indexName]; ok {
+			materializedIndex.ColumnDesc = append(materializedIndex.ColumnDesc, ColumnDesc{
+				Name:         name,
+				Type:         typ,
+				InternalType: internalType,
+				IsNull:       isNull,
+				IsKey:        isKey,
+				Default:      defaultValue,
+				Extra:        extra,
+				Visible:      isVisible,
+			})
+		} else {
+			columns[indexName] = &MaterializedIndexDesc{
+				IndexName:     indexName,
+				IndexKeysType: indexKeysType,
+				ColumnDesc: []ColumnDesc{{
+					Name:         name,
+					Type:         typ,
+					InternalType: internalType,
+					IsNull:       isNull,
+					IsKey:        isKey,
+					Default:      defaultValue,
+					Extra:        extra,
+					Visible:      isVisible,
+				}},
+			}
 		}
-		columns = append(columns, desc)
-	}
 
-	if err := rows.Err(); err != nil {
-		return nil, xerror.Wrapf(err, xerror.Normal, "describe table %s", tableName)
+		if err := rows.Err(); err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table %s", tableName)
+		}
 	}
-
 	return columns, nil
+
 }

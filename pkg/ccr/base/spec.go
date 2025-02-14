@@ -576,26 +576,6 @@ func (s *Spec) RenameTableWithName(oldName, newName string) error {
 	return s.Exec(sql)
 }
 
-func (s *Spec) dropTable(table string, force bool) error {
-	log.Infof("drop table %s.%s", s.Database, table)
-
-	db, err := s.Connect()
-	if err != nil {
-		return err
-	}
-
-	suffix := ""
-	if force {
-		suffix = "FORCE"
-	}
-	sql := fmt.Sprintf("DROP TABLE %s.%s %s", utils.FormatKeywordName(s.Database), utils.FormatKeywordName(table), suffix)
-	_, err = db.Exec(sql)
-	if err != nil {
-		return xerror.Wrapf(err, xerror.Normal, "drop table %s.%s failed, sql: %s", s.Database, table, sql)
-	}
-	return nil
-}
-
 func (s *Spec) ClearDB() error {
 	log.Infof("clear database %s", s.Database)
 
@@ -1329,7 +1309,7 @@ func (s *Spec) DropTable(tableName string, force bool) error {
 	}
 	dbName := utils.FormatKeywordName(s.Database)
 	tableName = utils.FormatKeywordName(tableName)
-	dropSql := fmt.Sprintf("DROP TABLE %s.%s %s", dbName, tableName, sqlSuffix)
+	dropSql := fmt.Sprintf("DROP TABLE IF EXISTS %s.%s %s", dbName, tableName, sqlSuffix)
 	log.Infof("drop table sql: %s", dropSql)
 	return s.Exec(dropSql)
 }
@@ -1379,7 +1359,11 @@ func (s *Spec) AddPartition(destTableName string, addPartition *record.AddPartit
 func (s *Spec) DropPartition(destTableName string, dropPartition *record.DropPartition) error {
 	dbName := utils.FormatKeywordName(s.Database)
 	destTableName = utils.FormatKeywordName(destTableName)
-	dropPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s %s", dbName, destTableName, dropPartition.Sql)
+	forceDrop := ""
+	if dropPartition.ForceDrop {
+		forceDrop = "FORCE"
+	}
+	dropPartitionSql := fmt.Sprintf("ALTER TABLE %s.%s DROP PARTITION IF EXISTS %s %s", dbName, destTableName, utils.FormatKeywordName(dropPartition.PartitionName), forceDrop)
 	log.Infof("drop partition sql: %s", dropPartitionSql)
 	return s.Exec(dropPartitionSql)
 }
@@ -1565,6 +1549,11 @@ func correctAddPartitionSql(addPartitionSql string, addPartition *record.AddPart
 	}
 	if addPartition.IsTemp && !strings.Contains(addPartitionSql, "ADD TEMPORARY PARTITION") {
 		addPartitionSql = strings.ReplaceAll(addPartitionSql, "ADD PARTITION", "ADD TEMPORARY PARTITION")
+	}
+	if strings.Contains(addPartitionSql, "ADD PARTITION") {
+		addPartitionSql = strings.ReplaceAll(addPartitionSql, "ADD PARTITION", "ADD PARTITION IF NOT EXISTS")
+	} else {
+		addPartitionSql = strings.ReplaceAll(addPartitionSql, "ADD TEMPORARY PARTITION", "ADD TEMPORARY PARTITION IF NOT EXISTS")
 	}
 	return addPartitionSql
 }

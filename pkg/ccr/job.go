@@ -3034,13 +3034,16 @@ func (j *Job) isModifyTableColumnsCommitted(record *record.ModifyTableAddOrDropC
 		return false, err
 	}
 
-	columns, err := j.destMeta.DescribeTable(tableName)
+	materializedIndexes, err := j.destMeta.DescribeTableAll(tableName)
 	if err != nil {
 		return false, err
 	}
+	baseIndex := materializedIndexes[tableName]
+
+	log.Debugf("desc all table: %v", baseIndex)
 
 	destColumnMap := make(map[string]struct{})
-	for _, col := range columns {
+	for _, col := range baseIndex.ColumnDesc {
 		destColumnMap[col.Name] = struct{}{}
 	}
 	columnSchema := record.IndexSchemaMap[record.BaseIndexId]
@@ -3049,7 +3052,7 @@ func (j *Job) isModifyTableColumnsCommitted(record *record.ModifyTableAddOrDropC
 			continue
 		}
 		exists := false
-		for _, col := range columns {
+		for _, col := range baseIndex.ColumnDesc {
 			// To keep the logical simple, we don't compare the column type and other properties.
 			if c.Name == col.Name {
 				exists = true
@@ -3072,6 +3075,31 @@ func (j *Job) isModifyTableColumnsCommitted(record *record.ModifyTableAddOrDropC
 	return true, nil
 }
 
+func (j *Job) isDropRollupCommitted(record *record.DropRollup) (bool, error) {
+	var destTableName string
+	var err error
+	if j.SyncType == TableSync {
+		destTableName = j.Dest.Table
+	} else {
+		destTableName, err = j.getDestNameBySrcId(record.TableId)
+		if err != nil {
+			log.Errorf("get dest table name by src id %d failed, err: %v", record.TableId, err)
+			return false, err
+		}
+	}
+
+	descResult, err := j.destMeta.DescribeTableAll(destTableName)
+	if err != nil {
+		return false, err
+	}
+
+	if _, ok := descResult[record.IndexName]; ok {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 // determineBinlogState determines whether the unknown binlog is committed or not.
 // The result is true if the binlog is committed, otherwise false.
 func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
@@ -3087,7 +3115,6 @@ func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
 		case festruct.TBinlogType_DROP_PARTITION:
 		case festruct.TBinlogType_ADD_PARTITION:
 		case festruct.TBinlogType_DROP_TABLE:
-		case festruct.TBinlogType_DROP_ROLLUP:
 
 		// Idempotent when executing twice
 		case festruct.TBinlogType_MODIFY_VIEW_DEF:
@@ -3147,6 +3174,13 @@ func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
 		return false, xerror.Errorf(xerror.Normal, "UPSERT binlog should not step into here, commit seq %d", commitSeq)
 
 	// TODO: check dest table
+	case festruct.TBinlogType_DROP_ROLLUP:
+		dropRollup, err := record.NewDropRollupFromJson(binlog.GetData())
+		if err != nil {
+			return false, err
+		}
+		return j.isDropRollupCommitted(dropRollup)
+
 	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS:
 		modifyTableAddOrDropColumns, err := record.NewModifyTableAddOrDropColumnsFromJson(binlog.GetData())
 		if err != nil {

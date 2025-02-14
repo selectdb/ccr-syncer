@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite('test_ds_idem_create_table') {
+suite('test_ds_idem_drop_table') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
@@ -53,13 +53,6 @@ suite('test_ds_idem_create_table') {
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 60))
 
-    // The below failpoints are automatically removed when the first hit.
-    //
-    // The first failpoint is used to simulate the failure occurred before committed.
-    // The second failpoint is used to simulate the failure of committed but rpc failed.
-    helper.addFailpoint('handle_binlog_idempotent:before', 'CREATE_TABLE')
-    helper.addFailpoint('handle_binlog_idempotent:after', 'CREATE_TABLE')
-
     logger.info('create a new table')
     sql """
         CREATE TABLE IF NOT EXISTS tbl_${suffix}_new
@@ -81,14 +74,21 @@ suite('test_ds_idem_create_table') {
             "binlog.ttl_seconds" = "180"
         )
     """
+    logger.info('drop new table')
+
+    helper.addFailpoint('handle_binlog_idempotent:before', 'DROP_TABLE')
+    helper.addFailpoint('handle_binlog_idempotent:after', 'DROP_TABLE')
+    sql """
+        DROP TABLE tbl_${suffix}_new
+    """
 
     assertTrue(helper.checkShowTimesOf(
-        "SHOW TABLES LIKE 'tbl_${suffix }_new'", { r -> r.size() > 0 }, 30, 'target_sql'))
+        "SHOW TABLES LIKE 'tbl_${suffix }_new'", { r -> r.size() == 0 }, 30, 'target_sql'))
 
-    sql "INSERT INTO tbl_${suffix}_new VALUES (2, 10)"
-    
+    sql "INSERT INTO ${tableName} VALUES (2, 10)"
+
     assertTrue(helper.checkSelectTimesOf("""
-                            SELECT * FROM tbl_${suffix }_new
+                            SELECT * FROM ${tableName}
                             WHERE id = 10
                             """,
                             1, 60))
