@@ -72,7 +72,6 @@ type Specer interface {
 
 	RenameRollup(destTableName, oldRollup, newRollup string) error
 	DropRollup(destTableName, rollupName string) error
-	CheckRollupIndexExists(destTableName, rollup string) (bool, error)
 
 	DesyncTables(tables ...string) error
 

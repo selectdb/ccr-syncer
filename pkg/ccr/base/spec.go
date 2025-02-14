@@ -20,7 +20,6 @@ import (
 	"database/sql"
 	"fmt"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -1466,32 +1465,10 @@ func (s *Spec) RenameRollup(destTableName, oldRollup, newRollup string) error {
 func (s *Spec) DropRollup(destTableName, rollup string) error {
 	dbName := utils.FormatKeywordName(s.Database)
 	destTableName = utils.FormatKeywordName(destTableName)
-	descTableRes, err := s.queryResult(fmt.Sprintf("DESC %s.%s ALL", dbName, destTableName), "IndexName", "DESC TABLE")
-	if err != nil {
-		return xerror.Wrap(err, xerror.Normal, fmt.Sprintf("desc table %s failed", destTableName))
-	}
-	sort.Strings(descTableRes)
-
-	if index := sort.SearchStrings(descTableRes, rollup); index < len(descTableRes) && descTableRes[index] == rollup {
-		rollup = utils.FormatKeywordName(rollup)
-		dropRollupSql := fmt.Sprintf("ALTER TABLE %s.%s DROP ROLLUP %s", dbName, destTableName, rollup)
-		log.Infof("drop rollup sql: %s", dropRollupSql)
-		return s.Exec(dropRollupSql)
-	}
-	log.Info(fmt.Sprintf("rollup %s not found in %s, skip drop rollup", rollup, destTableName))
-	return nil
-}
-
-func (s *Spec) CheckRollupIndexExists(destTableName, rollup string) (bool, error) {
-	descTableRes, err := s.queryResult(fmt.Sprintf("DESC %s.%s ALL", s.Database, destTableName), "IndexName", "DESC TABLE")
-	if err != nil {
-		return false, xerror.Wrap(err, xerror.Normal, fmt.Sprintf("desc table %s failed", destTableName))
-	}
-	sort.Strings(descTableRes)
-	if index := sort.SearchStrings(descTableRes, rollup); index < len(descTableRes) && descTableRes[index] == rollup {
-		return true, nil
-	}
-	return false, nil
+	rollup = utils.FormatKeywordName(rollup)
+	dropRollupSql := fmt.Sprintf("ALTER TABLE %s.%s DROP ROLLUP %s", dbName, destTableName, rollup)
+	log.Infof("drop rollup sql: %s", dropRollupSql)
+	return s.Exec(dropRollupSql)
 }
 
 func (s *Spec) DesyncTables(tables ...string) error {
@@ -1578,7 +1555,6 @@ func correctAddPartitionSql(addPartitionSql string, addPartition *record.AddPart
 	} else {
 		addPartitionSql = strings.ReplaceAll(addPartitionSql, "ADD TEMPORARY PARTITION", "ADD TEMPORARY PARTITION IF NOT EXISTS")
 	}
-	log.Infof("add partition sql: %s", addPartitionSql)
 	return addPartitionSql
 }
 
