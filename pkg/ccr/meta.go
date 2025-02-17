@@ -1424,3 +1424,36 @@ func (m *Meta) DescribeTableAll(tableName string) (map[string]*MaterializedIndex
 	return columns, nil
 
 }
+
+func (m *Meta) ShowTables() ([]string, error) {
+	db, err := m.Connect()
+	if err != nil {
+		return nil, err
+	}
+
+	dbName := utils.FormatKeywordName(m.Database)
+	query := fmt.Sprintf("SHOW TABLES FROM %s", dbName)
+	log.Debugf("show tables from %s, sql: %s", m.Database, query)
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "show tables from %s", dbName)
+	}
+
+	tables := []string{}
+	defer rows.Close()
+	for rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "parse show tables from %s rows", dbName)
+		}
+
+		table, err := rowParser.GetString(fmt.Sprintf("Tables_in_%s", m.Database))
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "show tables from %s get table error", m.Database)
+		}
+
+		tables = append(tables, table)
+	}
+	return tables, nil
+}

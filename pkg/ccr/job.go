@@ -3100,6 +3100,15 @@ func (j *Job) isDropRollupCommitted(record *record.DropRollup) (bool, error) {
 	return true, nil
 }
 
+func (j *Job) isRenameTableCommitted(record *record.RenameTable) (bool, error) {
+	showResult, err := j.destMeta.ShowTables()
+  if err != nil {
+		return false, err
+	}
+  
+	return utils.Contains(showResult, record.NewTableName), nil
+}
+
 func (j *Job) isRenameColumnCommitted(record *record.RenameColumn) (bool, error) {
 	var destTableName string
 	var err error
@@ -3118,12 +3127,7 @@ func (j *Job) isRenameColumnCommitted(record *record.RenameColumn) (bool, error)
 		return false, err
 	}
 
-	columnNames := []string{}
-	for _, desc := range descResult[destTableName].ColumnDesc {
-		columnNames = append(columnNames, desc.Name)
-	}
-
-	return utils.Contains(columnNames, record.NewColName), nil
+	return utils.Contains(showResult, record.NewTableName), nil
 }
 
 func (j *Job) isModifyTableInvertedIndicesCommitted(record *record.ModifyTableAddOrDropInvertedIndices) (bool, error) {
@@ -3260,6 +3264,11 @@ func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
 		}
 		return j.isModifyTableInvertedIndicesCommitted(modifyTableAddOrDropInvertedIndices)
 	case festruct.TBinlogType_RENAME_TABLE:
+		renameTable, err := record.NewRenameTableFromJson(binlog.GetData())
+		if err != nil {
+			return false, err
+		}
+		return j.isRenameTableCommitted(renameTable)
 	case festruct.TBinlogType_RENAME_PARTITION:
 	case festruct.TBinlogType_RENAME_ROLLUP:
 	case festruct.TBinlogType_RENAME_COLUMN:
