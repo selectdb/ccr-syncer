@@ -3080,16 +3080,10 @@ func (j *Job) isModifyTableColumnsCommitted(record *record.ModifyTableAddOrDropC
 }
 
 func (j *Job) isDropRollupCommitted(record *record.DropRollup) (bool, error) {
-	var destTableName string
-	var err error
-	if j.SyncType == TableSync {
-		destTableName = j.Dest.Table
-	} else {
-		destTableName, err = j.getDestNameBySrcId(record.TableId)
-		if err != nil {
-			log.Errorf("get dest table name by src id %d failed, err: %v", record.TableId, err)
-			return false, err
-		}
+	destTableName, err := j.getDestNameBySrcId(record.TableId)
+	if err != nil {
+		log.Errorf("get dest table name by src id %d failed, err: %v", record.TableId, err)
+		return false, err
 	}
 
 	descResult, err := j.destMeta.DescribeTableAll(destTableName)
@@ -3153,7 +3147,7 @@ func (j *Job) isModifyTableInvertedIndicesCommitted(record *record.ModifyTableAd
 	return true, nil
 }
 
-func (j *Job) IsRenameColumnCommitted(record *record.RenameColumn) (bool, error) {
+func (j *Job) isRenameColumnCommitted(record *record.RenameColumn) (bool, error) {
 	destTableName, err := j.getDestNameBySrcId(record.TableId)
 	if err != nil {
 		log.Errorf("get dest table name by src id %d failed, err: %v", record.TableId, err)
@@ -3185,7 +3179,7 @@ func (j *Job) IsRenameColumnCommitted(record *record.RenameColumn) (bool, error)
 	return true, nil
 }
 
-func (j *Job) IsRenameRollupCommitted(record *record.RenameRollup) (bool, error) {
+func (j *Job) isRenameRollupCommitted(record *record.RenameRollup) (bool, error) {
 	destTableName, err := j.getDestNameBySrcId(record.TableId)
 	if err != nil {
 		log.Errorf("get dest table name by src id %d failed, err: %v", record.TableId, err)
@@ -3205,6 +3199,34 @@ func (j *Job) IsRenameRollupCommitted(record *record.RenameRollup) (bool, error)
 
 	log.Infof("rollup %s is renamed to %s in dest table %s, this binlog is committed",
 		record.OldRollupName, record.NewRollupName, destTableName)
+	return true, nil
+}
+
+func (j *Job) isRenamePartitionCommitted(record *record.RenamePartition) (bool, error) {
+	destTableId, err := j.getDestTableIdBySrc(record.TableId)
+	if err != nil {
+		return false, err
+	}
+
+	if err := j.destMeta.UpdatePartitions(destTableId); err != nil {
+		return false, err
+	}
+
+	partitions, err := j.destMeta.GetPartitionIdMap(destTableId)
+	if err != nil {
+		return false, err
+	}
+
+	for _, partition := range partitions {
+		if partition.Name == record.OldPartitionName {
+			log.Infof("partition %s is not renamed to %s in dest table %d, this binlog is not committed",
+				record.OldPartitionName, record.NewPartitionName, destTableId)
+			return false, nil
+		}
+	}
+
+	log.Infof("partition %s is renamed to %s in dest table %d, this binlog is not committed",
+		record.OldPartitionName, record.NewPartitionName, destTableId)
 	return true, nil
 }
 
@@ -3281,7 +3303,6 @@ func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
 	case festruct.TBinlogType_UPSERT:
 		return false, xerror.Errorf(xerror.Normal, "UPSERT binlog should not step into here, commit seq %d", commitSeq)
 
-	// TODO: check dest table
 	case festruct.TBinlogType_DROP_ROLLUP:
 		dropRollup, err := record.NewDropRollupFromJson(binlog.GetData())
 		if err != nil {
@@ -3308,24 +3329,28 @@ func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
 		}
 		return j.isRenameTableCommitted(renameTable)
 	case festruct.TBinlogType_RENAME_PARTITION:
+		renamePartitionRecord, err := record.NewRenamePartitionFromJson(binlog.GetData())
+		if err != nil {
+			return false, err
+		}
+		return j.isRenamePartitionCommitted(renamePartitionRecord)
 	case festruct.TBinlogType_RENAME_ROLLUP:
 		renameRollupRecord, err := record.NewRenameRollupFromJson(binlog.GetData())
 		if err != nil {
 			return false, err
 		}
-		return j.IsRenameRollupCommitted(renameRollupRecord)
+		return j.isRenameRollupCommitted(renameRollupRecord)
 	case festruct.TBinlogType_RENAME_COLUMN:
 		renameColumnRecord, err := record.NewRenameColumnFromJson(binlog.GetData())
 		if err != nil {
 			return false, nil
 		}
-		return j.IsRenameColumnCommitted(renameColumnRecord)
+		return j.isRenameColumnCommitted(renameColumnRecord)
 
 	default:
 		return false, xerror.Errorf(xerror.Normal, "unknown binlog type: %v, commit seq %d, data %s",
 			binlogType, commitSeq, binlog.GetData())
 	}
-	return false, nil
 }
 
 func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
