@@ -3153,10 +3153,10 @@ func (j *Job) isModifyTableInvertedIndicesCommitted(record *record.ModifyTableAd
 	return true, nil
 }
 
-func (j *Job) IsRenameColumnCommitted(renameColumnRecord *record.RenameColumn) (bool, error) {
-	destTableName, err := j.getDestNameBySrcId(renameColumnRecord.TableId)
+func (j *Job) IsRenameColumnCommitted(record *record.RenameColumn) (bool, error) {
+	destTableName, err := j.getDestNameBySrcId(record.TableId)
 	if err != nil {
-		log.Errorf("get dest table name by src id %d failed, err: %v", renameColumnRecord.TableId, err)
+		log.Errorf("get dest table name by src id %d failed, err: %v", record.TableId, err)
 		return false, err
 	}
 
@@ -3173,15 +3173,38 @@ func (j *Job) IsRenameColumnCommitted(renameColumnRecord *record.RenameColumn) (
 	log.Debugf("desc all table: %v", baseIndex)
 
 	for _, column := range baseIndex.ColumnDesc {
-		if column.Name == renameColumnRecord.ColName {
+		if column.Name == record.ColName {
 			log.Infof("column %s is not renamed to %s in dest table %s, this binlog is not committed",
-				renameColumnRecord.ColName, renameColumnRecord.NewColName, destTableName)
+				record.ColName, record.NewColName, destTableName)
 			return false, nil
 		}
 	}
 
 	log.Infof("column %s is renamed to %s in dest table %s, this binlog is committed",
-		renameColumnRecord.ColName, renameColumnRecord.NewColName, destTableName)
+		record.ColName, record.NewColName, destTableName)
+	return true, nil
+}
+
+func (j *Job) IsRenameRollupCommitted(record *record.RenameRollup) (bool, error) {
+	destTableName, err := j.getDestNameBySrcId(record.TableId)
+	if err != nil {
+		log.Errorf("get dest table name by src id %d failed, err: %v", record.TableId, err)
+		return false, err
+	}
+
+	descResult, err := j.destMeta.DescribeTableAll(destTableName)
+	if err != nil {
+		return false, err
+	}
+
+	if _, ok := descResult[record.NewRollupName]; !ok {
+		log.Infof("rollup %s is not renamed to %s in dest table %s, this binlog is not committed",
+			record.OldRollupName, record.NewRollupName, destTableName)
+		return false, nil
+	}
+
+	log.Infof("rollup %s is renamed to %s in dest table %s, this binlog is committed",
+		record.OldRollupName, record.NewRollupName, destTableName)
 	return true, nil
 }
 
@@ -3286,6 +3309,11 @@ func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
 		return j.isRenameTableCommitted(renameTable)
 	case festruct.TBinlogType_RENAME_PARTITION:
 	case festruct.TBinlogType_RENAME_ROLLUP:
+		renameRollupRecord, err := record.NewRenameRollupFromJson(binlog.GetData())
+		if err != nil {
+			return false, err
+		}
+		return j.IsRenameRollupCommitted(renameRollupRecord)
 	case festruct.TBinlogType_RENAME_COLUMN:
 		renameColumnRecord, err := record.NewRenameColumnFromJson(binlog.GetData())
 		if err != nil {
