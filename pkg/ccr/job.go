@@ -2363,10 +2363,7 @@ func (j *Job) handleRenameColumn(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	return j.handleRenameColumnRecord(binlog.GetCommitSeq(), renameColumn)
-}
-
-func (j *Job) handleRenameColumnRecord(commitSeq int64, renameColumn *record.RenameColumn) error {
+	commitSeq := binlog.GetCommitSeq()
 	if j.isBinlogCommitted(renameColumn.TableId, commitSeq) {
 		return nil
 	}
@@ -2390,10 +2387,7 @@ func (j *Job) handleModifyComment(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	return j.handleModifyCommentRecord(binlog.GetCommitSeq(), modifyComment)
-}
-
-func (j *Job) handleModifyCommentRecord(commitSeq int64, modifyComment *record.ModifyComment) error {
+	commitSeq := binlog.GetCommitSeq()
 	if j.isBinlogCommitted(modifyComment.TableId, commitSeq) {
 		return nil
 	}
@@ -2504,16 +2498,13 @@ func (j *Job) handleRenameTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	return j.handleRenameTableRecord(binlog.GetCommitSeq(), renameTable)
-}
-
-func (j *Job) handleRenameTableRecord(commitSeq int64, renameTable *record.RenameTable) error {
 	// don't support rename table when table sync
 	if j.SyncType == TableSync {
 		log.Warnf("rename table is not supported when table sync, consider rebuilding this job instead")
 		return xerror.Errorf(xerror.Normal, "rename table is not supported when table sync, consider rebuilding this job instead")
 	}
 
+	commitSeq := binlog.GetCommitSeq()
 	if j.isBinlogCommitted(renameTable.TableId, commitSeq) {
 		return nil
 	}
@@ -2561,10 +2552,7 @@ func (j *Job) handleReplaceTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	return j.handleReplaceTableRecord(binlog.GetCommitSeq(), record)
-}
-
-func (j *Job) handleReplaceTableRecord(commitSeq int64, record *record.ReplaceTableRecord) error {
+	commitSeq := binlog.GetCommitSeq()
 	if j.SyncType == TableSync {
 		info := fmt.Sprintf("replace table %s with fullsync in table sync, reset src table id from %d to %d, swap: %t",
 			record.OriginTableName, record.OriginTableId, record.NewTableId, record.SwapTable)
@@ -2637,15 +2625,12 @@ func (j *Job) handleModifyTableAddOrDropInvertedIndices(binlog *festruct.TBinlog
 		j.progress.PrevCommitSeq, j.progress.CommitSeq)
 
 	data := binlog.GetData()
-	modifyTableAddOrDropInvertedIndices, err := record.NewModifyTableAddOrDropInvertedIndicesFromJson(data)
+	record, err := record.NewModifyTableAddOrDropInvertedIndicesFromJson(data)
 	if err != nil {
 		return err
 	}
 
-	return j.handleModifyTableAddOrDropInvertedIndicesRecord(binlog.GetCommitSeq(), modifyTableAddOrDropInvertedIndices)
-}
-
-func (j *Job) handleModifyTableAddOrDropInvertedIndicesRecord(commitSeq int64, record *record.ModifyTableAddOrDropInvertedIndices) error {
+	commitSeq := binlog.GetCommitSeq()
 	if j.isBinlogCommitted(record.TableId, commitSeq) {
 		return nil
 	}
@@ -2686,10 +2671,7 @@ func (j *Job) handleIndexChangeJob(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	return j.handleIndexChangeJobRecord(binlog.GetCommitSeq(), indexChangeJob)
-}
-
-func (j *Job) handleIndexChangeJobRecord(commitSeq int64, indexChangeJob *record.IndexChangeJob) error {
+	commitSeq := binlog.GetCommitSeq()
 	if j.isBinlogCommitted(indexChangeJob.TableId, commitSeq) {
 		return nil
 	}
@@ -2721,10 +2703,8 @@ func (j *Job) handleAlterViewDef(binlog *festruct.TBinlog) error {
 	if err != nil {
 		return err
 	}
-	return j.handleAlterViewDefRecord(binlog.GetCommitSeq(), alterView)
-}
 
-func (j *Job) handleAlterViewDefRecord(commitSeq int64, alterView *record.AlterView) error {
+	commitSeq := binlog.GetCommitSeq()
 	if j.isBinlogCommitted(alterView.TableId, commitSeq) {
 		return nil
 	}
@@ -2746,10 +2726,8 @@ func (j *Job) handleRenamePartition(binlog *festruct.TBinlog) error {
 	if err != nil {
 		return err
 	}
-	return j.handleRenamePartitionRecord(binlog.GetCommitSeq(), renamePartition)
-}
 
-func (j *Job) handleRenamePartitionRecord(commitSeq int64, renamePartition *record.RenamePartition) error {
+	commitSeq := binlog.GetCommitSeq()
 	if j.isBinlogCommitted(renamePartition.TableId, commitSeq) {
 		return nil
 	}
@@ -2785,10 +2763,7 @@ func (j *Job) handleRenameRollup(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	return j.handleRenameRollupRecord(binlog.GetCommitSeq(), renameRollup)
-}
-
-func (j *Job) handleRenameRollupRecord(commitSeq int64, renameRollup *record.RenameRollup) error {
+	commitSeq := binlog.GetCommitSeq()
 	if j.isBinlogCommitted(renameRollup.TableId, commitSeq) {
 		return nil
 	}
@@ -2825,10 +2800,7 @@ func (j *Job) handleDropRollup(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	return j.handleDropRollupRecord(binlog.GetCommitSeq(), dropRollup)
-}
-
-func (j *Job) handleDropRollupRecord(commitSeq int64, dropRollup *record.DropRollup) error {
+	commitSeq := binlog.GetCommitSeq()
 	if j.isBinlogCommitted(dropRollup.TableId, commitSeq) {
 		return nil
 	}
@@ -2853,10 +2825,7 @@ func (j *Job) handleRecoverInfo(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	return j.handleRecoverInfoRecord(binlog.GetCommitSeq(), recoverInfo)
-}
-
-func (j *Job) handleRecoverInfoRecord(commitSeq int64, recoverInfo *record.RecoverInfo) error {
+	commitSeq := binlog.GetCommitSeq()
 	if j.isBinlogCommitted(recoverInfo.TableId, commitSeq) {
 		return nil
 	}
@@ -2897,84 +2866,19 @@ func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
+	// keep compatible with old version
 	binlogType := festruct.TBinlogType(barrierLog.BinlogType)
 	log.Infof("handle barrier binlog with type %s, prevCommitSeq: %d, commitSeq: %d",
 		binlogType, j.progress.PrevCommitSeq, j.progress.CommitSeq)
 
-	commitSeq := binlog.GetCommitSeq()
-	switch binlogType {
-	case festruct.TBinlogType_RENAME_TABLE:
-		renameTable, err := record.NewRenameTableFromJson(barrierLog.Binlog)
-		if err != nil {
-			return err
-		}
-		return j.handleRenameTableRecord(commitSeq, renameTable)
-	case festruct.TBinlogType_RENAME_COLUMN:
-		renameColumn, err := record.NewRenameColumnFromJson(barrierLog.Binlog)
-		if err != nil {
-			return err
-		}
-		return j.handleRenameColumnRecord(commitSeq, renameColumn)
-	case festruct.TBinlogType_RENAME_PARTITION:
-		renamePartition, err := record.NewRenamePartitionFromJson(barrierLog.Binlog)
-		if err != nil {
-			return err
-		}
-		return j.handleRenamePartitionRecord(commitSeq, renamePartition)
-	case festruct.TBinlogType_RENAME_ROLLUP:
-		renameRollup, err := record.NewRenameRollupFromJson(barrierLog.Binlog)
-		if err != nil {
-			return err
-		}
-		return j.handleRenameRollupRecord(binlog.GetCommitSeq(), renameRollup)
-	case festruct.TBinlogType_DROP_ROLLUP:
-		dropRollup, err := record.NewDropRollupFromJson(barrierLog.Binlog)
-		if err != nil {
-			return err
-		}
-		return j.handleDropRollupRecord(commitSeq, dropRollup)
-	case festruct.TBinlogType_REPLACE_TABLE:
-		replaceTable, err := record.NewReplaceTableRecordFromJson(barrierLog.Binlog)
-		if err != nil {
-			return err
-		}
-		return j.handleReplaceTableRecord(commitSeq, replaceTable)
-	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_INVERTED_INDICES:
-		m, err := record.NewModifyTableAddOrDropInvertedIndicesFromJson(barrierLog.Binlog)
-		if err != nil {
-			return err
-		}
-		return j.handleModifyTableAddOrDropInvertedIndicesRecord(commitSeq, m)
-	case festruct.TBinlogType_INDEX_CHANGE_JOB:
-		job, err := record.NewIndexChangeJobFromJson(barrierLog.Binlog)
-		if err != nil {
-			return err
-		}
-		return j.handleIndexChangeJobRecord(commitSeq, job)
-	case festruct.TBinlogType_MODIFY_VIEW_DEF:
-		alterView, err := record.NewAlterViewFromJson(barrierLog.Binlog)
-		if err != nil {
-			return err
-		}
-		return j.handleAlterViewDefRecord(commitSeq, alterView)
-	case festruct.TBinlogType_MODIFY_COMMENT:
-		modifyComment, err := record.NewModifyCommentFromJson(barrierLog.Binlog)
-		if err != nil {
-			return err
-		}
-		return j.handleModifyCommentRecord(commitSeq, modifyComment)
-	case festruct.TBinlogType_RECOVER_INFO:
-		recoverInfo, err := record.NewRecoverInfoFromJson(barrierLog.Binlog)
-		if err != nil {
-			return err
-		}
-		return j.handleRecoverInfoRecord(commitSeq, recoverInfo)
-	case festruct.TBinlogType_BARRIER:
-		log.Info("handle barrier binlog, ignore it")
-	default:
-		return xerror.Errorf(xerror.Normal, "unknown binlog type wrapped by barrier: %d", barrierLog.BinlogType)
-	}
-	return nil
+	newBinlog := festruct.NewTBinlog()
+	newBinlog.SetCommitSeq(utils.ThriftValueWrapper(binlog.GetCommitSeq()))
+	newBinlog.SetTimestamp(utils.ThriftValueWrapper(binlog.GetTimestamp()))
+	newBinlog.SetType(&binlogType)
+	newBinlog.SetDbId(utils.ThriftValueWrapper(binlog.GetDbId()))
+	newBinlog.SetData(&barrierLog.Binlog)
+	newBinlog.SetTableIds(binlog.GetTableIds())
+	return j.handleNonBarrierBinlog(newBinlog)
 }
 
 // return: error && bool backToRunLoop
@@ -3281,20 +3185,6 @@ func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
 	if binlogType == festruct.TBinlogType_REPLACE_TABLE {
 		// We can't determine whether the binlog is committed or not, trigger full sync.
 		return true, j.newSnapshot(commitSeq, "the REPLACE_TABLE binlog state is unknown")
-	} else if binlogType == festruct.TBinlogType_BARRIER {
-		// keep compatible with old version
-		barrierLog, err := record.NewBarrierLogFromJson(binlog.GetData())
-		if err != nil {
-			return false, err
-		}
-
-		if barrierLog.Binlog == "" {
-			return false, nil
-		}
-
-		binlogType := festruct.TBinlogType(barrierLog.BinlogType)
-		// TODO: handle barriers
-		_ = binlogType
 	}
 
 	switch binlogType {
@@ -3382,6 +3272,17 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		return xerror.Errorf(xerror.Normal, "fail to handle binlog by failpoint")
 	}
 
+	if binlogType == festruct.TBinlogType_BARRIER {
+		return j.handleBarrier(binlog)
+	}
+
+	return j.handleNonBarrierBinlog(binlog)
+}
+
+func (j *Job) handleNonBarrierBinlog(binlog *festruct.TBinlog) error {
+	binlogType := binlog.GetType()
+	commitSeq := binlog.GetCommitSeq()
+
 	if binlogType == festruct.TBinlogType_UPSERT {
 		return j.handleUpsertWithRetry(binlog)
 	}
@@ -3429,8 +3330,6 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 		log.Infof("handle alter database property binlog, ignore it, commit seq %d", commitSeq)
 	case festruct.TBinlogType_MODIFY_TABLE_PROPERTY:
 		err = j.handleModifyProperty(binlog)
-	case festruct.TBinlogType_BARRIER:
-		err = j.handleBarrier(binlog)
 	case festruct.TBinlogType_TRUNCATE_TABLE:
 		err = j.handleTruncateTable(binlog)
 	case festruct.TBinlogType_RENAME_TABLE:
