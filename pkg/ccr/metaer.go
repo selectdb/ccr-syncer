@@ -150,6 +150,7 @@ type Metaer interface {
 
 	UpdateIndexes(tableId, partitionId int64) error
 	ShowIndexes(tableName string) ([]*IndexDesc, error)
+	ShowTables() ([]string, error)
 
 	UpdateReplicas(tableId, partitionId int64) error
 	GetReplicas(tableId, partitionId int64) (*btree.Map[int64, *ReplicaMeta], error)
