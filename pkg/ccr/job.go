@@ -3100,6 +3100,32 @@ func (j *Job) isDropRollupCommitted(record *record.DropRollup) (bool, error) {
 	return true, nil
 }
 
+func (j *Job) isRenameColumnCommitted(record *record.RenameColumn) (bool, error) {
+	var destTableName string
+	var err error
+	if j.SyncType == TableSync {
+		destTableName = j.Dest.Table
+	} else {
+		destTableName, err = j.getDestNameBySrcId(record.TableId)
+		if err != nil {
+			log.Errorf("get dest table name by src id %d failed, err: %v", record.TableId, err)
+			return false, err
+		}
+	}
+
+	descResult, err := j.destMeta.DescribeTableAll(destTableName)
+	if err != nil {
+		return false, err
+	}
+
+	columnNames := []string{}
+	for _, desc := range descResult[destTableName].ColumnDesc {
+		columnNames = append(columnNames, desc.Name)
+	}
+
+	return utils.Contains(columnNames, record.NewColName), nil
+}
+
 func (j *Job) isModifyTableInvertedIndicesCommitted(record *record.ModifyTableAddOrDropInvertedIndices) (bool, error) {
 	tableName, err := j.getDestNameBySrcId(record.TableId)
 	if err != nil {
@@ -3237,7 +3263,11 @@ func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
 	case festruct.TBinlogType_RENAME_PARTITION:
 	case festruct.TBinlogType_RENAME_ROLLUP:
 	case festruct.TBinlogType_RENAME_COLUMN:
-
+		renameColumn, err := record.NewRenameColumnFromJson(binlog.GetData())
+		if err != nil {
+			return false, nil
+		}
+		return j.isRenameColumnCommitted(renameColumn)
 	default:
 		return false, xerror.Errorf(xerror.Normal, "unknown binlog type: %v, commit seq %d, data %s",
 			binlogType, commitSeq, binlog.GetData())
