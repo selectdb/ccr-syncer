@@ -92,6 +92,11 @@ type MaterializedIndexDesc struct {
 	ColumnDesc    []ColumnDesc
 }
 
+func (m *MaterializedIndexDesc) String() string {
+	return fmt.Sprintf("MaterializedIndexDesc{ indexName:%s, indexKeysType:%s, columnDesc:%v}",
+		m.IndexName, m.IndexKeysType, m.ColumnDesc)
+}
+
 type ColumnDesc struct {
 	Name         string
 	Type         string
@@ -103,9 +108,18 @@ type ColumnDesc struct {
 	Visible      bool
 }
 
+func (c *ColumnDesc) String() string {
+	return fmt.Sprintf("ColumnDesc{ name:%s, type:%s, isNull:%t, isKey:%t, visible:%t}",
+		c.Name, c.Type, c.IsNull, c.IsKey, c.Visible)
+}
+
 type IndexDesc struct {
 	Name      string
 	IndexType string
+}
+
+func (i *IndexDesc) String() string {
+	return fmt.Sprintf("IndexDesc{ name:%s, indexType:%s}", i.Name, i.IndexType)
 }
 
 type MetaCleaner interface {

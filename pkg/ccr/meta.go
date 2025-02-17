@@ -1312,9 +1312,11 @@ func (m *Meta) DescribeTableAll(tableName string) (map[string]*MaterializedIndex
 	if err != nil {
 		return nil, xerror.Wrapf(err, xerror.Normal, "describe table %s", tableName)
 	}
-
-	columns := make(map[string]*MaterializedIndexDesc, 0)
 	defer rows.Close()
+
+	var indexName string
+	var indexKeysType string
+	columns := make(map[string]*MaterializedIndexDesc, 0)
 	for rows.Next() {
 		rowParser := utils.NewRowParser()
 		if err := rowParser.Parse(rows); err != nil {
@@ -1337,19 +1339,19 @@ func (m *Meta) DescribeTableAll(tableName string) (map[string]*MaterializedIndex
 		// +-----------+---------------+-------+------+--------------+------+-------+---------+-------+---------+------------+-------------+
 		// field is empty, skip scan
 		if name == "" {
+			indexName = ""
+			indexKeysType = ""
 			continue
-		}
+		} else if indexName == "" {
+			indexName, err = rowParser.GetString("IndexName")
+			if err != nil {
+				return nil, xerror.Wrapf(err, xerror.Normal, "describe table get IndexName failed, table: %s", tableName)
+			}
 
-		indexName := ""
-		indexName, err = rowParser.GetString("IndexName")
-		if err != nil {
-			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get IndexName failed, table: %s", tableName)
-		}
-
-		indexKeysType := ""
-		indexKeysType, err = rowParser.GetString("IndexKeysType")
-		if err != nil {
-			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get IndexKeysType failed, table: %s", tableName)
+			indexKeysType, err = rowParser.GetString("IndexKeysType")
+			if err != nil {
+				return nil, xerror.Wrapf(err, xerror.Normal, "describe table get IndexKeysType failed, table: %s", tableName)
+			}
 		}
 
 		// get Type, Null, Key, Default, Extra
@@ -1395,31 +1397,23 @@ func (m *Meta) DescribeTableAll(tableName string) (map[string]*MaterializedIndex
 			defaultValue = ""
 		}
 
+		columnDesc := ColumnDesc{
+			Name:         name,
+			Type:         typ,
+			InternalType: internalType,
+			IsNull:       isNull,
+			IsKey:        isKey,
+			Default:      defaultValue,
+			Extra:        extra,
+			Visible:      isVisible,
+		}
 		if materializedIndex, ok := columns[indexName]; ok {
-			materializedIndex.ColumnDesc = append(materializedIndex.ColumnDesc, ColumnDesc{
-				Name:         name,
-				Type:         typ,
-				InternalType: internalType,
-				IsNull:       isNull,
-				IsKey:        isKey,
-				Default:      defaultValue,
-				Extra:        extra,
-				Visible:      isVisible,
-			})
+			materializedIndex.ColumnDesc = append(materializedIndex.ColumnDesc, columnDesc)
 		} else {
 			columns[indexName] = &MaterializedIndexDesc{
 				IndexName:     indexName,
 				IndexKeysType: indexKeysType,
-				ColumnDesc: []ColumnDesc{{
-					Name:         name,
-					Type:         typ,
-					InternalType: internalType,
-					IsNull:       isNull,
-					IsKey:        isKey,
-					Default:      defaultValue,
-					Extra:        extra,
-					Visible:      isVisible,
-				}},
+				ColumnDesc:    []ColumnDesc{columnDesc},
 			}
 		}
 
