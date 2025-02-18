@@ -1,0 +1,16 @@
+package handle
+
+import (
+	"github.com/selectdb/ccr_syncer/pkg/ccr"
+	"github.com/selectdb/ccr_syncer/pkg/ccr/record"
+)
+
+type IdempotentJobHandle[T record.Record] struct{}
+
+func (h *IdempotentJobHandle[T]) IsIdempotent() bool {
+	return true
+}
+
+func (h *IdempotentJobHandle[T]) IsBinlogCommitted(job *ccr.Job, record T) (bool, error) {
+	return true, nil
+}
