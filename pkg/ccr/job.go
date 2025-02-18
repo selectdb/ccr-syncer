@@ -1337,7 +1337,7 @@ func (j *Job) newLabel(commitSeq int64) string {
 	}
 }
 
-func (j *Job) isMaterializedViewTable(srcTableId int64) (bool, error) {
+func (j *Job) IsMaterializedViewTable(srcTableId int64) (bool, error) {
 	// 1. skip the OLAP tables
 	if j.SyncType == TableSync && srcTableId == j.Src.TableId {
 		return false, nil
@@ -1400,7 +1400,7 @@ func (j *Job) getDestTableIdBySrc(srcTableId int64) (int64, error) {
 	}
 }
 
-func (j *Job) getDestNameBySrcId(srcTableId int64) (string, error) {
+func (j *Job) GetDestNameBySrcId(srcTableId int64) (string, error) {
 	if j.SyncType == TableSync {
 		return j.Dest.Table, nil
 	}
@@ -1696,7 +1696,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		if j.SyncType == DBSync {
 			savedRecords := make([]*record.TableRecord, 0, len(tableRecords))
 			for _, tableRecord := range tableRecords {
-				if isAsyncMv, err := j.isMaterializedViewTable(tableRecord.Id); err != nil {
+				if isAsyncMv, err := j.IsMaterializedViewTable(tableRecord.Id); err != nil {
 					return err
 				} else if isAsyncMv {
 					// ignore the upsert of materialized view table.
@@ -1933,7 +1933,7 @@ func (j *Job) handleAddPartition(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	if isAsyncMv, err := j.isMaterializedViewTable(addPartition.TableId); err != nil {
+	if isAsyncMv, err := j.IsMaterializedViewTable(addPartition.TableId); err != nil {
 		return err
 	} else if isAsyncMv {
 		log.Warnf("skip add partition for materialized view table %d", addPartition.TableId)
@@ -1945,7 +1945,7 @@ func (j *Job) handleAddPartition(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	destTableName, err := j.getDestNameBySrcId(addPartition.TableId)
+	destTableName, err := j.GetDestNameBySrcId(addPartition.TableId)
 	if err != nil {
 		return err
 	}
@@ -1972,14 +1972,14 @@ func (j *Job) handleDropPartition(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	if isAsyncMv, err := j.isMaterializedViewTable(dropPartition.TableId); err != nil {
+	if isAsyncMv, err := j.IsMaterializedViewTable(dropPartition.TableId); err != nil {
 		return err
 	} else if isAsyncMv {
 		log.Warnf("skip drop partition for materialized view table %d", dropPartition.TableId)
 		return nil
 	}
 
-	destTableName, err := j.getDestNameBySrcId(dropPartition.TableId)
+	destTableName, err := j.GetDestNameBySrcId(dropPartition.TableId)
 	if err != nil {
 		return err
 	}
@@ -2190,7 +2190,7 @@ func (j *Job) handleModifyProperty(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	destTableName, err := j.getDestNameBySrcId(modifyProperty.TableId)
+	destTableName, err := j.GetDestNameBySrcId(modifyProperty.TableId)
 	if err != nil {
 		return err
 	}
@@ -2208,7 +2208,7 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	if isAsyncMv, err := j.isMaterializedViewTable(alterJob.TableId); err != nil {
+	if isAsyncMv, err := j.IsMaterializedViewTable(alterJob.TableId); err != nil {
 		return err
 	} else if isAsyncMv {
 		log.Warnf("skip alter job for materialized view table %d", alterJob.TableId)
@@ -2368,7 +2368,7 @@ func (j *Job) handleRenameColumn(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	destTableName, err := j.getDestNameBySrcId(renameColumn.TableId)
+	destTableName, err := j.GetDestNameBySrcId(renameColumn.TableId)
 	if err != nil {
 		return err
 	}
@@ -2392,7 +2392,7 @@ func (j *Job) handleModifyComment(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	destTableName, err := j.getDestNameBySrcId(modifyComment.TableId)
+	destTableName, err := j.GetDestNameBySrcId(modifyComment.TableId)
 	if err != nil {
 		return err
 	}
@@ -2447,7 +2447,7 @@ func (j *Job) handleReplacePartitions(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	if isAsyncMv, err := j.isMaterializedViewTable(replacePartition.TableId); err != nil {
+	if isAsyncMv, err := j.IsMaterializedViewTable(replacePartition.TableId); err != nil {
 		return err
 	} else if isAsyncMv {
 		log.Warnf("skip replace partitions for materialized view table %d", replacePartition.TableId)
@@ -2509,14 +2509,14 @@ func (j *Job) handleRenameTable(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	if isAsyncMv, err := j.isMaterializedViewTable(renameTable.TableId); err != nil {
+	if isAsyncMv, err := j.IsMaterializedViewTable(renameTable.TableId); err != nil {
 		return err
 	} else if isAsyncMv {
 		log.Warnf("skip rename table for materialized view table %d", renameTable.TableId)
 		return nil
 	}
 
-	destTableName, err := j.getDestNameBySrcId(renameTable.TableId)
+	destTableName, err := j.GetDestNameBySrcId(renameTable.TableId)
 	if err != nil {
 		return err
 	}
@@ -2561,7 +2561,7 @@ func (j *Job) handleReplaceTable(binlog *festruct.TBinlog) error {
 		return j.newSnapshot(commitSeq, info)
 	}
 
-	if isAsyncMv, err := j.isMaterializedViewTable(record.OriginTableId); err != nil {
+	if isAsyncMv, err := j.IsMaterializedViewTable(record.OriginTableId); err != nil {
 		return err
 	} else if isAsyncMv {
 		log.Warnf("skip replace table for materialized view table %d", record.OriginTableId)
@@ -2636,7 +2636,7 @@ func (j *Job) handleModifyTableAddOrDropInvertedIndices(binlog *festruct.TBinlog
 	}
 
 	if record.IsDropInvertedIndex {
-		destTableName, err := j.getDestNameBySrcId(record.TableId)
+		destTableName, err := j.GetDestNameBySrcId(record.TableId)
 		if err != nil {
 			return err
 		}
@@ -2650,7 +2650,7 @@ func (j *Job) handleModifyTableAddOrDropInvertedIndices(binlog *festruct.TBinlog
 		// for table sync with alias
 		tableName = j.Src.Table
 	} else {
-		if name, err := j.getDestNameBySrcId(record.TableId); err != nil {
+		if name, err := j.GetDestNameBySrcId(record.TableId); err != nil {
 			return xerror.Errorf(xerror.Normal, "get dest table name by src id %d failed, err: %v", record.TableId, err)
 		} else {
 			tableName = name
@@ -2709,7 +2709,7 @@ func (j *Job) handleAlterViewDef(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	viewName, err := j.getDestNameBySrcId(alterView.TableId)
+	viewName, err := j.GetDestNameBySrcId(alterView.TableId)
 	if err != nil {
 		return err
 	}
@@ -2732,7 +2732,7 @@ func (j *Job) handleRenamePartition(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	destTableName, err := j.getDestNameBySrcId(renamePartition.TableId)
+	destTableName, err := j.GetDestNameBySrcId(renamePartition.TableId)
 	if err != nil {
 		return err
 	}
@@ -2768,7 +2768,7 @@ func (j *Job) handleRenameRollup(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	destTableName, err := j.getDestNameBySrcId(renameRollup.TableId)
+	destTableName, err := j.GetDestNameBySrcId(renameRollup.TableId)
 	if err != nil {
 		return nil
 	}
@@ -2932,7 +2932,7 @@ func (j *Job) isModifyTableColumnsCommitted(record *record.ModifyTableAddOrDropC
 		return false, nil
 	}
 
-	tableName, err := j.getDestNameBySrcId(record.TableId)
+	tableName, err := j.GetDestNameBySrcId(record.TableId)
 	if err != nil {
 		log.Errorf("get dest table name by src id %d failed, err: %v", record.TableId, err)
 		return false, err
@@ -2984,7 +2984,7 @@ func (j *Job) isModifyTableColumnsCommitted(record *record.ModifyTableAddOrDropC
 }
 
 func (j *Job) isDropRollupCommitted(record *record.DropRollup) (bool, error) {
-	destTableName, err := j.getDestNameBySrcId(record.TableId)
+	destTableName, err := j.GetDestNameBySrcId(record.TableId)
 	if err != nil {
 		log.Errorf("get dest table name by src id %d failed, err: %v", record.TableId, err)
 		return false, err
@@ -3012,7 +3012,7 @@ func (j *Job) isRenameTableCommitted(record *record.RenameTable) (bool, error) {
 }
 
 func (j *Job) isModifyTableInvertedIndicesCommitted(record *record.ModifyTableAddOrDropInvertedIndices) (bool, error) {
-	tableName, err := j.getDestNameBySrcId(record.TableId)
+	tableName, err := j.GetDestNameBySrcId(record.TableId)
 	if err != nil {
 		log.Errorf("get dest table name by src id %d failed, err: %v", record.TableId, err)
 		return false, err
@@ -3052,7 +3052,7 @@ func (j *Job) isModifyTableInvertedIndicesCommitted(record *record.ModifyTableAd
 }
 
 func (j *Job) isRenameColumnCommitted(record *record.RenameColumn) (bool, error) {
-	destTableName, err := j.getDestNameBySrcId(record.TableId)
+	destTableName, err := j.GetDestNameBySrcId(record.TableId)
 	if err != nil {
 		log.Errorf("get dest table name by src id %d failed, err: %v", record.TableId, err)
 		return false, err
@@ -3084,7 +3084,7 @@ func (j *Job) isRenameColumnCommitted(record *record.RenameColumn) (bool, error)
 }
 
 func (j *Job) isRenameRollupCommitted(record *record.RenameRollup) (bool, error) {
-	destTableName, err := j.getDestNameBySrcId(record.TableId)
+	destTableName, err := j.GetDestNameBySrcId(record.TableId)
 	if err != nil {
 		log.Errorf("get dest table name by src id %d failed, err: %v", record.TableId, err)
 		return false, err
@@ -3140,6 +3140,10 @@ func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
 	commitSeq := binlog.GetCommitSeq()
 	if commitSeq != j.progress.UnknownCommitSeq {
 		panic("commit seq not match")
+	}
+
+	if IsJobHandleRegistered(binlog.GetType()) {
+		return IsBinlogCommitted(j, binlog)
 	}
 
 	isIdempotent := func(binlogType festruct.TBinlogType) bool {
@@ -3307,56 +3311,60 @@ func (j *Job) handleNonBarrierBinlog(binlog *festruct.TBinlog) error {
 	}
 
 	var err error
-	switch binlogType {
-	case festruct.TBinlogType_ADD_PARTITION:
-		err = j.handleAddPartition(binlog)
-	case festruct.TBinlogType_CREATE_TABLE:
-		err = j.handleCreateTable(binlog)
-	case festruct.TBinlogType_DROP_PARTITION:
-		err = j.handleDropPartition(binlog)
-	case festruct.TBinlogType_DROP_TABLE:
-		err = j.handleDropTable(binlog)
-	case festruct.TBinlogType_ALTER_JOB:
-		err = j.handleAlterJob(binlog)
-	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS:
-		err = j.handleLightningSchemaChange(binlog)
-	case festruct.TBinlogType_RENAME_COLUMN:
-		err = j.handleRenameColumn(binlog)
-	case festruct.TBinlogType_MODIFY_COMMENT:
-		err = j.handleModifyComment(binlog)
-	case festruct.TBinlogType_DUMMY:
-		err = j.handleDummy(binlog)
-	case festruct.TBinlogType_ALTER_DATABASE_PROPERTY:
-		log.Infof("handle alter database property binlog, ignore it, commit seq %d", commitSeq)
-	case festruct.TBinlogType_MODIFY_TABLE_PROPERTY:
-		err = j.handleModifyProperty(binlog)
-	case festruct.TBinlogType_TRUNCATE_TABLE:
-		err = j.handleTruncateTable(binlog)
-	case festruct.TBinlogType_RENAME_TABLE:
-		err = j.handleRenameTable(binlog)
-	case festruct.TBinlogType_REPLACE_PARTITIONS:
-		err = j.handleReplacePartitions(binlog)
-	case festruct.TBinlogType_MODIFY_PARTITIONS:
-		err = j.handleModifyPartitions(binlog)
-	case festruct.TBinlogType_REPLACE_TABLE:
-		err = j.handleReplaceTable(binlog)
-	case festruct.TBinlogType_MODIFY_VIEW_DEF:
-		err = j.handleAlterViewDef(binlog)
-	case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_INVERTED_INDICES:
-		err = j.handleModifyTableAddOrDropInvertedIndices(binlog)
-	case festruct.TBinlogType_INDEX_CHANGE_JOB:
-		err = j.handleIndexChangeJob(binlog)
-	case festruct.TBinlogType_RENAME_PARTITION:
-		err = j.handleRenamePartition(binlog)
-	case festruct.TBinlogType_RENAME_ROLLUP:
-		err = j.handleRenameRollup(binlog)
-	case festruct.TBinlogType_DROP_ROLLUP:
-		err = j.handleDropRollup(binlog)
-	case festruct.TBinlogType_RECOVER_INFO:
-		err = j.handleRecoverInfo(binlog)
-	default:
-		return xerror.Errorf(xerror.Normal, "unknown binlog type: %v, commit seq %d, data %s",
-			binlogType, commitSeq, binlog.GetData())
+	if IsJobHandleRegistered(binlogType) {
+		err = HandleBinlog(j, binlog)
+	} else {
+		switch binlogType {
+		case festruct.TBinlogType_ADD_PARTITION:
+			err = j.handleAddPartition(binlog)
+		case festruct.TBinlogType_CREATE_TABLE:
+			err = j.handleCreateTable(binlog)
+		case festruct.TBinlogType_DROP_PARTITION:
+			err = j.handleDropPartition(binlog)
+		case festruct.TBinlogType_DROP_TABLE:
+			err = j.handleDropTable(binlog)
+		case festruct.TBinlogType_ALTER_JOB:
+			err = j.handleAlterJob(binlog)
+		case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_COLUMNS:
+			err = j.handleLightningSchemaChange(binlog)
+		case festruct.TBinlogType_RENAME_COLUMN:
+			err = j.handleRenameColumn(binlog)
+		case festruct.TBinlogType_MODIFY_COMMENT:
+			err = j.handleModifyComment(binlog)
+		case festruct.TBinlogType_DUMMY:
+			err = j.handleDummy(binlog)
+		case festruct.TBinlogType_ALTER_DATABASE_PROPERTY:
+			log.Infof("handle alter database property binlog, ignore it, commit seq %d", commitSeq)
+		case festruct.TBinlogType_MODIFY_TABLE_PROPERTY:
+			err = j.handleModifyProperty(binlog)
+		case festruct.TBinlogType_TRUNCATE_TABLE:
+			err = j.handleTruncateTable(binlog)
+		case festruct.TBinlogType_RENAME_TABLE:
+			err = j.handleRenameTable(binlog)
+		case festruct.TBinlogType_REPLACE_PARTITIONS:
+			err = j.handleReplacePartitions(binlog)
+		case festruct.TBinlogType_MODIFY_PARTITIONS:
+			err = j.handleModifyPartitions(binlog)
+		case festruct.TBinlogType_REPLACE_TABLE:
+			err = j.handleReplaceTable(binlog)
+		case festruct.TBinlogType_MODIFY_VIEW_DEF:
+			err = j.handleAlterViewDef(binlog)
+		case festruct.TBinlogType_MODIFY_TABLE_ADD_OR_DROP_INVERTED_INDICES:
+			err = j.handleModifyTableAddOrDropInvertedIndices(binlog)
+		case festruct.TBinlogType_INDEX_CHANGE_JOB:
+			err = j.handleIndexChangeJob(binlog)
+		case festruct.TBinlogType_RENAME_PARTITION:
+			err = j.handleRenamePartition(binlog)
+		case festruct.TBinlogType_RENAME_ROLLUP:
+			err = j.handleRenameRollup(binlog)
+		case festruct.TBinlogType_DROP_ROLLUP:
+			err = j.handleDropRollup(binlog)
+		case festruct.TBinlogType_RECOVER_INFO:
+			err = j.handleRecoverInfo(binlog)
+		default:
+			return xerror.Errorf(xerror.Normal, "unknown binlog type: %v, commit seq %d, data %s",
+				binlogType, commitSeq, binlog.GetData())
+		}
 	}
 
 	if featureIdempotentDDL && err == nil && utils.IsJobFailpointExpected(
@@ -4068,6 +4076,10 @@ func (j *Job) lockBinlog(lockCommitSeq int64) error {
 
 	j.progress.LockedCommitSeq = lockedCommitSeq
 	return nil
+}
+
+func (j *Job) GetJobProgress() *JobProgress {
+	return j.progress
 }
 
 func isTxnCommitted(status *tstatus.TStatus) bool {
