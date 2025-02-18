@@ -31,6 +31,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/selectdb/ccr_syncer/pkg/ccr"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
+	"github.com/selectdb/ccr_syncer/pkg/rpc"
 	"github.com/selectdb/ccr_syncer/pkg/storage"
 	"github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/version"
@@ -74,7 +75,7 @@ func (s *HttpService) updateMetrics() {
 		info := s.getTotalJobAndLag()
 		SyncTotalLag.Set(float64(info.totalLag))
 		JobCount.Set(float64(info.jobNum))
-		time.Sleep(1 * time.Second) // update every second
+		time.Sleep(10 * time.Second) // update every 10 second
 	}
 }
 
@@ -123,14 +124,14 @@ func (s *HttpService) getTotalJobAndLag() MetricsInfo {
 		}
 
 		srcSpec := &job.Src
-		rpc, err := s.jobManager.GetFactory().NewFeRpc(srcSpec)
+		feRpc, err := rpc.NewFeRpc(srcSpec)
 		if err != nil {
 			log.Warnf("new fe rpc failed: %+v", err)
 			continue
 		}
 
 		commitSeq := jobProgress.CommitSeq
-		resp, err := rpc.GetBinlogLag(srcSpec, commitSeq)
+		resp, err := feRpc.GetBinlogLag(srcSpec, commitSeq)
 		if err != nil {
 			log.Warnf("rpc get bin log failed: %+v", err)
 			continue
@@ -201,9 +202,9 @@ func NewHttpServer(host string, port int, db storage.DB, jobManager *ccr.JobMana
 
 type CreateCcrRequest struct {
 	// must need all fields required
-	Name      string    `json:"name,required"`
-	Src       base.Spec `json:"src,required"`
-	Dest      base.Spec `json:"dest,required"`
+	Name      string    `json:"name"`
+	Src       base.Spec `json:"src"`
+	Dest      base.Spec `json:"dest"`
 	SkipError bool      `json:"skip_error"`
 	// For table sync, allow to create ccr job even if the target table already exists.
 	AllowTableExists bool `json:"allow_table_exists"`
@@ -321,7 +322,7 @@ func (s *HttpService) createHandler(w http.ResponseWriter, r *http.Request) {
 
 type CcrCommonRequest struct {
 	// must need all fields required
-	Name string `json:"name,required"`
+	Name string `json:"name"`
 }
 
 // GetLag service
@@ -335,7 +336,7 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 		LastCommitSeq        int64   `json:"last_commit_seq"`
 		FirstBinlogTimestamp string  `json:"first_binlog_timestamp"`
 		LastBinlogTimestamp  string  `json:"last_binlog_timestamp"`
-		TimeInterval         float64 `json:"time_interval"`
+		TimeInterval         float64 `json:"time_interval_secs"`
 	}
 	var lagResult *result
 	defer func() { writeJson(w, lagResult) }()
@@ -401,7 +402,7 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	srcSpec := &job.Src
-	rpc, err := s.jobManager.GetFactory().NewFeRpc(srcSpec)
+	feRpc, err := rpc.NewFeRpc(srcSpec)
 	if err != nil {
 		log.Warnf("new fe rpc failed: %+v", err)
 		lagResult = &result{
@@ -411,9 +412,9 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	commitSeq := jobProgress.CommitSeq
-	resp, err := rpc.GetBinlogLag(srcSpec, commitSeq)
+	resp, err := feRpc.GetBinlogLag(srcSpec, commitSeq)
 	if err != nil {
-		log.Warnf("rpc get bin log failed: %+v", err)
+		log.Warnf("rpc get binlog failed: %+v", err)
 		lagResult = &result{
 			defaultResult: newErrorResult(err.Error()),
 		}
@@ -660,17 +661,15 @@ func (s *HttpService) listJobsHandler(w http.ResponseWriter, r *http.Request) {
 	defer func() { writeJson(w, jobResult) }()
 
 	// use GetAllData to get all jobs
-	if ans, err := s.db.GetAllData(); err != nil {
+	if datum, err := s.db.GetAllData(); err != nil {
 		log.Warnf("when list jobs, get all data failed: %+v", err)
 
 		jobResult = &result{
 			defaultResult: newErrorResult(err.Error()),
 		}
 	} else {
-		var jobData []string
-		jobData = ans["jobs"]
 		allJobs := make([]string, 0)
-		for _, eachJob := range jobData {
+		for _, eachJob := range datum["jobs"] {
 			allJobs = append(allJobs, strings.Trim(strings.Split(eachJob, ",")[0], " "))
 		}
 
@@ -873,8 +872,8 @@ func (s *HttpService) updateHostMappingHandler(w http.ResponseWriter, r *http.Re
 	// Parse the JSON request body
 	var request struct {
 		CcrCommonRequest
-		SrcHostMapping  map[string]string `json:"src_host_mapping,required"`
-		DestHostMapping map[string]string `json:"dest_host_mapping,required"`
+		SrcHostMapping  map[string]string `json:"src_host_mapping"`
+		DestHostMapping map[string]string `json:"dest_host_mapping"`
 	}
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
@@ -911,7 +910,7 @@ func (s *HttpService) skipBinlogHandler(w http.ResponseWriter, r *http.Request) 
 	var request struct {
 		CcrCommonRequest
 		SkipCommitSeq int64  `json:"skip_commit_seq"`
-		SkipBy        string `json:"skip_by,required"`
+		SkipBy        string `json:"skip_by"`
 	}
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
@@ -963,8 +962,8 @@ func (s *HttpService) failpointHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Parse the JSON request body
 	var request struct {
-		Name      string      `json:"name,required"` // the ccr job name
-		Failpoint string      `json:"failpoint,required"`
+		Name      string      `json:"name"` // the ccr job name
+		Failpoint string      `json:"failpoint"`
 		Value     interface{} `json:"value"`
 	}
 	err := json.NewDecoder(r.Body).Decode(&request)
