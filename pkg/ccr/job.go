@@ -2455,15 +2455,15 @@ func (j *Job) handleReplacePartitions(binlog *festruct.TBinlog) error {
 	}
 
 	if !replacePartition.StrictRange {
-		info := fmt.Sprintf("replace partitions with non strict range is not supported yet, replace partition record: %s", string(data))
-		log.Warnf("%s", info)
-		return j.newSnapshot(j.progress.CommitSeq, info)
+		log.Warnf("replace partitions with non strict range is not supported yet, replace partition record: %s", string(data))
+		replace := true
+		return j.newPartialSnapshot(replacePartition.TableId, replacePartition.TableName, nil, replace)
 	}
 
 	if replacePartition.UseTempName {
-		info := fmt.Sprintf("replace partitions with use tmp name is not supported yet, replace partition record: %s", string(data))
-		log.Warnf("%s", info)
-		return j.newSnapshot(j.progress.CommitSeq, info)
+		log.Warnf("replace partitions with use tmp name is not supported yet, replace partition record: %s", string(data))
+		replace := true
+		return j.newPartialSnapshot(replacePartition.TableId, replacePartition.TableName, nil, replace)
 	}
 
 	oldPartitions := strings.Join(replacePartition.Partitions, ",")
