@@ -150,6 +150,15 @@ class Helper {
             endpoint syncerAddress
             body "${bodyJson}"
             op "post"
+            check { code, body ->
+                if (!"${code}".toString().equals("200")) {
+                    throw new Exception("request failed, code: ${code}, body: ${body}")
+                }
+                def value = jsonSlurper.parseText "${body}"
+                if (!value.success) {
+                    throw new Exception("request failed, error msg: ${value.error_msg}")
+                }
+            }
         }
     }
 
@@ -160,6 +169,16 @@ class Helper {
             endpoint syncerAddress
             body "${bodyJson}"
             op "post"
+            check { code, body ->
+                if (!"${code}".toString().equals("200")) {
+                    throw new Exception("request failed, code: ${code}, body: ${body}")
+                }
+                def jsonSlurper = new groovy.json.JsonSlurper()
+                def object = jsonSlurper.parseText "${body}"
+                if (!object.success) {
+                    throw new Exception("request failed, error msg: ${object.error_msg}")
+                }
+            }
         }
     }
 
@@ -170,6 +189,16 @@ class Helper {
             endpoint syncerAddress
             body "${bodyJson}"
             op "post"
+            check { code, body ->
+                if (!"${code}".toString().equals("200")) {
+                    throw new Exception("request failed, code: ${code}, body: ${body}")
+                }
+                def jsonSlurper = new groovy.json.JsonSlurper()
+                def object = jsonSlurper.parseText "${body}"
+                if (!object.success) {
+                    throw new Exception("request failed, error msg: ${object.error_msg}")
+                }
+            }
         }
     }
 
@@ -180,6 +209,16 @@ class Helper {
             endpoint syncerAddress
             body "${bodyJson}"
             op "post"
+            check { code, body ->
+                if (!"${code}".toString().equals("200")) {
+                    throw new Exception("request failed, code: ${code}, body: ${body}")
+                }
+                def jsonSlurper = new groovy.json.JsonSlurper()
+                def object = jsonSlurper.parseText "${body}"
+                if (!object.success) {
+                    throw new Exception("request failed, error msg: ${object.error_msg}")
+                }
+            }
         }
     }
 
@@ -190,6 +229,16 @@ class Helper {
             endpoint syncerAddress
             body "${bodyJson}"
             op "post"
+            check { code, body ->
+                if (!"${code}".toString().equals("200")) {
+                    throw new Exception("request failed, code: ${code}, body: ${body}")
+                }
+                def jsonSlurper = new groovy.json.JsonSlurper()
+                def object = jsonSlurper.parseText "${body}"
+                if (!object.success) {
+                    throw new Exception("request failed, error msg: ${object.error_msg}")
+                }
+            }
         }
     }
 
@@ -218,7 +267,9 @@ class Helper {
                 if (myClosure.call(res)) {
                     ret = true
                 }
-            } catch (Exception e) {}
+            } catch (Exception e) {
+                logger.info("exception", e)
+            }
 
             if (ret) {
                 break
@@ -265,7 +316,9 @@ class Helper {
                 if (tmpRes.size() == rowSize) {
                     return true
                 }
-            } catch (Exception) {}
+            } catch (Exception) {
+                logger.info("exception", e)
+            }
             sleep(sync_gap_time)
         }
 
