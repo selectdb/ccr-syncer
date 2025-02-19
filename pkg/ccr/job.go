@@ -3765,7 +3765,48 @@ func (j *Job) desyncDB() error {
 	return j.IDest.DesyncTables(tableNames...)
 }
 
+func (j *Job) Sync() error {
+	j.lock.Lock()
+	defer j.lock.Unlock()
+
+	if j.SyncType == DBSync {
+		return j.syncDB()
+	} else {
+		return j.syncTable()
+	}
+}
+
+func (j *Job) syncTable() error {
+	log.Debugf("sync table")
+
+	tableName, err := j.destMeta.GetTableNameById(j.Dest.TableId)
+	if err != nil {
+		return err
+	}
+
+	return j.IDest.SyncTables(tableName)
+}
+
+func (j *Job) syncDB() error {
+	log.Debugf("sync db")
+
+	tables, err := j.destMeta.GetTables()
+	if err != nil {
+		return err
+	}
+
+	tableNames := []string{}
+	for _, tableMeta := range tables {
+		tableNames = append(tableNames, tableMeta.Name)
+	}
+
+	return j.IDest.SyncTables(tableNames...)
+}
+
 func (j *Job) Desync() error {
+	j.lock.Lock()
+	defer j.lock.Unlock()
+
 	if j.SyncType == DBSync {
 		return j.desyncDB()
 	} else {
