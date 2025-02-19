@@ -232,6 +232,17 @@ func (jm *JobManager) Desync(jobName string) error {
 	}
 }
 
+func (jm *JobManager) Sync(jobName string) error {
+	jm.lock.RLock()
+	defer jm.lock.RUnlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return job.Sync()
+	} else {
+		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
+	}
+}
+
 func (jm *JobManager) ListJobs() []*JobStatus {
 	jm.lock.RLock()
 	defer jm.lock.RUnlock()

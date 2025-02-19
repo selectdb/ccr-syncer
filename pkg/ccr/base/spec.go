@@ -1485,6 +1485,27 @@ func (s *Spec) DropRollup(destTableName, rollup string) error {
 	return s.Exec(dropRollupSql)
 }
 
+func (s *Spec) SyncTables(tables ...string) error {
+	var err error
+
+	failedTables := []string{}
+	dbName := utils.FormatKeywordName(s.Database)
+	for _, table := range tables {
+		table = utils.FormatKeywordName(table)
+		syncSql := fmt.Sprintf("ALTER TABLE %s.%s SET (\"is_being_synced\"=\"true\")", dbName, table)
+		log.Debugf("exec sql: %s", syncSql)
+		if err = s.Exec(syncSql); err != nil {
+			failedTables = append(failedTables, table)
+		}
+	}
+
+	if len(failedTables) > 0 {
+		return xerror.Wrapf(err, xerror.FE, "failed tables: %s", strings.Join(failedTables, ","))
+	}
+
+	return nil
+}
+
 func (s *Spec) DesyncTables(tables ...string) error {
 	var err error
 
