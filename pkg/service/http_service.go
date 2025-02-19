@@ -648,6 +648,42 @@ func (s *HttpService) desyncHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *HttpService) syncHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("sync job")
+
+	var syncResult *defaultResult
+	defer func() { writeJson(w, syncResult) }()
+
+	// Parse the JSON request body
+	var request CcrCommonRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Warnf("sync job failed: %+v", err)
+
+		syncResult = newErrorResult(err.Error())
+		return
+	}
+
+	if request.Name == "" {
+		log.Warnf("sync job failed: name is empty")
+
+		syncResult = newErrorResult("name is empty")
+		return
+	}
+
+	if s.redirect(request.Name, w, r) {
+		return
+	}
+
+	if err := s.jobManager.Sync(request.Name); err != nil {
+		log.Warnf("sync job failed: %+v", err)
+
+		syncResult = newErrorResult(err.Error())
+	} else {
+		syncResult = newSuccessResult()
+	}
+}
+
 // ListJobs service
 func (s *HttpService) listJobsHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("list jobs")
@@ -1012,6 +1048,7 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/job_skip_binlog", s.skipBinlogHandler)
 	s.mux.HandleFunc("/failpoint", s.failpointHandler)
 	s.mux.Handle("/metrics", s.handlerCollector())
+	s.mux.HandleFunc("/sync", s.syncHandler)
 }
 
 func (s *HttpService) Start() error {

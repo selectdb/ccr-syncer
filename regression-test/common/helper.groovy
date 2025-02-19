@@ -187,6 +187,16 @@ class Helper {
         }
     }
 
+    void ccrJobSync(table = "") {
+        def bodyJson = get_ccr_body "${table}"
+        suite.httpTest {
+            uri "/sync"
+            endpoint syncerAddress
+            body "${bodyJson}"
+            op "post"
+        }
+    }
+
     void enableDbBinlog() {
         suite.sql """
             ALTER DATABASE ${context.dbName} SET properties ("binlog.enable" = "true")
