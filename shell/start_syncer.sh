@@ -24,14 +24,14 @@ Options:
     --host <arg>                the host of ccr progress, default is 127.0.0.1
     --port <arg>                the port of ccr progress, default is 9190
     --pid_dir <arg>             the path of ccr progress id, default is ./bin/
-    --pprof <arg>               use pprof or not, arg is one of [true|false], defalut value is false
+    --pprof <arg>               use pprof or not, arg is one of [true|false], default value is false
     --pprof_port <arg>          the port of pprof
     --connect_timeout <arg>     arg like 15s, default is 10s
     --rpc_timeout <arg>         arg like 10s, default is 3s
-    --config_file <arg>         the config file of ccr, which contains db_type,host,port,user and password, 
-                                defalut config file name is db.conf. If set config_file, the db_type, db_host,
+    --config_file <arg>         the config file of ccr, which contains db_type,host,port,user and password,
+                                default config file name is db.conf. If set config_file, the db_type, db_host,
                                 db_port, db_user, db_password should not be set.
-    --db_type <arg>             one of the [mysql|sqlite3|postgresql], defalut value is sqlite3
+    --db_type <arg>             one of the [mysql|sqlite3|postgresql], default value is sqlite3
     --db_host <arg>             the host of meta database
     --db_port <arg>             the port of meta database
     --db_user <arg>             the user name of meta database
@@ -165,7 +165,7 @@ while true; do
 done
 
 export PID_DIR
-PID_FILENAME="${HOST}_${PORT}" 
+PID_FILENAME="${HOST}_${PORT}"
 
 if [[ RUN_DAEMON -eq 0 ]]; then
     if [[ -z "${LOG_LEVEL}" ]]; then
