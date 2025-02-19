@@ -27,8 +27,14 @@ type BackupViewInfo struct {
 	Name string `json:"name"`
 }
 
+type BackupPartition struct {
+	Id      int64 `json:"id"`
+	Version int64 `json:"version"`
+}
+
 type BackupOlapTableInfo struct {
-	Id int64 `json:"id"`
+	Id         int64                      `json:"id"`
+	Partitions map[string]BackupPartition `json:"partitions"`
 }
 
 type NewBackupObject struct {

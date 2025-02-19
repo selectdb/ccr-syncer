@@ -175,14 +175,15 @@ type JobProgress struct {
 	LastCommitSeq    int64           `json:"last_commit_seq"` // the last commit seq try to sync
 	LockedCommitSeq  int64           `json:"-"`
 	UnknownCommitSeq int64           `json:"unknown_commit_seq"`
-	TableMapping     map[int64]int64 `json:"table_mapping"`
+	TableMapping     map[int64]int64 `json:"table_mapping,omitempty"`
 	// the upstream table id to name mapping, build during the fullsync,
 	// keep snapshot to avoid rename. it might be staled.
-	TableNameMapping  map[int64]string    `json:"table_name_mapping,omitempty"`
-	TableCommitSeqMap map[int64]int64     `json:"table_commit_seq_map"` // only for DBTablesIncrementalSync
-	InMemoryData      any                 `json:"-"`
-	PersistData       string              `json:"data"` // this often for binlog or snapshot info
-	PartialSyncData   *JobPartialSyncData `json:"partial_sync_data,omitempty"`
+	TableNameMapping      map[int64]string    `json:"table_name_mapping,omitempty"`
+	TableCommitSeqMap     map[int64]int64     `json:"table_commit_seq_map,omitempty"`     // only for DBTablesIncrementalSync
+	PartitionCommitSeqMap map[int64]int64     `json:"partition_commit_seq_map,omitempty"` // only for DBTablesIncrementalSync, partial sync with partitions
+	InMemoryData          any                 `json:"-"`
+	PersistData           string              `json:"data"` // this often for binlog or snapshot info
+	PartialSyncData       *JobPartialSyncData `json:"partial_sync_data,omitempty"`
 
 	// The tables need to be replaced rather than dropped during sync.
 	TableAliases map[string]string `json:"table_aliases,omitempty"`
@@ -222,18 +223,23 @@ func NewJobProgress(jobName string, syncType SyncType, db storage.DB) *JobProgre
 		JobName: jobName,
 		db:      db,
 
-		SyncId:       time.Now().Unix(),
-		SyncState:    syncState,
-		SubSyncState: BeginCreateSnapshot,
-		CommitSeq:    0,
-		TableMapping: nil,
+		SyncId:           time.Now().Unix(),
+		SyncState:        syncState,
+		SubSyncState:     BeginCreateSnapshot,
+		CommitSeq:        0,
+		LastCommitSeq:    0,
+		LockedCommitSeq:  0,
+		UnknownCommitSeq: 0,
+		TableMapping:     nil,
 
-		TableCommitSeqMap: nil,
-		InMemoryData:      nil,
-		PersistData:       "",
-		PartialSyncData:   nil,
-		TableAliases:      nil,
-		ShadowIndexes:     nil,
+		TableNameMapping:      nil,
+		TableCommitSeqMap:     nil,
+		PartitionCommitSeqMap: nil,
+		InMemoryData:          nil,
+		PersistData:           "",
+		PartialSyncData:       nil,
+		TableAliases:          nil,
+		ShadowIndexes:         nil,
 
 		CreatedAt:              time.Now().Unix(),
 		FullSyncStartAt:        0,
