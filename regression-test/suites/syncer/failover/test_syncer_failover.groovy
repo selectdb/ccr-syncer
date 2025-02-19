@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_fail_over_common") {
+suite("test_syncer_failover") {
     def versions = sql_return_maparray "show variables like 'version_comment'"
     if (versions[0].Value.contains('doris-2.0.')) {
         logger.info("2.0 not support AUTO PARTITION, current version is: ${versions[0].Value}")
@@ -79,9 +79,12 @@ suite("test_fail_over_common") {
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate0} WHERE test=${test_num}",
                                    insert_num, 30))
 
-    logger.info("=== Test 1: dest cluster follow source cluster case ===")
-    test_num = 1
+    def res = target_sql "SHOW CREATE TABLE ${tableDuplicate0}"
+    assertTrue(res[0][1].contains("\"is_being_synced\" = \"true\""))
 
+    logger.info("=== dest cluster follow source cluster case ===")
+
+    test_num = 1
     for (int index = 0; index < insert_num; index++) {
         sql """
             INSERT INTO ${tableDuplicate0} VALUES (0, 99, '${date_num}')
@@ -92,7 +95,7 @@ suite("test_fail_over_common") {
                                    insert_num * (test_num + 1), 30))
 
 
-    logger.info("=== Test 3: desync job and fail over===")
+    logger.info("=== pause and desync job ===")
 
     helper.ccrJobPause()
     helper.ccrJobDesync()
@@ -100,7 +103,19 @@ suite("test_fail_over_common") {
     def desync_res = target_sql "SHOW CREATE TABLE ${tableDuplicate0}"
     assertTrue(desync_res[0][1].contains("\"is_being_synced\" = \"false\""))
 
+    logger.info("=== insert & auto partition are working ===")
     test_num = 7
+    target_sql """
+        INSERT INTO ${tableDuplicate0} VALUES (${test_num}, 2, '2025-02-01')
+    """
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate0} WHERE test=${test_num}", 1, 3))
+    
+    assertTrue(helper.checkShowTimesOf("""
+        SHOW PARTITIONS FROM ${tableDuplicate0} WHERE PartitionName LIKE 'p20250201000000'""",
+                                exist, 3, "target"))
+
+    logger.info("=== the upstream upserts will not be synced ===")
+    test_num = 8
     date_num = "2025-01-02"
     for (int index = 0; index < insert_num; index++) {
         sql """
@@ -108,13 +123,7 @@ suite("test_fail_over_common") {
             """
     }
 
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate0} WHERE test=${test_num}", 0, 3))
- 
-    target_sql """
-        INSERT INTO ${tableDuplicate0} VALUES (${test_num}, 2, '2025-02-01')
-    """
-    
-    assertTrue(helper.checkShowTimesOf("SHOW PARTITIONS FROM ${tableDuplicate0} WHERE PartitionName LIKE 'p20250201000000'",
-                                exist, 3, "target"))
+    sleep(10000)  // sleep 10s
 
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableDuplicate0} WHERE test=${test_num}", 0, 3))
 }
