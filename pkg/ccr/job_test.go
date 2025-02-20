@@ -48,9 +48,51 @@ func TestFilterStorageMediumFromCreateTableSql(t *testing.T) {
 			origin: "CREATE TABLE `test` ( `id` INT(11) NOT NULL, `name` VARCHAR(255) NOT NULL, `storage_medium` VARCHAR(255) NOT NULL ) ENGINE=OLAP DUPLICATE KEY(`id`) DISTRIBUTED BY HASH(`id`) BUCKETS 10 PROPERTIES (\"replication_allocation\" = \"tag.location.default: 1\", \"storage_medium\" = \"SSD\", \"is_being_synced\" = \"true\")",
 			expect: "CREATE TABLE `test` ( `id` INT(11) NOT NULL, `name` VARCHAR(255) NOT NULL, `storage_medium` VARCHAR(255) NOT NULL ) ENGINE=OLAP DUPLICATE KEY(`id`) DISTRIBUTED BY HASH(`id`) BUCKETS 10 PROPERTIES (\"replication_allocation\" = \"tag.location.default: 1\", \"is_being_synced\" = \"true\")",
 		},
+		{
+			origin: "CREATE TABLE `test` ( `id` INT(11) NOT NULL, `name` VARCHAR(255) NOT NULL, `storage_medium` VARCHAR(255) NOT NULL ) ENGINE=OLAP DUPLICATE KEY(`id`) DISTRIBUTED BY HASH(`id`) BUCKETS 10 PROPERTIES (\"replication_allocation\" = \"tag.location.default: 1\", \"storage_medium\" = \"SSD\")",
+			expect: "CREATE TABLE `test` ( `id` INT(11) NOT NULL, `name` VARCHAR(255) NOT NULL, `storage_medium` VARCHAR(255) NOT NULL ) ENGINE=OLAP DUPLICATE KEY(`id`) DISTRIBUTED BY HASH(`id`) BUCKETS 10 PROPERTIES (\"replication_allocation\" = \"tag.location.default: 1\")",
+		},
+		{
+			origin: "CREATE TABLE `test` ( `id` INT(11) NOT NULL, `name` VARCHAR(255) NOT NULL, `storage_medium` VARCHAR(255) NOT NULL ) ENGINE=OLAP DUPLICATE KEY(`id`) DISTRIBUTED BY HASH(`id`) BUCKETS 10 PROPERTIES (\"storage_medium\" = \"SSD\")",
+			expect: "CREATE TABLE `test` ( `id` INT(11) NOT NULL, `name` VARCHAR(255) NOT NULL, `storage_medium` VARCHAR(255) NOT NULL ) ENGINE=OLAP DUPLICATE KEY(`id`) DISTRIBUTED BY HASH(`id`) BUCKETS 10 PROPERTIES ()",
+		},
+		{
+			origin: "CREATE TABLE `test` ( `id` INT(11) NOT NULL, `name` VARCHAR(255) NOT NULL, `storage_medium` VARCHAR(255) NOT NULL ) ENGINE=OLAP DUPLICATE KEY(`id`) DISTRIBUTED BY HASH(`id`) BUCKETS 10 PROPERTIES (\"storage_medium\" = \"SSD\", \"is_being_synced\" = \"true\")",
+			expect: "CREATE TABLE `test` ( `id` INT(11) NOT NULL, `name` VARCHAR(255) NOT NULL, `storage_medium` VARCHAR(255) NOT NULL ) ENGINE=OLAP DUPLICATE KEY(`id`) DISTRIBUTED BY HASH(`id`) BUCKETS 10 PROPERTIES (\"is_being_synced\" = \"true\")",
+		},
 	}
 	for i, test := range tests {
 		sql := ccr.FilterStorageMediumFromCreateTableSql(test.origin)
+		if sql != test.expect {
+			t.Errorf("test %d failed, expect %s, but got %s", i, test.expect, sql)
+		}
+	}
+}
+
+func TestFilterDynamicPartitionStoragePolicyFromCreateTableSql(t *testing.T) {
+	type TestCase struct {
+		origin, expect string
+	}
+	tests := []TestCase{
+		{
+			origin: "CREATE TABLE `test` ( `id` INT(11) NOT NULL, `name` VARCHAR(255) NOT NULL, `dynamic_partition_storage_policy` VARCHAR(255) NOT NULL ) ENGINE=OLAP DUPLICATE KEY(`id`) DISTRIBUTED BY HASH(`id`) BUCKETS 10 PROPERTIES (\"replication_allocation\" = \"tag.location.default: 1\", \"dynamic_partition.storage_policy\" = \"SSD\", \"is_being_synced\" = \"true\")", // nolint
+			expect: "CREATE TABLE `test` ( `id` INT(11) NOT NULL, `name` VARCHAR(255) NOT NULL, `dynamic_partition_storage_policy` VARCHAR(255) NOT NULL ) ENGINE=OLAP DUPLICATE KEY(`id`) DISTRIBUTED BY HASH(`id`) BUCKETS 10 PROPERTIES (\"replication_allocation\" = \"tag.location.default: 1\", \"is_being_synced\" = \"true\")",                                                 // nolint
+		},
+		{
+			origin: "CREATE TABLE `test` ( `id` INT(11) NOT NULL, `name` VARCHAR(255) NOT NULL, `dynamic_partition_storage_policy` VARCHAR(255) NOT NULL ) ENGINE=OLAP DUPLICATE KEY(`id`) DISTRIBUTED BY HASH(`id`) BUCKETS 10 PROPERTIES (\"replication_allocation\" = \"tag.location.default: 1\", \"dynamic_partition.storage_policy\" = \"SSD\")", // nolint
+			expect: "CREATE TABLE `test` ( `id` INT(11) NOT NULL, `name` VARCHAR(255) NOT NULL, `dynamic_partition_storage_policy` VARCHAR(255) NOT NULL ) ENGINE=OLAP DUPLICATE KEY(`id`) DISTRIBUTED BY HASH(`id`) BUCKETS 10 PROPERTIES (\"replication_allocation\" = \"tag.location.default: 1\")",                                                 // nolint
+		},
+		{
+			origin: "CREATE TABLE `test` ( `id` INT(11) NOT NULL, `name` VARCHAR(255) NOT NULL, `dynamic_partition_storage_policy` VARCHAR(255) NOT NULL ) ENGINE=OLAP DUPLICATE KEY(`id`) DISTRIBUTED BY HASH(`id`) BUCKETS 10 PROPERTIES (\"dynamic_partition.storage_policy\" = \"SSD\")", // nolint
+			expect: "CREATE TABLE `test` ( `id` INT(11) NOT NULL, `name` VARCHAR(255) NOT NULL, `dynamic_partition_storage_policy` VARCHAR(255) NOT NULL ) ENGINE=OLAP DUPLICATE KEY(`id`) DISTRIBUTED BY HASH(`id`) BUCKETS 10 PROPERTIES ()",                                               // nolint
+		},
+		{
+			origin: "CREATE TABLE `test` ( `id` INT(11) NOT NULL, `name` VARCHAR(255) NOT NULL, `dynamic_partition_storage_policy` VARCHAR(255) NOT NULL ) ENGINE=OLAP DUPLICATE KEY(`id`) DISTRIBUTED BY HASH(`id`) BUCKETS 10 PROPERTIES (\"dynamic_partition.storage_policy\" = \"SSD\", \"is_being_synced\" = \"true\")", // nolint
+			expect: "CREATE TABLE `test` ( `id` INT(11) NOT NULL, `name` VARCHAR(255) NOT NULL, `dynamic_partition_storage_policy` VARCHAR(255) NOT NULL ) ENGINE=OLAP DUPLICATE KEY(`id`) DISTRIBUTED BY HASH(`id`) BUCKETS 10 PROPERTIES (\"is_being_synced\" = \"true\")",                                                 // nolint
+		},
+	}
+	for i, test := range tests {
+		sql := ccr.FilterDynamicPartitionStoragePolicyFromCreateTableSql(test.origin)
 		if sql != test.expect {
 			t.Errorf("test %d failed, expect %s, but got %s", i, test.expect, sql)
 		}
