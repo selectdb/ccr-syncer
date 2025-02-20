@@ -66,6 +66,7 @@ suite("test_ds_tbl_diff_schema") {
             "binlog.enable" = "true"
         )
     """
+    helper.enableDbBinlog()
 
     helper.enableDbBinlog()
 
