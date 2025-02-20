@@ -39,6 +39,8 @@ suite("test_ds_view_modify_comment") {
         create view ${viewName} as select 1,to_base64(AES_ENCRYPT('doris','doris')); 
     """
 
+    helper.enableDbBinlog()
+
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 
