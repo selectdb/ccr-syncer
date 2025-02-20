@@ -28,10 +28,6 @@ suite("test_ds_view_modify_comment") {
         return res.size() == 0
     }
 
-    def existNewComment = { res -> Boolean
-        return res[0][1].contains("COMMENT 'doris_modify_view_comment'")
-    }
-
     sql """DROP VIEW IF EXISTS ${viewName}"""
     target_sql """DROP VIEW IF EXISTS ${viewName}"""
 
@@ -50,5 +46,9 @@ suite("test_ds_view_modify_comment") {
 
     sql "ALTER VIEW ${viewName} MODIFY COMMENT \"doris_modify_view_comment\""
 
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${viewName}", existNewComment, 30, "target_sql"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${viewName}", { r -> r[0][1].contains("COMMENT 'doris_modify_view_comment'")}, 30, "target_sql"))
+
+    sql "ALTER VIEW ${viewName} MODIFY COMMENT \"\""
+
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${viewName}", { r -> !r[0][1].contains("COMMENT")}, 30, "target_sql"))
 }
