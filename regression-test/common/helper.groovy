@@ -351,7 +351,7 @@ class Helper {
                 if (tmpRes.size() == rowSize) {
                     return true
                 }
-            } catch (Exception) {
+            } catch (Exception e) {
                 logger.info("exception", e)
             }
             sleep(sync_gap_time)
