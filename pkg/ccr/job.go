@@ -424,11 +424,12 @@ func (j *Job) handlePartialSyncTableNotFound() error {
 // Like fullSync, but only backup and restore partial of the partitions of a table.
 func (j *Job) partialSync() error {
 	type inMemoryData struct {
-		SnapshotName      string                        `json:"snapshot_name"`
-		SnapshotResp      *festruct.TGetSnapshotResult_ `json:"snapshot_resp"`
-		TableCommitSeqMap map[int64]int64               `json:"table_commit_seq_map"`
-		TableNameMapping  map[int64]string              `json:"table_name_mapping"`
-		RestoreLabel      string                        `json:"restore_label"`
+		SnapshotName          string                        `json:"snapshot_name"`
+		SnapshotResp          *festruct.TGetSnapshotResult_ `json:"snapshot_resp"`
+		TableCommitSeqMap     map[int64]int64               `json:"table_commit_seq_map"`
+		PartitionCommitSeqMap map[int64]int64               `json:"partition_commit_seq_map"`
+		TableNameMapping      map[int64]string              `json:"table_name_mapping"`
+		RestoreLabel          string                        `json:"restore_label"`
 	}
 
 	if j.progress.PartialSyncData == nil {
@@ -535,6 +536,7 @@ func (j *Job) partialSync() error {
 			return err
 		}
 
+		partitionCommitSeqMap := make(map[int64]int64)
 		tableCommitSeqMap := backupJobInfo.TableCommitSeqMap
 		tableNameMapping := backupJobInfo.TableNameMapping()
 		log.Debugf("table commit seq map: %v, table name mapping: %v", tableCommitSeqMap, tableNameMapping)
@@ -548,15 +550,27 @@ func (j *Job) partialSync() error {
 				j.Src.TableId = backupObject.Id
 			}
 			return j.newSnapshot(j.progress.CommitSeq)
-		} else if _, ok := tableCommitSeqMap[backupObject.Id]; !ok {
+		} else if commitSeq, ok := tableCommitSeqMap[backupObject.Id]; !ok {
 			return xerror.Errorf(xerror.Normal, "commit seq not found, table id %d, table name: %s", backupObject.Id, table)
+		} else {
+			for _, name := range partitions {
+				if part, ok := backupObject.Partitions[name]; !ok {
+					return xerror.Errorf(xerror.Normal, "partition %s not found in backup objects", name)
+				} else {
+					partitionCommitSeqMap[part.Id] = commitSeq
+				}
+			}
+			if len(partitionCommitSeqMap) > 0 {
+				log.Debugf("partition commit seq map: %v", partitionCommitSeqMap)
+			}
 		}
 
 		inMemoryData := &inMemoryData{
-			SnapshotName:      snapshotName,
-			SnapshotResp:      snapshotResp,
-			TableCommitSeqMap: tableCommitSeqMap,
-			TableNameMapping:  tableNameMapping,
+			SnapshotName:          snapshotName,
+			SnapshotResp:          snapshotResp,
+			TableCommitSeqMap:     tableCommitSeqMap,
+			TableNameMapping:      tableNameMapping,
+			PartitionCommitSeqMap: partitionCommitSeqMap,
 		}
 		j.progress.NextSubVolatile(AddExtraInfo, inMemoryData)
 
@@ -695,9 +709,14 @@ func (j *Job) partialSync() error {
 			return nil
 		}
 
-		// save the entire commit seq map, this value will be used in PersistRestoreInfo.
-		j.progress.TableCommitSeqMap = utils.MergeMap(
-			j.progress.TableCommitSeqMap, inMemoryData.TableCommitSeqMap)
+		// save the entire table/partition commit seq map, this value will be used in PersistRestoreInfo.
+		if len(partitions) > 0 {
+			j.progress.PartitionCommitSeqMap = utils.MergeMap(
+				j.progress.PartitionCommitSeqMap, inMemoryData.PartitionCommitSeqMap)
+		} else {
+			j.progress.TableCommitSeqMap = utils.MergeMap(
+				j.progress.TableCommitSeqMap, inMemoryData.TableCommitSeqMap)
+		}
 		j.progress.TableNameMapping = utils.MergeMap(
 			j.progress.TableNameMapping, inMemoryData.TableNameMapping)
 		j.progress.NextSubCheckpoint(PersistRestoreInfo, restoreSnapshotName)
@@ -752,6 +771,10 @@ func (j *Job) partialSync() error {
 			commitSeq, ok := j.progress.TableCommitSeqMap[j.Src.TableId]
 			if !ok {
 				return xerror.Errorf(xerror.Normal, "table id %d, commit seq not found", j.Src.TableId)
+			}
+			if len(partitions) > 0 {
+				// Only commit partition commit seq map, instead of the entire table commit seq.
+				commitSeq = j.progress.CommitSeq
 			}
 			j.Dest.TableId = destTable.Id
 			j.progress.TableMapping = nil
@@ -1269,6 +1292,7 @@ func (j *Job) fullSync() error {
 
 			j.progress.TableMapping = tableMapping
 			j.progress.ShadowIndexes = nil
+			j.progress.PartitionCommitSeqMap = nil
 			j.progress.NextWithPersist(j.progress.CommitSeq, DBTablesIncrementalSync, Done, "")
 		case TableSync:
 			if destTable, err := j.destMeta.UpdateTable(j.Dest.Table, 0); err != nil {
@@ -1281,6 +1305,7 @@ func (j *Job) fullSync() error {
 				return err
 			}
 
+			j.progress.PartitionCommitSeqMap = nil
 			j.progress.TableCommitSeqMap = nil
 			j.progress.TableMapping = nil
 			j.progress.ShadowIndexes = nil
@@ -1411,6 +1436,8 @@ func (j *Job) getDestNameBySrcId(srcTableId int64) (string, error) {
 }
 
 func (j *Job) isBinlogCommitted(tableId int64, binlogCommitSeq int64) bool {
+	// FIXME:
+	// what happend if the PartitionCommitSeqMap is not empty?
 	if j.progress.SyncState == DBTablesIncrementalSync {
 		tableCommitSeq, ok := j.progress.TableCommitSeqMap[tableId]
 		if ok && binlogCommitSeq <= tableCommitSeq {
@@ -1425,21 +1452,28 @@ func (j *Job) isBinlogCommitted(tableId int64, binlogCommitSeq int64) bool {
 func (j *Job) getDbSyncTableRecords(upsert *record.Upsert) []*record.TableRecord {
 	commitSeq := upsert.CommitSeq
 	tableCommitSeqMap := j.progress.TableCommitSeqMap
+	partitionCommitSeqMap := j.progress.PartitionCommitSeqMap
 	tableRecords := make([]*record.TableRecord, 0, len(upsert.TableRecords))
 
 	for tableId, tableRecord := range upsert.TableRecords {
-		// DBIncrementalSync
-		if tableCommitSeqMap == nil {
-			tableRecords = append(tableRecords, tableRecord)
+		if tableCommitSeq, ok := tableCommitSeqMap[tableId]; ok && commitSeq <= tableCommitSeq {
+			// All the partition records of the table have been committed
 			continue
 		}
 
-		if tableCommitSeq, ok := tableCommitSeqMap[tableId]; ok {
-			if commitSeq > tableCommitSeq {
-				tableRecords = append(tableRecords, tableRecord)
+		// Filter the committed partitions
+		if partitionCommitSeqMap != nil {
+			partitionRecords := make([]record.PartitionRecord, 0, len(tableRecord.PartitionRecords))
+			for _, partition := range tableRecord.PartitionRecords {
+				if partitionCommitSeq, ok := partitionCommitSeqMap[partition.Id]; ok && commitSeq <= partitionCommitSeq {
+					continue
+				}
+				partitionRecords = append(partitionRecords, partition) // copy
 			}
-		} else {
-			// for db partial sync
+			tableRecord.PartitionRecords = partitionRecords
+		}
+
+		if len(tableRecord.PartitionRecords) > 0 {
 			tableRecords = append(tableRecords, tableRecord)
 		}
 	}
@@ -1461,6 +1495,22 @@ func (j *Job) getRelatedTableRecords(upsert *record.Upsert) ([]*record.TableReco
 		tableRecord, ok := upsert.TableRecords[j.Src.TableId]
 		if !ok {
 			return nil, xerror.Errorf(xerror.Normal, "table record not found, table: %s", j.Src.Table)
+		}
+
+		// Filter the committed partitions
+		partitionCommitSeqMap := j.progress.PartitionCommitSeqMap
+		if partitionCommitSeqMap != nil {
+			partitionRecords := make([]record.PartitionRecord, 0, len(tableRecord.PartitionRecords))
+			for _, partition := range tableRecord.PartitionRecords {
+				if partitionCommitSeq, ok := partitionCommitSeqMap[partition.Id]; ok && upsert.CommitSeq <= partitionCommitSeq {
+					continue
+				}
+				partitionRecords = append(partitionRecords, partition) // copy
+			}
+			tableRecord.PartitionRecords = partitionRecords
+		}
+		if len(tableRecord.PartitionRecords) == 0 {
+			return nil, nil
 		}
 
 		tableRecords = make([]*record.TableRecord, 0, 1)
@@ -2426,10 +2476,6 @@ func (j *Job) handleReplacePartitions(binlog *festruct.TBinlog) error {
 		replacePartition.TableName, oldPartitions, newPartitions)
 
 	partitions := replacePartition.Partitions
-	if replacePartition.UseTempName {
-		partitions = replacePartition.TempPartitions
-	}
-
 	return j.newPartialSnapshot(replacePartition.TableId, replacePartition.TableName, partitions, false)
 }
 
@@ -2953,9 +2999,17 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 					break
 				}
 			}
+			for _, partitionCommitSeq := range j.progress.PartitionCommitSeqMap {
+				if partitionCommitSeq > commitSeq {
+					reachSwitchToDBIncrementalSync = false
+					break
+				}
+			}
 
 			if reachSwitchToDBIncrementalSync {
+				log.Infof("all table/partition commit seq reach the commit seq, switch to incremental sync, commit seq: %d", commitSeq)
 				j.progress.TableCommitSeqMap = nil
+				j.progress.PartitionCommitSeqMap = nil
 				j.progress.NextWithPersist(j.progress.CommitSeq, DBIncrementalSync, Done, "")
 			}
 		}
