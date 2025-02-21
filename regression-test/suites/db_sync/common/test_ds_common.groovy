@@ -97,6 +97,30 @@ suite("test_ds_common") {
         """
     }
 
+    // complex double quotes in comment
+    def createDuplicateTableWithComment = { tableName ->
+       sql """
+            CREATE TABLE if NOT EXISTS ${tableName}
+            (
+                `test` INT,
+                `id` INT,
+                `date_time` date NOT NULL
+            )
+            ENGINE=OLAP
+            DUPLICATE KEY(`test`, `id`, `date_time`)
+            COMMENT '"\"OLAP\""'
+            AUTO PARTITION BY RANGE (date_trunc(`date_time`, 'day'))
+            (
+            )
+            DISTRIBUTED BY HASH(id) BUCKETS AUTO
+            PROPERTIES (
+                "replication_allocation" = "tag.location.default: 1",
+                "estimate_partition_size" = "10G",
+                "binlog.enable" = "true"
+            )
+        """
+    }
+
     def exist = { res -> Boolean
         return res.size() != 0
     }
@@ -179,11 +203,13 @@ suite("test_ds_common") {
     def tableAggregate1 = "tbl_aggregate_1_${suffix}"
     def tableDuplicate1 = "tbl_duplicate_1_${suffix}"
     def keywordTableName = "`roles`"
+    def tableWithComment = "tbl_comment_1_${suffix}"
 
     createUniqueTable(tableUnique1)
     createAggergateTable(tableAggregate1)
     createDuplicateTable(tableDuplicate1)
     createUniqueTable(keywordTableName)
+    createDuplicateTableWithComment(tableWithComment)
 
     for (int index = 0; index < insert_num; index++) {
         sql """
@@ -198,6 +224,11 @@ suite("test_ds_common") {
     for (int index = 0; index < insert_num; index++) {
         sql """
             INSERT INTO ${tableDuplicate1} VALUES (0, 99, '${date_num}')
+            """
+    }
+    for (int index = 0; index < insert_num; index++) {
+        sql """
+            INSERT INTO ${tableWithComment} VALUES (0, 99, '${date_num}')
             """
     }
     for (int index = 0; index < insert_num; index++) {
@@ -224,6 +255,11 @@ suite("test_ds_common") {
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${keywordTableName}",
                                 exist, 30, "target"))
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${keywordTableName} WHERE test=${test_num}",
+                                   insert_num, 30))
+
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableWithComment}",
+                                exist, 30, "target"))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableWithComment} WHERE test=${test_num}",
                                    insert_num, 30))
 
     logger.info("=== Test 3: drop table case ===")
