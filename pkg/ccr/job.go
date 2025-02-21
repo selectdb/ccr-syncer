@@ -2097,6 +2097,7 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 	if featureFilterStorageMedium {
 		createTable.Sql = FilterStorageMediumFromCreateTableSql(createTable.Sql)
 	}
+	createTable.Sql = FilterDynamicPartitionStoragePolicyFromCreateTableSql(createTable.Sql)
 
 	if err = j.IDest.CreateTableOrView(createTable, j.Src.Database); err != nil {
 		errMsg := err.Error()
@@ -4222,7 +4223,22 @@ func IsSessionVariableRequired(msg string) bool {
 
 func FilterStorageMediumFromCreateTableSql(createSql string) string {
 	pattern := `"storage_medium"\s*=\s*"[^"]*"(,\s*)?`
-	return regexp.MustCompile(pattern).ReplaceAllString(createSql, "")
+	createSql = regexp.MustCompile(pattern).ReplaceAllString(createSql, "")
+	return FilterTailingCommaFromCreateTableSql(createSql)
+}
+
+func FilterDynamicPartitionStoragePolicyFromCreateTableSql(createSql string) string {
+	// Two patterns:
+	// - "dynamic_partition.storage_policy"="storage_policy",
+	// - , "dynamic_partition.storage_policy"="storage_policy"
+	pattern := `"dynamic_partition.storage_policy"\s*=\s*"[^"]*"(,\s*)?`
+	createSql = regexp.MustCompile(pattern).ReplaceAllString(createSql, "")
+	return FilterTailingCommaFromCreateTableSql(createSql)
+}
+
+func FilterTailingCommaFromCreateTableSql(createSql string) string {
+	pattern := `,(\s*)?\)\s*$`
+	return regexp.MustCompile(pattern).ReplaceAllString(createSql, ")")
 }
 
 func getJobId(name string, src base.Spec, dest base.Spec) string {
