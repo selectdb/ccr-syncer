@@ -381,8 +381,6 @@ func (j *JobProgress) Done() {
 	j.SubSyncState = Done
 	j.PrevCommitSeq = j.CommitSeq
 
-	xmetrics.ConsumeBinlog(j.JobName, j.PrevCommitSeq)
-
 	j.Persist()
 }
 
@@ -394,7 +392,6 @@ func (j *JobProgress) Rollback() {
 	j.UnknownCommitSeq = j.CommitSeq
 	j.CommitSeq = j.PrevCommitSeq
 
-	xmetrics.Rollback(j.JobName, j.PrevCommitSeq)
 	j.Persist()
 }
 
@@ -403,6 +400,8 @@ func (j *JobProgress) Rollback() {
 func (j *JobProgress) Persist() {
 	log.Tracef("update job progress, state: %s, subState: %s, commitSeq: %d, prevCommitSeq: %d",
 		j.SyncState, j.SubSyncState, j.CommitSeq, j.PrevCommitSeq)
+
+	defer xmetrics.RecordJobProgressPersist(j.JobName)()
 
 	for {
 		// Step 1: to json

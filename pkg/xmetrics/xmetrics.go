@@ -17,46 +17,202 @@
 package xmetrics
 
 import (
-	"github.com/hashicorp/go-metrics"
-	"github.com/hashicorp/go-metrics/prometheus"
+	"fmt"
+	"net"
+	"net/http"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 )
 
-func InitGlobal(serviceName string) error {
-	sink, err := prometheus.NewPrometheusSink()
-	if err != nil {
-		return xerror.Wrap(err, xerror.Normal, "init prometheus sink falied")
+var (
+	registry = prometheus.NewRegistry()
+
+	runningJobGauge              prometheus.Gauge
+	runningJobSyncStateGauges    *prometheus.GaugeVec
+	runningJobSubSyncStateGauges *prometheus.GaugeVec
+	runningJobLagGauges          *prometheus.GaugeVec
+	runningJobLagSecondsGauges   *prometheus.GaugeVec
+
+	errorCounters                *prometheus.CounterVec
+	feRpcCounters                *prometheus.CounterVec
+	feRpcHistograms              *prometheus.HistogramVec
+	beRpcCounters                *prometheus.CounterVec
+	beRpcHistograms              *prometheus.HistogramVec
+	binlogGauges                 *prometheus.GaugeVec
+	handleBinlogCounters         *prometheus.CounterVec
+	handleBinlogHistograms       *prometheus.HistogramVec
+	jobProgressPersistCounters   *prometheus.CounterVec
+	jobProgressPersistHistograms *prometheus.HistogramVec
+
+	sqlExecCounters   *prometheus.CounterVec
+	sqlExecHistograms *prometheus.HistogramVec
+
+	LargeBuckets = []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50}
+)
+
+func init() {
+	registry.MustRegister(
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+	)
+
+	errorCounters = promauto.With(registry).NewCounterVec(prometheus.CounterOpts{
+		Name: "ccr_error_total",
+		Help: "The number of errors",
+	}, []string{"error", "type"})
+
+	feRpcCounters = promauto.With(registry).NewCounterVec(prometheus.CounterOpts{
+		Name: "ccr_fe_rpc_total",
+		Help: "The number of frontend rpc",
+	}, []string{"method", "addr"})
+
+	feRpcHistograms = promauto.With(registry).NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "ccr_fe_rpc_duration_seconds",
+		Help:    "The frontend rpc duration in seconds",
+		Buckets: prometheus.DefBuckets,
+	}, []string{"method", "addr"})
+
+	beRpcCounters = promauto.With(registry).NewCounterVec(prometheus.CounterOpts{
+		Name: "ccr_be_rpc_total",
+		Help: "The number of backend rpc",
+	}, []string{"method", "addr"})
+
+	beRpcHistograms = promauto.With(registry).NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "ccr_be_rpc_duration_seconds",
+		Help:    "The backend rpc duration in seconds",
+		Buckets: LargeBuckets,
+	}, []string{"method", "addr"})
+
+	binlogGauges = promauto.With(registry).NewGaugeVec(prometheus.GaugeOpts{
+		Name: "ccr_binlog_commit_seq",
+		Help: "The commit seq of the last binlog",
+	}, []string{"name"})
+
+	handleBinlogCounters = promauto.With(registry).NewCounterVec(prometheus.CounterOpts{
+		Name: "ccr_handle_binlog_total",
+		Help: "The number of handled binlog",
+	}, []string{"name"})
+
+	handleBinlogHistograms = promauto.With(registry).NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "ccr_handle_binlog_duration_seconds",
+		Help:    "The handle binlog duration in seconds",
+		Buckets: LargeBuckets,
+	}, []string{"name"})
+
+	runningJobGauge = promauto.With(registry).NewGauge(prometheus.GaugeOpts{
+		Name: "ccr_job_running_total",
+		Help: "The number of running jobs",
+	})
+
+	runningJobSyncStateGauges = promauto.With(registry).NewGaugeVec(prometheus.GaugeOpts{
+		Name: "ccr_job_running_sync_state",
+		Help: "The sync state of running jobs",
+	}, []string{"name"})
+
+	runningJobSubSyncStateGauges = promauto.With(registry).NewGaugeVec(prometheus.GaugeOpts{
+		Name: "ccr_job_running_sub_sync_state",
+		Help: "The sub sync state of running jobs",
+	}, []string{"name"})
+
+	runningJobLagGauges = promauto.With(registry).NewGaugeVec(prometheus.GaugeOpts{
+		Name: "ccr_job_running_lag_total",
+		Help: "The lag of running jobs",
+	}, []string{"name"})
+
+	runningJobLagSecondsGauges = promauto.With(registry).NewGaugeVec(prometheus.GaugeOpts{
+		Name: "ccr_job_running_lag_seconds",
+		Help: "The lag of running jobs in seconds",
+	}, []string{"name"})
+
+	jobProgressPersistCounters = promauto.With(registry).NewCounterVec(prometheus.CounterOpts{
+		Name: "ccr_job_progress_persist_total",
+		Help: "The number of job progress persist",
+	}, []string{"name"})
+
+	jobProgressPersistHistograms = promauto.With(registry).NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "ccr_job_progress_persist_duration_seconds",
+		Help:    "The job progress persist duration in seconds",
+		Buckets: prometheus.DefBuckets,
+	}, []string{"name"})
+
+	sqlExecCounters = promauto.With(registry).NewCounterVec(prometheus.CounterOpts{
+		Name: "ccr_sql_exec_total",
+		Help: "The number of sql exec",
+	}, []string{"host", "db"})
+	sqlExecHistograms = promauto.With(registry).NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "ccr_sql_exec_duration_seconds",
+		Help:    "The sql exec duration in seconds",
+		Buckets: prometheus.DefBuckets,
+	}, []string{"host", "db"})
+}
+
+func RecordError(err *xerror.XError) {
+	errorCounters.With(ErrorLabels(err)).Inc()
+}
+
+func RecordFeRpc(method, addr string) func() {
+	start := time.Now()
+	return func() {
+		feRpcCounters.With(prometheus.Labels{"method": method, "addr": addr}).Inc()
+		feRpcHistograms.With(prometheus.Labels{"method": method, "addr": addr}).Observe(time.Since(start).Seconds())
 	}
+}
 
-	if _, err := metrics.NewGlobal(metrics.DefaultConfig(serviceName), sink); err != nil {
-		return xerror.Wrap(err, xerror.Normal, "new global metrics falied")
+func RecordBeRpc(method, ip string, port uint16) func() {
+	addr := net.JoinHostPort(ip, fmt.Sprintf("%d", port))
+	start := time.Now()
+	return func() {
+		beRpcCounters.With(prometheus.Labels{"method": method, "addr": addr}).Inc()
+		beRpcHistograms.With(prometheus.Labels{"method": method, "addr": addr}).Observe(time.Since(start).Seconds())
 	}
-
-	return nil
 }
 
-func AddError(err *xerror.XError) {
-	metrics.IncrCounter(ErrorMetrics(err).Tag(), 1)
+func UpdateJobSyncState(jobName string, syncState, subSyncState int) {
+	runningJobSyncStateGauges.With(prometheus.Labels{"name": jobName}).Set(float64(syncState))
+	runningJobSubSyncStateGauges.With(prometheus.Labels{"name": jobName}).Set(float64(subSyncState))
 }
 
-func AddNewJob(jobName string) {
-	metrics.SetGauge(JobMetrics(jobName).HandlingCommitSeq().Tag(), -1)
-
-	metrics.IncrCounter(DashboardMetrics().JobNum().Tag(), 1)
+func UpdateJobLag(jobName string, lag int64, interval float64) {
+	runningJobLagGauges.With(prometheus.Labels{"name": jobName}).Set(float64(lag))
+	runningJobLagSecondsGauges.With(prometheus.Labels{"name": jobName}).Set(interval)
 }
 
-func HandlingBinlog(jobName string, commitSeq int64) {
-	metrics.SetGauge(JobMetrics(jobName).HandlingCommitSeq().Tag(), float32(commitSeq))
+func UpdateJobNum(num int) {
+	runningJobGauge.Set(float64(num))
 }
 
-func Rollback(jobName string, commitSeq int64) {
-	metrics.SetGauge(JobMetrics(jobName).HandlingCommitSeq().Tag(), float32(commitSeq))
-	metrics.SetGauge(JobMetrics(jobName).PrevCommitSeq().Tag(), float32(commitSeq))
+func RecordHandlingBinlog(jobName string, commitSeq int64) func() {
+	binlogGauges.With(prometheus.Labels{"name": jobName}).Set(float64(commitSeq))
+	handleBinlogCounters.With(prometheus.Labels{"name": jobName}).Inc()
+
+	start := time.Now()
+	return func() {
+		handleBinlogHistograms.With(prometheus.Labels{"name": jobName}).Observe(time.Since(start).Seconds())
+	}
 }
 
-func ConsumeBinlog(jobName string, commitSeq int64) {
-	metrics.SetGauge(JobMetrics(jobName).PrevCommitSeq().Tag(), float32(commitSeq))
-	metrics.IncrCounter(JobMetrics(jobName).HandledBinlogNum().Tag(), 1)
+func RecordJobProgressPersist(jobName string) func() {
+	start := time.Now()
+	return func() {
+		jobProgressPersistCounters.With(prometheus.Labels{"name": jobName}).Inc()
+		jobProgressPersistHistograms.With(prometheus.Labels{"name": jobName}).Observe(time.Since(start).Seconds())
+	}
+}
 
-	metrics.IncrCounter(DashboardMetrics().BinlogNum().Tag(), 1)
+func RecordSqlExec(ip, port, db string) func() {
+	host := net.JoinHostPort(ip, port)
+	start := time.Now()
+	return func() {
+		sqlExecCounters.With(prometheus.Labels{"host": host, "db": db}).Inc()
+		sqlExecHistograms.With(prometheus.Labels{"host": host, "db": db}).Observe(time.Since(start).Seconds())
+	}
+}
+
+func GetHttpHandler() http.Handler {
+	return promhttp.HandlerFor(registry, promhttp.HandlerOpts{Registry: registry})
 }

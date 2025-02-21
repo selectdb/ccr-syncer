@@ -77,6 +77,8 @@ type DB interface {
 
 	// GetAllData
 	GetAllData() (map[string][]string, error)
+	// GetJobs
+	GetJobs() ([]string, error)
 }
 
 func SetDBOptions(db *sql.DB) {
