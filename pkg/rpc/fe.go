@@ -31,6 +31,7 @@ import (
 	festruct_types "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/types"
 	"github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
+	"github.com/selectdb/ccr_syncer/pkg/xmetrics"
 
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt"
@@ -548,6 +549,8 @@ func (rpc *singleFeClient) Address() string {
 func (rpc *singleFeClient) BeginTransaction(spec *base.Spec, label string, tableIds []int64) (*festruct.TBeginTxnResult_, error) {
 	log.Tracef("Call BeginTransaction, addr: %s, spec: %s, label: %s, tableIds: %v", rpc.Address(), spec, label, tableIds)
 
+	defer xmetrics.RecordFeRpc("BeginTransaction", rpc.addr)()
+
 	client := rpc.client
 	req := &festruct.TBeginTxnRequest{
 		Label: &label,
@@ -565,6 +568,8 @@ func (rpc *singleFeClient) BeginTransaction(spec *base.Spec, label string, table
 
 func (rpc *singleFeClient) BeginTransactionForTxnInsert(spec *base.Spec, label string, tableIds []int64, stidNum int64) (*festruct.TBeginTxnResult_, error) {
 	log.Tracef("Call BeginTransactionForTxnInsert, addr: %s, spec: %s, label: %s, tableIds: %v", rpc.Address(), spec, label, tableIds)
+
+	defer xmetrics.RecordFeRpc("BeginTransaction", rpc.addr)()
 
 	client := rpc.client
 	req := &festruct.TBeginTxnRequest{
@@ -599,6 +604,8 @@ func (rpc *singleFeClient) BeginTransactionForTxnInsert(spec *base.Spec, label s
 func (rpc *singleFeClient) CommitTransaction(spec *base.Spec, txnId int64, commitInfos []*festruct_types.TTabletCommitInfo) (*festruct.TCommitTxnResult_, error) {
 	log.Tracef("Call CommitTransaction, addr: %s spec: %s, txnId: %d, commitInfos: %v", rpc.Address(), spec, txnId, commitInfos)
 
+	defer xmetrics.RecordFeRpc("CommitTransaction", rpc.addr)()
+
 	client := rpc.client
 	req := &festruct.TCommitTxnRequest{}
 	setAuthInfo(req, spec)
@@ -614,6 +621,8 @@ func (rpc *singleFeClient) CommitTransaction(spec *base.Spec, txnId int64, commi
 
 func (rpc *singleFeClient) CommitTransactionForTxnInsert(spec *base.Spec, txnId int64, isTxnInsert bool, subTxnInfos []*festruct.TSubTxnInfo) (*festruct.TCommitTxnResult_, error) {
 	log.Tracef("Call CommitTransactionForTxnInsert, addr: %s spec: %s, txnId: %d, subTxnInfos: %v", rpc.Address(), spec, txnId, subTxnInfos)
+
+	defer xmetrics.RecordFeRpc("CommitTransaction", rpc.addr)()
 
 	client := rpc.client
 	req := &festruct.TCommitTxnRequest{}
@@ -645,6 +654,8 @@ func (rpc *singleFeClient) CommitTransactionForTxnInsert(spec *base.Spec, txnId 
 func (rpc *singleFeClient) RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.TRollbackTxnResult_, error) {
 	log.Tracef("Call RollbackTransaction, addr: %s, spec: %s, txnId: %d", rpc.Address(), spec, txnId)
 
+	defer xmetrics.RecordFeRpc("RollbackTransaction", rpc.addr)()
+
 	client := rpc.client
 	req := &festruct.TRollbackTxnRequest{}
 	setAuthInfo(req, spec)
@@ -669,6 +680,8 @@ func (rpc *singleFeClient) RollbackTransaction(spec *base.Spec, txnId int64) (*f
 //	}
 func (rpc *singleFeClient) GetBinlog(spec *base.Spec, commitSeq, numAcquired int64) (*festruct.TGetBinlogResult_, error) {
 	log.Tracef("Call GetBinlog, addr: %s, spec: %s, commit seq: %d, num acquired: %d", rpc.Address(), spec, commitSeq, numAcquired)
+
+	defer xmetrics.RecordFeRpc("GetBinlog", rpc.addr)()
 
 	client := rpc.client
 	req := &festruct.TGetBinlogRequest{
@@ -695,6 +708,8 @@ func (rpc *singleFeClient) GetBinlog(spec *base.Spec, commitSeq, numAcquired int
 
 func (rpc *singleFeClient) GetBinlogLag(spec *base.Spec, commitSeq int64) (*festruct.TGetBinlogLagResult_, error) {
 	log.Tracef("Call GetBinlogLag, addr: %s, spec: %s, commit seq: %d", rpc.Address(), spec, commitSeq)
+
+	defer xmetrics.RecordFeRpc("GetBinlogLag", rpc.addr)()
 
 	client := rpc.client
 	req := &festruct.TGetBinlogRequest{
@@ -733,6 +748,8 @@ func (rpc *singleFeClient) GetBinlogLag(spec *base.Spec, commitSeq int64) (*fest
 //	}
 func (rpc *singleFeClient) GetSnapshot(spec *base.Spec, labelName string, compress bool) (*festruct.TGetSnapshotResult_, error) {
 	log.Tracef("Call GetSnapshot, addr: %s, spec: %s, label: %s", rpc.Address(), spec, labelName)
+
+	defer xmetrics.RecordFeRpc("GetSnapshot", rpc.addr)()
 
 	client := rpc.client
 	snapshotType := festruct.TSnapshotType_LOCAL
@@ -778,6 +795,8 @@ func (rpc *singleFeClient) GetSnapshot(spec *base.Spec, labelName string, compre
 func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, restoreReq *RestoreSnapshotRequest) (*festruct.TRestoreSnapshotResult_, error) {
 	// NOTE: ignore meta, because it's too large
 	log.Tracef("Call RestoreSnapshot, addr: %s, spec: %s", rpc.Address(), spec)
+
+	defer xmetrics.RecordFeRpc("RestoreSnapshot", rpc.addr)()
 
 	client := rpc.client
 	repoName := "__keep_on_local__"
@@ -831,6 +850,7 @@ func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, restoreReq *RestoreS
 func (rpc *singleFeClient) GetMasterToken(spec *base.Spec) (*festruct.TGetMasterTokenResult_, error) {
 	log.Tracef("Call GetMasterToken, addr: %s, spec: %s", rpc.Address(), spec)
 
+	defer xmetrics.RecordFeRpc("GetMasterToken", rpc.addr)()
 	client := rpc.client
 	req := &festruct.TGetMasterTokenRequest{
 		Cluster:  &spec.Cluster,
@@ -869,12 +889,14 @@ func (rpc *singleFeClient) getMeta(spec *base.Spec, reqTables []*festruct.TGetMe
 func (rpc *singleFeClient) GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error) {
 	log.Tracef("GetMetaDb, addr: %s, spec: %s", rpc.Address(), spec)
 
+	defer xmetrics.RecordFeRpc("GetDbMeta", rpc.addr)()
 	return rpc.getMeta(spec, nil)
 }
 
 func (rpc *singleFeClient) GetTableMeta(spec *base.Spec, tableIds []int64) (*festruct.TGetMetaResult_, error) {
 	log.Tracef("GetMetaTable, addr: %s, tableIds: %v", rpc.Address(), tableIds)
 
+	defer xmetrics.RecordFeRpc("GetTableMeta", rpc.addr)()
 	reqTables := make([]*festruct.TGetMetaTable, 0, len(tableIds))
 	for _, tableId := range tableIds {
 		tableId := tableId
@@ -889,6 +911,7 @@ func (rpc *singleFeClient) GetTableMeta(spec *base.Spec, tableIds []int64) (*fes
 func (rpc *singleFeClient) GetBackends(spec *base.Spec) (*festruct.TGetBackendMetaResult_, error) {
 	log.Tracef("GetBackends, addr: %s, spec: %s", rpc.Address(), spec)
 
+	defer xmetrics.RecordFeRpc("GetBackends", rpc.addr)()
 	client := rpc.client
 	req := &festruct.TGetBackendMetaRequest{
 		Cluster: &spec.Cluster,
@@ -916,6 +939,8 @@ func (rpc *singleFeClient) GetBackends(spec *base.Spec) (*festruct.TGetBackendMe
 //	}
 func (rpc *singleFeClient) LockBinlog(spec *base.Spec, jobUniqueId string, tableId int64, lockCommitSeq int64) (*festruct.TLockBinlogResult_, error) {
 	log.Tracef("Call LockBinlog, addr: %s, spec: %s, tableId: %d, jobUniqueId: %s, lockCommitSeq: %d", rpc.Address(), spec, tableId, jobUniqueId, lockCommitSeq)
+
+	defer xmetrics.RecordFeRpc("LockBinlog", rpc.addr)()
 
 	client := rpc.client
 	req := &festruct.TLockBinlogRequest{

@@ -28,6 +28,7 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/ccr/record"
 	"github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
+	"github.com/selectdb/ccr_syncer/pkg/xmetrics"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -1147,6 +1148,8 @@ func (s *Spec) WaitTransactionDone(txnId int64) {
 
 // Exec sql
 func (s *Spec) Exec(sql string) error {
+	defer xmetrics.RecordSqlExec(s.Host, s.Port, s.Database)()
+
 	db, err := s.Connect()
 	if err != nil {
 		return err

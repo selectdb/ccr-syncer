@@ -280,6 +280,29 @@ func (s *MysqlDB) GetStampAndJobs(hostInfo string) (int64, []string, error) {
 	return timestamp, jobs, nil
 }
 
+func (s *MysqlDB) GetJobs() ([]string, error) {
+	jobs := make([]string, 0)
+	rows, err := s.db.Query("SELECT job_name FROM jobs")
+	if err != nil {
+		return nil, xerror.Wrapf(err, xerror.DB, "mysql: get job names failed.")
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var jobName string
+		if err = rows.Scan(&jobName); err != nil {
+			return nil, xerror.Wrapf(err, xerror.DB, "mysql: scan job_name failed.")
+		}
+		jobs = append(jobs, jobName)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, xerror.Wrapf(err, xerror.DB, "mysql: get job names failed.")
+	}
+
+	return jobs, nil
+}
+
 func (s *MysqlDB) GetDeadSyncers(expiredTime int64) ([]string, error) {
 	row, err := s.db.Query(fmt.Sprintf("SELECT host_info FROM syncers WHERE timestamp < %d", expiredTime))
 	if err != nil {

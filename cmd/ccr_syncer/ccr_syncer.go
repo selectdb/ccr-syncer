@@ -226,7 +226,15 @@ func main() {
 		monitor.Start()
 	}()
 
-	// Step 9: start signal mux
+	// Step 9: start job collector
+	jobCollector := NewJobCollector(db)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		jobCollector.Collect()
+	}()
+
+	// Step 10: start signal mux
 	// use closure to capture httpService, checker, jobManager
 	signalHandler := func(signal os.Signal) bool {
 		switch signal {
@@ -237,6 +245,7 @@ func main() {
 			checker.Stop()
 			jobManager.Stop()
 			monitor.Stop()
+			jobCollector.Stop()
 			log.Info("all service stop")
 			return true
 		case syscall.SIGHUP:
@@ -254,8 +263,8 @@ func main() {
 		signalMux.Serve()
 	}()
 
-	// Step 10: start pprof
-	if syncer.Pprof == true {
+	// Step 11: start pprof
+	if syncer.Pprof {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -266,6 +275,6 @@ func main() {
 		}()
 	}
 
-	// Step 11: wait for all task done
+	// Step 12: wait for all task done
 	wg.Wait()
 }

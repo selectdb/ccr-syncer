@@ -27,8 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/selectdb/ccr_syncer/pkg/ccr"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	"github.com/selectdb/ccr_syncer/pkg/rpc"
@@ -36,115 +34,10 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/version"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
+	"github.com/selectdb/ccr_syncer/pkg/xmetrics"
 
 	log "github.com/sirupsen/logrus"
 )
-
-type MetricsInfo struct {
-	totalLag int64
-	jobNum   int64
-}
-
-var (
-	registry = prometheus.NewRegistry()
-
-	JobCount = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "ccr_syncer_job_count",
-		Help: "The current number of running CCR jobs",
-	})
-
-	SyncTotalLag = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "ccr_syncer_sync_total_lag",
-		Help: "The total lag of all CCR jobs",
-	})
-)
-
-func init() {
-	registry.MustRegister(JobCount)
-	registry.MustRegister(SyncTotalLag)
-}
-
-func (s *HttpService) handlerCollector() http.Handler {
-	return promhttp.HandlerFor(registry, promhttp.HandlerOpts{
-		ErrorHandling: promhttp.ContinueOnError,
-	})
-}
-
-func (s *HttpService) updateMetrics() {
-	for {
-		info := s.getTotalJobAndLag()
-		SyncTotalLag.Set(float64(info.totalLag))
-		JobCount.Set(float64(info.jobNum))
-		time.Sleep(10 * time.Second) // update every 10 second
-	}
-}
-
-func (s *HttpService) getTotalJobAndLag() MetricsInfo {
-	var Jobs []string
-
-	if ans, err := s.db.GetAllData(); err != nil {
-		log.Warnf("when list jobs, get all data failed: %+v", err)
-		return MetricsInfo{}
-	} else {
-		var jobData []string = ans["jobs"]
-		allJobs := make([]string, 0)
-		for _, eachJob := range jobData {
-			allJobs = append(allJobs, strings.Trim(strings.Split(eachJob, ",")[0], " "))
-		}
-		Jobs = append(Jobs, allJobs...)
-	}
-
-	var totalLag int64
-	for _, jobName := range Jobs {
-		var job ccr.Job
-		var jobProgress ccr.JobProgress
-
-		jobInfo, err := s.db.GetJobInfo(jobName)
-		if err != nil {
-			log.Warnf("db get job info failed: %+v", err)
-			continue
-		}
-
-		err = json.Unmarshal([]byte(jobInfo), &job)
-		if err != nil {
-			log.Warnf("unmarshal get job info failed: %+v", err)
-			continue
-		}
-
-		jobProgressData, err := s.db.GetProgress(jobName)
-		if err != nil {
-			log.Warnf("db get job progress failed: %+v", err)
-			continue
-		}
-
-		err = json.Unmarshal([]byte(jobProgressData), &jobProgress)
-		if err != nil {
-			log.Warnf("unmarshal get job progress failed: %+v", err)
-			continue
-		}
-
-		srcSpec := &job.Src
-		feRpc, err := rpc.NewFeRpc(srcSpec)
-		if err != nil {
-			log.Warnf("new fe rpc failed: %+v", err)
-			continue
-		}
-
-		commitSeq := jobProgress.CommitSeq
-		resp, err := feRpc.GetBinlogLag(srcSpec, commitSeq)
-		if err != nil {
-			log.Warnf("rpc get bin log failed: %+v", err)
-			continue
-		}
-
-		lag := resp.GetLag()
-		totalLag += lag
-	}
-	return MetricsInfo{
-		totalLag: totalLag,
-		jobNum:   int64(len(Jobs)),
-	}
-}
 
 // TODO(Drogon): impl a generic http request handle parse json
 
@@ -1047,7 +940,7 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/update_host_mapping", s.updateHostMappingHandler)
 	s.mux.HandleFunc("/job_skip_binlog", s.skipBinlogHandler)
 	s.mux.HandleFunc("/failpoint", s.failpointHandler)
-	s.mux.Handle("/metrics", s.handlerCollector())
+	s.mux.Handle("/metrics", xmetrics.GetHttpHandler())
 	s.mux.HandleFunc("/sync", s.syncHandler)
 }
 
@@ -1056,7 +949,6 @@ func (s *HttpService) Start() error {
 	log.Infof("Server listening on %s", addr)
 
 	s.RegisterHandlers()
-	go s.updateMetrics()
 
 	s.server = &http.Server{Addr: addr, Handler: s.mux}
 	err := s.server.ListenAndServe()

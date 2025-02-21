@@ -274,6 +274,29 @@ func (s *PostgresqlDB) GetStampAndJobs(hostInfo string) (int64, []string, error)
 	return timestamp, jobs, nil
 }
 
+func (s *PostgresqlDB) GetJobs() ([]string, error) {
+	jobs := make([]string, 0)
+	rows, err := s.db.Query("SELECT job_name FROM jobs")
+	if err != nil {
+		return nil, xerror.Wrapf(err, xerror.DB, "postgresql: get job names failed.")
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var jobName string
+		if err = rows.Scan(&jobName); err != nil {
+			return nil, xerror.Wrapf(err, xerror.DB, "postgresql: scan job_name failed.")
+		}
+		jobs = append(jobs, jobName)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, xerror.Wrapf(err, xerror.DB, "postgresql: get job names failed.")
+	}
+
+	return jobs, nil
+}
+
 func (s *PostgresqlDB) GetDeadSyncers(expiredTime int64) ([]string, error) {
 	row, err := s.db.Query(fmt.Sprintf("SELECT host_info FROM %s.syncers WHERE timestamp < %d", s.dbName, expiredTime))
 	if err != nil {

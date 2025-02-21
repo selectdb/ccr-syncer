@@ -21,6 +21,7 @@ import (
 
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
+	"github.com/selectdb/ccr_syncer/pkg/xmetrics"
 
 	bestruct "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/backendservice"
 	beservice "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/backendservice/backendservice"
@@ -39,6 +40,8 @@ type BeRpc struct {
 
 func (beRpc *BeRpc) IngestBinlog(req *bestruct.TIngestBinlogRequest) (*bestruct.TIngestBinlogResult_, error) {
 	log.Tracef("IngestBinlog req: %+v, txnId: %d, be: %v", req, req.GetTxnId(), beRpc.backend)
+
+	defer xmetrics.RecordBeRpc("IngestBinlog", beRpc.backend.Host, beRpc.backend.BePort)()
 
 	client := beRpc.client
 	if result, err := client.IngestBinlog(context.Background(), req); err != nil {

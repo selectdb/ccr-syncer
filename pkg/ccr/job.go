@@ -3316,7 +3316,7 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
 
 	// Step 2: update job progress
 	j.progress.StartHandle(commitSeq)
-	xmetrics.HandlingBinlog(j.Name, commitSeq)
+	defer xmetrics.RecordHandlingBinlog(j.Name, commitSeq)()
 
 	// Skip binlog conditionally
 	if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipBySilence && j.Extra.SkipCommitSeq == commitSeq {
@@ -3620,7 +3620,7 @@ func (j *Job) handleError(err error) error {
 		return nil
 	}
 
-	xmetrics.AddError(xerr)
+	xmetrics.RecordError(xerr)
 	if xerr.IsPanic() {
 		log.Errorf("job panic, job: %s, err: %+v", j.Name, err)
 		return err
@@ -4042,9 +4042,11 @@ func (j *Job) Resume() error {
 type RawJobStatus struct {
 	state         int32
 	progressState int32
+	commitSeq     int64
 }
 
 func (j *Job) updateJobStatus() {
+	atomic.StoreInt64(&j.rawStatus.commitSeq, j.progress.PrevCommitSeq)
 	atomic.StoreInt32(&j.rawStatus.state, int32(j.State))
 	if j.progress != nil {
 		atomic.StoreInt32(&j.rawStatus.progressState, int32(j.progress.SyncState))
@@ -4055,16 +4057,19 @@ type JobStatus struct {
 	Name          string `json:"name"`
 	State         string `json:"state"`
 	ProgressState string `json:"progress_state"`
+	CommitSeq     int64  `json:"commit_seq"`
 }
 
 func (j *Job) Status() *JobStatus {
 	state := JobState(atomic.LoadInt32(&j.rawStatus.state)).String()
 	progressState := SyncState(atomic.LoadInt32(&j.rawStatus.progressState)).String()
+	commitSeq := atomic.LoadInt64(&j.rawStatus.commitSeq)
 
 	return &JobStatus{
 		Name:          j.Name,
 		State:         state,
 		ProgressState: progressState,
+		CommitSeq:     commitSeq,
 	}
 }
 
