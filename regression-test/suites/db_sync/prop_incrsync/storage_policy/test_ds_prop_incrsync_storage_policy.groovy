@@ -32,8 +32,8 @@ suite('test_ds_prop_incrsync_storage_policy') {
     sql "DROP TABLE IF EXISTS ${dbName}.${tableNameIncrement}"
     target_sql "DROP TABLE IF EXISTS TEST_${dbName}.${tableNameIncrement}"
 
-    def resource_name = 'test_ds_tbl_storage_policy_resource'
-    def policy_name = 'test_ds_tbl_storage_policy'
+    def resource_name = "res_" + helper.randomSuffix()
+    def policy_name= "policy_" + helper.randomSuffix()
 
     def check_storage_policy_exist = { name->
         def polices = sql'''
@@ -132,6 +132,9 @@ suite('test_ds_prop_incrsync_storage_policy') {
         AGGREGATE KEY(`test`, `id`)
         PARTITION BY RANGE(`id`)
         (
+            PARTITION p0 VALUES LESS THAN (100) ("storage_policy" = "${policy_name}"),
+            PARTITION p1 VALUES LESS THAN (200) ("storage_policy" = "${policy_name}"),
+            PARTITION p2 VALUES LESS THAN (300)
         )
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
