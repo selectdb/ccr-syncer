@@ -1604,7 +1604,12 @@ func ReplaceAndEscapeComment(input string) string {
 		if len(groups) < 2 {
 			return match
 		}
-		content := strings.ReplaceAll(groups[1], `"`, `\"`)
+
+		// The `\"` and `"` should be replaced with `\"`
+		regex := regexp.MustCompile(`\\"|"`)
+		content := regex.ReplaceAllStringFunc(groups[1], func(match string) string {
+			return `\"`
+		})
 		return fmt.Sprintf(`COMMENT "%s"`, content)
 	})
 }
