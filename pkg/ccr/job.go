@@ -4182,6 +4182,14 @@ func (j *Job) GetJobProgress() *JobProgress {
 	return j.progress
 }
 
+func (j *Job) GetSrcMeta() Metaer {
+	return j.srcMeta
+}
+
+func (j *Job) GetDestMeta() Metaer {
+	return j.destMeta
+}
+
 func isTxnCommitted(status *tstatus.TStatus) bool {
 	return isStatusContainsAny(status, "is already COMMITTED")
 }
