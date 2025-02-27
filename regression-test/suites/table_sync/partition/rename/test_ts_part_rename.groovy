@@ -146,7 +146,7 @@ suite("test_ts_part_rename") {
 
     logger.info("=== Test 5: Check new partitions key and range ===")
 
-    show_result = target_sql_return_maparray """SHOW PARTITIONS FROM TEST_${context.dbName}.${tableName} WHERE PartitionName = \"${opPartitonNameNew}\" """
+    def show_result = target_sql_return_maparray """SHOW PARTITIONS FROM TEST_${context.dbName}.${tableName} WHERE PartitionName = \"${opPartitonNameNew}\" """
     /*
         *************************** 1. row ***************************
         PartitionId: 13055

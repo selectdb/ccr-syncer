@@ -94,7 +94,7 @@ suite("test_ds_prop_incrsync_incsync_auto_increment") {
 
     assertTrue(target_res[0][1].contains("`id` bigint NOT NULL AUTO_INCREMENT(1)"))
 
-    res = sql "select * from ${tableNameFull} order by id"
+    def res = sql "select * from ${tableNameFull} order by id"
 
     target_res = target_sql "select * from ${tableNameFull} order by id"
 

@@ -28,8 +28,8 @@ suite('test_tsa_dml_insert_overwrite') {
         return res.size() == 0
     }
 
-    tableName = "${baseTableName}_unpart"
-    aliasTableName = "${aliasBaseTableName}_unpart"
+    def tableName = "${baseTableName}_unpart"
+    def aliasTableName = "${aliasBaseTableName}_unpart"
     helper.set_alias(aliasTableName)
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
@@ -46,6 +46,7 @@ suite('test_tsa_dml_insert_overwrite') {
         )
     """
 
+    helper.ccrJobDelete()
     helper.ccrJobCreate(tableName)
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 60))
