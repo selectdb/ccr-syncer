@@ -772,6 +772,9 @@ func (j *Job) partialSync() error {
 		}
 		switch j.SyncType {
 		case DBSync:
+			if len(j.progress.TableMapping) == 0 {
+				j.progress.TableMapping = make(map[int64]int64)
+			}
 			j.progress.TableMapping[tableId] = destTable.Id
 			j.progress.NextWithPersist(j.progress.CommitSeq, DBTablesIncrementalSync, Done, "")
 		case TableSync:
