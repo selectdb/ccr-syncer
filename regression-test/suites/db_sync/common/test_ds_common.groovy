@@ -259,7 +259,7 @@ suite("test_ds_common") {
 
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE TEST_${context.dbName}.${tableWithComment}",
                                 exist, 30, "target"))
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableWithComment} WHERE test=${test_num}",
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableWithComment} WHERE test=0",
                                    insert_num, 30))
 
     logger.info("=== Test 3: drop table case ===")
