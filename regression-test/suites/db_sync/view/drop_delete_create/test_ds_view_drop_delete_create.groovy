@@ -81,7 +81,7 @@ suite("test_ds_view_drop_delete_create") {
         DROP VIEW view_test_${suffix}
     """
 
-    num_restore = helper.getRestoreRowSize(tableDuplicate0)
+    def num_restore = helper.getRestoreRowSize(tableDuplicate0)
 
     helper.ccrJobCreate()
 
