@@ -33,16 +33,27 @@ type DropTable struct {
 
 func NewDropTableFromJson(data string) (*DropTable, error) {
 	var dropTable DropTable
+	if err := dropTable.Deserialize(data); err != nil {
+		return nil, err
+	}
+	return &dropTable, nil
+}
+
+func (dropTable *DropTable) Deserialize(data string) error {
 	err := json.Unmarshal([]byte(data), &dropTable)
 	if err != nil {
-		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal drop table error")
+		return xerror.Wrap(err, xerror.Normal, "unmarshal drop table error")
 	}
 
 	if dropTable.TableId == 0 {
-		return nil, xerror.Errorf(xerror.Normal, "table id not found")
+		return xerror.Errorf(xerror.Normal, "table id not found")
 	}
 
-	return &dropTable, nil
+	return nil
+}
+
+func (dropRollup *DropTable) GetTableId() int64 {
+	return dropRollup.TableId
 }
 
 // Stringer, all fields
