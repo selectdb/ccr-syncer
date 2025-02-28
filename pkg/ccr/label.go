@@ -18,8 +18,11 @@ package ccr
 
 import (
 	"fmt"
+	"regexp"
 	"time"
 )
+
+var LabelRegex = `^[-_A-Za-z0-9:]{1,128}$`
 
 // snapshot name format "ccrs_${ccr_name}_${sync_id}"
 func NewSnapshotLabelPrefix(ccrName string, syncId int64) string {
@@ -46,4 +49,14 @@ func NewRestoreLabel(snapshotName string) string {
 
 func TableAlias(tableName string) string {
 	return fmt.Sprintf("__ccr_%s_%d", tableName, time.Now().Unix())
+}
+
+// the same as doris
+func CheckLabelRegex(label string) bool {
+	if label == "" {
+		return false
+	}
+
+	re := regexp.MustCompile(LabelRegex)
+	return re.MatchString(label)
 }
