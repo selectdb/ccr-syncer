@@ -468,11 +468,6 @@ func (j *Job) partialSync() error {
 		}
 
 		snapshotName := NewLabelWithTs(prefix)
-		isLabelMatch := CheckLabelRegex(snapshotName)
-		if isLabelMatch == false {
-			err := xerror.Errorf(xerror.Normal, "the snapshotName : %s does not match the regex of doris", snapshotName)
-			return err
-		}
 		log.Infof("partial sync status: create snapshot %s", snapshotName)
 		err := j.ISrc.CreatePartialSnapshot(snapshotName, table, partitions)
 		if err != nil && err == base.ErrBackupPartitionNotFound {
@@ -637,12 +632,6 @@ func (j *Job) partialSync() error {
 
 		// Step 5.2: start a new fullsync & restore snapshot to dest
 		restoreSnapshotName := NewRestoreLabel(snapshotName)
-		isLabelMatch := CheckLabelRegex(restoreSnapshotName)
-		if isLabelMatch == false {
-			err := xerror.Errorf(xerror.Normal, "the restoreSnapshotName : %s does not match the regex of doris", snapshotName)
-			return err
-		}
-
 		snapshotResp := inMemoryData.SnapshotResp
 
 		dest := &j.Dest
@@ -877,11 +866,6 @@ func (j *Job) fullSync() error {
 
 		// Step 1.3: Create snapshot
 		snapshotName := NewLabelWithTs(prefix)
-		isLabelMatch := CheckLabelRegex(snapshotName)
-		if isLabelMatch == false {
-			err := xerror.Errorf(xerror.Normal, "the snapshotName : %s does not match the regex of doris", snapshotName)
-			return err
-		}
 		log.Infof("fullsync status: create snapshot %s", snapshotName)
 		if err := j.ISrc.CreateSnapshot(snapshotName, backupTableList); err != nil {
 			return err
@@ -1043,12 +1027,6 @@ func (j *Job) fullSync() error {
 
 		// Step 5.2: start a new fullsync & restore snapshot to dest
 		restoreSnapshotName := NewRestoreLabel(snapshotName)
-		isLabelMatch := CheckLabelRegex(restoreSnapshotName)
-		if isLabelMatch == false {
-			err := xerror.Errorf(xerror.Normal, "the restoreSnapshotName : %s does not match the regex of doris", snapshotName)
-			return err
-		}
-
 		snapshotResp := inMemoryData.SnapshotResp
 		tableNameMapping := inMemoryData.TableNameMapping
 

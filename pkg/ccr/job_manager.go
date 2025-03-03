@@ -27,6 +27,7 @@ import (
 )
 
 var errJobExist = xerror.NewWithoutStack(xerror.Normal, "job exist")
+var errJobName = xerror.NewWithoutStack(xerror.Normal, "job name does not match the regex of doris")
 
 // job manager is thread safety
 type JobManager struct {
@@ -59,6 +60,12 @@ func (jm *JobManager) AddJob(job *Job) error {
 
 	jm.lock.Lock()
 	defer jm.lock.Unlock()
+
+	// Step 0: check job name
+	isLabelMatch := CheckLabelRegex(job.Name)
+	if isLabelMatch == false {
+		return xerror.XWrapf(errJobName, "job: %s", job.Name)
+	}
 
 	// Step 1: check job exist
 	if _, ok := jm.jobs[job.Name]; ok {
