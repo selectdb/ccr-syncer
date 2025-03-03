@@ -40,6 +40,7 @@ type TableRecord struct {
 	Id               int64             `json:"_"`
 	PartitionRecords []PartitionRecord `json:"partitionRecords"`
 	IndexIds         []int64           `json:"indexIds"`
+	DeltaRows        map[int64]int64   `json:"deltaRows"`
 }
 
 func (t *TableRecord) String() string {

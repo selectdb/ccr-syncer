@@ -44,7 +44,7 @@ var (
 	localRepoName    string
 	commitTxnTimeout time.Duration
 	connectTimeout   time.Duration
-	rpcTimeout       time.Duration
+	RpcTimeout       time.Duration
 )
 
 var ErrFeNotMasterCompatible = xerror.NewWithoutStack(xerror.FE, "not master compatible")
@@ -53,7 +53,7 @@ func init() {
 	flag.StringVar(&localRepoName, "local_repo_name", "", "local_repo_name")
 	flag.DurationVar(&commitTxnTimeout, "commit_txn_timeout", 33*time.Second, "commmit_txn_timeout")
 	flag.DurationVar(&connectTimeout, "connect_timeout", 10*time.Second, "connect timeout")
-	flag.DurationVar(&rpcTimeout, "rpc_timeout", 30*time.Second, "rpc timeout")
+	flag.DurationVar(&RpcTimeout, "rpc_timeout", 30*time.Second, "rpc timeout")
 }
 
 // canUseNextAddr means can try next addr, err is a connection error, not a method not found or other error
@@ -516,7 +516,7 @@ type singleFeClient struct {
 
 func newSingleFeClient(addr string) (*singleFeClient, error) {
 	// create kitex FrontendService client
-	if fe_client, err := feservice.NewClient("FrontendService", client.WithHostPorts(addr), client.WithConnectTimeout(connectTimeout), client.WithRPCTimeout(rpcTimeout)); err != nil {
+	if fe_client, err := feservice.NewClient("FrontendService", client.WithHostPorts(addr), client.WithConnectTimeout(connectTimeout), client.WithRPCTimeout(RpcTimeout)); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "NewFeClient error: %v, addr: %s", err, addr)
 	} else {
 		return &singleFeClient{
