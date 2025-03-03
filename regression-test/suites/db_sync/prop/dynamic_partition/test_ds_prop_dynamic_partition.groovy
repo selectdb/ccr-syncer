@@ -23,7 +23,13 @@ suite('test_ds_prop_dynamic_partition') {
     def tableName = 'tbl_' + helper.randomSuffix()
     def policyName = 'policy_' + helper.randomSuffix()
     def resourceName = 'resource_' + helper.randomSuffix()
-
+	
+	String ak = getS3AK()
+    String sk = getS3SK()
+    String s3_endpoint = getS3Endpoint()
+    String region = getS3Region()
+    String bucket = context.config.otherConfigs.get("s3BucketName");
+	
     def exist = { res -> Boolean
         return res.size() != 0
     }
@@ -46,17 +52,17 @@ suite('test_ds_prop_dynamic_partition') {
     helper.enableDbBinlog()
 
     sql """ CREATE RESOURCE "${resourceName}"
-        PROPERTIES
+		PROPERTIES
         (
             "type" = "s3",
-            "s3.endpoint" = "bj.s3.com",
-            "s3.region" = "bj",
-            "s3.access_key" = "bbb",
-            "s3.secret_key" = "aaaa",
-            "s3.bucket" = "test",
-            "s3_validity_check" = "false",
-            "s3.root.path" = "s3://test/"
-        )
+            "s3.endpoint" = "${s3_endpoint}",
+            "s3.region" = "${region}",
+            "s3.access_key"= "${ak}",
+            "s3.secret_key" = "${sk}",
+            "s3.bucket" = "${bucket}",
+			"s3_validity_check" = "false",
+            "s3.root.path" = "s3://regression/"
+        );
         """
     sql """ CREATE STORAGE POLICY ${policyName} PROPERTIES ( "storage_resource" = "${resourceName}", "cooldown_ttl" = "5000" ) """
     sql """
@@ -154,9 +160,9 @@ suite('test_ds_prop_dynamic_partition') {
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 
-    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_range_by_day", 30))
-    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_range_by_week", 30))
-    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_range_by_month", 30))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_range_by_day", 180))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_range_by_week", 180))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_range_by_month", 180))
 
     assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${tableName}_range_by_day\"", exist, 60, 'sql'))
     assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${tableName}_range_by_week\"", exist, 60, 'sql'))
