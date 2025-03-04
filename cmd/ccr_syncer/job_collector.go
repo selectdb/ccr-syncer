@@ -142,7 +142,7 @@ func getJobLag(spec *base.Spec, commitSeq int64) (int64, float64, error) {
 	lag := resp.GetLag()
 	firstTimestampMs := resp.GetFirstBinlogTimestamp()
 	lastTimestampMs := resp.GetLastBinlogTimestamp()
-	intervals := float64(lastTimestampMs - firstTimestampMs) / 1000.0
+	intervals := float64(lastTimestampMs-firstTimestampMs) / 1000.0
 	if intervals <= 0 || lag <= 0 {
 		intervals = 0
 	}
