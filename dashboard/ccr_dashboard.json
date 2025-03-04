@@ -393,7 +393,8 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green"
+                                        "color": "green",
+                                        "value": null
                                     },
                                     {
                                         "color": "red",
@@ -408,7 +409,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 0,
-                        "y": 66
+                        "y": 98
                     },
                     "id": 16,
                     "options": {
@@ -493,7 +494,8 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green"
+                                        "color": "green",
+                                        "value": null
                                     },
                                     {
                                         "color": "red",
@@ -509,7 +511,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 12,
-                        "y": 66
+                        "y": 98
                     },
                     "id": 12,
                     "options": {
@@ -611,7 +613,8 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green"
+                                        "color": "green",
+                                        "value": null
                                     },
                                     {
                                         "color": "red",
@@ -626,7 +629,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 0,
-                        "y": 74
+                        "y": 106
                     },
                     "id": 24,
                     "options": {
@@ -711,7 +714,8 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green"
+                                        "color": "green",
+                                        "value": null
                                     },
                                     {
                                         "color": "red",
@@ -727,7 +731,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 12,
-                        "y": 74
+                        "y": 106
                     },
                     "id": 25,
                     "options": {
@@ -826,7 +830,8 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green"
+                                        "color": "green",
+                                        "value": null
                                     },
                                     {
                                         "color": "red",
@@ -841,7 +846,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 0,
-                        "y": 163
+                        "y": 11
                     },
                     "id": 14,
                     "options": {
@@ -926,7 +931,8 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green"
+                                        "color": "green",
+                                        "value": null
                                     },
                                     {
                                         "color": "red",
@@ -942,7 +948,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 12,
-                        "y": 163
+                        "y": 11
                     },
                     "id": 17,
                     "options": {
@@ -966,7 +972,7 @@
                                 "uid": "${datasource}"
                             },
                             "disableTextWrap": false,
-                            "editorMode": "builder",
+                            "editorMode": "code",
                             "expr": "sum by(name) (rate(ccr_job_progress_persist_duration_seconds_sum{instance=\"$instance\"}[1m])) / sum by(name) (rate(ccr_job_progress_persist_duration_seconds_count{instance=\"$instance\"}[1m]))",
                             "fullMetaSearch": false,
                             "includeNullMetadata": true,
@@ -981,7 +987,7 @@
                                 "uid": "${datasource}"
                             },
                             "disableTextWrap": false,
-                            "editorMode": "builder",
+                            "editorMode": "code",
                             "expr": "histogram_quantile(0.99, sum by(le, name) (rate(ccr_job_progress_persist_duration_seconds_bucket{instance=\"$instance\"}[1m])))",
                             "fullMetaSearch": false,
                             "hide": false,
@@ -1044,7 +1050,8 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green"
+                                        "color": "green",
+                                        "value": null
                                     },
                                     {
                                         "color": "red",
@@ -1059,7 +1066,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 0,
-                        "y": 179
+                        "y": 19
                     },
                     "id": 11,
                     "options": {
@@ -1144,7 +1151,8 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green"
+                                        "color": "green",
+                                        "value": null
                                     },
                                     {
                                         "color": "red",
@@ -1160,7 +1168,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 12,
-                        "y": 179
+                        "y": 19
                     },
                     "id": 15,
                     "options": {
@@ -1262,7 +1270,8 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green"
+                                        "color": "green",
+                                        "value": null
                                     },
                                     {
                                         "color": "red",
@@ -1277,7 +1286,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 0,
-                        "y": 187
+                        "y": 27
                     },
                     "id": 7,
                     "options": {
@@ -1379,7 +1388,8 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green"
+                                        "color": "green",
+                                        "value": null
                                     },
                                     {
                                         "color": "red",
@@ -1395,7 +1405,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 12,
-                        "y": 187
+                        "y": 27
                     },
                     "id": 8,
                     "options": {
@@ -1419,7 +1429,7 @@
                                 "uid": "${datasource}"
                             },
                             "disableTextWrap": false,
-                            "editorMode": "builder",
+                            "editorMode": "code",
                             "expr": "histogram_quantile(0.99, sum by(le, method, addr) (rate(ccr_fe_rpc_duration_seconds_bucket{method=\"BeginTransaction\", instance=\"$instance\"}[1m])))",
                             "fullMetaSearch": false,
                             "hide": false,
@@ -1435,7 +1445,7 @@
                                 "uid": "${datasource}"
                             },
                             "disableTextWrap": false,
-                            "editorMode": "builder",
+                            "editorMode": "code",
                             "expr": "histogram_quantile(0.99, sum by(le, method, addr) (rate(ccr_fe_rpc_duration_seconds_bucket{method=\"CommitTransaction\", instance=\"$instance\"}[1m])))",
                             "fullMetaSearch": false,
                             "hide": false,
@@ -1452,7 +1462,7 @@
                                 "uid": "${datasource}"
                             },
                             "disableTextWrap": false,
-                            "editorMode": "builder",
+                            "editorMode": "code",
                             "expr": "sum by(method, addr) (rate(ccr_fe_rpc_duration_seconds_sum{method=\"BeginTransaction\", instance=\"$instance\"}[1m])) / sum by(method, addr) (rate(ccr_fe_rpc_duration_seconds_count{method=\"BeginTransaction\", instance=\"$instance\"}[1m]))",
                             "fullMetaSearch": false,
                             "hide": false,
@@ -1532,7 +1542,8 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green"
+                                        "color": "green",
+                                        "value": null
                                     },
                                     {
                                         "color": "red",
@@ -1547,7 +1558,327 @@
                         "h": 8,
                         "w": 12,
                         "x": 0,
-                        "y": 195
+                        "y": 35
+                    },
+                    "id": 28,
+                    "options": {
+                        "legend": {
+                            "calcs": [],
+                            "displayMode": "list",
+                            "placement": "bottom",
+                            "showLegend": true
+                        },
+                        "tooltip": {
+                            "hideZeros": false,
+                            "mode": "single",
+                            "sort": "none"
+                        }
+                    },
+                    "pluginVersion": "11.5.2",
+                    "targets": [
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "builder",
+                            "expr": "rate(ccr_fe_rpc_total{method=\"GetDbMeta\", instance=\"$instance\"}[1m])",
+                            "fullMetaSearch": false,
+                            "includeNullMetadata": true,
+                            "legendFormat": "__auto",
+                            "range": true,
+                            "refId": "A",
+                            "useBackend": false
+                        },
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "builder",
+                            "expr": "rate(ccr_fe_rpc_total{method=\"GetBackends\", instance=\"$instance\"}[1m])",
+                            "fullMetaSearch": false,
+                            "hide": false,
+                            "includeNullMetadata": true,
+                            "instant": false,
+                            "legendFormat": "__auto",
+                            "range": true,
+                            "refId": "B",
+                            "useBackend": false
+                        },
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "builder",
+                            "expr": "rate(ccr_fe_rpc_total{method=\"GetTableMeta\", instance=\"$instance\"}[1m])",
+                            "fullMetaSearch": false,
+                            "hide": false,
+                            "includeNullMetadata": true,
+                            "legendFormat": "__auto",
+                            "range": true,
+                            "refId": "C",
+                            "useBackend": false
+                        }
+                    ],
+                    "title": "FE RPC QPS - Meta",
+                    "type": "timeseries"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "fieldConfig": {
+                        "defaults": {
+                            "color": {
+                                "mode": "palette-classic"
+                            },
+                            "custom": {
+                                "axisBorderShow": false,
+                                "axisCenteredZero": false,
+                                "axisColorMode": "text",
+                                "axisLabel": "",
+                                "axisPlacement": "auto",
+                                "barAlignment": 0,
+                                "barWidthFactor": 0.6,
+                                "drawStyle": "line",
+                                "fillOpacity": 0,
+                                "gradientMode": "none",
+                                "hideFrom": {
+                                    "legend": false,
+                                    "tooltip": false,
+                                    "viz": false
+                                },
+                                "insertNulls": false,
+                                "lineInterpolation": "linear",
+                                "lineWidth": 1,
+                                "pointSize": 5,
+                                "scaleDistribution": {
+                                    "type": "linear"
+                                },
+                                "showPoints": "auto",
+                                "spanNulls": false,
+                                "stacking": {
+                                    "group": "A",
+                                    "mode": "none"
+                                },
+                                "thresholdsStyle": {
+                                    "mode": "off"
+                                }
+                            },
+                            "mappings": [],
+                            "thresholds": {
+                                "mode": "absolute",
+                                "steps": [
+                                    {
+                                        "color": "green",
+                                        "value": null
+                                    },
+                                    {
+                                        "color": "red",
+                                        "value": 80
+                                    }
+                                ]
+                            },
+                            "unit": "s"
+                        },
+                        "overrides": []
+                    },
+                    "gridPos": {
+                        "h": 8,
+                        "w": 12,
+                        "x": 12,
+                        "y": 35
+                    },
+                    "id": 29,
+                    "options": {
+                        "legend": {
+                            "calcs": [],
+                            "displayMode": "list",
+                            "placement": "bottom",
+                            "showLegend": true
+                        },
+                        "tooltip": {
+                            "hideZeros": false,
+                            "mode": "single",
+                            "sort": "none"
+                        }
+                    },
+                    "pluginVersion": "11.5.2",
+                    "targets": [
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "code",
+                            "expr": "histogram_quantile(0.99, sum by(le, method, addr) (rate(ccr_fe_rpc_duration_seconds_bucket{method=\"GetDbMeta\", instance=\"$instance\"}[1m])))",
+                            "fullMetaSearch": false,
+                            "hide": false,
+                            "includeNullMetadata": true,
+                            "legendFormat": "P99 {{method}} - {{addr}}",
+                            "range": true,
+                            "refId": "A",
+                            "useBackend": false
+                        },
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "code",
+                            "expr": "sum by(method, addr) (rate(ccr_fe_rpc_duration_seconds_sum{method=\"GetDbMeta\", instance=\"$instance\"}[1m])) / sum by(method, addr) (rate(ccr_fe_rpc_duration_seconds_count{method=\"GetDbMeta\", instance=\"$instance\"}[1m]))",
+                            "fullMetaSearch": false,
+                            "hide": false,
+                            "includeNullMetadata": true,
+                            "instant": false,
+                            "legendFormat": "AVG {{method}} - {{addr}}",
+                            "range": true,
+                            "refId": "B",
+                            "useBackend": false
+                        },
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "code",
+                            "expr": "histogram_quantile(0.99, sum by(le, method, addr) (rate(ccr_fe_rpc_duration_seconds_bucket{method=\"GetTableMeta\", instance=\"$instance\"}[1m])))",
+                            "fullMetaSearch": false,
+                            "hide": false,
+                            "includeNullMetadata": true,
+                            "legendFormat": "P99 {{method}} - {{addr}}",
+                            "range": true,
+                            "refId": "C",
+                            "useBackend": false
+                        },
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "code",
+                            "expr": "histogram_quantile(0.99, sum by(le, method, addr) (rate(ccr_fe_rpc_duration_seconds_bucket{method=\"GetBackends\", instance=\"$instance\"}[1m])))",
+                            "fullMetaSearch": false,
+                            "hide": false,
+                            "includeNullMetadata": true,
+                            "legendFormat": "P99 {{method}} - {{addr}}",
+                            "range": true,
+                            "refId": "D",
+                            "useBackend": false
+                        },
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "code",
+                            "expr": "sum by(method, addr) (rate(ccr_fe_rpc_duration_seconds_sum{method=\"GetTableMeta\", instance=\"$instance\"}[1m])) / sum by(method, addr) (rate(ccr_fe_rpc_duration_seconds_count{method=\"GetTableMeta\", instance=\"$instance\"}[1m]))",
+                            "fullMetaSearch": false,
+                            "hide": false,
+                            "includeNullMetadata": true,
+                            "instant": false,
+                            "legendFormat": "AVG {{method}} - {{addr}}",
+                            "range": true,
+                            "refId": "E",
+                            "useBackend": false
+                        },
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "code",
+                            "expr": "sum by(method, addr) (rate(ccr_fe_rpc_duration_seconds_sum{method=\"GetBackends\", instance=\"$instance\"}[1m])) / sum by(method, addr) (rate(ccr_fe_rpc_duration_seconds_count{method=\"GetBackends\", instance=\"$instance\"}[1m]))",
+                            "fullMetaSearch": false,
+                            "hide": false,
+                            "includeNullMetadata": true,
+                            "instant": false,
+                            "legendFormat": "AVG {{method}} - {{addr}}",
+                            "range": true,
+                            "refId": "F",
+                            "useBackend": false
+                        }
+                    ],
+                    "title": "FE RPC Latency - Meta",
+                    "type": "timeseries"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "fieldConfig": {
+                        "defaults": {
+                            "color": {
+                                "mode": "palette-classic"
+                            },
+                            "custom": {
+                                "axisBorderShow": false,
+                                "axisCenteredZero": false,
+                                "axisColorMode": "text",
+                                "axisLabel": "",
+                                "axisPlacement": "auto",
+                                "barAlignment": 0,
+                                "barWidthFactor": 0.6,
+                                "drawStyle": "line",
+                                "fillOpacity": 0,
+                                "gradientMode": "none",
+                                "hideFrom": {
+                                    "legend": false,
+                                    "tooltip": false,
+                                    "viz": false
+                                },
+                                "insertNulls": false,
+                                "lineInterpolation": "linear",
+                                "lineWidth": 1,
+                                "pointSize": 5,
+                                "scaleDistribution": {
+                                    "type": "linear"
+                                },
+                                "showPoints": "auto",
+                                "spanNulls": false,
+                                "stacking": {
+                                    "group": "A",
+                                    "mode": "none"
+                                },
+                                "thresholdsStyle": {
+                                    "mode": "off"
+                                }
+                            },
+                            "mappings": [],
+                            "thresholds": {
+                                "mode": "absolute",
+                                "steps": [
+                                    {
+                                        "color": "green",
+                                        "value": null
+                                    },
+                                    {
+                                        "color": "red",
+                                        "value": 80
+                                    }
+                                ]
+                            }
+                        },
+                        "overrides": []
+                    },
+                    "gridPos": {
+                        "h": 8,
+                        "w": 12,
+                        "x": 0,
+                        "y": 43
                     },
                     "id": 9,
                     "options": {
@@ -1632,7 +1963,8 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green"
+                                        "color": "green",
+                                        "value": null
                                     },
                                     {
                                         "color": "red",
@@ -1648,7 +1980,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 12,
-                        "y": 195
+                        "y": 43
                     },
                     "id": 10,
                     "options": {
@@ -1751,7 +2083,8 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green"
+                                        "color": "green",
+                                        "value": null
                                     },
                                     {
                                         "color": "red",
@@ -1766,7 +2099,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 0,
-                        "y": 203
+                        "y": 51
                     },
                     "id": 5,
                     "options": {
@@ -1851,7 +2184,8 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green"
+                                        "color": "green",
+                                        "value": null
                                     },
                                     {
                                         "color": "red",
@@ -1867,7 +2201,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 12,
-                        "y": 203
+                        "y": 51
                     },
                     "id": 6,
                     "options": {
@@ -1891,7 +2225,7 @@
                                 "uid": "${datasource}"
                             },
                             "disableTextWrap": false,
-                            "editorMode": "builder",
+                            "editorMode": "code",
                             "expr": "sum by(method, addr) (rate(ccr_be_rpc_duration_seconds_sum{instance=\"$instance\"}[1m])) / sum by(method, addr) (rate(ccr_be_rpc_duration_seconds_count{instance=\"$instance\"}[1m]))",
                             "fullMetaSearch": false,
                             "includeNullMetadata": true,
@@ -1906,8 +2240,8 @@
                                 "uid": "${datasource}"
                             },
                             "disableTextWrap": false,
-                            "editorMode": "builder",
-                            "expr": "sum by(method, addr) (rate(ccr_be_rpc_duration_seconds_bucket[1m])) / sum by(method, addr) (rate(ccr_be_rpc_duration_seconds_count{instance=\"$instance\"}[1m]))",
+                            "editorMode": "code",
+                            "expr": "histogram_quantile(0.99, sum by(le, method, addr) (rate(ccr_be_rpc_duration_seconds_bucket{instance=\"$instance\"}[1m])))",
                             "fullMetaSearch": false,
                             "hide": false,
                             "includeNullMetadata": true,
@@ -1999,7 +2333,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 0,
-                        "y": 28
+                        "y": 76
                     },
                     "id": 1,
                     "options": {
@@ -2151,7 +2485,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 12,
-                        "y": 28
+                        "y": 76
                     },
                     "id": 3,
                     "options": {
@@ -2266,7 +2600,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 0,
-                        "y": 29
+                        "y": 85
                     },
                     "id": 26,
                     "options": {
@@ -2365,6 +2699,6 @@
     "timezone": "browser",
     "title": "CCR Dashboard",
     "uid": "dedp1q59coxkwd",
-    "version": 123,
+    "version": 130,
     "weekStart": ""
 }
