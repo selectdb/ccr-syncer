@@ -20,10 +20,12 @@ import (
 	"context"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/modern-go/gls"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/record"
+	"github.com/selectdb/ccr_syncer/pkg/rpc"
 	utils "github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
@@ -105,6 +107,8 @@ type tabletIngestBinlogHandler struct {
 	destPartitionId int64
 	destTableId     int64
 
+	deltaRows int64
+
 	*commitInfosCollector
 	*subTxnInfosCollector
 
@@ -183,7 +187,22 @@ func (h *tabletIngestBinlogHandler) handleReplica(srcReplica, destReplica *Repli
 		cwind.Acquire()
 		defer cwind.Release()
 
-		resp, err := destRpc.IngestBinlog(req)
+		var options []rpc.BeRpcOption
+		if h.deltaRows > 0 {
+			// estimate downloading time according to delta rows
+			estimatedBytes := h.deltaRows * 1024         // each row 1KB
+			estimatedDownloadSpeed := int64(1024 * 1024) // a slow download speed 1MB/s
+			estimatedElapsed := estimatedBytes / estimatedDownloadSpeed
+			estimatedDuration := time.Duration(estimatedElapsed) * time.Second
+			if estimatedDuration > time.Hour {
+				estimatedDuration = time.Hour
+			}
+			if estimatedDuration > rpc.RpcTimeout {
+				options = append(options, rpc.WithBeRpcTimeout(estimatedDuration))
+			}
+		}
+
+		resp, err := destRpc.IngestBinlog(req, options...)
 		if err != nil {
 			j.setError(err)
 			return
@@ -364,6 +383,7 @@ type prepareIndexArg struct {
 	destPartitionId int64
 	srcIndexMeta    *IndexMeta
 	destIndexMeta   *IndexMeta
+	deltaRows       map[int64]int64
 }
 
 func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
@@ -417,6 +437,7 @@ func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 			destTablet:      destTablet,
 			destPartitionId: arg.destPartitionId,
 			destTableId:     arg.destTableId,
+			deltaRows:       arg.deltaRows[arg.srcIndexMeta.Id],
 
 			commitInfosCollector: newCommitInfosCollector(),
 			subTxnInfosCollector: newSubTxnInfosCollector(),
@@ -431,7 +452,8 @@ func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 	}
 }
 
-func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partitionRecord record.PartitionRecord, indexIds []int64) {
+func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64,
+	partitionRecord record.PartitionRecord, indexIds []int64, deltaRows map[int64]int64) {
 	log.Tracef("txn %d ingest binlog: prepare partition: %v", j.txnId, partitionRecord)
 	// 废弃 preparePartition， 上面index的那部分是这里的实现
 	// 还是要求一下和下游对齐的index length，这个是不可以recover的
@@ -509,6 +531,7 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 		srcPartitionId:  srcPartitionId,
 		destTableId:     destTableId,
 		destPartitionId: destPartitionId,
+		deltaRows:       deltaRows,
 	}
 	for _, indexId := range indexIds {
 		if j.srcMeta.IsIndexDropped(indexId) {
@@ -609,7 +632,7 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 				j.txnId, partitionRecord.Id, partitionRecord.Range, partitionRecord.Version)
 			continue
 		}
-		j.preparePartition(srcTableId, destTableId, partitionRecord, tableRecord.IndexIds)
+		j.preparePartition(srcTableId, destTableId, partitionRecord, tableRecord.IndexIds, tableRecord.DeltaRows)
 	}
 }
 
