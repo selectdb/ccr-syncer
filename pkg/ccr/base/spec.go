@@ -1616,14 +1616,15 @@ func ReplaceAndEscapeComment(input string) string {
 
 func FilterUnsupportedProperties(modifyProperty *record.ModifyTableProperty) map[string]string {
 	invalidProps := map[string]struct{}{
-		"binlog.enable":            {},
-		"light_schema_change":      {},
-		"dynamic_partition.enable": {},
-		"colocate_with":            {},
-		"storage_policy":           {},
-		"replication_num":          {},
-		"replication_allocation":   {},
-		"is_being_synced":          {},
+		"binlog.enable":                    {},
+		"light_schema_change":              {},
+		"dynamic_partition.enable":         {},
+		"colocate_with":                    {},
+		"storage_policy":                   {},
+		"replication_num":                  {},
+		"replication_allocation":           {},
+		"is_being_synced":                  {},
+		"dynamic_partition.storage_policy": {},
 	}
 	validProperties := make(map[string]string)
 	for prop, value := range modifyProperty.Properties {
