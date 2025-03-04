@@ -37,7 +37,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "eedp1iu2cufwgc"
+                "uid": "${datasource}"
             },
             "fieldConfig": {
                 "defaults": {
@@ -86,11 +86,19 @@
             "pluginVersion": "11.5.2",
             "targets": [
                 {
-                    "editorMode": "code",
-                    "expr": "ccr_job_running_total",
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "disableTextWrap": false,
+                    "editorMode": "builder",
+                    "expr": "ccr_job_running_total{instance=\"$instance\"}",
+                    "fullMetaSearch": false,
+                    "includeNullMetadata": true,
                     "legendFormat": "__auto",
                     "range": true,
-                    "refId": "A"
+                    "refId": "A",
+                    "useBackend": false
                 }
             ],
             "title": "Running",
@@ -99,7 +107,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "eedp1iu2cufwgc"
+                "uid": "${datasource}"
             },
             "fieldConfig": {
                 "defaults": {
@@ -179,11 +187,19 @@
             "pluginVersion": "11.5.2",
             "targets": [
                 {
-                    "editorMode": "code",
-                    "expr": "ccr_error_total",
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "disableTextWrap": false,
+                    "editorMode": "builder",
+                    "expr": "ccr_error_total{instance=\"$instance\"}",
+                    "fullMetaSearch": false,
+                    "includeNullMetadata": true,
                     "legendFormat": "__auto",
                     "range": true,
-                    "refId": "A"
+                    "refId": "A",
+                    "useBackend": false
                 }
             ],
             "title": "Total Error",
@@ -192,7 +208,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "eedp1iu2cufwgc"
+                "uid": "${datasource}"
             },
             "fieldConfig": {
                 "defaults": {
@@ -254,63 +270,87 @@
             "pluginVersion": "11.5.2",
             "targets": [
                 {
-                    "editorMode": "code",
-                    "expr": "ccr_job_running_sync_state",
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "disableTextWrap": false,
+                    "editorMode": "builder",
+                    "expr": "ccr_job_running_sync_state{instance=\"$instance\"}",
+                    "fullMetaSearch": false,
+                    "includeNullMetadata": true,
                     "legendFormat": "SyncState",
                     "range": true,
-                    "refId": "A"
+                    "refId": "A",
+                    "useBackend": false
                 },
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "eedp1iu2cufwgc"
+                        "uid": "${datasource}"
                     },
-                    "editorMode": "code",
-                    "expr": "ccr_job_running_sub_sync_state",
+                    "disableTextWrap": false,
+                    "editorMode": "builder",
+                    "expr": "ccr_job_running_sub_sync_state{instance=\"$instance\"}",
+                    "fullMetaSearch": false,
                     "hide": false,
+                    "includeNullMetadata": true,
                     "instant": false,
                     "legendFormat": "__auto",
                     "range": true,
-                    "refId": "B"
+                    "refId": "B",
+                    "useBackend": false
                 },
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "eedp1iu2cufwgc"
+                        "uid": "${datasource}"
                     },
-                    "editorMode": "code",
-                    "expr": "ccr_job_running_lag_total",
+                    "disableTextWrap": false,
+                    "editorMode": "builder",
+                    "expr": "ccr_job_running_lag_total{instance=\"$instance\"}",
+                    "fullMetaSearch": false,
                     "hide": false,
+                    "includeNullMetadata": true,
                     "instant": false,
                     "legendFormat": "__auto",
                     "range": true,
-                    "refId": "C"
+                    "refId": "C",
+                    "useBackend": false
                 },
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "eedp1iu2cufwgc"
+                        "uid": "${datasource}"
                     },
-                    "editorMode": "code",
-                    "expr": "ccr_job_running_lag_seconds",
+                    "disableTextWrap": false,
+                    "editorMode": "builder",
+                    "expr": "ccr_job_running_lag_seconds{instance=\"$instance\"}",
+                    "fullMetaSearch": false,
                     "hide": false,
+                    "includeNullMetadata": true,
                     "instant": false,
                     "legendFormat": "__auto",
                     "range": true,
-                    "refId": "D"
+                    "refId": "D",
+                    "useBackend": false
                 },
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "eedp1iu2cufwgc"
+                        "uid": "${datasource}"
                     },
-                    "editorMode": "code",
-                    "expr": "ccr_binlog_commit_seq",
+                    "disableTextWrap": false,
+                    "editorMode": "builder",
+                    "expr": "ccr_binlog_commit_seq{instance=\"$instance\"}",
+                    "fullMetaSearch": false,
                     "hide": false,
+                    "includeNullMetadata": true,
                     "instant": false,
                     "legendFormat": "__auto",
                     "range": true,
-                    "refId": "E"
+                    "refId": "E",
+                    "useBackend": false
                 }
             ],
             "title": "Job State",
@@ -409,7 +449,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "eedp1iu2cufwgc"
+                        "uid": "${datasource}"
                     },
                     "fieldConfig": {
                         "defaults": {
@@ -489,11 +529,19 @@
                     "pluginVersion": "11.5.2",
                     "targets": [
                         {
-                            "editorMode": "code",
-                            "expr": "rate(ccr_handle_binlog_total[1m])",
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "builder",
+                            "expr": "rate(ccr_handle_binlog_total{instance=\"$instance\"}[1m])",
+                            "fullMetaSearch": false,
+                            "includeNullMetadata": true,
                             "legendFormat": "__auto",
                             "range": true,
-                            "refId": "A"
+                            "refId": "A",
+                            "useBackend": false
                         }
                     ],
                     "title": "Handle binlog QPS",
@@ -502,7 +550,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "eedp1iu2cufwgc"
+                        "uid": "${datasource}"
                     },
                     "fieldConfig": {
                         "defaults": {
@@ -583,27 +631,242 @@
                     "pluginVersion": "11.5.2",
                     "targets": [
                         {
-                            "editorMode": "code",
-                            "expr": "sum by(name) (rate(ccr_handle_binlog_duration_seconds_sum[1m])) / \r\nsum by(name) (rate(ccr_handle_binlog_duration_seconds_count[1m]))",
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "builder",
+                            "expr": "sum by(name) (rate(ccr_handle_binlog_duration_seconds_sum{instance=\"$instance\"}[1m])) / sum by(name) (rate(ccr_handle_binlog_duration_seconds_count{instance=\"$instance\"}[1m]))",
+                            "fullMetaSearch": false,
+                            "includeNullMetadata": true,
                             "legendFormat": "AVG {{name}}",
                             "range": true,
-                            "refId": "A"
+                            "refId": "A",
+                            "useBackend": false
                         },
                         {
                             "datasource": {
                                 "type": "prometheus",
-                                "uid": "eedp1iu2cufwgc"
+                                "uid": "${datasource}"
                             },
-                            "editorMode": "code",
-                            "expr": "histogram_quantile(0.99, sum by(le, name) (rate(ccr_handle_binlog_duration_seconds_bucket[1m])))",
+                            "disableTextWrap": false,
+                            "editorMode": "builder",
+                            "expr": "histogram_quantile(0.99, sum by(le, name) (rate(ccr_handle_binlog_duration_seconds_bucket{instance=\"$instance\"}[1m])))",
+                            "fullMetaSearch": false,
                             "hide": false,
+                            "includeNullMetadata": true,
                             "instant": false,
                             "legendFormat": "P99 {{name}}",
                             "range": true,
-                            "refId": "B"
+                            "refId": "B",
+                            "useBackend": false
                         }
                     ],
                     "title": "Handle binlog Latency",
+                    "type": "timeseries"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "fieldConfig": {
+                        "defaults": {
+                            "color": {
+                                "mode": "palette-classic"
+                            },
+                            "custom": {
+                                "axisBorderShow": false,
+                                "axisCenteredZero": false,
+                                "axisColorMode": "text",
+                                "axisLabel": "",
+                                "axisPlacement": "auto",
+                                "barAlignment": 0,
+                                "barWidthFactor": 0.6,
+                                "drawStyle": "line",
+                                "fillOpacity": 0,
+                                "gradientMode": "none",
+                                "hideFrom": {
+                                    "legend": false,
+                                    "tooltip": false,
+                                    "viz": false
+                                },
+                                "insertNulls": false,
+                                "lineInterpolation": "linear",
+                                "lineWidth": 1,
+                                "pointSize": 5,
+                                "scaleDistribution": {
+                                    "type": "linear"
+                                },
+                                "showPoints": "auto",
+                                "spanNulls": false,
+                                "stacking": {
+                                    "group": "A",
+                                    "mode": "none"
+                                },
+                                "thresholdsStyle": {
+                                    "mode": "off"
+                                }
+                            },
+                            "mappings": [],
+                            "thresholds": {
+                                "mode": "absolute",
+                                "steps": [
+                                    {
+                                        "color": "green",
+                                        "value": null
+                                    },
+                                    {
+                                        "color": "red",
+                                        "value": 80
+                                    }
+                                ]
+                            }
+                        },
+                        "overrides": []
+                    },
+                    "gridPos": {
+                        "h": 8,
+                        "w": 12,
+                        "x": 0,
+                        "y": 74
+                    },
+                    "id": 24,
+                    "options": {
+                        "legend": {
+                            "calcs": [],
+                            "displayMode": "list",
+                            "placement": "bottom",
+                            "showLegend": true
+                        },
+                        "tooltip": {
+                            "hideZeros": false,
+                            "mode": "single",
+                            "sort": "none"
+                        }
+                    },
+                    "pluginVersion": "11.5.2",
+                    "targets": [
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "builder",
+                            "expr": "ccr_job_running_lag_total{instance=\"$instance\"}",
+                            "fullMetaSearch": false,
+                            "includeNullMetadata": true,
+                            "legendFormat": "__auto",
+                            "range": true,
+                            "refId": "A",
+                            "useBackend": false
+                        }
+                    ],
+                    "title": "Binlog Lag",
+                    "type": "timeseries"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "fieldConfig": {
+                        "defaults": {
+                            "color": {
+                                "mode": "palette-classic"
+                            },
+                            "custom": {
+                                "axisBorderShow": false,
+                                "axisCenteredZero": false,
+                                "axisColorMode": "text",
+                                "axisLabel": "",
+                                "axisPlacement": "auto",
+                                "barAlignment": 0,
+                                "barWidthFactor": 0.6,
+                                "drawStyle": "line",
+                                "fillOpacity": 0,
+                                "gradientMode": "none",
+                                "hideFrom": {
+                                    "legend": false,
+                                    "tooltip": false,
+                                    "viz": false
+                                },
+                                "insertNulls": false,
+                                "lineInterpolation": "linear",
+                                "lineWidth": 1,
+                                "pointSize": 5,
+                                "scaleDistribution": {
+                                    "type": "linear"
+                                },
+                                "showPoints": "auto",
+                                "spanNulls": false,
+                                "stacking": {
+                                    "group": "A",
+                                    "mode": "none"
+                                },
+                                "thresholdsStyle": {
+                                    "mode": "off"
+                                }
+                            },
+                            "mappings": [],
+                            "thresholds": {
+                                "mode": "absolute",
+                                "steps": [
+                                    {
+                                        "color": "green",
+                                        "value": null
+                                    },
+                                    {
+                                        "color": "red",
+                                        "value": 80
+                                    }
+                                ]
+                            },
+                            "unit": "dtdurations"
+                        },
+                        "overrides": []
+                    },
+                    "gridPos": {
+                        "h": 8,
+                        "w": 12,
+                        "x": 12,
+                        "y": 74
+                    },
+                    "id": 25,
+                    "options": {
+                        "legend": {
+                            "calcs": [],
+                            "displayMode": "list",
+                            "placement": "bottom",
+                            "showLegend": true
+                        },
+                        "tooltip": {
+                            "hideZeros": false,
+                            "mode": "single",
+                            "sort": "none"
+                        }
+                    },
+                    "pluginVersion": "11.5.2",
+                    "targets": [
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "builder",
+                            "expr": "ccr_job_running_lag_seconds{instance=\"$instance\"}",
+                            "fullMetaSearch": false,
+                            "includeNullMetadata": true,
+                            "legendFormat": "__auto",
+                            "range": true,
+                            "refId": "A",
+                            "useBackend": false
+                        }
+                    ],
+                    "title": "Binlog Lag In Seconds",
                     "type": "timeseries"
                 }
             ],
@@ -623,7 +886,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "eedp1iu2cufwgc"
+                        "uid": "${datasource}"
                     },
                     "fieldConfig": {
                         "defaults": {
@@ -703,11 +966,19 @@
                     "pluginVersion": "11.5.2",
                     "targets": [
                         {
-                            "editorMode": "code",
-                            "expr": "rate(ccr_job_progress_persist_total[1m])",
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "builder",
+                            "expr": "rate(ccr_job_progress_persist_total{instance=\"$instance\"}[1m])",
+                            "fullMetaSearch": false,
+                            "includeNullMetadata": true,
                             "legendFormat": "__auto",
                             "range": true,
-                            "refId": "A"
+                            "refId": "A",
+                            "useBackend": false
                         }
                     ],
                     "title": "Save Job Progress QPS",
@@ -716,7 +987,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "eedp1iu2cufwgc"
+                        "uid": "${datasource}"
                     },
                     "fieldConfig": {
                         "defaults": {
@@ -797,24 +1068,36 @@
                     "pluginVersion": "11.5.2",
                     "targets": [
                         {
-                            "editorMode": "code",
-                            "expr": "sum by(name) (rate(ccr_job_progress_persist_duration_seconds_sum[1m])) / \r\nsum by(name) (rate(ccr_job_progress_persist_duration_seconds_count[1m]))",
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "builder",
+                            "expr": "sum by(name) (rate(ccr_job_progress_persist_duration_seconds_sum{instance=\"$instance\"}[1m])) / sum by(name) (rate(ccr_job_progress_persist_duration_seconds_count{instance=\"$instance\"}[1m]))",
+                            "fullMetaSearch": false,
+                            "includeNullMetadata": true,
                             "legendFormat": "AVG {{name}}",
                             "range": true,
-                            "refId": "A"
+                            "refId": "A",
+                            "useBackend": false
                         },
                         {
                             "datasource": {
                                 "type": "prometheus",
-                                "uid": "eedp1iu2cufwgc"
+                                "uid": "${datasource}"
                             },
-                            "editorMode": "code",
-                            "expr": "histogram_quantile(0.99, sum by(le, name) (rate(ccr_job_progress_persist_duration_seconds_bucket[1m])))",
+                            "disableTextWrap": false,
+                            "editorMode": "builder",
+                            "expr": "histogram_quantile(0.99, sum by(le, name) (rate(ccr_job_progress_persist_duration_seconds_bucket{instance=\"$instance\"}[1m])))",
+                            "fullMetaSearch": false,
                             "hide": false,
+                            "includeNullMetadata": true,
                             "instant": false,
                             "legendFormat": "P99 {{name}}",
                             "range": true,
-                            "refId": "B"
+                            "refId": "B",
+                            "useBackend": false
                         }
                     ],
                     "title": "Save Job Progress Latency",
@@ -823,7 +1106,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "eedp1iu2cufwgc"
+                        "uid": "${datasource}"
                     },
                     "fieldConfig": {
                         "defaults": {
@@ -903,11 +1186,19 @@
                     "pluginVersion": "11.5.2",
                     "targets": [
                         {
-                            "editorMode": "code",
-                            "expr": "sum by(host)(rate(ccr_sql_exec_total[1m]))",
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "builder",
+                            "expr": "sum by(host) (rate(ccr_sql_exec_total{instance=\"$instance\"}[1m]))",
+                            "fullMetaSearch": false,
+                            "includeNullMetadata": true,
                             "legendFormat": "__auto",
                             "range": true,
-                            "refId": "A"
+                            "refId": "A",
+                            "useBackend": false
                         }
                     ],
                     "title": "SQL EXEC QPS",
@@ -916,7 +1207,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "eedp1iu2cufwgc"
+                        "uid": "${datasource}"
                     },
                     "fieldConfig": {
                         "defaults": {
@@ -997,24 +1288,36 @@
                     "pluginVersion": "11.5.2",
                     "targets": [
                         {
-                            "editorMode": "code",
-                            "expr": "sum by(host) (rate(ccr_sql_exec_duration_seconds_sum[1m])) / \r\nsum by(host) (rate(ccr_sql_exec_duration_seconds_count[1m]))",
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "builder",
+                            "expr": "sum by(host) (rate(ccr_sql_exec_duration_seconds_sum{instance=\"$instance\"}[1m])) / sum by(host) (rate(ccr_sql_exec_duration_seconds_count{instance=\"$instance\"}[1m]))",
+                            "fullMetaSearch": false,
+                            "includeNullMetadata": true,
                             "legendFormat": "AVG {{host}}",
                             "range": true,
-                            "refId": "A"
+                            "refId": "A",
+                            "useBackend": false
                         },
                         {
                             "datasource": {
                                 "type": "prometheus",
-                                "uid": "eedp1iu2cufwgc"
+                                "uid": "${datasource}"
                             },
-                            "editorMode": "code",
-                            "expr": "histogram_quantile(0.99, sum by(le, host) (rate(ccr_sql_exec_duration_seconds_bucket[1m])))",
+                            "disableTextWrap": false,
+                            "editorMode": "builder",
+                            "expr": "histogram_quantile(0.99, sum by(le, host) (rate(ccr_sql_exec_duration_seconds_bucket{instance=\"$instance\"}[1m])))",
+                            "fullMetaSearch": false,
                             "hide": false,
+                            "includeNullMetadata": true,
                             "instant": false,
                             "legendFormat": "P99 {{host}}",
                             "range": true,
-                            "refId": "B"
+                            "refId": "B",
+                            "useBackend": false
                         }
                     ],
                     "title": "SQL EXEC Latency",
@@ -1023,7 +1326,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "eedp1iu2cufwgc"
+                        "uid": "${datasource}"
                     },
                     "fieldConfig": {
                         "defaults": {
@@ -1103,9 +1406,13 @@
                     "pluginVersion": "11.5.2",
                     "targets": [
                         {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
                             "disableTextWrap": false,
-                            "editorMode": "code",
-                            "expr": "rate(ccr_fe_rpc_total{method=\"BeginTransaction\"}[1m])",
+                            "editorMode": "builder",
+                            "expr": "rate(ccr_fe_rpc_total{method=\"BeginTransaction\", instance=\"$instance\"}[1m])",
                             "fullMetaSearch": false,
                             "includeNullMetadata": true,
                             "legendFormat": "__auto",
@@ -1116,15 +1423,19 @@
                         {
                             "datasource": {
                                 "type": "prometheus",
-                                "uid": "eedp1iu2cufwgc"
+                                "uid": "${datasource}"
                             },
-                            "editorMode": "code",
-                            "expr": "rate(ccr_fe_rpc_total{method=\"CommitTransaction\"}[1m])",
+                            "disableTextWrap": false,
+                            "editorMode": "builder",
+                            "expr": "rate(ccr_fe_rpc_total{method=\"CommitTransaction\", instance=\"$instance\"}[1m])",
+                            "fullMetaSearch": false,
                             "hide": false,
+                            "includeNullMetadata": true,
                             "instant": false,
                             "legendFormat": "__auto",
                             "range": true,
-                            "refId": "B"
+                            "refId": "B",
+                            "useBackend": false
                         }
                     ],
                     "title": "FE RPC QPS - Txn",
@@ -1133,7 +1444,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "eedp1iu2cufwgc"
+                        "uid": "${datasource}"
                     },
                     "fieldConfig": {
                         "defaults": {
@@ -1214,9 +1525,13 @@
                     "pluginVersion": "11.5.2",
                     "targets": [
                         {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
                             "disableTextWrap": false,
-                            "editorMode": "code",
-                            "expr": "histogram_quantile(0.99, sum by(le, method, addr) (rate(ccr_fe_rpc_duration_seconds_bucket{method=\"BeginTransaction\"}[1m])))",
+                            "editorMode": "builder",
+                            "expr": "histogram_quantile(0.99, sum by(le, method, addr) (rate(ccr_fe_rpc_duration_seconds_bucket{method=\"BeginTransaction\", instance=\"$instance\"}[1m])))",
                             "fullMetaSearch": false,
                             "hide": false,
                             "includeNullMetadata": true,
@@ -1228,24 +1543,28 @@
                         {
                             "datasource": {
                                 "type": "prometheus",
-                                "uid": "eedp1iu2cufwgc"
+                                "uid": "${datasource}"
                             },
-                            "editorMode": "code",
-                            "expr": "histogram_quantile(0.99, sum(rate(ccr_fe_rpc_duration_seconds_bucket{method=\"CommitTransaction\"}[1m])) by (le, method, addr))",
+                            "disableTextWrap": false,
+                            "editorMode": "builder",
+                            "expr": "histogram_quantile(0.99, sum by(le, method, addr) (rate(ccr_fe_rpc_duration_seconds_bucket{method=\"CommitTransaction\", instance=\"$instance\"}[1m])))",
+                            "fullMetaSearch": false,
                             "hide": false,
+                            "includeNullMetadata": true,
                             "instant": false,
                             "legendFormat": "P99 {{method}} - {{addr}}",
                             "range": true,
-                            "refId": "C"
+                            "refId": "C",
+                            "useBackend": false
                         },
                         {
                             "datasource": {
                                 "type": "prometheus",
-                                "uid": "eedp1iu2cufwgc"
+                                "uid": "${datasource}"
                             },
                             "disableTextWrap": false,
-                            "editorMode": "code",
-                            "expr": "(sum by(method, addr)(rate(ccr_fe_rpc_duration_seconds_sum{method=\"BeginTransaction\"}[1m]))) / (sum by(method, addr)(rate(ccr_fe_rpc_duration_seconds_count{method=\"BeginTransaction\"}[1m])))",
+                            "editorMode": "builder",
+                            "expr": "sum by(method, addr) (rate(ccr_fe_rpc_duration_seconds_sum{method=\"BeginTransaction\", instance=\"$instance\"}[1m])) / sum by(method, addr) (rate(ccr_fe_rpc_duration_seconds_count{method=\"BeginTransaction\", instance=\"$instance\"}[1m]))",
                             "fullMetaSearch": false,
                             "hide": false,
                             "includeNullMetadata": true,
@@ -1258,15 +1577,19 @@
                         {
                             "datasource": {
                                 "type": "prometheus",
-                                "uid": "eedp1iu2cufwgc"
+                                "uid": "${datasource}"
                             },
+                            "disableTextWrap": false,
                             "editorMode": "code",
-                            "expr": "(sum by(method, addr)(rate(ccr_fe_rpc_duration_seconds_sum{method=\"CommitTransaction\"}[1m]))) / (sum by(method, addr)(rate(ccr_fe_rpc_duration_seconds_count{method=\"CommitTransaction\"}[1m]))) ",
+                            "expr": "sum by(method, addr) (rate(ccr_fe_rpc_duration_seconds_sum{method=\"CommitTransaction\", instance=\"$instance\"}[1m])) / sum by(method, addr) (rate(ccr_fe_rpc_duration_seconds_count{method=\"CommitTransaction\", instance=\"$instance\"}[1m]))",
+                            "fullMetaSearch": false,
                             "hide": false,
+                            "includeNullMetadata": true,
                             "instant": false,
                             "legendFormat": "AVG {{method}} - {{addr}}",
                             "range": true,
-                            "refId": "D"
+                            "refId": "D",
+                            "useBackend": false
                         }
                     ],
                     "title": "FE RPC Latency - Txn",
@@ -1275,7 +1598,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "eedp1iu2cufwgc"
+                        "uid": "${datasource}"
                     },
                     "fieldConfig": {
                         "defaults": {
@@ -1354,9 +1677,13 @@
                     "pluginVersion": "11.5.2",
                     "targets": [
                         {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
                             "disableTextWrap": false,
-                            "editorMode": "code",
-                            "expr": "rate(ccr_fe_rpc_total{method=\"GetBinlog\"}[1m])",
+                            "editorMode": "builder",
+                            "expr": "rate(ccr_fe_rpc_total{method=\"GetBinlog\", instance=\"$instance\"}[1m])",
                             "fullMetaSearch": false,
                             "includeNullMetadata": true,
                             "legendFormat": "__auto",
@@ -1371,7 +1698,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "eedp1iu2cufwgc"
+                        "uid": "${datasource}"
                     },
                     "fieldConfig": {
                         "defaults": {
@@ -1451,9 +1778,13 @@
                     "pluginVersion": "11.5.2",
                     "targets": [
                         {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
                             "disableTextWrap": false,
-                            "editorMode": "code",
-                            "expr": "histogram_quantile(0.99, sum by(le, method, addr) (rate(ccr_fe_rpc_duration_seconds_bucket{method=\"GetBinlog\"}[1m])))",
+                            "editorMode": "builder",
+                            "expr": "histogram_quantile(0.99, sum by(le, method, addr) (rate(ccr_fe_rpc_duration_seconds_bucket{method=\"GetBinlog\", instance=\"$instance\"}[1m])))",
                             "fullMetaSearch": false,
                             "hide": false,
                             "includeNullMetadata": true,
@@ -1465,11 +1796,11 @@
                         {
                             "datasource": {
                                 "type": "prometheus",
-                                "uid": "eedp1iu2cufwgc"
+                                "uid": "${datasource}"
                             },
                             "disableTextWrap": false,
-                            "editorMode": "code",
-                            "expr": "(sum by(method, addr)(rate(ccr_fe_rpc_duration_seconds_sum{method=\"GetBinlog\"}[1m]))) / (sum by(method, addr)(rate(ccr_fe_rpc_duration_seconds_count{method=\"GetBinlog\"}[1m])))",
+                            "editorMode": "builder",
+                            "expr": "sum by(method, addr) (rate(ccr_fe_rpc_duration_seconds_sum{method=\"GetBinlog\", instance=\"$instance\"}[1m])) / sum by(method, addr) (rate(ccr_fe_rpc_duration_seconds_count{method=\"GetBinlog\", instance=\"$instance\"}[1m]))",
                             "fullMetaSearch": false,
                             "hide": false,
                             "includeNullMetadata": true,
@@ -1486,7 +1817,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "eedp1iu2cufwgc"
+                        "uid": "${datasource}"
                     },
                     "fieldConfig": {
                         "defaults": {
@@ -1565,9 +1896,13 @@
                     "pluginVersion": "11.5.2",
                     "targets": [
                         {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
                             "disableTextWrap": false,
-                            "editorMode": "code",
-                            "expr": "rate(ccr_be_rpc_total{method=\"IngestBinlog\"}[1m])",
+                            "editorMode": "builder",
+                            "expr": "rate(ccr_be_rpc_total{method=\"IngestBinlog\", instance=\"$instance\"}[1m])",
                             "fullMetaSearch": false,
                             "includeNullMetadata": true,
                             "legendFormat": "__auto",
@@ -1582,7 +1917,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "eedp1iu2cufwgc"
+                        "uid": "${datasource}"
                     },
                     "fieldConfig": {
                         "defaults": {
@@ -1662,9 +1997,13 @@
                     "pluginVersion": "11.5.2",
                     "targets": [
                         {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
                             "disableTextWrap": false,
-                            "editorMode": "code",
-                            "expr": "sum by(method, addr)(rate(ccr_be_rpc_duration_seconds_sum[1m])) / sum by (method, addr)(rate(ccr_be_rpc_duration_seconds_count[1m]))",
+                            "editorMode": "builder",
+                            "expr": "sum by(method, addr) (rate(ccr_be_rpc_duration_seconds_sum{instance=\"$instance\"}[1m])) / sum by(method, addr) (rate(ccr_be_rpc_duration_seconds_count{instance=\"$instance\"}[1m]))",
                             "fullMetaSearch": false,
                             "includeNullMetadata": true,
                             "legendFormat": "AVG {{method}} - {{addr}}",
@@ -1675,11 +2014,11 @@
                         {
                             "datasource": {
                                 "type": "prometheus",
-                                "uid": "eedp1iu2cufwgc"
+                                "uid": "${datasource}"
                             },
                             "disableTextWrap": false,
-                            "editorMode": "code",
-                            "expr": "sum by(method, addr)(rate(ccr_be_rpc_duration_seconds_bucket[1m])) / sum by (method, addr)(rate(ccr_be_rpc_duration_seconds_count[1m]))",
+                            "editorMode": "builder",
+                            "expr": "sum by(method, addr) (rate(ccr_be_rpc_duration_seconds_bucket[1m])) / sum by(method, addr) (rate(ccr_be_rpc_duration_seconds_count{instance=\"$instance\"}[1m]))",
                             "fullMetaSearch": false,
                             "hide": false,
                             "includeNullMetadata": true,
@@ -1709,7 +2048,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "eedp1iu2cufwgc"
+                        "uid": "${datasource}"
                     },
                     "fieldConfig": {
                         "defaults": {
@@ -1792,11 +2131,11 @@
                         {
                             "datasource": {
                                 "type": "prometheus",
-                                "uid": "eedp1iu2cufwgc"
+                                "uid": "${datasource}"
                             },
                             "disableTextWrap": false,
                             "editorMode": "builder",
-                            "expr": "go_memstats_heap_alloc_bytes",
+                            "expr": "go_memstats_heap_alloc_bytes{instance=\"$instance\"}",
                             "fullMetaSearch": false,
                             "includeNullMetadata": true,
                             "legendFormat": "__auto",
@@ -1807,11 +2146,11 @@
                         {
                             "datasource": {
                                 "type": "prometheus",
-                                "uid": "eedp1iu2cufwgc"
+                                "uid": "${datasource}"
                             },
                             "disableTextWrap": false,
                             "editorMode": "builder",
-                            "expr": "go_memstats_heap_inuse_bytes",
+                            "expr": "go_memstats_heap_inuse_bytes{instance=\"$instance\"}",
                             "fullMetaSearch": false,
                             "hide": false,
                             "includeNullMetadata": true,
@@ -1824,11 +2163,11 @@
                         {
                             "datasource": {
                                 "type": "prometheus",
-                                "uid": "eedp1iu2cufwgc"
+                                "uid": "${datasource}"
                             },
                             "disableTextWrap": false,
                             "editorMode": "builder",
-                            "expr": "go_memstats_heap_sys_bytes",
+                            "expr": "go_memstats_heap_sys_bytes{instance=\"$instance\"}",
                             "fullMetaSearch": false,
                             "hide": false,
                             "includeNullMetadata": true,
@@ -1841,11 +2180,11 @@
                         {
                             "datasource": {
                                 "type": "prometheus",
-                                "uid": "eedp1iu2cufwgc"
+                                "uid": "${datasource}"
                             },
                             "disableTextWrap": false,
                             "editorMode": "builder",
-                            "expr": "process_resident_memory_bytes",
+                            "expr": "process_resident_memory_bytes{instance=\"$instance\"}",
                             "fullMetaSearch": false,
                             "hide": false,
                             "includeNullMetadata": true,
@@ -1862,7 +2201,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "eedp1iu2cufwgc"
+                        "uid": "${datasource}"
                     },
                     "fieldConfig": {
                         "defaults": {
@@ -1942,9 +2281,13 @@
                     "pluginVersion": "11.5.2",
                     "targets": [
                         {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
                             "disableTextWrap": false,
-                            "editorMode": "code",
-                            "expr": "rate(process_cpu_seconds_total[1m])",
+                            "editorMode": "builder",
+                            "expr": "rate(process_cpu_seconds_total{instance=\"$instance\"}[1m])",
                             "fullMetaSearch": false,
                             "includeNullMetadata": true,
                             "legendFormat": "__auto",
@@ -1966,7 +2309,49 @@
     "schemaVersion": 40,
     "tags": [],
     "templating": {
-        "list": []
+        "list": [
+            {
+                "current": {
+                    "text": "prometheus",
+                    "value": "eedp1iu2cufwgc"
+                },
+                "label": "Datasource",
+                "name": "datasource",
+                "options": [],
+                "query": "prometheus",
+                "refresh": 1,
+                "regex": "",
+                "type": "datasource"
+            },
+            {
+                "allowCustomValue": false,
+                "current": {
+                    "text": [
+                        "localhost:9190"
+                    ],
+                    "value": [
+                        "localhost:9190"
+                    ]
+                },
+                "datasource": {
+                    "type": "prometheus",
+                    "uid": "${datasource}"
+                },
+                "definition": "label_values(ccr_job_running_total,instance)",
+                "includeAll": false,
+                "label": "Instance",
+                "name": "instance",
+                "options": [],
+                "query": {
+                    "qryType": 1,
+                    "query": "label_values(ccr_job_running_total,instance)",
+                    "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                },
+                "refresh": 1,
+                "regex": "",
+                "type": "query"
+            }
+        ]
     },
     "time": {
         "from": "now-30m",
@@ -1976,6 +2361,6 @@
     "timezone": "browser",
     "title": "CCR Dashboard",
     "uid": "dedp1q59coxkwd",
-    "version": 82,
+    "version": 117,
     "weekStart": ""
 }
