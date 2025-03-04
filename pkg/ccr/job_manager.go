@@ -62,8 +62,7 @@ func (jm *JobManager) AddJob(job *Job) error {
 	defer jm.lock.Unlock()
 
 	// Step 0: check job name
-	isLabelMatch := CheckLabelRegex(job.Name)
-	if isLabelMatch == false {
+	if !CheckLabelRegex(job.Name) {
 		return xerror.XWrapf(errJobName, "job: %s", job.Name)
 	}
 
