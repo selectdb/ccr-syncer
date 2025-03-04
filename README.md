@@ -99,6 +99,10 @@ Syncer从源集群批量获取库/表的 binlog，并根据 binlog 中的信息�
 
 在生产环境中使用前，请参考[使用须知](doc/notes.md) 调整源和目标集群配置。
 
+## 监控
+
+Syncer 通过 `/metrics` 接口导出符合 prometheus 协议的 metrics 指标。用户可以在 prometheus 中新增 target，并在 grafana 中展示抓取的指标。Syncer 提供了一份基础的 grafana dashboard：[CCR Dashboard](./dashboard/ccr_dashboard.json)，可以直接导入到 grafana 中使用。
+
 ## 功能详情
 
 Doris 功能繁多，syncer 目前只支持了其中的一部分，具体细节可以参考[功能详情](https://doris.apache.org/zh-CN/docs/dev/admin-manual/data-admin/ccr/feature)。
