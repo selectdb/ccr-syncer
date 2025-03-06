@@ -15,3 +15,14 @@
 // specific language governing permissions and limitations
 // under the License
 package record
+
+type Dummy struct {
+}
+
+func (dummy *Dummy) Deserialize(data string) error {
+	return nil
+}
+
+func (dummy *Dummy) GetTableId() int64 {
+	return -1
+}
