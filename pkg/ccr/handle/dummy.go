@@ -14,10 +14,7 @@ func init() {
 }
 
 type DummyHandle struct {
-}
-
-func (h *DummyHandle) IsIdempotent() bool {
-	return false
+	IdempotentJobHandle[*record.AddPartition]
 }
 
 func (h *DummyHandle) IsBinlogCommitted(job *ccr.Job, record *record.Dummy) (bool, error) {
