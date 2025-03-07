@@ -246,6 +246,36 @@ class Helper {
         }
     }
 
+    // lag info
+    // "lag" "first_commit_seq" "last_commit_seq" "first_binlog_timestamp" "last_binlog_timestamp" "time_interval_secs"
+    Object get_job_lag(tableName = "") {
+        def request_body = get_ccr_body(tableName)
+        def get_job_lag_url = { check_func ->
+            suite.httpTest {
+                uri "/get_lag"
+                endpoint syncerAddress
+                body request_body
+                op "post"
+                check check_func
+            }
+        }
+
+        def result = null
+        get_job_lag_url.call() { code, body ->
+            if (!"${code}".toString().equals("200")) {
+                throw "request failed, code: ${code}, body: ${body}"
+            }
+            def jsonSlurper = new groovy.json.JsonSlurper()
+            def object = jsonSlurper.parseText "${body}"
+            if (!object.success) {
+                throw "request failed, error msg: ${object.error_msg}"
+            }
+            result = object
+            logger.info("job lag info: ${object}")
+        }
+        return result
+    }
+
     void enableDbBinlog() {
         suite.sql """
             ALTER DATABASE ${context.dbName} SET properties ("binlog.enable" = "true")
