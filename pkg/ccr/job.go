@@ -555,7 +555,7 @@ func (j *Job) partialSync() error {
 				log.Infof("%s", info)
 				j.Src.TableId = backupObject.Id
 			}
-			return j.newSnapshot(j.progress.CommitSeq, info)
+			return j.NewSnapshot(j.progress.CommitSeq, info)
 		} else if commitSeq, ok := tableCommitSeqMap[backupObject.Id]; !ok {
 			return xerror.Errorf(xerror.Normal, "commit seq not found, table id %d, table name: %s", backupObject.Id, table)
 		} else {
@@ -816,7 +816,7 @@ func (j *Job) fullSync() error {
 	switch j.progress.SubSyncState {
 	case Done:
 		log.Infof("fullsync status: done")
-		if err := j.newSnapshot(j.progress.CommitSeq, ""); err != nil {
+		if err := j.NewSnapshot(j.progress.CommitSeq, ""); err != nil {
 			return err
 		}
 
@@ -915,7 +915,7 @@ func (j *Job) fullSync() error {
 				utils.FirstOr(snapshotResp.Status.GetErrorMsgs(), "unknown"),
 				snapshotResp.Status.GetStatusCode())
 			log.Warnf("force full sync, because %s", info)
-			return j.newSnapshot(j.progress.CommitSeq, info)
+			return j.NewSnapshot(j.progress.CommitSeq, info)
 		} else if snapshotResp.Status.GetStatusCode() != tstatus.TStatusCode_OK {
 			err = xerror.Errorf(xerror.FE, "get snapshot failed, status: %v", snapshotResp.Status)
 			return err
@@ -957,7 +957,7 @@ func (j *Job) fullSync() error {
 					j.Src.Table, j.Src.TableId, backupObject.Id)
 				log.Warnf("%s", info)
 				j.Src.TableId = backupObject.Id
-				return j.newSnapshot(j.progress.CommitSeq, info)
+				return j.NewSnapshot(j.progress.CommitSeq, info)
 			} else if _, ok := tableCommitSeqMap[j.Src.TableId]; !ok {
 				return xerror.Errorf(xerror.Normal, "table id %d, commit seq not found", j.Src.TableId)
 			}
@@ -1141,7 +1141,7 @@ func (j *Job) fullSync() error {
 			}
 			info := fmt.Sprintf("the snapshot %s is expired", restoreSnapshotName)
 			log.Infof("force full sync, because %s", info)
-			return j.newSnapshot(j.progress.CommitSeq, info)
+			return j.NewSnapshot(j.progress.CommitSeq, info)
 		}
 
 		for {
@@ -2227,7 +2227,7 @@ func (j *Job) handleDummy(binlog *festruct.TBinlog) error {
 	info := fmt.Sprintf("handle dummy binlog, need full sync. SyncType: %v, seq: %v", j.SyncType, dummyCommitSeq)
 	log.Infof("%s", info)
 
-	return j.newSnapshot(dummyCommitSeq, info)
+	return j.NewSnapshot(dummyCommitSeq, info)
 }
 
 func (j *Job) handleModifyProperty(binlog *festruct.TBinlog) error {
@@ -2381,7 +2381,7 @@ func (j *Job) handleSchemaChange(alterJob *record.AlterJobV2) error {
 
 	info := fmt.Sprintf("handle schema change job, need full sync, Table: %v", alterJob.TableName)
 
-	return j.newSnapshot(j.progress.CommitSeq, info)
+	return j.NewSnapshot(j.progress.CommitSeq, info)
 }
 
 // handleLightningSchemaChange
@@ -2608,7 +2608,7 @@ func (j *Job) handleReplaceTable(binlog *festruct.TBinlog) error {
 			record.OriginTableName, record.OriginTableId, record.NewTableId, record.SwapTable)
 		log.Infof("%s", info)
 		j.Src.TableId = record.NewTableId
-		return j.newSnapshot(commitSeq, info)
+		return j.NewSnapshot(commitSeq, info)
 	}
 
 	if isAsyncMv, err := j.IsMaterializedViewTable(record.OriginTableId); err != nil {
@@ -3245,7 +3245,7 @@ func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
 
 	if binlogType == festruct.TBinlogType_REPLACE_TABLE {
 		// We can't determine whether the binlog is committed or not, trigger full sync.
-		return true, j.newSnapshot(commitSeq, "the REPLACE_TABLE binlog state is unknown")
+		return true, j.NewSnapshot(commitSeq, "the REPLACE_TABLE binlog state is unknown")
 	}
 
 	switch binlogType {
@@ -3457,7 +3457,7 @@ func (j *Job) incrementalSync() error {
 	if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipByFullSync {
 		info := fmt.Sprintf("the user required skipping the binlog, commit seq %d", j.progress.CommitSeq)
 		log.Warnf("force full sync, because %s", info)
-		return j.newSnapshot(j.progress.CommitSeq, info)
+		return j.NewSnapshot(j.progress.CommitSeq, info)
 	}
 
 	// Step 1: get binlog
@@ -3632,7 +3632,7 @@ func (j *Job) handleError(err error) error {
 	if xerr.Category() == xerror.Meta {
 		info := fmt.Sprintf("receive meta category error, make new snapshot, job: %s, err: %v", j.Name, err)
 		log.Warnf("%s", info)
-		_ = j.newSnapshot(j.progress.CommitSeq, info)
+		_ = j.NewSnapshot(j.progress.CommitSeq, info)
 	}
 	return nil
 }
@@ -3677,7 +3677,7 @@ func (j *Job) run() {
 	}
 }
 
-func (j *Job) newSnapshot(commitSeq int64, fullSyncInfo string) error {
+func (j *Job) NewSnapshot(commitSeq int64, fullSyncInfo string) error {
 	log.Infof("new snapshot, commitSeq: %d, prevCommitSeq: %d, prevSyncState: %s, prevSubSyncState: %s",
 		commitSeq, j.progress.PrevCommitSeq, j.progress.SyncState, j.progress.SubSyncState)
 
@@ -3781,7 +3781,7 @@ func (j *Job) Run() error {
 	} else {
 		j.progress = NewJobProgress(j.Name, j.SyncType, j.db)
 		info := fmt.Sprintf("new job, job: %s, sync type: %v", j.Name, j.SyncType)
-		if err := j.newSnapshot(0, info); err != nil {
+		if err := j.NewSnapshot(0, info); err != nil {
 			return err
 		}
 	}
