@@ -1295,7 +1295,7 @@ func (m *Meta) IsIndexDropped(indexId int64) bool {
 	panic("IsIndexDropped is not supported, please use ThriftMeta instead")
 }
 
-func(m *Meta) GetDroppedIndexMap() map[int64]int64 {
+func (m *Meta) GetDroppedIndexMap() map[int64]int64 {
 	panic("GetDroppedIndexMap is not supported, please use ThriftMeta instead")
 }
 
