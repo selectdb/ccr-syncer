@@ -2173,7 +2173,6 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 				dropTable.TableId, binlog.GetCommitSeq())
 			// So that the sync state would convert to DBIncrementalSync,
 			// see handlePartialSyncTableNotFound for details.
-			delete(j.progress.TableCommitSeqMap, dropTable.TableId)
 			return nil
 		}
 	}
@@ -2181,7 +2180,6 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 	if j.isBinlogCommitted(dropTable.TableId, binlog.GetCommitSeq()) {
 		// So that the sync state would convert to DBIncrementalSync,
 		// see handlePartialSyncTableNotFound for details.
-		delete(j.progress.TableCommitSeqMap, dropTable.TableId)
 		return nil
 	}
 
