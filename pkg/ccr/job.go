@@ -159,6 +159,11 @@ type JobExtra struct {
 	SkipBinlog    bool   `json:"skip_binlog,omitempty"`
 	SkipCommitSeq int64  `json:"skip_commit_seq,omitempty"`
 	SkipBy        string `json:"skip_by,omitempty"`
+
+	// The cached binlogs used for missing binlogs,don't need to persist.
+	CachedBinlogs map[int64]*festruct.TBinlog `json:"-"`
+	// The binlog already applied to the dest cluster, don't need to persist.
+	AppliedBinlogs map[int64]struct{} `json:"-"`
 }
 
 type Job struct {
@@ -1452,6 +1457,10 @@ func (j *Job) GetDestNameBySrcId(srcTableId int64) (string, error) {
 }
 
 func (j *Job) isBinlogCommitted(tableId int64, binlogCommitSeq int64) bool {
+	if _, ok := j.Extra.AppliedBinlogs[binlogCommitSeq]; ok {
+		return true
+	}
+
 	// FIXME:
 	// what happend if the PartitionCommitSeqMap is not empty?
 	if j.progress.SyncState == DBTablesIncrementalSync {
@@ -4129,6 +4138,66 @@ func (j *Job) SkipBinlog(skipCommitSeq int64, skipBy string) error {
 
 	log.Infof("skip binlog by %s, commit seq %d, job %s", skipBy, skipCommitSeq, j.Name)
 	return nil
+}
+
+func (j *Job) GetSpecifiedBinlog(commitSeq int64) (*festruct.TBinlog, error) {
+	if binlog, ok := j.Extra.CachedBinlogs[commitSeq]; ok {
+		return binlog, nil
+	}
+
+	// Get binlog from src
+	src := &j.Src
+	srcRpc, err := j.factory.NewFeRpc(src)
+	if err != nil {
+		log.Errorf("new fe rpc failed, src: %v, err: %+v", src, err)
+		return nil, err
+	}
+
+	prevCommitSeq := commitSeq - 1
+	getBinlogResp, err := srcRpc.GetBinlog(src, prevCommitSeq, 1)
+	if err != nil {
+		log.Errorf("get specified binlog %d failed, src: %v, err: %+v", commitSeq, src, err)
+		return nil, err
+	}
+
+	log.Tracef("get specified binlog %d resp: %v", commitSeq, getBinlogResp)
+
+	status := getBinlogResp.GetStatus()
+	switch status.StatusCode {
+	case tstatus.TStatusCode_OK:
+	case tstatus.TStatusCode_BINLOG_TOO_OLD_COMMIT_SEQ:
+	case tstatus.TStatusCode_BINLOG_TOO_NEW_COMMIT_SEQ:
+		return nil, xerror.Errorf(xerror.Normal, "binlog is too new, commit seq: %d", commitSeq)
+	case tstatus.TStatusCode_BINLOG_DISABLE:
+		return nil, xerror.Errorf(xerror.Normal, "binlog is disabled, commit seq: %d", commitSeq)
+	case tstatus.TStatusCode_BINLOG_NOT_FOUND_DB:
+		return nil, xerror.Errorf(xerror.Normal, "can't found db, commit seq: %d", commitSeq)
+	case tstatus.TStatusCode_BINLOG_NOT_FOUND_TABLE:
+		return nil, xerror.Errorf(xerror.Normal, "can't found table, commit seq: %d", commitSeq)
+	default:
+		return nil, xerror.Errorf(xerror.Normal, "invalid binlog status type: %v, msg: %s",
+			status.StatusCode, utils.FirstOr(status.GetErrorMsgs(), ""))
+	}
+
+	binlogs := getBinlogResp.GetBinlogs()
+	if len(binlogs) == 0 {
+		return nil, xerror.Errorf(xerror.Normal, "no binlog, but status code is: %v", status.StatusCode)
+	}
+	if len(binlogs) > 1 {
+		return nil, xerror.Errorf(xerror.Normal, "more than one binlog, but status code is: %v", status.StatusCode)
+	}
+
+	binlog := binlogs[0]
+	if binlog.GetCommitSeq() != commitSeq {
+		return nil, xerror.Errorf(xerror.Normal, "binlog commit seq is not equal to %d, specified commit seq %d, commit seq: %d",
+			commitSeq, commitSeq, binlog.GetCommitSeq())
+	}
+
+	if j.Extra.CachedBinlogs == nil {
+		j.Extra.CachedBinlogs = make(map[int64]*festruct.TBinlog)
+	}
+	j.Extra.CachedBinlogs[commitSeq] = binlog
+	return binlog, nil
 }
 
 func (j *Job) lockBinlog(lockCommitSeq int64) error {

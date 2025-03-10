@@ -30,6 +30,7 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
 	bestruct "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/backendservice"
+	festruct "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/frontendservice"
 	tstatus "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/status"
 	ttypes "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/types"
 
@@ -732,25 +733,46 @@ func (j *IngestBinlogJob) prepareMeta() {
 	j.destMeta = destMeta
 }
 
-// TODO(Drogon): use monad error handle
+// Apply the drop rollup binlog to the dest cluster, to avoid blocking the ingest binlog.
+func (j *IngestBinlogJob) applyDropRollupBinlog() {
+	droppedIndexMap := j.srcMeta.GetDroppedIndexMap()
+	for _, commitSeq := range droppedIndexMap {
+		if _, ok := j.ccrJob.Extra.AppliedBinlogs[commitSeq]; ok {
+			continue
+		}
+
+		binlog, err := j.ccrJob.GetSpecifiedBinlog(commitSeq)
+		if err != nil {
+			j.setError(err)
+			return
+		}
+		if binlog.GetType() == festruct.TBinlogType_DROP_ROLLUP {
+			// Apply the drop rollup binlog to the dest cluster
+			err := j.ccrJob.handleDropRollup(binlog)
+			if err != nil {
+				j.setError(err)
+				return
+			}
+			if j.ccrJob.Extra.AppliedBinlogs == nil {
+				j.ccrJob.Extra.AppliedBinlogs = make(map[int64]struct{})
+			}
+			j.ccrJob.Extra.AppliedBinlogs[commitSeq] = struct{}{}
+		}
+	}
+}
+
 func (j *IngestBinlogJob) Run() {
-	j.prepareMeta()
-	if err := j.Error(); err != nil {
-		return
+	steps := []func(){
+		j.prepareMeta,
+		j.applyDropRollupBinlog,
+		j.prepareBackendMap,
+		j.prepareTabletIngestJobs,
+		j.runTabletIngestJobs,
 	}
-
-	j.prepareBackendMap()
-	if err := j.Error(); err != nil {
-		return
-	}
-
-	j.prepareTabletIngestJobs()
-	if err := j.Error(); err != nil {
-		return
-	}
-
-	j.runTabletIngestJobs()
-	if err := j.Error(); err != nil {
-		return
+	for _, step := range steps {
+		step()
+		if err := j.Error(); err != nil {
+			return
+		}
 	}
 }

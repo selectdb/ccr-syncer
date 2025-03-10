@@ -19,6 +19,7 @@ package ccr
 import (
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	"github.com/selectdb/ccr_syncer/pkg/rpc"
+	utils "github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
 	tstatus "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/status"
@@ -163,12 +164,14 @@ func NewThriftMeta(spec *base.Spec, rpcFactory rpc.IRpcFactory, tableIds []int64
 	for _, index := range dbMeta.GetDroppedIndexes() {
 		droppedIndexes[index] = struct{}{}
 	}
+	droppedIndexMap := utils.CopyMap(dbMeta.GetDroppedIndexMap())
 
 	return &ThriftMeta{
 		meta:              meta,
 		droppedPartitions: droppedPartitions,
 		droppedTables:     droppedTables,
 		droppedIndexes:    droppedIndexes,
+		droppedIndexMap:   droppedIndexMap,
 	}, nil
 }
 
@@ -177,6 +180,7 @@ type ThriftMeta struct {
 	droppedPartitions map[int64]struct{}
 	droppedTables     map[int64]struct{}
 	droppedIndexes    map[int64]struct{}
+	droppedIndexMap   map[int64]int64
 }
 
 func (tm *ThriftMeta) GetTablets(tableId, partitionId, indexId int64) (*btree.Map[int64, *TabletMeta], error) {
@@ -295,7 +299,11 @@ func (tm *ThriftMeta) IsTableDropped(tableId int64) bool {
 }
 
 // Whether the target index are dropped
-func (tm *ThriftMeta) IsIndexDropped(tableId int64) bool {
-	_, ok := tm.droppedIndexes[tableId]
+func (tm *ThriftMeta) IsIndexDropped(indexId int64) bool {
+	_, ok := tm.droppedIndexes[indexId]
 	return ok
+}
+
+func (tm *ThriftMeta) GetDroppedIndexMap() map[int64]int64 {
+	return tm.droppedIndexMap
 }
