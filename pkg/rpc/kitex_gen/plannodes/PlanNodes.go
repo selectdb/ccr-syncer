@@ -10289,6 +10289,7 @@ type TPaimonFileDesc struct {
 	DeletionFile      *TPaimonDeletionFileDesc `thrift:"deletion_file,12,optional" frugal:"12,optional,TPaimonDeletionFileDesc" json:"deletion_file,omitempty"`
 	HadoopConf        map[string]string        `thrift:"hadoop_conf,13,optional" frugal:"13,optional,map<string:string>" json:"hadoop_conf,omitempty"`
 	PaimonTable       *string                  `thrift:"paimon_table,14,optional" frugal:"14,optional,string" json:"paimon_table,omitempty"`
+	RowCount          *int64                   `thrift:"row_count,15,optional" frugal:"15,optional,i64" json:"row_count,omitempty"`
 }
 
 func NewTPaimonFileDesc() *TPaimonFileDesc {
@@ -10423,6 +10424,15 @@ func (p *TPaimonFileDesc) GetPaimonTable() (v string) {
 	}
 	return *p.PaimonTable
 }
+
+var TPaimonFileDesc_RowCount_DEFAULT int64
+
+func (p *TPaimonFileDesc) GetRowCount() (v int64) {
+	if !p.IsSetRowCount() {
+		return TPaimonFileDesc_RowCount_DEFAULT
+	}
+	return *p.RowCount
+}
 func (p *TPaimonFileDesc) SetPaimonSplit(val *string) {
 	p.PaimonSplit = val
 }
@@ -10465,6 +10475,9 @@ func (p *TPaimonFileDesc) SetHadoopConf(val map[string]string) {
 func (p *TPaimonFileDesc) SetPaimonTable(val *string) {
 	p.PaimonTable = val
 }
+func (p *TPaimonFileDesc) SetRowCount(val *int64) {
+	p.RowCount = val
+}
 
 var fieldIDToName_TPaimonFileDesc = map[int16]string{
 	1:  "paimon_split",
@@ -10481,6 +10494,7 @@ var fieldIDToName_TPaimonFileDesc = map[int16]string{
 	12: "deletion_file",
 	13: "hadoop_conf",
 	14: "paimon_table",
+	15: "row_count",
 }
 
 func (p *TPaimonFileDesc) IsSetPaimonSplit() bool {
@@ -10537,6 +10551,10 @@ func (p *TPaimonFileDesc) IsSetHadoopConf() bool {
 
 func (p *TPaimonFileDesc) IsSetPaimonTable() bool {
 	return p.PaimonTable != nil
+}
+
+func (p *TPaimonFileDesc) IsSetRowCount() bool {
+	return p.RowCount != nil
 }
 
 func (p *TPaimonFileDesc) Read(iprot thrift.TProtocol) (err error) {
@@ -10665,6 +10683,14 @@ func (p *TPaimonFileDesc) Read(iprot thrift.TProtocol) (err error) {
 		case 14:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField14(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 15:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField15(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10886,6 +10912,17 @@ func (p *TPaimonFileDesc) ReadField14(iprot thrift.TProtocol) error {
 	p.PaimonTable = _field
 	return nil
 }
+func (p *TPaimonFileDesc) ReadField15(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.RowCount = _field
+	return nil
+}
 
 func (p *TPaimonFileDesc) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -10947,6 +10984,10 @@ func (p *TPaimonFileDesc) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField14(oprot); err != nil {
 			fieldId = 14
+			goto WriteFieldError
+		}
+		if err = p.writeField15(oprot); err != nil {
+			fieldId = 15
 			goto WriteFieldError
 		}
 	}
@@ -11255,6 +11296,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
 }
 
+func (p *TPaimonFileDesc) writeField15(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRowCount() {
+		if err = oprot.WriteFieldBegin("row_count", thrift.I64, 15); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.RowCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
+}
+
 func (p *TPaimonFileDesc) String() string {
 	if p == nil {
 		return "<nil>"
@@ -11309,6 +11369,9 @@ func (p *TPaimonFileDesc) DeepEqual(ano *TPaimonFileDesc) bool {
 		return false
 	}
 	if !p.Field14DeepEqual(ano.PaimonTable) {
+		return false
+	}
+	if !p.Field15DeepEqual(ano.RowCount) {
 		return false
 	}
 	return true
@@ -11475,6 +11538,18 @@ func (p *TPaimonFileDesc) Field14DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.PaimonTable, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TPaimonFileDesc) Field15DeepEqual(src *int64) bool {
+
+	if p.RowCount == src {
+		return true
+	} else if p.RowCount == nil || src == nil {
+		return false
+	}
+	if *p.RowCount != *src {
 		return false
 	}
 	return true
@@ -15107,6 +15182,7 @@ type TTableFormatFileDesc struct {
 	MaxComputeParams        *TMaxComputeFileDesc     `thrift:"max_compute_params,6,optional" frugal:"6,optional,TMaxComputeFileDesc" json:"max_compute_params,omitempty"`
 	TrinoConnectorParams    *TTrinoConnectorFileDesc `thrift:"trino_connector_params,7,optional" frugal:"7,optional,TTrinoConnectorFileDesc" json:"trino_connector_params,omitempty"`
 	LakesoulParams          *TLakeSoulFileDesc       `thrift:"lakesoul_params,8,optional" frugal:"8,optional,TLakeSoulFileDesc" json:"lakesoul_params,omitempty"`
+	TableLevelRowCount      *int64                   `thrift:"table_level_row_count,9,optional" frugal:"9,optional,i64" json:"table_level_row_count,omitempty"`
 }
 
 func NewTTableFormatFileDesc() *TTableFormatFileDesc {
@@ -15187,6 +15263,15 @@ func (p *TTableFormatFileDesc) GetLakesoulParams() (v *TLakeSoulFileDesc) {
 	}
 	return p.LakesoulParams
 }
+
+var TTableFormatFileDesc_TableLevelRowCount_DEFAULT int64
+
+func (p *TTableFormatFileDesc) GetTableLevelRowCount() (v int64) {
+	if !p.IsSetTableLevelRowCount() {
+		return TTableFormatFileDesc_TableLevelRowCount_DEFAULT
+	}
+	return *p.TableLevelRowCount
+}
 func (p *TTableFormatFileDesc) SetTableFormatType(val *string) {
 	p.TableFormatType = val
 }
@@ -15211,6 +15296,9 @@ func (p *TTableFormatFileDesc) SetTrinoConnectorParams(val *TTrinoConnectorFileD
 func (p *TTableFormatFileDesc) SetLakesoulParams(val *TLakeSoulFileDesc) {
 	p.LakesoulParams = val
 }
+func (p *TTableFormatFileDesc) SetTableLevelRowCount(val *int64) {
+	p.TableLevelRowCount = val
+}
 
 var fieldIDToName_TTableFormatFileDesc = map[int16]string{
 	1: "table_format_type",
@@ -15221,6 +15309,7 @@ var fieldIDToName_TTableFormatFileDesc = map[int16]string{
 	6: "max_compute_params",
 	7: "trino_connector_params",
 	8: "lakesoul_params",
+	9: "table_level_row_count",
 }
 
 func (p *TTableFormatFileDesc) IsSetTableFormatType() bool {
@@ -15253,6 +15342,10 @@ func (p *TTableFormatFileDesc) IsSetTrinoConnectorParams() bool {
 
 func (p *TTableFormatFileDesc) IsSetLakesoulParams() bool {
 	return p.LakesoulParams != nil
+}
+
+func (p *TTableFormatFileDesc) IsSetTableLevelRowCount() bool {
+	return p.TableLevelRowCount != nil
 }
 
 func (p *TTableFormatFileDesc) Read(iprot thrift.TProtocol) (err error) {
@@ -15333,6 +15426,14 @@ func (p *TTableFormatFileDesc) Read(iprot thrift.TProtocol) (err error) {
 		case 8:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField9(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -15434,6 +15535,17 @@ func (p *TTableFormatFileDesc) ReadField8(iprot thrift.TProtocol) error {
 	p.LakesoulParams = _field
 	return nil
 }
+func (p *TTableFormatFileDesc) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TableLevelRowCount = _field
+	return nil
+}
 
 func (p *TTableFormatFileDesc) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -15471,6 +15583,10 @@ func (p *TTableFormatFileDesc) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
 			goto WriteFieldError
 		}
 	}
@@ -15643,6 +15759,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
 
+func (p *TTableFormatFileDesc) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTableLevelRowCount() {
+		if err = oprot.WriteFieldBegin("table_level_row_count", thrift.I64, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TableLevelRowCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+
 func (p *TTableFormatFileDesc) String() string {
 	if p == nil {
 		return "<nil>"
@@ -15679,6 +15814,9 @@ func (p *TTableFormatFileDesc) DeepEqual(ano *TTableFormatFileDesc) bool {
 		return false
 	}
 	if !p.Field8DeepEqual(ano.LakesoulParams) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.TableLevelRowCount) {
 		return false
 	}
 	return true
@@ -15741,6 +15879,18 @@ func (p *TTableFormatFileDesc) Field7DeepEqual(src *TTrinoConnectorFileDesc) boo
 func (p *TTableFormatFileDesc) Field8DeepEqual(src *TLakeSoulFileDesc) bool {
 
 	if !p.LakesoulParams.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TTableFormatFileDesc) Field9DeepEqual(src *int64) bool {
+
+	if p.TableLevelRowCount == src {
+		return true
+	} else if p.TableLevelRowCount == nil || src == nil {
+		return false
+	}
+	if *p.TableLevelRowCount != *src {
 		return false
 	}
 	return true

@@ -7013,6 +7013,20 @@ func (p *TPaimonFileDesc) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 15:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField15(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -7284,6 +7298,19 @@ func (p *TPaimonFileDesc) FastReadField14(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TPaimonFileDesc) FastReadField15(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.RowCount = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TPaimonFileDesc) FastWrite(buf []byte) int {
 	return 0
@@ -7297,6 +7324,7 @@ func (p *TPaimonFileDesc) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binar
 		offset += p.fastWriteField8(buf[offset:], binaryWriter)
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
 		offset += p.fastWriteField10(buf[offset:], binaryWriter)
+		offset += p.fastWriteField15(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -7331,6 +7359,7 @@ func (p *TPaimonFileDesc) BLength() int {
 		l += p.field12Length()
 		l += p.field13Length()
 		l += p.field14Length()
+		l += p.field15Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -7512,6 +7541,17 @@ func (p *TPaimonFileDesc) fastWriteField14(buf []byte, binaryWriter bthrift.Bina
 	return offset
 }
 
+func (p *TPaimonFileDesc) fastWriteField15(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetRowCount() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "row_count", thrift.I64, 15)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.RowCount)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TPaimonFileDesc) field1Length() int {
 	l := 0
 	if p.IsSetPaimonSplit() {
@@ -7673,6 +7713,17 @@ func (p *TPaimonFileDesc) field14Length() int {
 	if p.IsSetPaimonTable() {
 		l += bthrift.Binary.FieldBeginLength("paimon_table", thrift.STRING, 14)
 		l += bthrift.Binary.StringLengthNocopy(*p.PaimonTable)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TPaimonFileDesc) field15Length() int {
+	l := 0
+	if p.IsSetRowCount() {
+		l += bthrift.Binary.FieldBeginLength("row_count", thrift.I64, 15)
+		l += bthrift.Binary.I64Length(*p.RowCount)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -10493,6 +10544,20 @@ func (p *TTableFormatFileDesc) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 9:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField9(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -10632,6 +10697,19 @@ func (p *TTableFormatFileDesc) FastReadField8(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TTableFormatFileDesc) FastReadField9(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.TableLevelRowCount = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TTableFormatFileDesc) FastWrite(buf []byte) int {
 	return 0
@@ -10641,6 +10719,7 @@ func (p *TTableFormatFileDesc) FastWriteNocopy(buf []byte, binaryWriter bthrift.
 	offset := 0
 	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "TTableFormatFileDesc")
 	if p != nil {
+		offset += p.fastWriteField9(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -10667,6 +10746,7 @@ func (p *TTableFormatFileDesc) BLength() int {
 		l += p.field6Length()
 		l += p.field7Length()
 		l += p.field8Length()
+		l += p.field9Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -10754,6 +10834,17 @@ func (p *TTableFormatFileDesc) fastWriteField8(buf []byte, binaryWriter bthrift.
 	return offset
 }
 
+func (p *TTableFormatFileDesc) fastWriteField9(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTableLevelRowCount() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "table_level_row_count", thrift.I64, 9)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.TableLevelRowCount)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TTableFormatFileDesc) field1Length() int {
 	l := 0
 	if p.IsSetTableFormatType() {
@@ -10830,6 +10921,17 @@ func (p *TTableFormatFileDesc) field8Length() int {
 	if p.IsSetLakesoulParams() {
 		l += bthrift.Binary.FieldBeginLength("lakesoul_params", thrift.STRUCT, 8)
 		l += p.LakesoulParams.BLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TTableFormatFileDesc) field9Length() int {
+	l := 0
+	if p.IsSetTableLevelRowCount() {
+		l += bthrift.Binary.FieldBeginLength("table_level_row_count", thrift.I64, 9)
+		l += bthrift.Binary.I64Length(*p.TableLevelRowCount)
+
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l

@@ -7715,6 +7715,7 @@ type TJdbcExecutorCtorParams struct {
 	ConnectionPoolCacheClearTime *int32          `thrift:"connection_pool_cache_clear_time,14,optional" frugal:"14,optional,i32" json:"connection_pool_cache_clear_time,omitempty"`
 	ConnectionPoolKeepAlive      *bool           `thrift:"connection_pool_keep_alive,15,optional" frugal:"15,optional,bool" json:"connection_pool_keep_alive,omitempty"`
 	CatalogId                    *int64          `thrift:"catalog_id,16,optional" frugal:"16,optional,i64" json:"catalog_id,omitempty"`
+	JdbcDriverChecksum           *string         `thrift:"jdbc_driver_checksum,17,optional" frugal:"17,optional,string" json:"jdbc_driver_checksum,omitempty"`
 }
 
 func NewTJdbcExecutorCtorParams() *TJdbcExecutorCtorParams {
@@ -7867,6 +7868,15 @@ func (p *TJdbcExecutorCtorParams) GetCatalogId() (v int64) {
 	}
 	return *p.CatalogId
 }
+
+var TJdbcExecutorCtorParams_JdbcDriverChecksum_DEFAULT string
+
+func (p *TJdbcExecutorCtorParams) GetJdbcDriverChecksum() (v string) {
+	if !p.IsSetJdbcDriverChecksum() {
+		return TJdbcExecutorCtorParams_JdbcDriverChecksum_DEFAULT
+	}
+	return *p.JdbcDriverChecksum
+}
 func (p *TJdbcExecutorCtorParams) SetStatement(val *string) {
 	p.Statement = val
 }
@@ -7915,6 +7925,9 @@ func (p *TJdbcExecutorCtorParams) SetConnectionPoolKeepAlive(val *bool) {
 func (p *TJdbcExecutorCtorParams) SetCatalogId(val *int64) {
 	p.CatalogId = val
 }
+func (p *TJdbcExecutorCtorParams) SetJdbcDriverChecksum(val *string) {
+	p.JdbcDriverChecksum = val
+}
 
 var fieldIDToName_TJdbcExecutorCtorParams = map[int16]string{
 	1:  "statement",
@@ -7933,6 +7946,7 @@ var fieldIDToName_TJdbcExecutorCtorParams = map[int16]string{
 	14: "connection_pool_cache_clear_time",
 	15: "connection_pool_keep_alive",
 	16: "catalog_id",
+	17: "jdbc_driver_checksum",
 }
 
 func (p *TJdbcExecutorCtorParams) IsSetStatement() bool {
@@ -7997,6 +8011,10 @@ func (p *TJdbcExecutorCtorParams) IsSetConnectionPoolKeepAlive() bool {
 
 func (p *TJdbcExecutorCtorParams) IsSetCatalogId() bool {
 	return p.CatalogId != nil
+}
+
+func (p *TJdbcExecutorCtorParams) IsSetJdbcDriverChecksum() bool {
+	return p.JdbcDriverChecksum != nil
 }
 
 func (p *TJdbcExecutorCtorParams) Read(iprot thrift.TProtocol) (err error) {
@@ -8141,6 +8159,14 @@ func (p *TJdbcExecutorCtorParams) Read(iprot thrift.TProtocol) (err error) {
 		case 16:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField16(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 17:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField17(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -8353,6 +8379,17 @@ func (p *TJdbcExecutorCtorParams) ReadField16(iprot thrift.TProtocol) error {
 	p.CatalogId = _field
 	return nil
 }
+func (p *TJdbcExecutorCtorParams) ReadField17(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.JdbcDriverChecksum = _field
+	return nil
+}
 
 func (p *TJdbcExecutorCtorParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -8422,6 +8459,10 @@ func (p *TJdbcExecutorCtorParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField16(oprot); err != nil {
 			fieldId = 16
+			goto WriteFieldError
+		}
+		if err = p.writeField17(oprot); err != nil {
+			fieldId = 17
 			goto WriteFieldError
 		}
 	}
@@ -8746,6 +8787,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
 }
 
+func (p *TJdbcExecutorCtorParams) writeField17(oprot thrift.TProtocol) (err error) {
+	if p.IsSetJdbcDriverChecksum() {
+		if err = oprot.WriteFieldBegin("jdbc_driver_checksum", thrift.STRING, 17); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.JdbcDriverChecksum); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
+}
+
 func (p *TJdbcExecutorCtorParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -8806,6 +8866,9 @@ func (p *TJdbcExecutorCtorParams) DeepEqual(ano *TJdbcExecutorCtorParams) bool {
 		return false
 	}
 	if !p.Field16DeepEqual(ano.CatalogId) {
+		return false
+	}
+	if !p.Field17DeepEqual(ano.JdbcDriverChecksum) {
 		return false
 	}
 	return true
@@ -8999,6 +9062,18 @@ func (p *TJdbcExecutorCtorParams) Field16DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.CatalogId != *src {
+		return false
+	}
+	return true
+}
+func (p *TJdbcExecutorCtorParams) Field17DeepEqual(src *string) bool {
+
+	if p.JdbcDriverChecksum == src {
+		return true
+	} else if p.JdbcDriverChecksum == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.JdbcDriverChecksum, *src) != 0 {
 		return false
 	}
 	return true

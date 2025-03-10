@@ -15391,6 +15391,20 @@ func (p *TCalcDeleteBitmapPartitionInfo) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 8:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField8(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -15620,6 +15634,36 @@ func (p *TCalcDeleteBitmapPartitionInfo) FastReadField7(buf []byte) (int, error)
 	return offset, nil
 }
 
+func (p *TCalcDeleteBitmapPartitionInfo) FastReadField8(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := bthrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.TabletStates = make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem int64
+		if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_elem = v
+
+		}
+
+		p.TabletStates = append(p.TabletStates, _elem)
+	}
+	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TCalcDeleteBitmapPartitionInfo) FastWrite(buf []byte) int {
 	return 0
@@ -15636,6 +15680,7 @@ func (p *TCalcDeleteBitmapPartitionInfo) FastWriteNocopy(buf []byte, binaryWrite
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 		offset += p.fastWriteField7(buf[offset:], binaryWriter)
+		offset += p.fastWriteField8(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -15653,6 +15698,7 @@ func (p *TCalcDeleteBitmapPartitionInfo) BLength() int {
 		l += p.field5Length()
 		l += p.field6Length()
 		l += p.field7Length()
+		l += p.field8Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -15770,6 +15816,25 @@ func (p *TCalcDeleteBitmapPartitionInfo) fastWriteField7(buf []byte, binaryWrite
 	return offset
 }
 
+func (p *TCalcDeleteBitmapPartitionInfo) fastWriteField8(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTabletStates() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "tablet_states", thrift.LIST, 8)
+		listBeginOffset := offset
+		offset += bthrift.Binary.ListBeginLength(thrift.I64, 0)
+		var length int
+		for _, v := range p.TabletStates {
+			length++
+			offset += bthrift.Binary.WriteI64(buf[offset:], v)
+
+		}
+		bthrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I64, length)
+		offset += bthrift.Binary.WriteListEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TCalcDeleteBitmapPartitionInfo) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("partition_id", thrift.I64, 1)
@@ -15845,6 +15910,19 @@ func (p *TCalcDeleteBitmapPartitionInfo) field7Length() int {
 		l += bthrift.Binary.ListBeginLength(thrift.I64, len(p.SubTxnIds))
 		var tmpV int64
 		l += bthrift.Binary.I64Length(int64(tmpV)) * len(p.SubTxnIds)
+		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TCalcDeleteBitmapPartitionInfo) field8Length() int {
+	l := 0
+	if p.IsSetTabletStates() {
+		l += bthrift.Binary.FieldBeginLength("tablet_states", thrift.LIST, 8)
+		l += bthrift.Binary.ListBeginLength(thrift.I64, len(p.TabletStates))
+		var tmpV int64
+		l += bthrift.Binary.I64Length(int64(tmpV)) * len(p.TabletStates)
 		l += bthrift.Binary.ListEndLength()
 		l += bthrift.Binary.FieldEndLength()
 	}
