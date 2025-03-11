@@ -127,6 +127,7 @@ suite("test_ds_absorb_tbl_create_alt_row_store") {
     sql """
         ALTER TABLE ${tableName}_1 SET ("store_row_column" = "true")
         """
+
     assertTrue(helper.checkShowTimesOf("""
                             SHOW ALTER TABLE COLUMN
                             FROM ${context.dbName}
@@ -170,4 +171,5 @@ suite("test_ds_absorb_tbl_create_alt_row_store") {
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existRowStore, 60, "sql"))
     // don't sync
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistRowStore, 60, "target"))
+
 }

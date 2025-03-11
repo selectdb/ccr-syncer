@@ -26,9 +26,11 @@ suite("test_ds_absorb_tbl_create_alt_dy_part") {
     def exist = { res -> Boolean
         return res.size() != 0
     }
+
     def notExist = { res -> Boolean
         return res.size() == 0
     }
+
     def checkShowResult = { target_res, property -> Boolean
         if(!target_res[0][1].contains(property)){
             logger.info("don't contains {}", property)
@@ -170,6 +172,7 @@ suite("test_ds_absorb_tbl_create_alt_dy_part") {
         """
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_2" """, exist, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_2" """, notExist, 60, "target"))
+
 
     // 4. Insert N data
     for (int index = insert_num; index < insert_num * 2; index++) {

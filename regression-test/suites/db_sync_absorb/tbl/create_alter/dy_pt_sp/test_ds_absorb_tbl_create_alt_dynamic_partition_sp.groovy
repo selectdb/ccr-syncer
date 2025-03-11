@@ -34,9 +34,11 @@ suite("test_ds_absorb_tbl_create_alt_dynamic_partition_sp") {
     def exist = { res -> Boolean
         return res.size() != 0
     }
+
     def notExist = { res -> Boolean
         return res.size() == 0
     }
+
     def checkShowResult = { target_res, property -> Boolean
         if (!target_res[0][1].contains(property)) {
             logger.info("don't contains {}", property)
@@ -170,4 +172,5 @@ suite("test_ds_absorb_tbl_create_alt_dynamic_partition_sp") {
 
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", { res -> return res[0][1].contains("\"dynamic_partition.end\" = \"3\"")}, 60, 'target'))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", { res -> return !res[0][1].contains("\"dynamic_partition.storage_policy\" = \"${policyName}\"")}, 60, 'target'))
+
 }
