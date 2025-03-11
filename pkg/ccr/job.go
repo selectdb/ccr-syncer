@@ -4026,8 +4026,6 @@ func (j *Job) FirstRun() error {
 }
 
 func (j *Job) getJobState() JobState {
-	j.isInterrupted.Store(true)
-
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
