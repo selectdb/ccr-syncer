@@ -26,7 +26,9 @@ suite("test_ds_absorb_tbl_create_alt_compaction") {
     def exist = { res -> Boolean
         return res.size() != 0
     }
-
+    def notExist = { res -> Boolean
+        return res.size() == 0
+    }
     def checkShowResult = { target_res, property -> Boolean
         if(!target_res[0][1].contains(property)){
             logger.info("don't contains {}", property)
