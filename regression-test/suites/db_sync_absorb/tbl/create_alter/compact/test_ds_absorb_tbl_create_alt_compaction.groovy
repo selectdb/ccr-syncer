@@ -14,7 +14,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_ds_absorb_tbl_create_alt_bucket") {
+suite("test_ds_absorb_tbl_create_alt_compaction") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -35,12 +35,22 @@ suite("test_ds_absorb_tbl_create_alt_bucket") {
             return true 
     }
 
-    def existOldBucket = { res -> Boolean
-        return res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 1")
+    def existNewCompaction = { res -> Boolean
+        Boolean result = checkShowResult(res, "\"time_series_compaction_goal_size_mbytes\" = \"2048\"") && 
+        checkShowResult(res, "\"time_series_compaction_file_count_threshold\" = \"3000\"") &&
+        checkShowResult(res, "\"time_series_compaction_time_threshold_seconds\" = \"4000\"") &&
+        checkShowResult(res, "\"time_series_compaction_empty_rowsets_threshold\" = \"6\"") &&
+        checkShowResult(res, "\"time_series_compaction_level_threshold\" = \"2\"")
+        return result
     }
 
-    def existNewBucket = { res -> Boolean
-        return res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
+    def existOldCompaction = { res -> Boolean
+        Boolean result = checkShowResult(res, "\"time_series_compaction_goal_size_mbytes\" = \"1024\"") && 
+        checkShowResult(res, "\"time_series_compaction_file_count_threshold\" = \"2000\"") &&
+        checkShowResult(res, "\"time_series_compaction_time_threshold_seconds\" = \"3600\"") &&
+        checkShowResult(res, "\"time_series_compaction_empty_rowsets_threshold\" = \"5\"") &&
+        checkShowResult(res, "\"time_series_compaction_level_threshold\" = \"1\"")
+        return result
     }
 
     sql "DROP TABLE IF EXISTS ${dbName}.${tableName}_1"
@@ -62,7 +72,8 @@ suite("test_ds_absorb_tbl_create_alt_bucket") {
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
-            "binlog.enable" = "true"
+            "binlog.enable" = "true",
+            "compaction_policy" = "time_series"
         )
     """
 
@@ -70,7 +81,8 @@ suite("test_ds_absorb_tbl_create_alt_bucket") {
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 
-    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_1", 30))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_1", 180))
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, exist, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, exist, 60, "target"))
 
     // 1. Pause ccr job
@@ -84,8 +96,8 @@ suite("test_ds_absorb_tbl_create_alt_bucket") {
     }
 
     // 3. Do operation & wait it finishes upstream
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existOldBucket, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existOldBucket, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existOldCompaction, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existOldCompaction, 60, "target"))
 
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}_2
@@ -103,13 +115,35 @@ suite("test_ds_absorb_tbl_create_alt_bucket") {
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
-            "binlog.enable" = "true"
+            "binlog.enable" = "true",
+            "compaction_policy" = "time_series"
         )
     """
     sql """
-        ALTER TABLE ${tableName}_1 MODIFY DISTRIBUTION DISTRIBUTED BY HASH(`id`) BUCKETS 20
+        alter table ${tableName}_1 set ("compaction_policy" = "time_series")
+        """
+
+    sql """
+        alter table ${tableName}_1 set ("time_series_compaction_goal_size_mbytes" = "2048")
+        """
+
+    sql """
+        alter table ${tableName}_1 set ("time_series_compaction_file_count_threshold" = "3000")
+        """
+
+    sql """
+        alter table ${tableName}_1 set ("time_series_compaction_time_threshold_seconds" = "4000")
+        """
+
+    sql """
+        alter table ${tableName}_1 set ("time_series_compaction_empty_rowsets_threshold" = "6")
+        """
+
+    sql """
+        alter table ${tableName}_1 set ("time_series_compaction_level_threshold" = "2")
         """
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_2" """, exist, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_2" """, notExist, 60, "target"))
 
     // 4. Insert N data
     for (int index = insert_num; index < insert_num * 2; index++) {
@@ -123,10 +157,11 @@ suite("test_ds_absorb_tbl_create_alt_bucket") {
             """
     }
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "target"))
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "target"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existNewBucket, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existOldBucket, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "sql"))
+    
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existNewCompaction, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existOldCompaction, 60, "target"))
 
     // 5. Force trigger fullsnapshot
     helper.force_fullsync()
@@ -137,6 +172,6 @@ suite("test_ds_absorb_tbl_create_alt_bucket") {
     // 7. Verify data and operation are synced downstream
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "target"))
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "target"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existNewBucket, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existOldBucket, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existNewCompaction, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existNewCompaction, 60, "target"))
 }
