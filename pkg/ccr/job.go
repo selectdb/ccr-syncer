@@ -186,8 +186,9 @@ type Job struct {
 	jobFactory *JobFactory  `json:"-"`
 	rawStatus  RawJobStatus `json:"-"`
 
-	stop      chan struct{} `json:"-"`
-	isDeleted atomic.Bool   `json:"-"`
+	stop          chan struct{} `json:"-"`
+	isDeleted     atomic.Bool   `json:"-"`
+	isInterrupted atomic.Bool   `json:"-"` // A flag to interrupt the job routine to release the lock
 
 	asyncMvTableCache  map[int64]struct{}      `json:"-"`
 	concurrencyManager *rpc.ConcurrencyManager `json:"-"`
@@ -3452,6 +3453,14 @@ func (j *Job) recoverIncrementalSync() error {
 	return nil
 }
 
+func (j *Job) takeInterruptState() bool {
+	if j.isInterrupted.Load() {
+		j.isInterrupted.Store(false)
+		return true
+	}
+	return false
+}
+
 func (j *Job) incrementalSync() error {
 	if !j.progress.IsDone() {
 		log.Infof("job progress is not done, need recover. state: %s, prevCommitSeq: %d, commitSeq: %d",
@@ -3477,7 +3486,7 @@ func (j *Job) incrementalSync() error {
 	}
 
 	// Step 2: handle all binlog
-	for {
+	for !j.takeInterruptState() {
 		// The CommitSeq is equals to PrevCommitSeq in here.
 		commitSeq := j.progress.CommitSeq
 		log.Tracef("src: %s, commitSeq: %d", src, commitSeq)
@@ -3524,6 +3533,7 @@ func (j *Job) incrementalSync() error {
 			return err
 		}
 	}
+	return nil
 }
 
 func (j *Job) recoverJobProgress() error {
@@ -3830,6 +3840,8 @@ func (j *Job) desyncDB() error {
 }
 
 func (j *Job) Sync() error {
+	j.isInterrupted.Store(true)
+
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
@@ -3868,6 +3880,8 @@ func (j *Job) syncDB() error {
 }
 
 func (j *Job) Desync() error {
+	j.isInterrupted.Store(true)
+
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
@@ -4012,6 +4026,8 @@ func (j *Job) FirstRun() error {
 }
 
 func (j *Job) getJobState() JobState {
+	j.isInterrupted.Store(true)
+
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
@@ -4019,6 +4035,8 @@ func (j *Job) getJobState() JobState {
 }
 
 func (j *Job) changeJobState(state JobState) error {
+	j.isInterrupted.Store(true)
+
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
@@ -4084,6 +4102,8 @@ func (j *Job) Status() *JobStatus {
 }
 
 func (j *Job) UpdateHostMapping(srcHostMaps, destHostMaps map[string]string) error {
+	j.isInterrupted.Store(true)
+
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
@@ -4122,6 +4142,8 @@ func (j *Job) UpdateHostMapping(srcHostMaps, destHostMaps map[string]string) err
 }
 
 func (j *Job) SkipBinlog(skipCommitSeq int64, skipBy string) error {
+	j.isInterrupted.Store(true)
+
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
