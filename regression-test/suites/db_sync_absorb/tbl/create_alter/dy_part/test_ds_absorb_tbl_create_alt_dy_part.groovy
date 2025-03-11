@@ -94,7 +94,8 @@ suite("test_ds_absorb_tbl_create_alt_dy_part") {
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 
-    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_1", 30))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_1", 180))
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, exist, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, exist, 60, "target"))
 
     // 1. Pause ccr job
@@ -179,11 +180,11 @@ suite("test_ds_absorb_tbl_create_alt_dy_part") {
             """
     }
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "target"))
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "sql"))
 
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existNewPartitionProperty, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existNewPartitionProperty, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existOldPartitionProperty, 60, "target"))
 
     // 5. Force trigger fullsnapshot
     helper.force_fullsync()

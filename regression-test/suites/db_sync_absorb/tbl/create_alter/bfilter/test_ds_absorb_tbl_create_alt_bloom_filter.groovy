@@ -14,7 +14,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_ds_absorb_tbl_create_alt_distr_type") {
+suite("test_ds_absorb_tbl_create_alt_bloom_filter") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -35,16 +35,19 @@ suite("test_ds_absorb_tbl_create_alt_distr_type") {
             return true 
     }
 
-    def existBucketNew = { res -> Boolean
-        return res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
+    def existBF = { res -> Boolean
+        return checkShowResult(res, "\"bloom_filter_columns\" = \"test, id\"")
     }
 
-    def notExistBucketNew = { res -> Boolean
-        return !res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
+    def notExistBF = { res -> Boolean
+        return !checkShowResult(res, "\"bloom_filter_columns\" = \"test, id\"")
     }
 
-    sql "DROP TABLE IF EXISTS ${dbName}.${tableName}_1"
-    sql "DROP TABLE IF EXISTS ${dbName}.${tableName}_2"
+    def has_count = { count ->
+        return { res -> Boolean
+            res.size() == count
+        }
+    }
 
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}_1
@@ -53,12 +56,7 @@ suite("test_ds_absorb_tbl_create_alt_distr_type") {
             `id` INT
         )
         ENGINE=OLAP
-        UNIQUE KEY(`test`, `id`)
-        PARTITION BY RANGE(`id`)
-        (
-            PARTITION p10 values less than (10),
-            PARTITION p100 values less than (100)
-        )
+        AGGREGATE KEY(`test`, `id`)
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
@@ -70,8 +68,11 @@ suite("test_ds_absorb_tbl_create_alt_distr_type") {
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 
-    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_1", 30))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_1", 180))
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, exist, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, exist, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistBF, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistBF, 60, "target"))
 
     // 1. Pause ccr job
     helper.ccrJobPause()
@@ -84,9 +85,6 @@ suite("test_ds_absorb_tbl_create_alt_distr_type") {
     }
 
     // 3. Do operation & wait it finishes upstream
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistBucketNew, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistBucketNew, 60, "target"))
-
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}_2
         (
@@ -94,22 +92,26 @@ suite("test_ds_absorb_tbl_create_alt_distr_type") {
             `id` INT
         )
         ENGINE=OLAP
-        UNIQUE KEY(`test`, `id`)
-        PARTITION BY RANGE(`id`)
-        (
-            PARTITION p10 values less than (10),
-            PARTITION p100 values less than (100)
-        )
+        AGGREGATE KEY(`test`, `id`)
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true"
         )
     """
+    def state = sql """ SHOW ALTER TABLE COLUMN FROM ${context.dbName} WHERE TableName = "${tableName}_1" AND State = "FINISHED" """
     sql """
-        ALTER TABLE ${tableName}_1 MODIFY DISTRIBUTION DISTRIBUTED BY HASH(id) BUCKETS 20;
+        ALTER TABLE ${tableName}_1 SET ("bloom_filter_columns" = "test, id");
         """
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existBF, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_2" """, exist, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_2" """, notExist, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("""
+                                SHOW ALTER TABLE COLUMN
+                                FROM ${context.dbName}
+                                WHERE TableName = "${tableName}_1" AND State = "FINISHED"
+                                """,
+                                has_count(state.size() + 1), 30))
 
     // 4. Insert N data
     for (int index = insert_num; index < insert_num * 2; index++) {
@@ -123,11 +125,8 @@ suite("test_ds_absorb_tbl_create_alt_distr_type") {
             """
     }
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "target"))
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "target"))
-
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existBucketNew, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistBucketNew, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "sql"))
 
     // 5. Force trigger fullsnapshot
     helper.force_fullsync()
@@ -136,8 +135,14 @@ suite("test_ds_absorb_tbl_create_alt_distr_type") {
     helper.ccrJobResume()
   
     // 7. Verify data and operation are synced downstream
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existBF, 60, "target"))
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "target"))
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "target"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existBucketNew, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistBucketNew, 60, "target"))
+    state = sql """ SHOW ALTER TABLE COLUMN FROM ${context.dbName} WHERE TableName = "${tableName}_1" AND State = "FINISHED" """
+    assertTrue(helper.checkShowTimesOf("""
+                                SHOW ALTER TABLE COLUMN
+                                FROM ${context.dbName}
+                                WHERE TableName = "${tableName}_1" AND State = "FINISHED"
+                                """,
+                                has_count(state.size()), 30))
 }

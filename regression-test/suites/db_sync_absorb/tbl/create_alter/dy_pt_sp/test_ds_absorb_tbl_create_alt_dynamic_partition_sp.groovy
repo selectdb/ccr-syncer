@@ -25,7 +25,7 @@ suite("test_ds_absorb_tbl_create_alt_dynamic_partition_sp") {
     def test_num = 0
     def insert_num = 10
 	
-	  String ak = getS3AK()
+	String ak = getS3AK()
     String sk = getS3SK()
     String s3_endpoint = getS3Endpoint()
     String region = getS3Region()
@@ -93,6 +93,7 @@ suite("test_ds_absorb_tbl_create_alt_dynamic_partition_sp") {
     helper.ccrJobCreate()
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_1", 180))
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, exist, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, exist, 60, "target"))
 
     // 1. Pause ccr job
@@ -149,6 +150,12 @@ suite("test_ds_absorb_tbl_create_alt_dynamic_partition_sp") {
             INSERT INTO ${tableName}_2 VALUES (${test_num}, ${index}, curdate())
             """
     }
+
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "sql"))
+
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", { res -> return res[0][1].contains("\"dynamic_partition.end\" = \"3\"")}, 60, 'sql'))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", { res -> return res[0][1].contains("\"dynamic_partition.storage_policy\" = \"${policyName}\"")}, 60, 'sql'))
     // 5. Force trigger fullsnapshot
     helper.force_fullsync()
 
@@ -159,6 +166,6 @@ suite("test_ds_absorb_tbl_create_alt_dynamic_partition_sp") {
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "target"))
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "target"))
 
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", { res -> return res[0][1].contains("\"dynamic_partition.storage_policy\" = \"${policyName}\"")}, 60, 'sql'))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", { res -> return res[0][1].contains("\"dynamic_partition.end\" = \"3\"")}, 60, 'sql'))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", { res -> return res[0][1].contains("\"dynamic_partition.end\" = \"3\"")}, 60, 'target'))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", { res -> return res[0][1].contains("\"dynamic_partition.storage_policy\" = \"${policyName}\"")}, 60, 'target'))
 }

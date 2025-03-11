@@ -14,10 +14,11 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_ds_absorb_tbl_create_drop") {
+suite("test_ds_absorb_tbl_create_alt_comment") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    def dbName = context.dbName
     def tableName = "tbl_" + helper.randomSuffix()
     def test_num = 0
     def insert_num = 10
@@ -25,9 +26,25 @@ suite("test_ds_absorb_tbl_create_drop") {
     def exist = { res -> Boolean
         return res.size() != 0
     }
-    def notExist = { res -> Boolean
-        return res.size() == 0
+
+    def checkShowResult = { target_res, property -> Boolean
+        if(!target_res[0][1].contains(property)){
+            logger.info("don't contains {}", property)
+            return false
+        }
+            return true 
     }
+
+    def existComment = { res -> Boolean
+        return res[0][1].contains("COMMENT 'test_comment'")
+    }
+
+    def notExistComment = { res -> Boolean
+        return !res[0][1].contains("COMMENT 'test_comment'")
+    }
+
+    sql "DROP TABLE IF EXISTS ${dbName}.${tableName}_1"
+    sql "DROP TABLE IF EXISTS ${dbName}.${tableName}_2"
 
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}_1
@@ -37,6 +54,11 @@ suite("test_ds_absorb_tbl_create_drop") {
         )
         ENGINE=OLAP
         UNIQUE KEY(`test`, `id`)
+        PARTITION BY RANGE(`id`)
+        (
+            PARTITION p10 values less than (10),
+            PARTITION p100 values less than (100)
+        )
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
@@ -48,6 +70,8 @@ suite("test_ds_absorb_tbl_create_drop") {
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_1", 180))
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, exist, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, exist, 60, "target"))
 
     // 1. Pause ccr job
@@ -61,6 +85,9 @@ suite("test_ds_absorb_tbl_create_drop") {
     }
 
     // 3. Do operation & wait it finishes upstream
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistComment, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistComment, 60, "target"))
+
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}_2
         (
@@ -69,22 +96,40 @@ suite("test_ds_absorb_tbl_create_drop") {
         )
         ENGINE=OLAP
         UNIQUE KEY(`test`, `id`)
+        PARTITION BY RANGE(`id`)
+        (
+            PARTITION p10 values less than (10),
+            PARTITION p100 values less than (100)
+        )
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true"
         )
     """
-    sql "DROP TABLE ${tableName}_1 FORCE"
-    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, notExist, 60, "sql"))
+    sql """
+        ALTER TABLE ${tableName}_1 MODIFY COMMENT "test_comment"
+        """
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_2" """, exist, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_2" """, notExist, 60, "target"))
 
     // 4. Insert N data
     for (int index = insert_num; index < insert_num * 2; index++) {
         sql """
+            INSERT INTO ${tableName}_1 VALUES (${test_num}, ${index})
+            """
+    }
+    for (int index = 0; index < insert_num * 2; index++) {
+        sql """
             INSERT INTO ${tableName}_2 VALUES (${test_num}, ${index})
             """
     }
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num }, 60, "sql"))
+
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "sql"))
+    
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existComment, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistComment, 60, "target"))
 
     // 5. Force trigger fullsnapshot
     helper.force_fullsync()
@@ -93,6 +138,8 @@ suite("test_ds_absorb_tbl_create_drop") {
     helper.ccrJobResume()
   
     // 7. Verify data and operation are synced downstream
-    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, notExist, 60, "target"))
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num }, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existComment, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existComment, 60, "target"))
 }
