@@ -123,11 +123,11 @@ suite("test_ds_absorb_tbl_create_alt_row_store") {
         )
     """
 
-    def state = sql """ SHOW ALTER TABLE COLUMN FROM ${context.dbName} WHERE TableName = "${tableName}" AND State = "FINISHED" """
+    def state = sql """ SHOW ALTER TABLE COLUMN FROM ${context.dbName} WHERE TableName = "${tableName}_1" AND State = "FINISHED" """
     sql """
         ALTER TABLE ${tableName}_1 SET ("store_row_column" = "true")
         """
-    state = sql """ SHOW ALTER TABLE COLUMN FROM ${context.dbName} WHERE TableName = "${tableName}" AND State = "FINISHED" """
+
     assertTrue(helper.checkShowTimesOf("""
                             SHOW ALTER TABLE COLUMN
                             FROM ${context.dbName}
@@ -137,7 +137,6 @@ suite("test_ds_absorb_tbl_create_alt_row_store") {
     sql """
         ALTER TABLE ${tableName}_1 SET ("row_store_columns" = "test,id")
         """
-    state = sql """ SHOW ALTER TABLE COLUMN FROM ${context.dbName} WHERE TableName = "${tableName}" AND State = "FINISHED" """
     assertTrue(helper.checkShowTimesOf("""
                                 SHOW ALTER TABLE COLUMN
                                 FROM ${context.dbName}
@@ -171,5 +170,6 @@ suite("test_ds_absorb_tbl_create_alt_row_store") {
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "target"))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existRowStore, 60, "sql"))
     // don't sync
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existRowStore, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistRowStore, 60, "target"))
+
 }
