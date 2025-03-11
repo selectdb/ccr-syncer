@@ -948,6 +948,7 @@ func (s *HttpService) Start() error {
 	addr := fmt.Sprintf(":%d", s.port)
 	log.Infof("Server listening on %s", addr)
 
+	s.mux = http.NewServeMux()
 	s.RegisterHandlers()
 
 	s.server = &http.Server{Addr: addr, Handler: s.mux}

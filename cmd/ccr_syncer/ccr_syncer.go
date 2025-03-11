@@ -277,4 +277,5 @@ func main() {
 
 	// Step 12: wait for all task done
 	wg.Wait()
+	log.Infof("ccr-syncer exit, host: %v, port: %v, version: %v", syncer.Port, syncer.Host, version.GetVersion())
 }
