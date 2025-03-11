@@ -20710,6 +20710,7 @@ type TCalcDeleteBitmapPartitionInfo struct {
 	CumulativeCompactionCnts []int64            `thrift:"cumulative_compaction_cnts,5,optional" frugal:"5,optional,list<i64>" json:"cumulative_compaction_cnts,omitempty"`
 	CumulativePoints         []int64            `thrift:"cumulative_points,6,optional" frugal:"6,optional,list<i64>" json:"cumulative_points,omitempty"`
 	SubTxnIds                []int64            `thrift:"sub_txn_ids,7,optional" frugal:"7,optional,list<i64>" json:"sub_txn_ids,omitempty"`
+	TabletStates             []int64            `thrift:"tablet_states,8,optional" frugal:"8,optional,list<i64>" json:"tablet_states,omitempty"`
 }
 
 func NewTCalcDeleteBitmapPartitionInfo() *TCalcDeleteBitmapPartitionInfo {
@@ -20766,6 +20767,15 @@ func (p *TCalcDeleteBitmapPartitionInfo) GetSubTxnIds() (v []int64) {
 	}
 	return p.SubTxnIds
 }
+
+var TCalcDeleteBitmapPartitionInfo_TabletStates_DEFAULT []int64
+
+func (p *TCalcDeleteBitmapPartitionInfo) GetTabletStates() (v []int64) {
+	if !p.IsSetTabletStates() {
+		return TCalcDeleteBitmapPartitionInfo_TabletStates_DEFAULT
+	}
+	return p.TabletStates
+}
 func (p *TCalcDeleteBitmapPartitionInfo) SetPartitionId(val types.TPartitionId) {
 	p.PartitionId = val
 }
@@ -20787,6 +20797,9 @@ func (p *TCalcDeleteBitmapPartitionInfo) SetCumulativePoints(val []int64) {
 func (p *TCalcDeleteBitmapPartitionInfo) SetSubTxnIds(val []int64) {
 	p.SubTxnIds = val
 }
+func (p *TCalcDeleteBitmapPartitionInfo) SetTabletStates(val []int64) {
+	p.TabletStates = val
+}
 
 var fieldIDToName_TCalcDeleteBitmapPartitionInfo = map[int16]string{
 	1: "partition_id",
@@ -20796,6 +20809,7 @@ var fieldIDToName_TCalcDeleteBitmapPartitionInfo = map[int16]string{
 	5: "cumulative_compaction_cnts",
 	6: "cumulative_points",
 	7: "sub_txn_ids",
+	8: "tablet_states",
 }
 
 func (p *TCalcDeleteBitmapPartitionInfo) IsSetBaseCompactionCnts() bool {
@@ -20812,6 +20826,10 @@ func (p *TCalcDeleteBitmapPartitionInfo) IsSetCumulativePoints() bool {
 
 func (p *TCalcDeleteBitmapPartitionInfo) IsSetSubTxnIds() bool {
 	return p.SubTxnIds != nil
+}
+
+func (p *TCalcDeleteBitmapPartitionInfo) IsSetTabletStates() bool {
+	return p.TabletStates != nil
 }
 
 func (p *TCalcDeleteBitmapPartitionInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -20890,6 +20908,14 @@ func (p *TCalcDeleteBitmapPartitionInfo) Read(iprot thrift.TProtocol) (err error
 		case 7:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -21077,6 +21103,29 @@ func (p *TCalcDeleteBitmapPartitionInfo) ReadField7(iprot thrift.TProtocol) erro
 	p.SubTxnIds = _field
 	return nil
 }
+func (p *TCalcDeleteBitmapPartitionInfo) ReadField8(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.TabletStates = _field
+	return nil
+}
 
 func (p *TCalcDeleteBitmapPartitionInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -21110,6 +21159,10 @@ func (p *TCalcDeleteBitmapPartitionInfo) Write(oprot thrift.TProtocol) (err erro
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
 			goto WriteFieldError
 		}
 	}
@@ -21297,6 +21350,33 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
 
+func (p *TCalcDeleteBitmapPartitionInfo) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTabletStates() {
+		if err = oprot.WriteFieldBegin("tablet_states", thrift.LIST, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.I64, len(p.TabletStates)); err != nil {
+			return err
+		}
+		for _, v := range p.TabletStates {
+			if err := oprot.WriteI64(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
 func (p *TCalcDeleteBitmapPartitionInfo) String() string {
 	if p == nil {
 		return "<nil>"
@@ -21330,6 +21410,9 @@ func (p *TCalcDeleteBitmapPartitionInfo) DeepEqual(ano *TCalcDeleteBitmapPartiti
 		return false
 	}
 	if !p.Field7DeepEqual(ano.SubTxnIds) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.TabletStates) {
 		return false
 	}
 	return true
@@ -21407,6 +21490,19 @@ func (p *TCalcDeleteBitmapPartitionInfo) Field7DeepEqual(src []int64) bool {
 		return false
 	}
 	for i, v := range p.SubTxnIds {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+func (p *TCalcDeleteBitmapPartitionInfo) Field8DeepEqual(src []int64) bool {
+
+	if len(p.TabletStates) != len(src) {
+		return false
+	}
+	for i, v := range p.TabletStates {
 		_src := src[i]
 		if v != _src {
 			return false

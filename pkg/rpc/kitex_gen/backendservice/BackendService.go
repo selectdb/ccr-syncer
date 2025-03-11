@@ -221,6 +221,53 @@ func (p *TTopicInfoType) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+type TWgSlotMemoryPolicy int64
+
+const (
+	TWgSlotMemoryPolicy_NONE    TWgSlotMemoryPolicy = 0
+	TWgSlotMemoryPolicy_FIXED   TWgSlotMemoryPolicy = 1
+	TWgSlotMemoryPolicy_DYNAMIC TWgSlotMemoryPolicy = 2
+)
+
+func (p TWgSlotMemoryPolicy) String() string {
+	switch p {
+	case TWgSlotMemoryPolicy_NONE:
+		return "NONE"
+	case TWgSlotMemoryPolicy_FIXED:
+		return "FIXED"
+	case TWgSlotMemoryPolicy_DYNAMIC:
+		return "DYNAMIC"
+	}
+	return "<UNSET>"
+}
+
+func TWgSlotMemoryPolicyFromString(s string) (TWgSlotMemoryPolicy, error) {
+	switch s {
+	case "NONE":
+		return TWgSlotMemoryPolicy_NONE, nil
+	case "FIXED":
+		return TWgSlotMemoryPolicy_FIXED, nil
+	case "DYNAMIC":
+		return TWgSlotMemoryPolicy_DYNAMIC, nil
+	}
+	return TWgSlotMemoryPolicy(0), fmt.Errorf("not a valid TWgSlotMemoryPolicy string")
+}
+
+func TWgSlotMemoryPolicyPtr(v TWgSlotMemoryPolicy) *TWgSlotMemoryPolicy { return &v }
+func (p *TWgSlotMemoryPolicy) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = TWgSlotMemoryPolicy(result.Int64)
+	return
+}
+
+func (p *TWgSlotMemoryPolicy) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
 type TWorkloadMetricType int64
 
 const (
@@ -366,43 +413,6 @@ func (p *TWorkloadActionType) Scan(value interface{}) (err error) {
 }
 
 func (p *TWorkloadActionType) Value() (driver.Value, error) {
-	if p == nil {
-		return nil, nil
-	}
-	return int64(*p), nil
-}
-
-type TWorkloadType int64
-
-const (
-	TWorkloadType_INTERNAL TWorkloadType = 2
-)
-
-func (p TWorkloadType) String() string {
-	switch p {
-	case TWorkloadType_INTERNAL:
-		return "INTERNAL"
-	}
-	return "<UNSET>"
-}
-
-func TWorkloadTypeFromString(s string) (TWorkloadType, error) {
-	switch s {
-	case "INTERNAL":
-		return TWorkloadType_INTERNAL, nil
-	}
-	return TWorkloadType(0), fmt.Errorf("not a valid TWorkloadType string")
-}
-
-func TWorkloadTypePtr(v TWorkloadType) *TWorkloadType { return &v }
-func (p *TWorkloadType) Scan(value interface{}) (err error) {
-	var result sql.NullInt64
-	err = result.Scan(value)
-	*p = TWorkloadType(result.Int64)
-	return
-}
-
-func (p *TWorkloadType) Value() (driver.Value, error) {
 	if p == nil {
 		return nil, nil
 	}
@@ -11948,22 +11958,25 @@ func (p *TQueryIngestBinlogResult_) Field2DeepEqual(src *string) bool {
 }
 
 type TWorkloadGroupInfo struct {
-	Id                       *int64  `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id,omitempty"`
-	Name                     *string `thrift:"name,2,optional" frugal:"2,optional,string" json:"name,omitempty"`
-	Version                  *int64  `thrift:"version,3,optional" frugal:"3,optional,i64" json:"version,omitempty"`
-	CpuShare                 *int64  `thrift:"cpu_share,4,optional" frugal:"4,optional,i64" json:"cpu_share,omitempty"`
-	CpuHardLimit             *int32  `thrift:"cpu_hard_limit,5,optional" frugal:"5,optional,i32" json:"cpu_hard_limit,omitempty"`
-	MemLimit                 *string `thrift:"mem_limit,6,optional" frugal:"6,optional,string" json:"mem_limit,omitempty"`
-	EnableMemoryOvercommit   *bool   `thrift:"enable_memory_overcommit,7,optional" frugal:"7,optional,bool" json:"enable_memory_overcommit,omitempty"`
-	EnableCpuHardLimit       *bool   `thrift:"enable_cpu_hard_limit,8,optional" frugal:"8,optional,bool" json:"enable_cpu_hard_limit,omitempty"`
-	ScanThreadNum            *int32  `thrift:"scan_thread_num,9,optional" frugal:"9,optional,i32" json:"scan_thread_num,omitempty"`
-	MaxRemoteScanThreadNum   *int32  `thrift:"max_remote_scan_thread_num,10,optional" frugal:"10,optional,i32" json:"max_remote_scan_thread_num,omitempty"`
-	MinRemoteScanThreadNum   *int32  `thrift:"min_remote_scan_thread_num,11,optional" frugal:"11,optional,i32" json:"min_remote_scan_thread_num,omitempty"`
-	MemoryLowWatermark       *int32  `thrift:"memory_low_watermark,12,optional" frugal:"12,optional,i32" json:"memory_low_watermark,omitempty"`
-	MemoryHighWatermark      *int32  `thrift:"memory_high_watermark,13,optional" frugal:"13,optional,i32" json:"memory_high_watermark,omitempty"`
-	ReadBytesPerSecond       *int64  `thrift:"read_bytes_per_second,14,optional" frugal:"14,optional,i64" json:"read_bytes_per_second,omitempty"`
-	RemoteReadBytesPerSecond *int64  `thrift:"remote_read_bytes_per_second,15,optional" frugal:"15,optional,i64" json:"remote_read_bytes_per_second,omitempty"`
-	Tag                      *string `thrift:"tag,16,optional" frugal:"16,optional,string" json:"tag,omitempty"`
+	Id                       *int64               `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id,omitempty"`
+	Name                     *string              `thrift:"name,2,optional" frugal:"2,optional,string" json:"name,omitempty"`
+	Version                  *int64               `thrift:"version,3,optional" frugal:"3,optional,i64" json:"version,omitempty"`
+	CpuShare                 *int64               `thrift:"cpu_share,4,optional" frugal:"4,optional,i64" json:"cpu_share,omitempty"`
+	CpuHardLimit             *int32               `thrift:"cpu_hard_limit,5,optional" frugal:"5,optional,i32" json:"cpu_hard_limit,omitempty"`
+	MemLimit                 *string              `thrift:"mem_limit,6,optional" frugal:"6,optional,string" json:"mem_limit,omitempty"`
+	EnableMemoryOvercommit   *bool                `thrift:"enable_memory_overcommit,7,optional" frugal:"7,optional,bool" json:"enable_memory_overcommit,omitempty"`
+	EnableCpuHardLimit       *bool                `thrift:"enable_cpu_hard_limit,8,optional" frugal:"8,optional,bool" json:"enable_cpu_hard_limit,omitempty"`
+	ScanThreadNum            *int32               `thrift:"scan_thread_num,9,optional" frugal:"9,optional,i32" json:"scan_thread_num,omitempty"`
+	MaxRemoteScanThreadNum   *int32               `thrift:"max_remote_scan_thread_num,10,optional" frugal:"10,optional,i32" json:"max_remote_scan_thread_num,omitempty"`
+	MinRemoteScanThreadNum   *int32               `thrift:"min_remote_scan_thread_num,11,optional" frugal:"11,optional,i32" json:"min_remote_scan_thread_num,omitempty"`
+	MemoryLowWatermark       *int32               `thrift:"memory_low_watermark,12,optional" frugal:"12,optional,i32" json:"memory_low_watermark,omitempty"`
+	MemoryHighWatermark      *int32               `thrift:"memory_high_watermark,13,optional" frugal:"13,optional,i32" json:"memory_high_watermark,omitempty"`
+	ReadBytesPerSecond       *int64               `thrift:"read_bytes_per_second,14,optional" frugal:"14,optional,i64" json:"read_bytes_per_second,omitempty"`
+	RemoteReadBytesPerSecond *int64               `thrift:"remote_read_bytes_per_second,15,optional" frugal:"15,optional,i64" json:"remote_read_bytes_per_second,omitempty"`
+	Tag                      *string              `thrift:"tag,16,optional" frugal:"16,optional,string" json:"tag,omitempty"`
+	TotalQuerySlotCount      *int32               `thrift:"total_query_slot_count,17,optional" frugal:"17,optional,i32" json:"total_query_slot_count,omitempty"`
+	WriteBufferRatio         *int32               `thrift:"write_buffer_ratio,18,optional" frugal:"18,optional,i32" json:"write_buffer_ratio,omitempty"`
+	SlotMemoryPolicy         *TWgSlotMemoryPolicy `thrift:"slot_memory_policy,19,optional" frugal:"19,optional,TWgSlotMemoryPolicy" json:"slot_memory_policy,omitempty"`
 }
 
 func NewTWorkloadGroupInfo() *TWorkloadGroupInfo {
@@ -12116,6 +12129,33 @@ func (p *TWorkloadGroupInfo) GetTag() (v string) {
 	}
 	return *p.Tag
 }
+
+var TWorkloadGroupInfo_TotalQuerySlotCount_DEFAULT int32
+
+func (p *TWorkloadGroupInfo) GetTotalQuerySlotCount() (v int32) {
+	if !p.IsSetTotalQuerySlotCount() {
+		return TWorkloadGroupInfo_TotalQuerySlotCount_DEFAULT
+	}
+	return *p.TotalQuerySlotCount
+}
+
+var TWorkloadGroupInfo_WriteBufferRatio_DEFAULT int32
+
+func (p *TWorkloadGroupInfo) GetWriteBufferRatio() (v int32) {
+	if !p.IsSetWriteBufferRatio() {
+		return TWorkloadGroupInfo_WriteBufferRatio_DEFAULT
+	}
+	return *p.WriteBufferRatio
+}
+
+var TWorkloadGroupInfo_SlotMemoryPolicy_DEFAULT TWgSlotMemoryPolicy
+
+func (p *TWorkloadGroupInfo) GetSlotMemoryPolicy() (v TWgSlotMemoryPolicy) {
+	if !p.IsSetSlotMemoryPolicy() {
+		return TWorkloadGroupInfo_SlotMemoryPolicy_DEFAULT
+	}
+	return *p.SlotMemoryPolicy
+}
 func (p *TWorkloadGroupInfo) SetId(val *int64) {
 	p.Id = val
 }
@@ -12164,6 +12204,15 @@ func (p *TWorkloadGroupInfo) SetRemoteReadBytesPerSecond(val *int64) {
 func (p *TWorkloadGroupInfo) SetTag(val *string) {
 	p.Tag = val
 }
+func (p *TWorkloadGroupInfo) SetTotalQuerySlotCount(val *int32) {
+	p.TotalQuerySlotCount = val
+}
+func (p *TWorkloadGroupInfo) SetWriteBufferRatio(val *int32) {
+	p.WriteBufferRatio = val
+}
+func (p *TWorkloadGroupInfo) SetSlotMemoryPolicy(val *TWgSlotMemoryPolicy) {
+	p.SlotMemoryPolicy = val
+}
 
 var fieldIDToName_TWorkloadGroupInfo = map[int16]string{
 	1:  "id",
@@ -12182,6 +12231,9 @@ var fieldIDToName_TWorkloadGroupInfo = map[int16]string{
 	14: "read_bytes_per_second",
 	15: "remote_read_bytes_per_second",
 	16: "tag",
+	17: "total_query_slot_count",
+	18: "write_buffer_ratio",
+	19: "slot_memory_policy",
 }
 
 func (p *TWorkloadGroupInfo) IsSetId() bool {
@@ -12246,6 +12298,18 @@ func (p *TWorkloadGroupInfo) IsSetRemoteReadBytesPerSecond() bool {
 
 func (p *TWorkloadGroupInfo) IsSetTag() bool {
 	return p.Tag != nil
+}
+
+func (p *TWorkloadGroupInfo) IsSetTotalQuerySlotCount() bool {
+	return p.TotalQuerySlotCount != nil
+}
+
+func (p *TWorkloadGroupInfo) IsSetWriteBufferRatio() bool {
+	return p.WriteBufferRatio != nil
+}
+
+func (p *TWorkloadGroupInfo) IsSetSlotMemoryPolicy() bool {
+	return p.SlotMemoryPolicy != nil
 }
 
 func (p *TWorkloadGroupInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -12390,6 +12454,30 @@ func (p *TWorkloadGroupInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 16:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField16(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 17:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField17(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 18:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField18(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 19:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField19(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -12600,6 +12688,40 @@ func (p *TWorkloadGroupInfo) ReadField16(iprot thrift.TProtocol) error {
 	p.Tag = _field
 	return nil
 }
+func (p *TWorkloadGroupInfo) ReadField17(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TotalQuerySlotCount = _field
+	return nil
+}
+func (p *TWorkloadGroupInfo) ReadField18(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WriteBufferRatio = _field
+	return nil
+}
+func (p *TWorkloadGroupInfo) ReadField19(iprot thrift.TProtocol) error {
+
+	var _field *TWgSlotMemoryPolicy
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := TWgSlotMemoryPolicy(v)
+		_field = &tmp
+	}
+	p.SlotMemoryPolicy = _field
+	return nil
+}
 
 func (p *TWorkloadGroupInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -12669,6 +12791,18 @@ func (p *TWorkloadGroupInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField16(oprot); err != nil {
 			fieldId = 16
+			goto WriteFieldError
+		}
+		if err = p.writeField17(oprot); err != nil {
+			fieldId = 17
+			goto WriteFieldError
+		}
+		if err = p.writeField18(oprot); err != nil {
+			fieldId = 18
+			goto WriteFieldError
+		}
+		if err = p.writeField19(oprot); err != nil {
+			fieldId = 19
 			goto WriteFieldError
 		}
 	}
@@ -12993,6 +13127,63 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
 }
 
+func (p *TWorkloadGroupInfo) writeField17(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTotalQuerySlotCount() {
+		if err = oprot.WriteFieldBegin("total_query_slot_count", thrift.I32, 17); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.TotalQuerySlotCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
+}
+
+func (p *TWorkloadGroupInfo) writeField18(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWriteBufferRatio() {
+		if err = oprot.WriteFieldBegin("write_buffer_ratio", thrift.I32, 18); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.WriteBufferRatio); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 end error: ", p), err)
+}
+
+func (p *TWorkloadGroupInfo) writeField19(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSlotMemoryPolicy() {
+		if err = oprot.WriteFieldBegin("slot_memory_policy", thrift.I32, 19); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.SlotMemoryPolicy)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 end error: ", p), err)
+}
+
 func (p *TWorkloadGroupInfo) String() string {
 	if p == nil {
 		return "<nil>"
@@ -13053,6 +13244,15 @@ func (p *TWorkloadGroupInfo) DeepEqual(ano *TWorkloadGroupInfo) bool {
 		return false
 	}
 	if !p.Field16DeepEqual(ano.Tag) {
+		return false
+	}
+	if !p.Field17DeepEqual(ano.TotalQuerySlotCount) {
+		return false
+	}
+	if !p.Field18DeepEqual(ano.WriteBufferRatio) {
+		return false
+	}
+	if !p.Field19DeepEqual(ano.SlotMemoryPolicy) {
 		return false
 	}
 	return true
@@ -13246,6 +13446,42 @@ func (p *TWorkloadGroupInfo) Field16DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Tag, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TWorkloadGroupInfo) Field17DeepEqual(src *int32) bool {
+
+	if p.TotalQuerySlotCount == src {
+		return true
+	} else if p.TotalQuerySlotCount == nil || src == nil {
+		return false
+	}
+	if *p.TotalQuerySlotCount != *src {
+		return false
+	}
+	return true
+}
+func (p *TWorkloadGroupInfo) Field18DeepEqual(src *int32) bool {
+
+	if p.WriteBufferRatio == src {
+		return true
+	} else if p.WriteBufferRatio == nil || src == nil {
+		return false
+	}
+	if *p.WriteBufferRatio != *src {
+		return false
+	}
+	return true
+}
+func (p *TWorkloadGroupInfo) Field19DeepEqual(src *TWgSlotMemoryPolicy) bool {
+
+	if p.SlotMemoryPolicy == src {
+		return true
+	} else if p.SlotMemoryPolicy == nil || src == nil {
+		return false
+	}
+	if *p.SlotMemoryPolicy != *src {
 		return false
 	}
 	return true

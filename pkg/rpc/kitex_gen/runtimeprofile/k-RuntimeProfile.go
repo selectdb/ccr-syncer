@@ -815,7 +815,7 @@ func (p *TRuntimeProfileNode) FastReadField10(buf []byte) (int, error) {
 		return offset, err
 	} else {
 		offset += l
-		p.IsSink = &v
+		p.DeprecatedIsSink = &v
 
 	}
 	return offset, nil
@@ -1007,9 +1007,9 @@ func (p *TRuntimeProfileNode) fastWriteField9(buf []byte, binaryWriter bthrift.B
 
 func (p *TRuntimeProfileNode) fastWriteField10(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
-	if p.IsSetIsSink() {
-		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "is_sink", thrift.BOOL, 10)
-		offset += bthrift.Binary.WriteBool(buf[offset:], *p.IsSink)
+	if p.IsSetDeprecatedIsSink() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "deprecated_is_sink", thrift.BOOL, 10)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.DeprecatedIsSink)
 
 		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
 	}
@@ -1137,9 +1137,9 @@ func (p *TRuntimeProfileNode) field9Length() int {
 
 func (p *TRuntimeProfileNode) field10Length() int {
 	l := 0
-	if p.IsSetIsSink() {
-		l += bthrift.Binary.FieldBeginLength("is_sink", thrift.BOOL, 10)
-		l += bthrift.Binary.BoolLength(*p.IsSink)
+	if p.IsSetDeprecatedIsSink() {
+		l += bthrift.Binary.FieldBeginLength("deprecated_is_sink", thrift.BOOL, 10)
+		l += bthrift.Binary.BoolLength(*p.DeprecatedIsSink)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

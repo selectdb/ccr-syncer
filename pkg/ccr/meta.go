@@ -1295,6 +1295,10 @@ func (m *Meta) IsIndexDropped(indexId int64) bool {
 	panic("IsIndexDropped is not supported, please use ThriftMeta instead")
 }
 
+func (m *Meta) GetDroppedIndexMap() map[int64]int64 {
+	panic("GetDroppedIndexMap is not supported, please use ThriftMeta instead")
+}
+
 // Describe table all by sql
 // DESC ${tableName} ALL
 func (m *Meta) DescribeTableAll(tableName string) (map[string]*MaterializedIndexDesc, error) {

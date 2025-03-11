@@ -1771,6 +1771,19 @@ type TQueryOptions struct {
 	ProfileLevel                                int32           `thrift:"profile_level,147,optional" frugal:"147,optional,i32" json:"profile_level,omitempty"`
 	MinScannerConcurrency                       int32           `thrift:"min_scanner_concurrency,148,optional" frugal:"148,optional,i32" json:"min_scanner_concurrency,omitempty"`
 	MinScanSchedulerConcurrency                 int32           `thrift:"min_scan_scheduler_concurrency,149,optional" frugal:"149,optional,i32" json:"min_scan_scheduler_concurrency,omitempty"`
+	EnableRuntimeFilterPartitionPrune           bool            `thrift:"enable_runtime_filter_partition_prune,150,optional" frugal:"150,optional,bool" json:"enable_runtime_filter_partition_prune,omitempty"`
+	MinimumOperatorMemoryRequiredKb             int32           `thrift:"minimum_operator_memory_required_kb,151,optional" frugal:"151,optional,i32" json:"minimum_operator_memory_required_kb,omitempty"`
+	EnableMemOvercommit                         bool            `thrift:"enable_mem_overcommit,152,optional" frugal:"152,optional,bool" json:"enable_mem_overcommit,omitempty"`
+	QuerySlotCount                              int32           `thrift:"query_slot_count,153,optional" frugal:"153,optional,i32" json:"query_slot_count,omitempty"`
+	EnableSpill                                 bool            `thrift:"enable_spill,154,optional" frugal:"154,optional,bool" json:"enable_spill,omitempty"`
+	EnableReserveMemory                         bool            `thrift:"enable_reserve_memory,155,optional" frugal:"155,optional,bool" json:"enable_reserve_memory,omitempty"`
+	RevocableMemoryHighWatermarkPercent         int32           `thrift:"revocable_memory_high_watermark_percent,156,optional" frugal:"156,optional,i32" json:"revocable_memory_high_watermark_percent,omitempty"`
+	SpillSortMemLimit                           int64           `thrift:"spill_sort_mem_limit,157,optional" frugal:"157,optional,i64" json:"spill_sort_mem_limit,omitempty"`
+	SpillSortBatchBytes                         int64           `thrift:"spill_sort_batch_bytes,158,optional" frugal:"158,optional,i64" json:"spill_sort_batch_bytes,omitempty"`
+	SpillAggregationPartitionCount              int32           `thrift:"spill_aggregation_partition_count,159,optional" frugal:"159,optional,i32" json:"spill_aggregation_partition_count,omitempty"`
+	SpillHashJoinPartitionCount                 int32           `thrift:"spill_hash_join_partition_count,160,optional" frugal:"160,optional,i32" json:"spill_hash_join_partition_count,omitempty"`
+	LowMemoryModeBufferLimit                    int64           `thrift:"low_memory_mode_buffer_limit,161,optional" frugal:"161,optional,i64" json:"low_memory_mode_buffer_limit,omitempty"`
+	DumpHeapProfileWhenMemLimitExceeded         bool            `thrift:"dump_heap_profile_when_mem_limit_exceeded,162,optional" frugal:"162,optional,bool" json:"dump_heap_profile_when_mem_limit_exceeded,omitempty"`
 	DisableFileCache                            bool            `thrift:"disable_file_cache,1000,optional" frugal:"1000,optional,bool" json:"disable_file_cache,omitempty"`
 }
 
@@ -1906,6 +1919,19 @@ func NewTQueryOptions() *TQueryOptions {
 		ProfileLevel:                                1,
 		MinScannerConcurrency:                       1,
 		MinScanSchedulerConcurrency:                 0,
+		EnableRuntimeFilterPartitionPrune:           true,
+		MinimumOperatorMemoryRequiredKb:             1024,
+		EnableMemOvercommit:                         true,
+		QuerySlotCount:                              0,
+		EnableSpill:                                 false,
+		EnableReserveMemory:                         true,
+		RevocableMemoryHighWatermarkPercent:         -1,
+		SpillSortMemLimit:                           134217728,
+		SpillSortBatchBytes:                         8388608,
+		SpillAggregationPartitionCount:              32,
+		SpillHashJoinPartitionCount:                 32,
+		LowMemoryModeBufferLimit:                    33554432,
+		DumpHeapProfileWhenMemLimitExceeded:         false,
 		DisableFileCache:                            false,
 	}
 }
@@ -2040,6 +2066,19 @@ func (p *TQueryOptions) InitDefault() {
 	p.ProfileLevel = 1
 	p.MinScannerConcurrency = 1
 	p.MinScanSchedulerConcurrency = 0
+	p.EnableRuntimeFilterPartitionPrune = true
+	p.MinimumOperatorMemoryRequiredKb = 1024
+	p.EnableMemOvercommit = true
+	p.QuerySlotCount = 0
+	p.EnableSpill = false
+	p.EnableReserveMemory = true
+	p.RevocableMemoryHighWatermarkPercent = -1
+	p.SpillSortMemLimit = 134217728
+	p.SpillSortBatchBytes = 8388608
+	p.SpillAggregationPartitionCount = 32
+	p.SpillHashJoinPartitionCount = 32
+	p.LowMemoryModeBufferLimit = 33554432
+	p.DumpHeapProfileWhenMemLimitExceeded = false
 	p.DisableFileCache = false
 }
 
@@ -3303,6 +3342,123 @@ func (p *TQueryOptions) GetMinScanSchedulerConcurrency() (v int32) {
 	return p.MinScanSchedulerConcurrency
 }
 
+var TQueryOptions_EnableRuntimeFilterPartitionPrune_DEFAULT bool = true
+
+func (p *TQueryOptions) GetEnableRuntimeFilterPartitionPrune() (v bool) {
+	if !p.IsSetEnableRuntimeFilterPartitionPrune() {
+		return TQueryOptions_EnableRuntimeFilterPartitionPrune_DEFAULT
+	}
+	return p.EnableRuntimeFilterPartitionPrune
+}
+
+var TQueryOptions_MinimumOperatorMemoryRequiredKb_DEFAULT int32 = 1024
+
+func (p *TQueryOptions) GetMinimumOperatorMemoryRequiredKb() (v int32) {
+	if !p.IsSetMinimumOperatorMemoryRequiredKb() {
+		return TQueryOptions_MinimumOperatorMemoryRequiredKb_DEFAULT
+	}
+	return p.MinimumOperatorMemoryRequiredKb
+}
+
+var TQueryOptions_EnableMemOvercommit_DEFAULT bool = true
+
+func (p *TQueryOptions) GetEnableMemOvercommit() (v bool) {
+	if !p.IsSetEnableMemOvercommit() {
+		return TQueryOptions_EnableMemOvercommit_DEFAULT
+	}
+	return p.EnableMemOvercommit
+}
+
+var TQueryOptions_QuerySlotCount_DEFAULT int32 = 0
+
+func (p *TQueryOptions) GetQuerySlotCount() (v int32) {
+	if !p.IsSetQuerySlotCount() {
+		return TQueryOptions_QuerySlotCount_DEFAULT
+	}
+	return p.QuerySlotCount
+}
+
+var TQueryOptions_EnableSpill_DEFAULT bool = false
+
+func (p *TQueryOptions) GetEnableSpill() (v bool) {
+	if !p.IsSetEnableSpill() {
+		return TQueryOptions_EnableSpill_DEFAULT
+	}
+	return p.EnableSpill
+}
+
+var TQueryOptions_EnableReserveMemory_DEFAULT bool = true
+
+func (p *TQueryOptions) GetEnableReserveMemory() (v bool) {
+	if !p.IsSetEnableReserveMemory() {
+		return TQueryOptions_EnableReserveMemory_DEFAULT
+	}
+	return p.EnableReserveMemory
+}
+
+var TQueryOptions_RevocableMemoryHighWatermarkPercent_DEFAULT int32 = -1
+
+func (p *TQueryOptions) GetRevocableMemoryHighWatermarkPercent() (v int32) {
+	if !p.IsSetRevocableMemoryHighWatermarkPercent() {
+		return TQueryOptions_RevocableMemoryHighWatermarkPercent_DEFAULT
+	}
+	return p.RevocableMemoryHighWatermarkPercent
+}
+
+var TQueryOptions_SpillSortMemLimit_DEFAULT int64 = 134217728
+
+func (p *TQueryOptions) GetSpillSortMemLimit() (v int64) {
+	if !p.IsSetSpillSortMemLimit() {
+		return TQueryOptions_SpillSortMemLimit_DEFAULT
+	}
+	return p.SpillSortMemLimit
+}
+
+var TQueryOptions_SpillSortBatchBytes_DEFAULT int64 = 8388608
+
+func (p *TQueryOptions) GetSpillSortBatchBytes() (v int64) {
+	if !p.IsSetSpillSortBatchBytes() {
+		return TQueryOptions_SpillSortBatchBytes_DEFAULT
+	}
+	return p.SpillSortBatchBytes
+}
+
+var TQueryOptions_SpillAggregationPartitionCount_DEFAULT int32 = 32
+
+func (p *TQueryOptions) GetSpillAggregationPartitionCount() (v int32) {
+	if !p.IsSetSpillAggregationPartitionCount() {
+		return TQueryOptions_SpillAggregationPartitionCount_DEFAULT
+	}
+	return p.SpillAggregationPartitionCount
+}
+
+var TQueryOptions_SpillHashJoinPartitionCount_DEFAULT int32 = 32
+
+func (p *TQueryOptions) GetSpillHashJoinPartitionCount() (v int32) {
+	if !p.IsSetSpillHashJoinPartitionCount() {
+		return TQueryOptions_SpillHashJoinPartitionCount_DEFAULT
+	}
+	return p.SpillHashJoinPartitionCount
+}
+
+var TQueryOptions_LowMemoryModeBufferLimit_DEFAULT int64 = 33554432
+
+func (p *TQueryOptions) GetLowMemoryModeBufferLimit() (v int64) {
+	if !p.IsSetLowMemoryModeBufferLimit() {
+		return TQueryOptions_LowMemoryModeBufferLimit_DEFAULT
+	}
+	return p.LowMemoryModeBufferLimit
+}
+
+var TQueryOptions_DumpHeapProfileWhenMemLimitExceeded_DEFAULT bool = false
+
+func (p *TQueryOptions) GetDumpHeapProfileWhenMemLimitExceeded() (v bool) {
+	if !p.IsSetDumpHeapProfileWhenMemLimitExceeded() {
+		return TQueryOptions_DumpHeapProfileWhenMemLimitExceeded_DEFAULT
+	}
+	return p.DumpHeapProfileWhenMemLimitExceeded
+}
+
 var TQueryOptions_DisableFileCache_DEFAULT bool = false
 
 func (p *TQueryOptions) GetDisableFileCache() (v bool) {
@@ -3731,6 +3887,45 @@ func (p *TQueryOptions) SetMinScannerConcurrency(val int32) {
 func (p *TQueryOptions) SetMinScanSchedulerConcurrency(val int32) {
 	p.MinScanSchedulerConcurrency = val
 }
+func (p *TQueryOptions) SetEnableRuntimeFilterPartitionPrune(val bool) {
+	p.EnableRuntimeFilterPartitionPrune = val
+}
+func (p *TQueryOptions) SetMinimumOperatorMemoryRequiredKb(val int32) {
+	p.MinimumOperatorMemoryRequiredKb = val
+}
+func (p *TQueryOptions) SetEnableMemOvercommit(val bool) {
+	p.EnableMemOvercommit = val
+}
+func (p *TQueryOptions) SetQuerySlotCount(val int32) {
+	p.QuerySlotCount = val
+}
+func (p *TQueryOptions) SetEnableSpill(val bool) {
+	p.EnableSpill = val
+}
+func (p *TQueryOptions) SetEnableReserveMemory(val bool) {
+	p.EnableReserveMemory = val
+}
+func (p *TQueryOptions) SetRevocableMemoryHighWatermarkPercent(val int32) {
+	p.RevocableMemoryHighWatermarkPercent = val
+}
+func (p *TQueryOptions) SetSpillSortMemLimit(val int64) {
+	p.SpillSortMemLimit = val
+}
+func (p *TQueryOptions) SetSpillSortBatchBytes(val int64) {
+	p.SpillSortBatchBytes = val
+}
+func (p *TQueryOptions) SetSpillAggregationPartitionCount(val int32) {
+	p.SpillAggregationPartitionCount = val
+}
+func (p *TQueryOptions) SetSpillHashJoinPartitionCount(val int32) {
+	p.SpillHashJoinPartitionCount = val
+}
+func (p *TQueryOptions) SetLowMemoryModeBufferLimit(val int64) {
+	p.LowMemoryModeBufferLimit = val
+}
+func (p *TQueryOptions) SetDumpHeapProfileWhenMemLimitExceeded(val bool) {
+	p.DumpHeapProfileWhenMemLimitExceeded = val
+}
 func (p *TQueryOptions) SetDisableFileCache(val bool) {
 	p.DisableFileCache = val
 }
@@ -3876,6 +4071,19 @@ var fieldIDToName_TQueryOptions = map[int16]string{
 	147:  "profile_level",
 	148:  "min_scanner_concurrency",
 	149:  "min_scan_scheduler_concurrency",
+	150:  "enable_runtime_filter_partition_prune",
+	151:  "minimum_operator_memory_required_kb",
+	152:  "enable_mem_overcommit",
+	153:  "query_slot_count",
+	154:  "enable_spill",
+	155:  "enable_reserve_memory",
+	156:  "revocable_memory_high_watermark_percent",
+	157:  "spill_sort_mem_limit",
+	158:  "spill_sort_batch_bytes",
+	159:  "spill_aggregation_partition_count",
+	160:  "spill_hash_join_partition_count",
+	161:  "low_memory_mode_buffer_limit",
+	162:  "dump_heap_profile_when_mem_limit_exceeded",
 	1000: "disable_file_cache",
 }
 
@@ -4437,6 +4645,58 @@ func (p *TQueryOptions) IsSetMinScannerConcurrency() bool {
 
 func (p *TQueryOptions) IsSetMinScanSchedulerConcurrency() bool {
 	return p.MinScanSchedulerConcurrency != TQueryOptions_MinScanSchedulerConcurrency_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableRuntimeFilterPartitionPrune() bool {
+	return p.EnableRuntimeFilterPartitionPrune != TQueryOptions_EnableRuntimeFilterPartitionPrune_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetMinimumOperatorMemoryRequiredKb() bool {
+	return p.MinimumOperatorMemoryRequiredKb != TQueryOptions_MinimumOperatorMemoryRequiredKb_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableMemOvercommit() bool {
+	return p.EnableMemOvercommit != TQueryOptions_EnableMemOvercommit_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetQuerySlotCount() bool {
+	return p.QuerySlotCount != TQueryOptions_QuerySlotCount_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableSpill() bool {
+	return p.EnableSpill != TQueryOptions_EnableSpill_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableReserveMemory() bool {
+	return p.EnableReserveMemory != TQueryOptions_EnableReserveMemory_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetRevocableMemoryHighWatermarkPercent() bool {
+	return p.RevocableMemoryHighWatermarkPercent != TQueryOptions_RevocableMemoryHighWatermarkPercent_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetSpillSortMemLimit() bool {
+	return p.SpillSortMemLimit != TQueryOptions_SpillSortMemLimit_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetSpillSortBatchBytes() bool {
+	return p.SpillSortBatchBytes != TQueryOptions_SpillSortBatchBytes_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetSpillAggregationPartitionCount() bool {
+	return p.SpillAggregationPartitionCount != TQueryOptions_SpillAggregationPartitionCount_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetSpillHashJoinPartitionCount() bool {
+	return p.SpillHashJoinPartitionCount != TQueryOptions_SpillHashJoinPartitionCount_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetLowMemoryModeBufferLimit() bool {
+	return p.LowMemoryModeBufferLimit != TQueryOptions_LowMemoryModeBufferLimit_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetDumpHeapProfileWhenMemLimitExceeded() bool {
+	return p.DumpHeapProfileWhenMemLimitExceeded != TQueryOptions_DumpHeapProfileWhenMemLimitExceeded_DEFAULT
 }
 
 func (p *TQueryOptions) IsSetDisableFileCache() bool {
@@ -5577,6 +5837,110 @@ func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
 		case 149:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField149(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 150:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField150(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 151:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField151(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 152:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField152(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 153:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField153(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 154:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField154(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 155:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField155(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 156:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField156(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 157:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField157(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 158:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField158(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 159:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField159(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 160:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField160(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 161:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField161(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 162:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField162(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7156,6 +7520,149 @@ func (p *TQueryOptions) ReadField149(iprot thrift.TProtocol) error {
 	p.MinScanSchedulerConcurrency = _field
 	return nil
 }
+func (p *TQueryOptions) ReadField150(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnableRuntimeFilterPartitionPrune = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField151(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.MinimumOperatorMemoryRequiredKb = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField152(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnableMemOvercommit = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField153(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.QuerySlotCount = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField154(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnableSpill = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField155(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnableReserveMemory = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField156(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.RevocableMemoryHighWatermarkPercent = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField157(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.SpillSortMemLimit = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField158(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.SpillSortBatchBytes = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField159(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.SpillAggregationPartitionCount = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField160(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.SpillHashJoinPartitionCount = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField161(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.LowMemoryModeBufferLimit = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField162(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.DumpHeapProfileWhenMemLimitExceeded = _field
+	return nil
+}
 func (p *TQueryOptions) ReadField1000(iprot thrift.TProtocol) error {
 
 	var _field bool
@@ -7732,6 +8239,58 @@ func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField149(oprot); err != nil {
 			fieldId = 149
+			goto WriteFieldError
+		}
+		if err = p.writeField150(oprot); err != nil {
+			fieldId = 150
+			goto WriteFieldError
+		}
+		if err = p.writeField151(oprot); err != nil {
+			fieldId = 151
+			goto WriteFieldError
+		}
+		if err = p.writeField152(oprot); err != nil {
+			fieldId = 152
+			goto WriteFieldError
+		}
+		if err = p.writeField153(oprot); err != nil {
+			fieldId = 153
+			goto WriteFieldError
+		}
+		if err = p.writeField154(oprot); err != nil {
+			fieldId = 154
+			goto WriteFieldError
+		}
+		if err = p.writeField155(oprot); err != nil {
+			fieldId = 155
+			goto WriteFieldError
+		}
+		if err = p.writeField156(oprot); err != nil {
+			fieldId = 156
+			goto WriteFieldError
+		}
+		if err = p.writeField157(oprot); err != nil {
+			fieldId = 157
+			goto WriteFieldError
+		}
+		if err = p.writeField158(oprot); err != nil {
+			fieldId = 158
+			goto WriteFieldError
+		}
+		if err = p.writeField159(oprot); err != nil {
+			fieldId = 159
+			goto WriteFieldError
+		}
+		if err = p.writeField160(oprot); err != nil {
+			fieldId = 160
+			goto WriteFieldError
+		}
+		if err = p.writeField161(oprot); err != nil {
+			fieldId = 161
+			goto WriteFieldError
+		}
+		if err = p.writeField162(oprot); err != nil {
+			fieldId = 162
 			goto WriteFieldError
 		}
 		if err = p.writeField1000(oprot); err != nil {
@@ -10416,6 +10975,253 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 149 end error: ", p), err)
 }
 
+func (p *TQueryOptions) writeField150(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableRuntimeFilterPartitionPrune() {
+		if err = oprot.WriteFieldBegin("enable_runtime_filter_partition_prune", thrift.BOOL, 150); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableRuntimeFilterPartitionPrune); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 150 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 150 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField151(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMinimumOperatorMemoryRequiredKb() {
+		if err = oprot.WriteFieldBegin("minimum_operator_memory_required_kb", thrift.I32, 151); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.MinimumOperatorMemoryRequiredKb); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 151 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 151 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField152(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableMemOvercommit() {
+		if err = oprot.WriteFieldBegin("enable_mem_overcommit", thrift.BOOL, 152); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableMemOvercommit); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 152 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 152 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField153(oprot thrift.TProtocol) (err error) {
+	if p.IsSetQuerySlotCount() {
+		if err = oprot.WriteFieldBegin("query_slot_count", thrift.I32, 153); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.QuerySlotCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 153 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 153 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField154(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableSpill() {
+		if err = oprot.WriteFieldBegin("enable_spill", thrift.BOOL, 154); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableSpill); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 154 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 154 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField155(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableReserveMemory() {
+		if err = oprot.WriteFieldBegin("enable_reserve_memory", thrift.BOOL, 155); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableReserveMemory); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 155 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 155 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField156(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRevocableMemoryHighWatermarkPercent() {
+		if err = oprot.WriteFieldBegin("revocable_memory_high_watermark_percent", thrift.I32, 156); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.RevocableMemoryHighWatermarkPercent); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 156 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 156 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField157(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSpillSortMemLimit() {
+		if err = oprot.WriteFieldBegin("spill_sort_mem_limit", thrift.I64, 157); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.SpillSortMemLimit); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 157 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 157 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField158(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSpillSortBatchBytes() {
+		if err = oprot.WriteFieldBegin("spill_sort_batch_bytes", thrift.I64, 158); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.SpillSortBatchBytes); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 158 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 158 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField159(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSpillAggregationPartitionCount() {
+		if err = oprot.WriteFieldBegin("spill_aggregation_partition_count", thrift.I32, 159); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.SpillAggregationPartitionCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 159 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 159 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField160(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSpillHashJoinPartitionCount() {
+		if err = oprot.WriteFieldBegin("spill_hash_join_partition_count", thrift.I32, 160); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.SpillHashJoinPartitionCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 160 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 160 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField161(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLowMemoryModeBufferLimit() {
+		if err = oprot.WriteFieldBegin("low_memory_mode_buffer_limit", thrift.I64, 161); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.LowMemoryModeBufferLimit); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 161 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 161 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField162(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDumpHeapProfileWhenMemLimitExceeded() {
+		if err = oprot.WriteFieldBegin("dump_heap_profile_when_mem_limit_exceeded", thrift.BOOL, 162); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.DumpHeapProfileWhenMemLimitExceeded); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 162 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 162 end error: ", p), err)
+}
+
 func (p *TQueryOptions) writeField1000(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDisableFileCache() {
 		if err = oprot.WriteFieldBegin("disable_file_cache", thrift.BOOL, 1000); err != nil {
@@ -10867,6 +11673,45 @@ func (p *TQueryOptions) DeepEqual(ano *TQueryOptions) bool {
 		return false
 	}
 	if !p.Field149DeepEqual(ano.MinScanSchedulerConcurrency) {
+		return false
+	}
+	if !p.Field150DeepEqual(ano.EnableRuntimeFilterPartitionPrune) {
+		return false
+	}
+	if !p.Field151DeepEqual(ano.MinimumOperatorMemoryRequiredKb) {
+		return false
+	}
+	if !p.Field152DeepEqual(ano.EnableMemOvercommit) {
+		return false
+	}
+	if !p.Field153DeepEqual(ano.QuerySlotCount) {
+		return false
+	}
+	if !p.Field154DeepEqual(ano.EnableSpill) {
+		return false
+	}
+	if !p.Field155DeepEqual(ano.EnableReserveMemory) {
+		return false
+	}
+	if !p.Field156DeepEqual(ano.RevocableMemoryHighWatermarkPercent) {
+		return false
+	}
+	if !p.Field157DeepEqual(ano.SpillSortMemLimit) {
+		return false
+	}
+	if !p.Field158DeepEqual(ano.SpillSortBatchBytes) {
+		return false
+	}
+	if !p.Field159DeepEqual(ano.SpillAggregationPartitionCount) {
+		return false
+	}
+	if !p.Field160DeepEqual(ano.SpillHashJoinPartitionCount) {
+		return false
+	}
+	if !p.Field161DeepEqual(ano.LowMemoryModeBufferLimit) {
+		return false
+	}
+	if !p.Field162DeepEqual(ano.DumpHeapProfileWhenMemLimitExceeded) {
 		return false
 	}
 	if !p.Field1000DeepEqual(ano.DisableFileCache) {
@@ -11901,6 +12746,97 @@ func (p *TQueryOptions) Field148DeepEqual(src int32) bool {
 func (p *TQueryOptions) Field149DeepEqual(src int32) bool {
 
 	if p.MinScanSchedulerConcurrency != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field150DeepEqual(src bool) bool {
+
+	if p.EnableRuntimeFilterPartitionPrune != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field151DeepEqual(src int32) bool {
+
+	if p.MinimumOperatorMemoryRequiredKb != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field152DeepEqual(src bool) bool {
+
+	if p.EnableMemOvercommit != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field153DeepEqual(src int32) bool {
+
+	if p.QuerySlotCount != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field154DeepEqual(src bool) bool {
+
+	if p.EnableSpill != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field155DeepEqual(src bool) bool {
+
+	if p.EnableReserveMemory != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field156DeepEqual(src int32) bool {
+
+	if p.RevocableMemoryHighWatermarkPercent != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field157DeepEqual(src int64) bool {
+
+	if p.SpillSortMemLimit != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field158DeepEqual(src int64) bool {
+
+	if p.SpillSortBatchBytes != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field159DeepEqual(src int32) bool {
+
+	if p.SpillAggregationPartitionCount != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field160DeepEqual(src int32) bool {
+
+	if p.SpillHashJoinPartitionCount != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field161DeepEqual(src int64) bool {
+
+	if p.LowMemoryModeBufferLimit != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field162DeepEqual(src bool) bool {
+
+	if p.DumpHeapProfileWhenMemLimitExceeded != src {
 		return false
 	}
 	return true

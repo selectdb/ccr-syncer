@@ -4361,6 +4361,20 @@ func (p *TJdbcExecutorCtorParams) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 17:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField17(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -4608,6 +4622,19 @@ func (p *TJdbcExecutorCtorParams) FastReadField16(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TJdbcExecutorCtorParams) FastReadField17(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.JdbcDriverChecksum = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TJdbcExecutorCtorParams) FastWrite(buf []byte) int {
 	return 0
@@ -4633,6 +4660,7 @@ func (p *TJdbcExecutorCtorParams) FastWriteNocopy(buf []byte, binaryWriter bthri
 		offset += p.fastWriteField7(buf[offset:], binaryWriter)
 		offset += p.fastWriteField8(buf[offset:], binaryWriter)
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
+		offset += p.fastWriteField17(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -4659,6 +4687,7 @@ func (p *TJdbcExecutorCtorParams) BLength() int {
 		l += p.field14Length()
 		l += p.field15Length()
 		l += p.field16Length()
+		l += p.field17Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -4841,6 +4870,17 @@ func (p *TJdbcExecutorCtorParams) fastWriteField16(buf []byte, binaryWriter bthr
 	return offset
 }
 
+func (p *TJdbcExecutorCtorParams) fastWriteField17(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetJdbcDriverChecksum() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "jdbc_driver_checksum", thrift.STRING, 17)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.JdbcDriverChecksum)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TJdbcExecutorCtorParams) field1Length() int {
 	l := 0
 	if p.IsSetStatement() {
@@ -5011,6 +5051,17 @@ func (p *TJdbcExecutorCtorParams) field16Length() int {
 	if p.IsSetCatalogId() {
 		l += bthrift.Binary.FieldBeginLength("catalog_id", thrift.I64, 16)
 		l += bthrift.Binary.I64Length(*p.CatalogId)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TJdbcExecutorCtorParams) field17Length() int {
+	l := 0
+	if p.IsSetJdbcDriverChecksum() {
+		l += bthrift.Binary.FieldBeginLength("jdbc_driver_checksum", thrift.STRING, 17)
+		l += bthrift.Binary.StringLengthNocopy(*p.JdbcDriverChecksum)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
