@@ -2987,6 +2987,10 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 		if !j.progress.IsDone() {
 			j.progress.Done()
 		}
+
+		if j.takeInterruptState() {
+			return nil, true // back to run loop
+		}
 	}
 	return nil, false
 }
