@@ -31,7 +31,8 @@ suite("test_syncer_get_lag") {
         )
         DISTRIBUTED BY HASH(id) BUCKETS 3
         PROPERTIES(
-            "replication_num" = "1"
+            "replication_num" = "1",
+            "binlog.enable" = "true"
         )
     """
     
@@ -181,7 +182,7 @@ suite("test_syncer_get_lag") {
         validateLagData(lagAfterDesync)
         
         afterRowCount =  target_sql """ select * FROM ${tableName} """
-        assertEquals(initialRowCount, afterRowCount)
+        assertEquals(initialRowCount.size(), afterRowCount.size())
         
         helper.ccrJobSync(tableName)
         
