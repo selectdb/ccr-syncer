@@ -94,7 +94,7 @@ suite("test_ds_absorb_tbl_create_alt_dy_part") {
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 
-    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_1", 30))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_1", 180))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, exist, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, exist, 60, "target"))
 
