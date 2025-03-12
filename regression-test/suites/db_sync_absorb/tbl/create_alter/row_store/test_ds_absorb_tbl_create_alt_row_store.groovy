@@ -78,12 +78,11 @@ suite("test_ds_absorb_tbl_create_alt_row_store") {
             `id` INT
         )
         ENGINE=OLAP
-        UNIQUE KEY(`test`, `id`)
+        DUPLICATE KEY(`test`, `id`)
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
-            "binlog.enable" = "true",
-            "light_schema_change" = "false"
+            "binlog.enable" = "true"
         )
     """
 
@@ -115,7 +114,7 @@ suite("test_ds_absorb_tbl_create_alt_row_store") {
             `id` INT
         )
         ENGINE=OLAP
-        UNIQUE KEY(`test`, `id`)
+        DUPLICATE KEY(`test`, `id`)
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
@@ -127,7 +126,6 @@ suite("test_ds_absorb_tbl_create_alt_row_store") {
     sql """
         ALTER TABLE ${tableName}_1 SET ("store_row_column" = "true")
         """
-
     assertTrue(helper.checkShowTimesOf("""
                             SHOW ALTER TABLE COLUMN
                             FROM ${context.dbName}
@@ -138,11 +136,11 @@ suite("test_ds_absorb_tbl_create_alt_row_store") {
         ALTER TABLE ${tableName}_1 SET ("row_store_columns" = "test,id")
         """
     assertTrue(helper.checkShowTimesOf("""
-                                SHOW ALTER TABLE COLUMN
-                                FROM ${context.dbName}
-                                WHERE TableName = "${tableName}_1" AND State = "FINISHED"
-                                """,
-                                has_count(state.size() + 2), 30))
+                            SHOW ALTER TABLE COLUMN
+                            FROM ${context.dbName}
+                            WHERE TableName = "${tableName}_1" AND State = "FINISHED"
+                            """,
+                            has_count(state.size() + 2), 30))
     // 4. Insert N data
     for (int index = insert_num; index < insert_num * 2; index++) {
         sql """
@@ -169,7 +167,5 @@ suite("test_ds_absorb_tbl_create_alt_row_store") {
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "target"))
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "target"))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existRowStore, 60, "sql"))
-    // don't sync
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistRowStore, 60, "target"))
-
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existRowStore, 60, "target"))
 }
