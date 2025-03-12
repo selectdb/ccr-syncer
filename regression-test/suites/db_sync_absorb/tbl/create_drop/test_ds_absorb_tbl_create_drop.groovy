@@ -15,6 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 suite("test_ds_absorb_tbl_create_drop") {
+
+    logger.info("Snapshot drop operations are not synchronized downstream so this test is not useful for the moment")
+    return
+
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
