@@ -144,5 +144,5 @@ suite("test_ds_absorb_tbl_create_alt_colocate") {
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "target"))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existGrooup1, 60, "sql"))
     // don't sync
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existGrooup1, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistGrooup1, 60, "target"))
 }

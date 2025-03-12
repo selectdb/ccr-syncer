@@ -34,7 +34,7 @@ suite("test_ds_absorb_tbl_create_alt_storage_policy") {
         return res[0][1].contains("\"storage_policy\" = \"test_policy\"")
     }
 
-    def notexistPolicy = { res -> Boolean
+    def notExistPolicy = { res -> Boolean
         return !res[0][1].contains("\"storage_policy\" = \"test_policy\"")
     }
 
@@ -116,8 +116,8 @@ suite("test_ds_absorb_tbl_create_alt_storage_policy") {
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_1", 180))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, exist, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, exist, 60, "target"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notexistPolicy, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notexistPolicy, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistPolicy, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistPolicy, 60, "target"))
 
     // 1. Pause ccr job
     helper.ccrJobPause()
@@ -164,7 +164,7 @@ suite("test_ds_absorb_tbl_create_alt_storage_policy") {
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "sql"))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existPolicy, 60, "sql"))
     // don't synced
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notexistPolicy, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistPolicy, 60, "target"))
     // 5. Force trigger fullsnapshot
     helper.force_fullsync()
 
@@ -175,5 +175,5 @@ suite("test_ds_absorb_tbl_create_alt_storage_policy") {
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "target"))
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "target"))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existPolicy, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existPolicy, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistPolicy, 60, "target"))
 }

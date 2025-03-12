@@ -25,7 +25,7 @@ suite("test_ds_absorb_tbl_create_alt_skip_bitmap_column") {
     }
 
     def dbName = context.dbName
-    def tableName = "tbl"
+    def tableName = "tbl" + helper.randomSuffix()
     def test_num = 0
     def insert_num = 5
 
@@ -100,7 +100,7 @@ suite("test_ds_absorb_tbl_create_alt_skip_bitmap_column") {
     // 2. Insert N data
     for (int index = 0; index < insert_num; index++) {
         sql """
-            INSERT INTO ${tableName}_1 VALUES (${test_num}, ${index}, ${index}, ${index}, ${index}, ${index})
+            INSERT INTO ${tableName}_1 VALUES (${index}, ${index}, ${index}, ${index}, ${index}, ${index})
             """
     }
 
@@ -133,12 +133,12 @@ suite("test_ds_absorb_tbl_create_alt_skip_bitmap_column") {
     // 4. Insert N data
     for (int index = insert_num; index < insert_num * 2; index++) {
         sql """
-            INSERT INTO ${tableName}_1 VALUES (${test_num}, ${index})
+            INSERT INTO ${tableName}_1 VALUES (${index}, ${index}, ${index}, ${index}, ${index}, ${index})
             """
     }
     for (int index = 0; index < insert_num * 2; index++) {
         sql """
-            INSERT INTO ${tableName}_2 VALUES (${test_num}, ${index})
+            INSERT INTO ${tableName}_2 VALUES (${index}, ${index}, ${index}, ${index}, ${index}, ${index})
             """
     }
 
