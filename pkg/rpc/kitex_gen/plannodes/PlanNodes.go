@@ -37730,6 +37730,7 @@ type TSortNode struct {
 	IsAnalyticSort  *bool           `thrift:"is_analytic_sort,9,optional" frugal:"9,optional,bool" json:"is_analytic_sort,omitempty"`
 	IsColocate      *bool           `thrift:"is_colocate,10,optional" frugal:"10,optional,bool" json:"is_colocate,omitempty"`
 	Algorithm       *TSortAlgorithm `thrift:"algorithm,11,optional" frugal:"11,optional,TSortAlgorithm" json:"algorithm,omitempty"`
+	UseLocalMerge   *bool           `thrift:"use_local_merge,12,optional" frugal:"12,optional,bool" json:"use_local_merge,omitempty"`
 }
 
 func NewTSortNode() *TSortNode {
@@ -37814,6 +37815,15 @@ func (p *TSortNode) GetAlgorithm() (v TSortAlgorithm) {
 	}
 	return *p.Algorithm
 }
+
+var TSortNode_UseLocalMerge_DEFAULT bool
+
+func (p *TSortNode) GetUseLocalMerge() (v bool) {
+	if !p.IsSetUseLocalMerge() {
+		return TSortNode_UseLocalMerge_DEFAULT
+	}
+	return *p.UseLocalMerge
+}
 func (p *TSortNode) SetSortInfo(val *TSortInfo) {
 	p.SortInfo = val
 }
@@ -37841,6 +37851,9 @@ func (p *TSortNode) SetIsColocate(val *bool) {
 func (p *TSortNode) SetAlgorithm(val *TSortAlgorithm) {
 	p.Algorithm = val
 }
+func (p *TSortNode) SetUseLocalMerge(val *bool) {
+	p.UseLocalMerge = val
+}
 
 var fieldIDToName_TSortNode = map[int16]string{
 	1:  "sort_info",
@@ -37852,6 +37865,7 @@ var fieldIDToName_TSortNode = map[int16]string{
 	9:  "is_analytic_sort",
 	10: "is_colocate",
 	11: "algorithm",
+	12: "use_local_merge",
 }
 
 func (p *TSortNode) IsSetSortInfo() bool {
@@ -37884,6 +37898,10 @@ func (p *TSortNode) IsSetIsColocate() bool {
 
 func (p *TSortNode) IsSetAlgorithm() bool {
 	return p.Algorithm != nil
+}
+
+func (p *TSortNode) IsSetUseLocalMerge() bool {
+	return p.UseLocalMerge != nil
 }
 
 func (p *TSortNode) Read(iprot thrift.TProtocol) (err error) {
@@ -37976,6 +37994,14 @@ func (p *TSortNode) Read(iprot thrift.TProtocol) (err error) {
 		case 11:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -38118,6 +38144,17 @@ func (p *TSortNode) ReadField11(iprot thrift.TProtocol) error {
 	p.Algorithm = _field
 	return nil
 }
+func (p *TSortNode) ReadField12(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.UseLocalMerge = _field
+	return nil
+}
 
 func (p *TSortNode) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -38159,6 +38196,10 @@ func (p *TSortNode) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 	}
@@ -38346,6 +38387,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
 
+func (p *TSortNode) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetUseLocalMerge() {
+		if err = oprot.WriteFieldBegin("use_local_merge", thrift.BOOL, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.UseLocalMerge); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
+
 func (p *TSortNode) String() string {
 	if p == nil {
 		return "<nil>"
@@ -38385,6 +38445,9 @@ func (p *TSortNode) DeepEqual(ano *TSortNode) bool {
 		return false
 	}
 	if !p.Field11DeepEqual(ano.Algorithm) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.UseLocalMerge) {
 		return false
 	}
 	return true
@@ -38484,6 +38547,18 @@ func (p *TSortNode) Field11DeepEqual(src *TSortAlgorithm) bool {
 		return false
 	}
 	if *p.Algorithm != *src {
+		return false
+	}
+	return true
+}
+func (p *TSortNode) Field12DeepEqual(src *bool) bool {
+
+	if p.UseLocalMerge == src {
+		return true
+	} else if p.UseLocalMerge == nil || src == nil {
+		return false
+	}
+	if *p.UseLocalMerge != *src {
 		return false
 	}
 	return true

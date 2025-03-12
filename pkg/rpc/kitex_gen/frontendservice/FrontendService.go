@@ -15291,8 +15291,10 @@ type TMasterOpRequest struct {
 	UserVariables          map[string]*exprs.TExprNode        `thrift:"user_variables,28,optional" frugal:"28,optional,map<string:exprs.TExprNode>" json:"user_variables,omitempty"`
 	TxnLoadInfo            *TTxnLoadInfo                      `thrift:"txnLoadInfo,29,optional" frugal:"29,optional,TTxnLoadInfo" json:"txnLoadInfo,omitempty"`
 	GroupCommitInfo        *TGroupCommitInfo                  `thrift:"groupCommitInfo,30,optional" frugal:"30,optional,TGroupCommitInfo" json:"groupCommitInfo,omitempty"`
+	PrepareExecuteBuffer   []byte                             `thrift:"prepareExecuteBuffer,31,optional" frugal:"31,optional,binary" json:"prepareExecuteBuffer,omitempty"`
 	CloudCluster           *string                            `thrift:"cloud_cluster,1000,optional" frugal:"1000,optional,string" json:"cloud_cluster,omitempty"`
 	NoAuth                 *bool                              `thrift:"noAuth,1001,optional" frugal:"1001,optional,bool" json:"noAuth,omitempty"`
+	SessionId              *string                            `thrift:"sessionId,1002,optional" frugal:"1002,optional,string" json:"sessionId,omitempty"`
 }
 
 func NewTMasterOpRequest() *TMasterOpRequest {
@@ -15557,6 +15559,15 @@ func (p *TMasterOpRequest) GetGroupCommitInfo() (v *TGroupCommitInfo) {
 	return p.GroupCommitInfo
 }
 
+var TMasterOpRequest_PrepareExecuteBuffer_DEFAULT []byte
+
+func (p *TMasterOpRequest) GetPrepareExecuteBuffer() (v []byte) {
+	if !p.IsSetPrepareExecuteBuffer() {
+		return TMasterOpRequest_PrepareExecuteBuffer_DEFAULT
+	}
+	return p.PrepareExecuteBuffer
+}
+
 var TMasterOpRequest_CloudCluster_DEFAULT string
 
 func (p *TMasterOpRequest) GetCloudCluster() (v string) {
@@ -15573,6 +15584,15 @@ func (p *TMasterOpRequest) GetNoAuth() (v bool) {
 		return TMasterOpRequest_NoAuth_DEFAULT
 	}
 	return *p.NoAuth
+}
+
+var TMasterOpRequest_SessionId_DEFAULT string
+
+func (p *TMasterOpRequest) GetSessionId() (v string) {
+	if !p.IsSetSessionId() {
+		return TMasterOpRequest_SessionId_DEFAULT
+	}
+	return *p.SessionId
 }
 func (p *TMasterOpRequest) SetUser(val string) {
 	p.User = val
@@ -15664,11 +15684,17 @@ func (p *TMasterOpRequest) SetTxnLoadInfo(val *TTxnLoadInfo) {
 func (p *TMasterOpRequest) SetGroupCommitInfo(val *TGroupCommitInfo) {
 	p.GroupCommitInfo = val
 }
+func (p *TMasterOpRequest) SetPrepareExecuteBuffer(val []byte) {
+	p.PrepareExecuteBuffer = val
+}
 func (p *TMasterOpRequest) SetCloudCluster(val *string) {
 	p.CloudCluster = val
 }
 func (p *TMasterOpRequest) SetNoAuth(val *bool) {
 	p.NoAuth = val
+}
+func (p *TMasterOpRequest) SetSessionId(val *string) {
+	p.SessionId = val
 }
 
 var fieldIDToName_TMasterOpRequest = map[int16]string{
@@ -15702,8 +15728,10 @@ var fieldIDToName_TMasterOpRequest = map[int16]string{
 	28:   "user_variables",
 	29:   "txnLoadInfo",
 	30:   "groupCommitInfo",
+	31:   "prepareExecuteBuffer",
 	1000: "cloud_cluster",
 	1001: "noAuth",
+	1002: "sessionId",
 }
 
 func (p *TMasterOpRequest) IsSetResourceInfo() bool {
@@ -15814,12 +15842,20 @@ func (p *TMasterOpRequest) IsSetGroupCommitInfo() bool {
 	return p.GroupCommitInfo != nil
 }
 
+func (p *TMasterOpRequest) IsSetPrepareExecuteBuffer() bool {
+	return p.PrepareExecuteBuffer != nil
+}
+
 func (p *TMasterOpRequest) IsSetCloudCluster() bool {
 	return p.CloudCluster != nil
 }
 
 func (p *TMasterOpRequest) IsSetNoAuth() bool {
 	return p.NoAuth != nil
+}
+
+func (p *TMasterOpRequest) IsSetSessionId() bool {
+	return p.SessionId != nil
 }
 
 func (p *TMasterOpRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -16087,6 +16123,14 @@ func (p *TMasterOpRequest) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
+		case 31:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField31(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 1000:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField1000(iprot); err != nil {
@@ -16098,6 +16142,14 @@ func (p *TMasterOpRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 1001:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField1001(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 1002:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1002(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -16514,6 +16566,17 @@ func (p *TMasterOpRequest) ReadField30(iprot thrift.TProtocol) error {
 	p.GroupCommitInfo = _field
 	return nil
 }
+func (p *TMasterOpRequest) ReadField31(iprot thrift.TProtocol) error {
+
+	var _field []byte
+	if v, err := iprot.ReadBinary(); err != nil {
+		return err
+	} else {
+		_field = []byte(v)
+	}
+	p.PrepareExecuteBuffer = _field
+	return nil
+}
 func (p *TMasterOpRequest) ReadField1000(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -16534,6 +16597,17 @@ func (p *TMasterOpRequest) ReadField1001(iprot thrift.TProtocol) error {
 		_field = &v
 	}
 	p.NoAuth = _field
+	return nil
+}
+func (p *TMasterOpRequest) ReadField1002(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SessionId = _field
 	return nil
 }
 
@@ -16663,12 +16737,20 @@ func (p *TMasterOpRequest) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 30
 			goto WriteFieldError
 		}
+		if err = p.writeField31(oprot); err != nil {
+			fieldId = 31
+			goto WriteFieldError
+		}
 		if err = p.writeField1000(oprot); err != nil {
 			fieldId = 1000
 			goto WriteFieldError
 		}
 		if err = p.writeField1001(oprot); err != nil {
 			fieldId = 1001
+			goto WriteFieldError
+		}
+		if err = p.writeField1002(oprot); err != nil {
+			fieldId = 1002
 			goto WriteFieldError
 		}
 	}
@@ -17286,6 +17368,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 30 end error: ", p), err)
 }
 
+func (p *TMasterOpRequest) writeField31(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPrepareExecuteBuffer() {
+		if err = oprot.WriteFieldBegin("prepareExecuteBuffer", thrift.STRING, 31); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBinary([]byte(p.PrepareExecuteBuffer)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 31 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 31 end error: ", p), err)
+}
+
 func (p *TMasterOpRequest) writeField1000(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCloudCluster() {
 		if err = oprot.WriteFieldBegin("cloud_cluster", thrift.STRING, 1000); err != nil {
@@ -17322,6 +17423,25 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1001 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1001 end error: ", p), err)
+}
+
+func (p *TMasterOpRequest) writeField1002(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSessionId() {
+		if err = oprot.WriteFieldBegin("sessionId", thrift.STRING, 1002); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SessionId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1002 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1002 end error: ", p), err)
 }
 
 func (p *TMasterOpRequest) String() string {
@@ -17428,10 +17548,16 @@ func (p *TMasterOpRequest) DeepEqual(ano *TMasterOpRequest) bool {
 	if !p.Field30DeepEqual(ano.GroupCommitInfo) {
 		return false
 	}
+	if !p.Field31DeepEqual(ano.PrepareExecuteBuffer) {
+		return false
+	}
 	if !p.Field1000DeepEqual(ano.CloudCluster) {
 		return false
 	}
 	if !p.Field1001DeepEqual(ano.NoAuth) {
+		return false
+	}
+	if !p.Field1002DeepEqual(ano.SessionId) {
 		return false
 	}
 	return true
@@ -17755,6 +17881,13 @@ func (p *TMasterOpRequest) Field30DeepEqual(src *TGroupCommitInfo) bool {
 	}
 	return true
 }
+func (p *TMasterOpRequest) Field31DeepEqual(src []byte) bool {
+
+	if bytes.Compare(p.PrepareExecuteBuffer, src) != 0 {
+		return false
+	}
+	return true
+}
 func (p *TMasterOpRequest) Field1000DeepEqual(src *string) bool {
 
 	if p.CloudCluster == src {
@@ -17775,6 +17908,18 @@ func (p *TMasterOpRequest) Field1001DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.NoAuth != *src {
+		return false
+	}
+	return true
+}
+func (p *TMasterOpRequest) Field1002DeepEqual(src *string) bool {
+
+	if p.SessionId == src {
+		return true
+	} else if p.SessionId == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SessionId, *src) != 0 {
 		return false
 	}
 	return true
@@ -32329,6 +32474,7 @@ type TCommitTxnRequest struct {
 	DbId                *int64                     `thrift:"db_id,12,optional" frugal:"12,optional,i64" json:"db_id,omitempty"`
 	TxnInsert           *bool                      `thrift:"txn_insert,13,optional" frugal:"13,optional,bool" json:"txn_insert,omitempty"`
 	SubTxnInfos         []*TSubTxnInfo             `thrift:"sub_txn_infos,14,optional" frugal:"14,optional,list<TSubTxnInfo>" json:"sub_txn_infos,omitempty"`
+	OnlyCommit          *bool                      `thrift:"only_commit,15,optional" frugal:"15,optional,bool" json:"only_commit,omitempty"`
 }
 
 func NewTCommitTxnRequest() *TCommitTxnRequest {
@@ -32463,6 +32609,15 @@ func (p *TCommitTxnRequest) GetSubTxnInfos() (v []*TSubTxnInfo) {
 	}
 	return p.SubTxnInfos
 }
+
+var TCommitTxnRequest_OnlyCommit_DEFAULT bool
+
+func (p *TCommitTxnRequest) GetOnlyCommit() (v bool) {
+	if !p.IsSetOnlyCommit() {
+		return TCommitTxnRequest_OnlyCommit_DEFAULT
+	}
+	return *p.OnlyCommit
+}
 func (p *TCommitTxnRequest) SetCluster(val *string) {
 	p.Cluster = val
 }
@@ -32505,6 +32660,9 @@ func (p *TCommitTxnRequest) SetTxnInsert(val *bool) {
 func (p *TCommitTxnRequest) SetSubTxnInfos(val []*TSubTxnInfo) {
 	p.SubTxnInfos = val
 }
+func (p *TCommitTxnRequest) SetOnlyCommit(val *bool) {
+	p.OnlyCommit = val
+}
 
 var fieldIDToName_TCommitTxnRequest = map[int16]string{
 	1:  "cluster",
@@ -32521,6 +32679,7 @@ var fieldIDToName_TCommitTxnRequest = map[int16]string{
 	12: "db_id",
 	13: "txn_insert",
 	14: "sub_txn_infos",
+	15: "only_commit",
 }
 
 func (p *TCommitTxnRequest) IsSetCluster() bool {
@@ -32577,6 +32736,10 @@ func (p *TCommitTxnRequest) IsSetTxnInsert() bool {
 
 func (p *TCommitTxnRequest) IsSetSubTxnInfos() bool {
 	return p.SubTxnInfos != nil
+}
+
+func (p *TCommitTxnRequest) IsSetOnlyCommit() bool {
+	return p.OnlyCommit != nil
 }
 
 func (p *TCommitTxnRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -32705,6 +32868,14 @@ func (p *TCommitTxnRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 14:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField14(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 15:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField15(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -32914,6 +33085,17 @@ func (p *TCommitTxnRequest) ReadField14(iprot thrift.TProtocol) error {
 	p.SubTxnInfos = _field
 	return nil
 }
+func (p *TCommitTxnRequest) ReadField15(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.OnlyCommit = _field
+	return nil
+}
 
 func (p *TCommitTxnRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -32975,6 +33157,10 @@ func (p *TCommitTxnRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField14(oprot); err != nil {
 			fieldId = 14
+			goto WriteFieldError
+		}
+		if err = p.writeField15(oprot); err != nil {
+			fieldId = 15
 			goto WriteFieldError
 		}
 	}
@@ -33277,6 +33463,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
 }
 
+func (p *TCommitTxnRequest) writeField15(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOnlyCommit() {
+		if err = oprot.WriteFieldBegin("only_commit", thrift.BOOL, 15); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.OnlyCommit); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
+}
+
 func (p *TCommitTxnRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -33331,6 +33536,9 @@ func (p *TCommitTxnRequest) DeepEqual(ano *TCommitTxnRequest) bool {
 		return false
 	}
 	if !p.Field14DeepEqual(ano.SubTxnInfos) {
+		return false
+	}
+	if !p.Field15DeepEqual(ano.OnlyCommit) {
 		return false
 	}
 	return true
@@ -33498,6 +33706,18 @@ func (p *TCommitTxnRequest) Field14DeepEqual(src []*TSubTxnInfo) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *TCommitTxnRequest) Field15DeepEqual(src *bool) bool {
+
+	if p.OnlyCommit == src {
+		return true
+	} else if p.OnlyCommit == nil || src == nil {
+		return false
+	}
+	if *p.OnlyCommit != *src {
+		return false
 	}
 	return true
 }
@@ -38203,6 +38423,572 @@ func (p *TFrontendPingFrontendRequest) Field3DeepEqual(src *string) bool {
 	return true
 }
 
+type TFrontendReportAliveSessionRequest struct {
+	ClusterId int32  `thrift:"clusterId,1,required" frugal:"1,required,i32" json:"clusterId"`
+	Token     string `thrift:"token,2,required" frugal:"2,required,string" json:"token"`
+}
+
+func NewTFrontendReportAliveSessionRequest() *TFrontendReportAliveSessionRequest {
+	return &TFrontendReportAliveSessionRequest{}
+}
+
+func (p *TFrontendReportAliveSessionRequest) InitDefault() {
+}
+
+func (p *TFrontendReportAliveSessionRequest) GetClusterId() (v int32) {
+	return p.ClusterId
+}
+
+func (p *TFrontendReportAliveSessionRequest) GetToken() (v string) {
+	return p.Token
+}
+func (p *TFrontendReportAliveSessionRequest) SetClusterId(val int32) {
+	p.ClusterId = val
+}
+func (p *TFrontendReportAliveSessionRequest) SetToken(val string) {
+	p.Token = val
+}
+
+var fieldIDToName_TFrontendReportAliveSessionRequest = map[int16]string{
+	1: "clusterId",
+	2: "token",
+}
+
+func (p *TFrontendReportAliveSessionRequest) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetClusterId bool = false
+	var issetToken bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetClusterId = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetToken = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetClusterId {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetToken {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TFrontendReportAliveSessionRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_TFrontendReportAliveSessionRequest[fieldId]))
+}
+
+func (p *TFrontendReportAliveSessionRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.ClusterId = _field
+	return nil
+}
+func (p *TFrontendReportAliveSessionRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Token = _field
+	return nil
+}
+
+func (p *TFrontendReportAliveSessionRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TFrontendReportAliveSessionRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TFrontendReportAliveSessionRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("clusterId", thrift.I32, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI32(p.ClusterId); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TFrontendReportAliveSessionRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("token", thrift.STRING, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Token); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TFrontendReportAliveSessionRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TFrontendReportAliveSessionRequest(%+v)", *p)
+
+}
+
+func (p *TFrontendReportAliveSessionRequest) DeepEqual(ano *TFrontendReportAliveSessionRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ClusterId) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Token) {
+		return false
+	}
+	return true
+}
+
+func (p *TFrontendReportAliveSessionRequest) Field1DeepEqual(src int32) bool {
+
+	if p.ClusterId != src {
+		return false
+	}
+	return true
+}
+func (p *TFrontendReportAliveSessionRequest) Field2DeepEqual(src string) bool {
+
+	if strings.Compare(p.Token, src) != 0 {
+		return false
+	}
+	return true
+}
+
+type TFrontendReportAliveSessionResult_ struct {
+	Status        status.TStatusCode `thrift:"status,1,required" frugal:"1,required,TStatusCode" json:"status"`
+	Msg           string             `thrift:"msg,2,required" frugal:"2,required,string" json:"msg"`
+	SessionIdList []string           `thrift:"sessionIdList,3,required" frugal:"3,required,list<string>" json:"sessionIdList"`
+}
+
+func NewTFrontendReportAliveSessionResult_() *TFrontendReportAliveSessionResult_ {
+	return &TFrontendReportAliveSessionResult_{}
+}
+
+func (p *TFrontendReportAliveSessionResult_) InitDefault() {
+}
+
+func (p *TFrontendReportAliveSessionResult_) GetStatus() (v status.TStatusCode) {
+	return p.Status
+}
+
+func (p *TFrontendReportAliveSessionResult_) GetMsg() (v string) {
+	return p.Msg
+}
+
+func (p *TFrontendReportAliveSessionResult_) GetSessionIdList() (v []string) {
+	return p.SessionIdList
+}
+func (p *TFrontendReportAliveSessionResult_) SetStatus(val status.TStatusCode) {
+	p.Status = val
+}
+func (p *TFrontendReportAliveSessionResult_) SetMsg(val string) {
+	p.Msg = val
+}
+func (p *TFrontendReportAliveSessionResult_) SetSessionIdList(val []string) {
+	p.SessionIdList = val
+}
+
+var fieldIDToName_TFrontendReportAliveSessionResult_ = map[int16]string{
+	1: "status",
+	2: "msg",
+	3: "sessionIdList",
+}
+
+func (p *TFrontendReportAliveSessionResult_) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetStatus bool = false
+	var issetMsg bool = false
+	var issetSessionIdList bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetStatus = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetMsg = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetSessionIdList = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetStatus {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetMsg {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetSessionIdList {
+		fieldId = 3
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TFrontendReportAliveSessionResult_[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_TFrontendReportAliveSessionResult_[fieldId]))
+}
+
+func (p *TFrontendReportAliveSessionResult_) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field status.TStatusCode
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = status.TStatusCode(v)
+	}
+	p.Status = _field
+	return nil
+}
+func (p *TFrontendReportAliveSessionResult_) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Msg = _field
+	return nil
+}
+func (p *TFrontendReportAliveSessionResult_) ReadField3(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.SessionIdList = _field
+	return nil
+}
+
+func (p *TFrontendReportAliveSessionResult_) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TFrontendReportAliveSessionResult"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TFrontendReportAliveSessionResult_) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("status", thrift.I32, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI32(int32(p.Status)); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TFrontendReportAliveSessionResult_) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Msg); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TFrontendReportAliveSessionResult_) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("sessionIdList", thrift.LIST, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRING, len(p.SessionIdList)); err != nil {
+		return err
+	}
+	for _, v := range p.SessionIdList {
+		if err := oprot.WriteString(v); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *TFrontendReportAliveSessionResult_) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TFrontendReportAliveSessionResult_(%+v)", *p)
+
+}
+
+func (p *TFrontendReportAliveSessionResult_) DeepEqual(ano *TFrontendReportAliveSessionResult_) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Status) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Msg) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.SessionIdList) {
+		return false
+	}
+	return true
+}
+
+func (p *TFrontendReportAliveSessionResult_) Field1DeepEqual(src status.TStatusCode) bool {
+
+	if p.Status != src {
+		return false
+	}
+	return true
+}
+func (p *TFrontendReportAliveSessionResult_) Field2DeepEqual(src string) bool {
+
+	if strings.Compare(p.Msg, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TFrontendReportAliveSessionResult_) Field3DeepEqual(src []string) bool {
+
+	if len(p.SessionIdList) != len(src) {
+		return false
+	}
+	for i, v := range p.SessionIdList {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+
 type TDiskInfo struct {
 	DirType    string `thrift:"dirType,1,required" frugal:"1,required,string" json:"dirType"`
 	Dir        string `thrift:"dir,2,required" frugal:"2,required,string" json:"dir"`
@@ -42306,6 +43092,7 @@ type TSchemaTableRequestParams struct {
 	ReplayToOtherFe  *bool                `thrift:"replay_to_other_fe,3,optional" frugal:"3,optional,bool" json:"replay_to_other_fe,omitempty"`
 	Catalog          *string              `thrift:"catalog,4,optional" frugal:"4,optional,string" json:"catalog,omitempty"`
 	DbId             *int64               `thrift:"dbId,5,optional" frugal:"5,optional,i64" json:"dbId,omitempty"`
+	TimeZone         *string              `thrift:"time_zone,6,optional" frugal:"6,optional,string" json:"time_zone,omitempty"`
 }
 
 func NewTSchemaTableRequestParams() *TSchemaTableRequestParams {
@@ -42359,6 +43146,15 @@ func (p *TSchemaTableRequestParams) GetDbId() (v int64) {
 	}
 	return *p.DbId
 }
+
+var TSchemaTableRequestParams_TimeZone_DEFAULT string
+
+func (p *TSchemaTableRequestParams) GetTimeZone() (v string) {
+	if !p.IsSetTimeZone() {
+		return TSchemaTableRequestParams_TimeZone_DEFAULT
+	}
+	return *p.TimeZone
+}
 func (p *TSchemaTableRequestParams) SetColumnsName(val []string) {
 	p.ColumnsName = val
 }
@@ -42374,6 +43170,9 @@ func (p *TSchemaTableRequestParams) SetCatalog(val *string) {
 func (p *TSchemaTableRequestParams) SetDbId(val *int64) {
 	p.DbId = val
 }
+func (p *TSchemaTableRequestParams) SetTimeZone(val *string) {
+	p.TimeZone = val
+}
 
 var fieldIDToName_TSchemaTableRequestParams = map[int16]string{
 	1: "columns_name",
@@ -42381,6 +43180,7 @@ var fieldIDToName_TSchemaTableRequestParams = map[int16]string{
 	3: "replay_to_other_fe",
 	4: "catalog",
 	5: "dbId",
+	6: "time_zone",
 }
 
 func (p *TSchemaTableRequestParams) IsSetColumnsName() bool {
@@ -42401,6 +43201,10 @@ func (p *TSchemaTableRequestParams) IsSetCatalog() bool {
 
 func (p *TSchemaTableRequestParams) IsSetDbId() bool {
 	return p.DbId != nil
+}
+
+func (p *TSchemaTableRequestParams) IsSetTimeZone() bool {
+	return p.TimeZone != nil
 }
 
 func (p *TSchemaTableRequestParams) Read(iprot thrift.TProtocol) (err error) {
@@ -42457,6 +43261,14 @@ func (p *TSchemaTableRequestParams) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -42555,6 +43367,17 @@ func (p *TSchemaTableRequestParams) ReadField5(iprot thrift.TProtocol) error {
 	p.DbId = _field
 	return nil
 }
+func (p *TSchemaTableRequestParams) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TimeZone = _field
+	return nil
+}
 
 func (p *TSchemaTableRequestParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -42580,6 +43403,10 @@ func (p *TSchemaTableRequestParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 	}
@@ -42703,6 +43530,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 
+func (p *TSchemaTableRequestParams) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTimeZone() {
+		if err = oprot.WriteFieldBegin("time_zone", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TimeZone); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
 func (p *TSchemaTableRequestParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -42730,6 +43576,9 @@ func (p *TSchemaTableRequestParams) DeepEqual(ano *TSchemaTableRequestParams) bo
 		return false
 	}
 	if !p.Field5DeepEqual(ano.DbId) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.TimeZone) {
 		return false
 	}
 	return true
@@ -42787,6 +43636,18 @@ func (p *TSchemaTableRequestParams) Field5DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.DbId != *src {
+		return false
+	}
+	return true
+}
+func (p *TSchemaTableRequestParams) Field6DeepEqual(src *string) bool {
+
+	if p.TimeZone == src {
+		return true
+	} else if p.TimeZone == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TimeZone, *src) != 0 {
 		return false
 	}
 	return true
@@ -70477,6 +71338,7 @@ func (p *TGetColumnInfoResult_) Field2DeepEqual(src []*TColumnInfo) bool {
 type TShowProcessListRequest struct {
 	ShowFullSql      *bool                `thrift:"show_full_sql,1,optional" frugal:"1,optional,bool" json:"show_full_sql,omitempty"`
 	CurrentUserIdent *types.TUserIdentity `thrift:"current_user_ident,2,optional" frugal:"2,optional,types.TUserIdentity" json:"current_user_ident,omitempty"`
+	TimeZone         *string              `thrift:"time_zone,3,optional" frugal:"3,optional,string" json:"time_zone,omitempty"`
 }
 
 func NewTShowProcessListRequest() *TShowProcessListRequest {
@@ -70503,16 +71365,29 @@ func (p *TShowProcessListRequest) GetCurrentUserIdent() (v *types.TUserIdentity)
 	}
 	return p.CurrentUserIdent
 }
+
+var TShowProcessListRequest_TimeZone_DEFAULT string
+
+func (p *TShowProcessListRequest) GetTimeZone() (v string) {
+	if !p.IsSetTimeZone() {
+		return TShowProcessListRequest_TimeZone_DEFAULT
+	}
+	return *p.TimeZone
+}
 func (p *TShowProcessListRequest) SetShowFullSql(val *bool) {
 	p.ShowFullSql = val
 }
 func (p *TShowProcessListRequest) SetCurrentUserIdent(val *types.TUserIdentity) {
 	p.CurrentUserIdent = val
 }
+func (p *TShowProcessListRequest) SetTimeZone(val *string) {
+	p.TimeZone = val
+}
 
 var fieldIDToName_TShowProcessListRequest = map[int16]string{
 	1: "show_full_sql",
 	2: "current_user_ident",
+	3: "time_zone",
 }
 
 func (p *TShowProcessListRequest) IsSetShowFullSql() bool {
@@ -70521,6 +71396,10 @@ func (p *TShowProcessListRequest) IsSetShowFullSql() bool {
 
 func (p *TShowProcessListRequest) IsSetCurrentUserIdent() bool {
 	return p.CurrentUserIdent != nil
+}
+
+func (p *TShowProcessListRequest) IsSetTimeZone() bool {
+	return p.TimeZone != nil
 }
 
 func (p *TShowProcessListRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -70553,6 +71432,14 @@ func (p *TShowProcessListRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -70606,6 +71493,17 @@ func (p *TShowProcessListRequest) ReadField2(iprot thrift.TProtocol) error {
 	p.CurrentUserIdent = _field
 	return nil
 }
+func (p *TShowProcessListRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TimeZone = _field
+	return nil
+}
 
 func (p *TShowProcessListRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -70619,6 +71517,10 @@ func (p *TShowProcessListRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -70677,6 +71579,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 
+func (p *TShowProcessListRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTimeZone() {
+		if err = oprot.WriteFieldBegin("time_zone", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TimeZone); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
 func (p *TShowProcessListRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -70697,6 +71618,9 @@ func (p *TShowProcessListRequest) DeepEqual(ano *TShowProcessListRequest) bool {
 	if !p.Field2DeepEqual(ano.CurrentUserIdent) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.TimeZone) {
+		return false
+	}
 	return true
 }
 
@@ -70715,6 +71639,18 @@ func (p *TShowProcessListRequest) Field1DeepEqual(src *bool) bool {
 func (p *TShowProcessListRequest) Field2DeepEqual(src *types.TUserIdentity) bool {
 
 	if !p.CurrentUserIdent.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TShowProcessListRequest) Field3DeepEqual(src *string) bool {
+
+	if p.TimeZone == src {
+		return true
+	} else if p.TimeZone == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TimeZone, *src) != 0 {
 		return false
 	}
 	return true
@@ -73306,6 +74242,8 @@ type FrontendService interface {
 
 	SnapshotLoaderReport(ctx context.Context, request *TSnapshotLoaderReportRequest) (r *status.TStatus, err error)
 
+	GetAliveSessions(ctx context.Context, request *TFrontendReportAliveSessionRequest) (r *TFrontendReportAliveSessionResult_, err error)
+
 	Ping(ctx context.Context, request *TFrontendPingFrontendRequest) (r *TFrontendPingFrontendResult_, err error)
 
 	InitExternalCtlMeta(ctx context.Context, request *TInitExternalCtlMetaRequest) (r *TInitExternalCtlMetaResult_, err error)
@@ -73671,6 +74609,15 @@ func (p *FrontendServiceClient) SnapshotLoaderReport(ctx context.Context, reques
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *FrontendServiceClient) GetAliveSessions(ctx context.Context, request *TFrontendReportAliveSessionRequest) (r *TFrontendReportAliveSessionResult_, err error) {
+	var _args FrontendServiceGetAliveSessionsArgs
+	_args.Request = request
+	var _result FrontendServiceGetAliveSessionsResult
+	if err = p.Client_().Call(ctx, "getAliveSessions", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 func (p *FrontendServiceClient) Ping(ctx context.Context, request *TFrontendPingFrontendRequest) (r *TFrontendPingFrontendResult_, err error) {
 	var _args FrontendServicePingArgs
 	_args.Request = request
@@ -73992,6 +74939,7 @@ func NewFrontendServiceProcessor(handler FrontendService) *FrontendServiceProces
 	self.AddToProcessorMap("streamLoadPut", &frontendServiceProcessorStreamLoadPut{handler: handler})
 	self.AddToProcessorMap("streamLoadMultiTablePut", &frontendServiceProcessorStreamLoadMultiTablePut{handler: handler})
 	self.AddToProcessorMap("snapshotLoaderReport", &frontendServiceProcessorSnapshotLoaderReport{handler: handler})
+	self.AddToProcessorMap("getAliveSessions", &frontendServiceProcessorGetAliveSessions{handler: handler})
 	self.AddToProcessorMap("ping", &frontendServiceProcessorPing{handler: handler})
 	self.AddToProcessorMap("initExternalCtlMeta", &frontendServiceProcessorInitExternalCtlMeta{handler: handler})
 	self.AddToProcessorMap("fetchSchemaTableData", &frontendServiceProcessorFetchSchemaTableData{handler: handler})
@@ -75513,6 +76461,54 @@ func (p *frontendServiceProcessorSnapshotLoaderReport) Process(ctx context.Conte
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("snapshotLoaderReport", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type frontendServiceProcessorGetAliveSessions struct {
+	handler FrontendService
+}
+
+func (p *frontendServiceProcessorGetAliveSessions) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := FrontendServiceGetAliveSessionsArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("getAliveSessions", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := FrontendServiceGetAliveSessionsResult{}
+	var retval *TFrontendReportAliveSessionResult_
+	if retval, err2 = p.handler.GetAliveSessions(ctx, args.Request); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getAliveSessions: "+err2.Error())
+		oprot.WriteMessageBegin("getAliveSessions", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("getAliveSessions", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -87426,6 +88422,346 @@ func (p *FrontendServiceSnapshotLoaderReportResult) DeepEqual(ano *FrontendServi
 }
 
 func (p *FrontendServiceSnapshotLoaderReportResult) Field0DeepEqual(src *status.TStatus) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type FrontendServiceGetAliveSessionsArgs struct {
+	Request *TFrontendReportAliveSessionRequest `thrift:"request,1" frugal:"1,default,TFrontendReportAliveSessionRequest" json:"request"`
+}
+
+func NewFrontendServiceGetAliveSessionsArgs() *FrontendServiceGetAliveSessionsArgs {
+	return &FrontendServiceGetAliveSessionsArgs{}
+}
+
+func (p *FrontendServiceGetAliveSessionsArgs) InitDefault() {
+}
+
+var FrontendServiceGetAliveSessionsArgs_Request_DEFAULT *TFrontendReportAliveSessionRequest
+
+func (p *FrontendServiceGetAliveSessionsArgs) GetRequest() (v *TFrontendReportAliveSessionRequest) {
+	if !p.IsSetRequest() {
+		return FrontendServiceGetAliveSessionsArgs_Request_DEFAULT
+	}
+	return p.Request
+}
+func (p *FrontendServiceGetAliveSessionsArgs) SetRequest(val *TFrontendReportAliveSessionRequest) {
+	p.Request = val
+}
+
+var fieldIDToName_FrontendServiceGetAliveSessionsArgs = map[int16]string{
+	1: "request",
+}
+
+func (p *FrontendServiceGetAliveSessionsArgs) IsSetRequest() bool {
+	return p.Request != nil
+}
+
+func (p *FrontendServiceGetAliveSessionsArgs) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FrontendServiceGetAliveSessionsArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetAliveSessionsArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewTFrontendReportAliveSessionRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Request = _field
+	return nil
+}
+
+func (p *FrontendServiceGetAliveSessionsArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("getAliveSessions_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetAliveSessionsArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Request.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *FrontendServiceGetAliveSessionsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("FrontendServiceGetAliveSessionsArgs(%+v)", *p)
+
+}
+
+func (p *FrontendServiceGetAliveSessionsArgs) DeepEqual(ano *FrontendServiceGetAliveSessionsArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Request) {
+		return false
+	}
+	return true
+}
+
+func (p *FrontendServiceGetAliveSessionsArgs) Field1DeepEqual(src *TFrontendReportAliveSessionRequest) bool {
+
+	if !p.Request.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type FrontendServiceGetAliveSessionsResult struct {
+	Success *TFrontendReportAliveSessionResult_ `thrift:"success,0,optional" frugal:"0,optional,TFrontendReportAliveSessionResult_" json:"success,omitempty"`
+}
+
+func NewFrontendServiceGetAliveSessionsResult() *FrontendServiceGetAliveSessionsResult {
+	return &FrontendServiceGetAliveSessionsResult{}
+}
+
+func (p *FrontendServiceGetAliveSessionsResult) InitDefault() {
+}
+
+var FrontendServiceGetAliveSessionsResult_Success_DEFAULT *TFrontendReportAliveSessionResult_
+
+func (p *FrontendServiceGetAliveSessionsResult) GetSuccess() (v *TFrontendReportAliveSessionResult_) {
+	if !p.IsSetSuccess() {
+		return FrontendServiceGetAliveSessionsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *FrontendServiceGetAliveSessionsResult) SetSuccess(x interface{}) {
+	p.Success = x.(*TFrontendReportAliveSessionResult_)
+}
+
+var fieldIDToName_FrontendServiceGetAliveSessionsResult = map[int16]string{
+	0: "success",
+}
+
+func (p *FrontendServiceGetAliveSessionsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *FrontendServiceGetAliveSessionsResult) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FrontendServiceGetAliveSessionsResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetAliveSessionsResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewTFrontendReportAliveSessionResult_()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *FrontendServiceGetAliveSessionsResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("getAliveSessions_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetAliveSessionsResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *FrontendServiceGetAliveSessionsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("FrontendServiceGetAliveSessionsResult(%+v)", *p)
+
+}
+
+func (p *FrontendServiceGetAliveSessionsResult) DeepEqual(ano *FrontendServiceGetAliveSessionsResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *FrontendServiceGetAliveSessionsResult) Field0DeepEqual(src *TFrontendReportAliveSessionResult_) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
