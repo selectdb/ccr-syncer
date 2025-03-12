@@ -164,6 +164,10 @@ type JobExtra struct {
 	CachedBinlogs map[int64]*festruct.TBinlog `json:"-"`
 	// The binlog already applied to the dest cluster, don't need to persist.
 	AppliedBinlogs map[int64]struct{} `json:"-"`
+
+	// A counter and a channel used to signal the job routine to release the lock.
+	InterruptSignal int32         `json:"-"`
+	InterruptCh     chan struct{} `json:"-"`
 }
 
 type Job struct {
@@ -232,6 +236,7 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 			allowTableExists: jobContext.AllowTableExists,
 			ReuseBinlogLabel: jobContext.ReuseBinlogLabel,
 			SkipBinlog:       false,
+			InterruptCh:      make(chan struct{}, 1),
 		},
 
 		factory: factory,
@@ -280,6 +285,7 @@ func NewJobFromJson(jsonData string, db storage.DB, factory *Factory) (*Job, err
 	job.stop = make(chan struct{})
 	job.jobFactory = NewJobFactory()
 	job.concurrencyManager = rpc.NewConcurrencyManager()
+	job.Extra.InterruptCh = make(chan struct{}, 1)
 	return &job, nil
 }
 
@@ -2986,6 +2992,10 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 		if !j.progress.IsDone() {
 			j.progress.Done()
 		}
+
+		if j.hasInterruptSignal() {
+			return nil, true // back to run loop
+		}
 	}
 	return nil, false
 }
@@ -3477,7 +3487,7 @@ func (j *Job) incrementalSync() error {
 	}
 
 	// Step 2: handle all binlog
-	for {
+	for !j.hasInterruptSignal() {
 		// The CommitSeq is equals to PrevCommitSeq in here.
 		commitSeq := j.progress.CommitSeq
 		log.Tracef("src: %s, commitSeq: %d", src, commitSeq)
@@ -3523,7 +3533,10 @@ func (j *Job) incrementalSync() error {
 		if err = j.lockBinlog(j.progress.PrevCommitSeq); err != nil {
 			return err
 		}
+
+		j.updateJobStatus()
 	}
+	return nil
 }
 
 func (j *Job) recoverJobProgress() error {
@@ -3655,6 +3668,9 @@ func (j *Job) run() {
 		if j.maybeDeleted() {
 			return
 		}
+
+		// Wait for the interrupt channel to be empty
+		j.consumeInterruptSignals()
 
 		select {
 		case <-j.stop:
@@ -3830,6 +3846,7 @@ func (j *Job) desyncDB() error {
 }
 
 func (j *Job) Sync() error {
+	defer j.raiseInterruptSignal()()
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
@@ -3868,6 +3885,7 @@ func (j *Job) syncDB() error {
 }
 
 func (j *Job) Desync() error {
+	defer j.raiseInterruptSignal()()
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
@@ -4019,6 +4037,7 @@ func (j *Job) getJobState() JobState {
 }
 
 func (j *Job) changeJobState(state JobState) error {
+	defer j.raiseInterruptSignal()()
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
@@ -4084,6 +4103,7 @@ func (j *Job) Status() *JobStatus {
 }
 
 func (j *Job) UpdateHostMapping(srcHostMaps, destHostMaps map[string]string) error {
+	defer j.raiseInterruptSignal()()
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
@@ -4122,6 +4142,7 @@ func (j *Job) UpdateHostMapping(srcHostMaps, destHostMaps map[string]string) err
 }
 
 func (j *Job) SkipBinlog(skipCommitSeq int64, skipBy string) error {
+	defer j.raiseInterruptSignal()()
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
@@ -4258,6 +4279,24 @@ func (j *Job) GetSrcMeta() Metaer {
 
 func (j *Job) GetDestMeta() Metaer {
 	return j.destMeta
+}
+
+func (j *Job) raiseInterruptSignal() func() {
+	atomic.AddInt32(&j.Extra.InterruptSignal, 1)
+	return func() {
+		j.Extra.InterruptCh <- struct{}{}
+	}
+}
+
+func (j *Job) hasInterruptSignal() bool {
+	return atomic.LoadInt32(&j.Extra.InterruptSignal) > 0
+}
+
+func (j *Job) consumeInterruptSignals() {
+	for j.hasInterruptSignal() {
+		<-j.Extra.InterruptCh
+		atomic.AddInt32(&j.Extra.InterruptSignal, -1)
+	}
 }
 
 func isTxnCommitted(status *tstatus.TStatus) bool {
