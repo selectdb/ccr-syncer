@@ -72,6 +72,7 @@ var (
 	featureFilterStorageMedium          bool
 	featureRestoreReplaceDiffSchema     bool
 	featureIdempotentDDL                bool
+	featureSkipWaitingTxnPublish        bool
 
 	flagBinlogBatchSize int64
 
@@ -107,6 +108,8 @@ func init() {
 		"replace the table with different schema during restore")
 	flag.BoolVar(&featureIdempotentDDL, "feature_idempotent_ddl", true,
 		"enable idempotent ddl by checking the dest table schema before rolling back")
+	flag.BoolVar(&featureSkipWaitingTxnPublish, "feature_skip_waiting_txn_publish", true,
+		"skip waiting for the txn publish")
 
 	flag.Int64Var(&flagBinlogBatchSize, "binlog_batch_size", 16, "the max num of binlogs to get in a batch")
 }
@@ -1923,7 +1926,8 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		if isTxnInsert {
 			resp, err = destRpc.CommitTransactionForTxnInsert(dest, txnId, true, subTxnInfos)
 		} else {
-			resp, err = destRpc.CommitTransaction(dest, txnId, commitInfos)
+			onlyCommitTxn := featureSkipWaitingTxnPublish
+			resp, err = destRpc.CommitTransaction(dest, txnId, commitInfos, onlyCommitTxn)
 		}
 		if err != nil {
 			rollback(err, inMemoryData)

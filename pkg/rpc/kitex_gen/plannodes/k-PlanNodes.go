@@ -27762,6 +27762,20 @@ func (p *TSortNode) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 12:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField12(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -27928,6 +27942,19 @@ func (p *TSortNode) FastReadField11(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TSortNode) FastReadField12(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.UseLocalMerge = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TSortNode) FastWrite(buf []byte) int {
 	return 0
@@ -27944,6 +27971,7 @@ func (p *TSortNode) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWrite
 		offset += p.fastWriteField8(buf[offset:], binaryWriter)
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
 		offset += p.fastWriteField10(buf[offset:], binaryWriter)
+		offset += p.fastWriteField12(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField11(buf[offset:], binaryWriter)
 	}
@@ -27965,6 +27993,7 @@ func (p *TSortNode) BLength() int {
 		l += p.field9Length()
 		l += p.field10Length()
 		l += p.field11Length()
+		l += p.field12Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -28065,6 +28094,17 @@ func (p *TSortNode) fastWriteField11(buf []byte, binaryWriter bthrift.BinaryWrit
 	return offset
 }
 
+func (p *TSortNode) fastWriteField12(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetUseLocalMerge() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "use_local_merge", thrift.BOOL, 12)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.UseLocalMerge)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TSortNode) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("sort_info", thrift.STRUCT, 1)
@@ -28153,6 +28193,17 @@ func (p *TSortNode) field11Length() int {
 	if p.IsSetAlgorithm() {
 		l += bthrift.Binary.FieldBeginLength("algorithm", thrift.I32, 11)
 		l += bthrift.Binary.I32Length(int32(*p.Algorithm))
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TSortNode) field12Length() int {
+	l := 0
+	if p.IsSetUseLocalMerge() {
+		l += bthrift.Binary.FieldBeginLength("use_local_merge", thrift.BOOL, 12)
+		l += bthrift.Binary.BoolLength(*p.UseLocalMerge)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
