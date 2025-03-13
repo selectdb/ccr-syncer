@@ -154,6 +154,7 @@ func (s SubSyncState) String() string {
 type JobPartialSyncData struct {
 	TableId      int64    `json:"table_id"`
 	Table        string   `json:"table"`
+	IsView       bool     `json:"is_view"`
 	PartitionIds []int64  `json:"partition_ids"`
 	Partitions   []string `json:"partitions"`
 }
