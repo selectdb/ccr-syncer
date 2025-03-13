@@ -30,7 +30,7 @@ suite("test_ds_absorb_tbl_drop_create_schema_consist") {
     }
 
     def checkValue = { res, index, expect -> Boolean
-        return res[index] == expect
+        return res[index][1] == expect
     }
 
     sql """
@@ -67,7 +67,7 @@ suite("test_ds_absorb_tbl_drop_create_schema_consist") {
 
     def res = sql " select * from ${tableName}";
     for (int index = 0; index < insert_num; index++) {
-        checkValue(res, index, "(${test_num}, ${index})")
+        assertTrue(checkValue(res, index, index))
     }
     // 3. Do operation & wait it finishes upstream
     sql "DROP TABLE ${tableName} FORCE"
@@ -94,8 +94,8 @@ suite("test_ds_absorb_tbl_drop_create_schema_consist") {
     }
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num }, 180, "sql"))
     res = sql " select * from ${tableName}";
-    for (int index = insert_num; index < insert_num * 2; index++) {
-        checkValue(res, index, "(${test_num}, ${index})")
+    for (int index = 0; index < insert_num; index++) {
+        assertTrue(checkValue(res, index, index + insert_num))
     }
     // 5. Force trigger fullsnapshot
     helper.force_fullsync()
@@ -107,7 +107,7 @@ suite("test_ds_absorb_tbl_drop_create_schema_consist") {
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "target"))
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num }, 60, "target"))
     res = target_sql " select * from ${tableName}";
-    for (int index = insert_num; index < insert_num * 2; index++) {
-        checkValue(res, index, "(${test_num}, ${index})")
+    for (int index = 0; index < insert_num; index++) {
+        assertTrue(checkValue(res, index, index + insert_num))
     }
 }
