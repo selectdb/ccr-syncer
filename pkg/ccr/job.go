@@ -3793,10 +3793,10 @@ func (j *Job) newPartialSnapshot(tableId int64, table string, partitions []strin
 		j.progress.TableAliases = make(map[string]string)
 		j.progress.TableAliases[table] = alias
 		log.Infof("new partial snapshot, commitSeq: %d, table id: %d, table: %s, alias: %s, isView: %t",
-			commitSeq, tableId, table, alias)
+			commitSeq, tableId, table, alias, isView)
 	} else {
 		log.Infof("new partial snapshot, commitSeq: %d, table id: %d, table: %s, partitions: %v, isView: %t",
-			commitSeq, tableId, table, partitions)
+			commitSeq, tableId, table, partitions, isView)
 	}
 
 	switch j.SyncType {
