@@ -19,7 +19,7 @@ suite("test_ds_absorb_tbl_create_alt_storage_policy") {
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
     def dbName = context.dbName
-    def tableName = "tbl"
+    def tableName = "tbl" + helper.randomSuffix()
     def test_num = 0
     def insert_num = 5
 
@@ -38,8 +38,8 @@ suite("test_ds_absorb_tbl_create_alt_storage_policy") {
         return !res[0][1].contains("\"storage_policy\" = \"test_policy\"")
     }
 
-    def resource_name = "test_ts_tbl_storage_policy_resource" + helper.randomSuffix()
-    def policy_name= "test_policy"
+    def resource_name = "test_ds_absorb_tbl_create_alt_storage_policy_resource" + helper.randomSuffix()
+    def policy_name= "test_policy" + helper.randomSuffix()
 
     def check_storage_policy_exist = { name->
         def polices = sql"""
