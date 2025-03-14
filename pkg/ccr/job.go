@@ -73,6 +73,7 @@ var (
 	featureRestoreReplaceDiffSchema     bool
 	featureIdempotentDDL                bool
 	featureSkipWaitingTxnPublish        bool
+	featureSkipCheckAsyncMvTable        bool
 
 	flagBinlogBatchSize int64
 
@@ -110,6 +111,8 @@ func init() {
 		"enable idempotent ddl by checking the dest table schema before rolling back")
 	flag.BoolVar(&featureSkipWaitingTxnPublish, "feature_skip_waiting_txn_publish", true,
 		"skip waiting for the txn publish")
+	flag.BoolVar(&featureSkipCheckAsyncMvTable, "feature_skip_check_async_mv_table", true,
+		"skip checking async mv table, the async mv binlogs will be filtered by doris")
 
 	flag.Int64Var(&flagBinlogBatchSize, "binlog_batch_size", 16, "the max num of binlogs to get in a batch")
 }
@@ -1393,6 +1396,10 @@ func (j *Job) newLabel(commitSeq int64) string {
 }
 
 func (j *Job) IsMaterializedViewTable(srcTableId int64) (bool, error) {
+	if featureSkipCheckAsyncMvTable {
+		return false, nil
+	}
+
 	// 1. skip the OLAP tables
 	if j.SyncType == TableSync && srcTableId == j.Src.TableId {
 		return false, nil
