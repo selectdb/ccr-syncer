@@ -22,7 +22,7 @@ suite("test_ds_absorb_tbl_create_alt_storage_policy") {
     def tableName = "tbl" + helper.randomSuffix()
     def test_num = 0
     def insert_num = 5
-
+    def policy_name= "test_policy" + helper.randomSuffix()
     def exist = { res -> Boolean
         return res.size() != 0
     }
@@ -31,15 +31,14 @@ suite("test_ds_absorb_tbl_create_alt_storage_policy") {
         return res.size() == 0
     }
     def existPolicy = { res -> Boolean
-        return res[0][1].contains("\"storage_policy\" = \"test_policy\"")
+        return res[0][1].contains("\"storage_policy\" = \"${policy_name}\"")
     }
 
     def notExistPolicy = { res -> Boolean
-        return !res[0][1].contains("\"storage_policy\" = \"test_policy\"")
+        return !res[0][1].contains("\"storage_policy\" = \"${policy_name}\"")
     }
 
     def resource_name = "test_ds_absorb_tbl_create_alt_storage_policy_resource" + helper.randomSuffix()
-    def policy_name= "test_policy" + helper.randomSuffix()
 
     def check_storage_policy_exist = { name->
         def polices = sql"""
