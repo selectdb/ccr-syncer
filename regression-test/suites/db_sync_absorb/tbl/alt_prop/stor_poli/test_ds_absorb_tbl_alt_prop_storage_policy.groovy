@@ -38,7 +38,7 @@ suite("test_ds_absorb_tbl_alt_prop_storage_policy") {
         return !res[0][1].contains("\"storage_policy\" = \"test_policy\"")
     }
 
-    def resource_name = "test_ds_absorb_tbl_alt_prop_storage_policy_resource" + helper.randomSuffix()
+    def resource_name = "test_ds_absorb_tbl_alt_prop_storage_policy_resource"
     def policy_name= "test_policy" + helper.randomSuffix()
 
     def check_storage_policy_exist = { name->
