@@ -1611,10 +1611,10 @@ func (j *Job) getRelatedTableRecords(upsert *record.Upsert) ([]*record.TableReco
 }
 
 // Table ingestBinlog
-func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*ttypes.TTabletCommitInfo, error) {
-	log.Tracef("txn %d ingest binlog", txnId)
+func (j *Job) ingestBinlog(commitSeq, txnId int64, tableRecords []*record.TableRecord) ([]*ttypes.TTabletCommitInfo, error) {
+	log.Tracef("txn %d ingest binlog, commitSeq: %d", txnId, commitSeq)
 
-	job, err := j.jobFactory.CreateJob(NewIngestContext(txnId, tableRecords, j.progress.TableMapping), j, "IngestBinlog")
+	job, err := j.jobFactory.CreateJob(NewIngestContext(commitSeq, txnId, tableRecords, j.progress.TableMapping), j, "IngestBinlog")
 	if err != nil {
 		return nil, err
 	}
@@ -1632,10 +1632,10 @@ func (j *Job) ingestBinlog(txnId int64, tableRecords []*record.TableRecord) ([]*
 }
 
 // Table ingestBinlog for txn insert
-func (j *Job) ingestBinlogForTxnInsert(txnId int64, tableRecords []*record.TableRecord, stidMap map[int64]int64, destTableId int64) ([]*festruct.TSubTxnInfo, error) {
-	log.Infof("ingestBinlogForTxnInsert, txnId: %d", txnId)
+func (j *Job) ingestBinlogForTxnInsert(commitSeq, txnId int64, tableRecords []*record.TableRecord, stidMap map[int64]int64, destTableId int64) ([]*festruct.TSubTxnInfo, error) {
+	log.Infof("txn %d ingestBinlogForTxnInsert, commitSeq: %d", txnId, commitSeq)
 
-	job, err := j.jobFactory.CreateJob(NewIngestContextForTxnInsert(txnId, tableRecords, j.progress.TableMapping, stidMap), j, "IngestBinlog")
+	job, err := j.jobFactory.CreateJob(NewIngestContextForTxnInsert(commitSeq, txnId, tableRecords, j.progress.TableMapping, stidMap), j, "IngestBinlog")
 	if err != nil {
 		return nil, err
 	}
@@ -1884,6 +1884,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		tableRecords := inMemoryData.TableRecords
 		txnId := inMemoryData.TxnId
 		isTxnInsert := inMemoryData.IsTxnInsert
+		commitSeq := inMemoryData.CommitSeq
 
 		// make stidMap, source_stid to dest_stid
 		stidMap := make(map[int64]int64)
@@ -1902,7 +1903,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			var allSubTxnInfos = make([]*festruct.TSubTxnInfo, 0, len(stidMap))
 			for _, destTableId := range inMemoryData.DestTableIds {
 				// When txn insert, use subTxnInfos to commit rather than commitInfos.
-				subTxnInfos, err := j.ingestBinlogForTxnInsert(txnId, tableRecords, stidMap, destTableId)
+				subTxnInfos, err := j.ingestBinlogForTxnInsert(commitSeq, txnId, tableRecords, stidMap, destTableId)
 				if err != nil {
 					rollback(err, inMemoryData)
 					return err
@@ -1914,7 +1915,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			}
 			inMemoryData.SubTxnInfos = allSubTxnInfos
 		} else {
-			commitInfos, err := j.ingestBinlog(txnId, tableRecords)
+			commitInfos, err := j.ingestBinlog(commitSeq, txnId, tableRecords)
 			if err != nil {
 				rollback(err, inMemoryData)
 				return err
@@ -2893,9 +2894,9 @@ func (j *Job) handleRenameRollup(binlog *festruct.TBinlog) error {
 	return j.IDest.RenameRollup(destTableName, oldRollup, newRollup)
 }
 
-func (j *Job) handleDropRollup(binlog *festruct.TBinlog) error {
-	log.Infof("handle drop rollup binlog, prevCommitSeq: %d, commitSeq: %d",
-		j.progress.PrevCommitSeq, j.progress.CommitSeq)
+func (j *Job) handleDropRollup(binlog *festruct.TBinlog, allowNotExists bool) error {
+	log.Infof("handle drop rollup binlog, prevCommitSeq: %d, commitSeq: %d, allowNotExists: %t",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq, allowNotExists)
 
 	data := binlog.GetData()
 	dropRollup, err := record.NewDropRollupFromJson(data)
@@ -2915,7 +2916,15 @@ func (j *Job) handleDropRollup(binlog *festruct.TBinlog) error {
 		destTableName = dropRollup.TableName
 	}
 
-	return j.IDest.DropRollup(destTableName, dropRollup.IndexName)
+	err = j.IDest.DropRollup(destTableName, dropRollup.IndexName)
+	if err != nil {
+		msg := fmt.Sprintf("Materialized view [%s] does not exist", dropRollup.IndexName)
+		if allowNotExists && strings.Contains(err.Error(), msg) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (j *Job) handleRecoverInfo(binlog *festruct.TBinlog) error {
@@ -3474,7 +3483,7 @@ func (j *Job) handleNonBarrierBinlog(binlog *festruct.TBinlog) error {
 		case festruct.TBinlogType_RENAME_ROLLUP:
 			err = j.handleRenameRollup(binlog)
 		case festruct.TBinlogType_DROP_ROLLUP:
-			err = j.handleDropRollup(binlog)
+			err = j.handleDropRollup(binlog, false)
 		case festruct.TBinlogType_RECOVER_INFO:
 			err = j.handleRecoverInfo(binlog)
 		default:
