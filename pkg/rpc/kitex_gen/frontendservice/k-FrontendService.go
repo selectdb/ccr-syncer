@@ -42836,6 +42836,34 @@ func (p *TGetBinlogLagResult_) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 8:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField8(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 9:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField9(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -42962,6 +42990,32 @@ func (p *TGetBinlogLagResult_) FastReadField7(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TGetBinlogLagResult_) FastReadField8(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.NextCommitSeq = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TGetBinlogLagResult_) FastReadField9(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.NextBinlogTimestamp = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TGetBinlogLagResult_) FastWrite(buf []byte) int {
 	return 0
@@ -42976,6 +43030,8 @@ func (p *TGetBinlogLagResult_) FastWriteNocopy(buf []byte, binaryWriter bthrift.
 		offset += p.fastWriteField5(buf[offset:], binaryWriter)
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 		offset += p.fastWriteField7(buf[offset:], binaryWriter)
+		offset += p.fastWriteField8(buf[offset:], binaryWriter)
+		offset += p.fastWriteField9(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
 	}
@@ -42995,6 +43051,8 @@ func (p *TGetBinlogLagResult_) BLength() int {
 		l += p.field5Length()
 		l += p.field6Length()
 		l += p.field7Length()
+		l += p.field8Length()
+		l += p.field9Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -43076,6 +43134,28 @@ func (p *TGetBinlogLagResult_) fastWriteField7(buf []byte, binaryWriter bthrift.
 	return offset
 }
 
+func (p *TGetBinlogLagResult_) fastWriteField8(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetNextCommitSeq() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "next_commit_seq", thrift.I64, 8)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.NextCommitSeq)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TGetBinlogLagResult_) fastWriteField9(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetNextBinlogTimestamp() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "next_binlog_timestamp", thrift.I64, 9)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.NextBinlogTimestamp)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TGetBinlogLagResult_) field1Length() int {
 	l := 0
 	if p.IsSetStatus() {
@@ -43145,6 +43225,28 @@ func (p *TGetBinlogLagResult_) field7Length() int {
 	if p.IsSetLastBinlogTimestamp() {
 		l += bthrift.Binary.FieldBeginLength("last_binlog_timestamp", thrift.I64, 7)
 		l += bthrift.Binary.I64Length(*p.LastBinlogTimestamp)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TGetBinlogLagResult_) field8Length() int {
+	l := 0
+	if p.IsSetNextCommitSeq() {
+		l += bthrift.Binary.FieldBeginLength("next_commit_seq", thrift.I64, 8)
+		l += bthrift.Binary.I64Length(*p.NextCommitSeq)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TGetBinlogLagResult_) field9Length() int {
+	l := 0
+	if p.IsSetNextBinlogTimestamp() {
+		l += bthrift.Binary.FieldBeginLength("next_binlog_timestamp", thrift.I64, 9)
+		l += bthrift.Binary.I64Length(*p.NextBinlogTimestamp)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

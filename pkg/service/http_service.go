@@ -230,6 +230,8 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 		FirstBinlogTimestamp string  `json:"first_binlog_timestamp"`
 		LastBinlogTimestamp  string  `json:"last_binlog_timestamp"`
 		TimeInterval         float64 `json:"time_interval_secs"`
+		NextCommitSeq        int64   `json:"next_commit_seq"`
+		NextBinlogTimestamp  string  `json:"next_binlog_timestamp"`
 	}
 	var lagResult *result
 	defer func() { writeJson(w, lagResult) }()
@@ -317,20 +319,26 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 	lag := resp.GetLag()
 	firstCommitSeq := resp.GetFirstCommitSeq()
 	lastCommitSeq := resp.GetLastCommitSeq()
-	var firstBinlogTimestamp, lastBinlogTimestamp string
+	nextCommitSeq := resp.GetNextCommitSeq()
+	var nextBinlogTimestamp, lastBinlogTimestamp, firstBinlogTimestamp string
 
-	if ts := resp.GetFirstBinlogTimestamp(); ts != -1 {
-		firstBinlogTimestamp = ConvertTimestampToString(resp.GetFirstBinlogTimestamp())
+	if ts := resp.GetNextBinlogTimestamp(); ts != -1 {
+		nextBinlogTimestamp = ConvertTimestampToString(ts)
 	} else {
-		firstBinlogTimestamp = "1970-01-01 08:00:00"
+		nextBinlogTimestamp = "1970-01-01 08:00:00"
 	}
 	if ts := resp.GetLastBinlogTimestamp(); ts != -1 {
-		lastBinlogTimestamp = ConvertTimestampToString(resp.GetLastBinlogTimestamp())
+		lastBinlogTimestamp = ConvertTimestampToString(ts)
 	} else {
 		lastBinlogTimestamp = "1970-01-01 08:00:00"
 	}
+	if ts := resp.GetFirstBinlogTimestamp(); ts != -1 {
+		firstBinlogTimestamp = ConvertTimestampToString(ts)
+	} else {
+		firstBinlogTimestamp = "1970-01-01 08:00:00"
+	}
 
-	timeInterval := CalculateTimeDifferenceInSeconds(lastBinlogTimestamp, firstBinlogTimestamp)
+	timeInterval := CalculateTimeDifferenceInSeconds(lastBinlogTimestamp, nextBinlogTimestamp)
 
 	lagResult = &result{
 		defaultResult:        newSuccessResult(),
@@ -340,6 +348,8 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 		FirstBinlogTimestamp: firstBinlogTimestamp,
 		LastBinlogTimestamp:  lastBinlogTimestamp,
 		TimeInterval:         timeInterval,
+		NextCommitSeq:        nextCommitSeq,
+		NextBinlogTimestamp:  nextBinlogTimestamp,
 	}
 }
 

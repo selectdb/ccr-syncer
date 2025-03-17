@@ -48,11 +48,13 @@ suite("test_syncer_get_lag") {
     def validateLagData = { lag ->
         assertTrue(lag != null)
         assertTrue(lag.containsKey("lag"))
-        assertTrue(lag.containsKey("first_commit_seq"))
+        assertTrue(lag.containsKey("next_commit_seq"))
         assertTrue(lag.containsKey("last_commit_seq"))
         assertTrue(lag.containsKey("first_binlog_timestamp"))
         assertTrue(lag.containsKey("last_binlog_timestamp"))
+        assertTrue(lag.containsKey("next_binlog_timestamp"))
         assertTrue(lag.containsKey("time_interval_secs"))
+        assertTrue(lag.containsKey("first_commit_seq"))
         assertTrue(lag.lag >= 0)
     }
     
@@ -60,7 +62,7 @@ suite("test_syncer_get_lag") {
     logger.info("Initial lag info: ${initialLag}")
     
     validateLagData(initialLag)
-    Boolean res = initialLag.last_commit_seq - initialLag.first_commit_seq <= 1
+    Boolean res = initialLag.last_commit_seq - initialLag.next_commit_seq <= 1
     assertTrue(res);
 
     {
@@ -107,7 +109,7 @@ suite("test_syncer_get_lag") {
         
         validateLagData(lagAfterMoreData)
         
-        if (lagAfterPause.first_commit_seq == lagAfterMoreData.first_commit_seq) {
+        if (lagAfterPause.next_commit_seq == lagAfterMoreData.next_commit_seq) {
             assertTrue(lagAfterMoreData.lag >= lagAfterPause.lag)
         }
     }
@@ -130,7 +132,7 @@ suite("test_syncer_get_lag") {
         
         validateLagData(lagAfterResume)
         
-        if (lagAfterResume.first_commit_seq >= lagAfterResumeImmediate.first_commit_seq) {
+        if (lagAfterResume.next_commit_seq >= lagAfterResumeImmediate.next_commit_seq) {
             res = lagAfterResume.lag <= lagAfterResumeImmediate.lag || lagAfterResume.lag == 0
             assertTrue(res == true);
         }
@@ -159,8 +161,8 @@ suite("test_syncer_get_lag") {
         
         validateLagData(lagAfterSync)
         
-        if (lagAfterSync.first_binlog_timestamp && lagAfterSync.last_binlog_timestamp && 
-            !lagAfterSync.first_binlog_timestamp.isEmpty() && !lagAfterSync.last_binlog_timestamp.isEmpty()) {
+        if (lagAfterSync.next_binlog_timestamp && lagAfterSync.last_binlog_timestamp && 
+            !lagAfterSync.next_binlog_timestamp.isEmpty() && !lagAfterSync.last_binlog_timestamp.isEmpty()) {
             
             assertTrue(lagAfterSync.time_interval_secs >= 0)
         }
@@ -220,5 +222,105 @@ suite("test_syncer_get_lag") {
         def finalLag = helper.get_job_lag(tableName)
         logger.info("Final lag after rapid operations: ${finalLag}")
         validateLagData(finalLag)
+    }
+
+    {
+        
+        def recycleTableName = "t_lag_recycle_" + helper.randomSuffix()
+        
+        sql """ DROP TABLE IF EXISTS ${recycleTableName} """
+        target_sql """DROP TABLE IF EXISTS ${recycleTableName}"""
+        
+        sql """
+            CREATE TABLE ${recycleTableName} (
+                id INT,
+                name VARCHAR(50),
+                value DOUBLE
+            )
+            DISTRIBUTED BY HASH(id) BUCKETS 3
+            PROPERTIES(
+                "replication_num" = "1"
+            )
+        """
+        
+        helper.enableDbBinlog()
+        
+        helper.ccrJobCreate(recycleTableName)
+        assertTrue(helper.checkRestoreFinishTimesOf("${recycleTableName}", 60))
+        
+        sql """
+            INSERT INTO ${recycleTableName} VALUES (1, 'initial', 1.1), (2, 'initial', 2.2)
+        """
+        
+        def initialRecycleLag = helper.get_job_lag(recycleTableName)
+        logger.info("Initial lag info for recycle test: ${initialRecycleLag}")
+        validateLagData(initialRecycleLag)
+        def prevRecycleSeq = initialRecycleLag.last_commit_seq
+        logger.info("Previous commit sequence for recycle test: ${prevRecycleSeq}")
+        
+        assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${recycleTableName}", 2, 10))
+        
+        logger.info("Disabling database binlog to simulate recycling...")
+        sql """
+            ALTER DATABASE ${context.dbName} SET PROPERTIES("binlog.enable" = "false")
+        """
+        
+        sleep(3000)
+        
+        def checkBinlogDisabled = sql """
+            SHOW CREATE DATABASE ${context.dbName}
+        """
+        logger.info("Database properties after disabling binlog: ${checkBinlogDisabled}")
+        
+        sql """
+            INSERT INTO ${recycleTableName} VALUES (3, 'no_binlog', 3.3), (4, 'no_binlog', 4.4)
+        """
+        
+        sleep(2000)
+        
+        def lagWhileDisabled = helper.get_job_lag(recycleTableName)
+        validateLagData(lagWhileDisabled)
+        
+        logger.info("Dropping and recreating table to force binlog sequence reset...")
+        sql """ DROP TABLE IF EXISTS ${recycleTableName} """
+        
+        sql """
+            ALTER DATABASE ${context.dbName} SET PROPERTIES("binlog.enable" = "true")
+        """
+        
+        sleep(3000)
+        
+        sql """
+            CREATE TABLE ${recycleTableName} (
+                id INT,
+                name VARCHAR(50),
+                value DOUBLE
+            )
+            DISTRIBUTED BY HASH(id) BUCKETS 3
+            PROPERTIES(
+                "replication_num" = "1", 
+                "binlog.enable" = "true"
+            )
+        """
+        
+        sql """
+            INSERT INTO ${recycleTableName} VALUES (5, 'new_binlog', 5.5), (6, 'new_binlog', 6.6)
+        """
+        
+        sleep(3000)
+        
+        def lagAfterReset = helper.get_job_lag(recycleTableName)
+        logger.info("Lag info after table reset: ${lagAfterReset}")
+        validateLagData(lagAfterReset)
+        
+        def newNextCommitSeq = lagAfterReset.next_commit_seq
+        logger.info("New next commit sequence after recycling: ${newNextCommitSeq}")
+        logger.info("Previous last commit sequence: ${prevRecycleSeq}")
+        logger.info("Testing if nextBinlog.getCommitSeq() > prevCommitSeq: ${newNextCommitSeq} > ${prevRecycleSeq}")
+        
+        assertTrue(newNextCommitSeq > prevRecycleSeq, 
+            "Expected next commit sequence (${newNextCommitSeq}) to be greater than previous sequence (${prevRecycleSeq})")
+        
+        assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${recycleTableName}", 4, 10))
     }
 }
