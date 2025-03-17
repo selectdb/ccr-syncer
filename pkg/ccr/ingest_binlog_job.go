@@ -268,25 +268,28 @@ func (h *tabletIngestBinlogHandler) handle() {
 
 type IngestContext struct {
 	context.Context
+	commitSeq    int64
 	txnId        int64
 	tableRecords []*record.TableRecord
 	tableMapping map[int64]int64
 	stidMapping  map[int64]int64
 }
 
-func NewIngestContext(txnId int64, tableRecords []*record.TableRecord, tableMapping map[int64]int64) *IngestContext {
+func NewIngestContext(commitSeq, txnId int64, tableRecords []*record.TableRecord, tableMapping map[int64]int64) *IngestContext {
 	return &IngestContext{
 		Context:      context.Background(),
+		commitSeq:    commitSeq,
 		txnId:        txnId,
 		tableRecords: tableRecords,
 		tableMapping: tableMapping,
 	}
 }
 
-func NewIngestContextForTxnInsert(txnId int64, tableRecords []*record.TableRecord,
+func NewIngestContextForTxnInsert(commitSeq, txnId int64, tableRecords []*record.TableRecord,
 	tableMapping map[int64]int64, stidMapping map[int64]int64) *IngestContext {
 	return &IngestContext{
 		Context:      context.Background(),
+		commitSeq:    commitSeq,
 		txnId:        txnId,
 		tableRecords: tableRecords,
 		tableMapping: tableMapping,
@@ -303,6 +306,7 @@ type IngestBinlogJob struct {
 	destMeta     IngestBinlogMetaer
 	stidMap      map[int64]int64
 
+	commitSeq    int64
 	txnId        int64
 	tableRecords []*record.TableRecord
 
@@ -332,6 +336,7 @@ func NewIngestBinlogJob(ctx context.Context, ccrJob *Job) (*IngestBinlogJob, err
 		factory: ccrJob.factory,
 
 		tableMapping: ingestCtx.tableMapping,
+		commitSeq:    ingestCtx.commitSeq,
 		txnId:        ingestCtx.txnId,
 		tableRecords: ingestCtx.tableRecords,
 		stidMap:      ingestCtx.stidMapping,
@@ -737,6 +742,11 @@ func (j *IngestBinlogJob) prepareMeta() {
 func (j *IngestBinlogJob) applyDropRollupBinlog() {
 	droppedIndexMap := j.srcMeta.GetDroppedIndexMap()
 	for _, commitSeq := range droppedIndexMap {
+		if commitSeq < j.commitSeq {
+			// ignore the binlog that has been committed
+			continue
+		}
+
 		if _, ok := j.ccrJob.Extra.AppliedBinlogs[commitSeq]; ok {
 			continue
 		}
@@ -746,18 +756,24 @@ func (j *IngestBinlogJob) applyDropRollupBinlog() {
 			j.setError(err)
 			return
 		}
-		if binlog.GetType() == festruct.TBinlogType_DROP_ROLLUP {
-			// Apply the drop rollup binlog to the dest cluster
-			err := j.ccrJob.handleDropRollup(binlog)
-			if err != nil {
-				j.setError(err)
-				return
-			}
-			if j.ccrJob.Extra.AppliedBinlogs == nil {
-				j.ccrJob.Extra.AppliedBinlogs = make(map[int64]struct{})
-			}
-			j.ccrJob.Extra.AppliedBinlogs[commitSeq] = struct{}{}
+
+		if binlog.GetType() != festruct.TBinlogType_DROP_ROLLUP {
+			continue
 		}
+
+		// Apply the drop rollup binlog to the dest cluster
+		log.Infof("txn %d ingest binlog: apply drop rollup binlog, commitSeq: %d", j.txnId, commitSeq)
+		allowNotExists := true
+		err = j.ccrJob.handleDropRollup(binlog, allowNotExists)
+		if err != nil {
+			j.setError(err)
+			return
+		}
+
+		if j.ccrJob.Extra.AppliedBinlogs == nil {
+			j.ccrJob.Extra.AppliedBinlogs = make(map[int64]struct{})
+		}
+		j.ccrJob.Extra.AppliedBinlogs[commitSeq] = struct{}{}
 	}
 }
 
