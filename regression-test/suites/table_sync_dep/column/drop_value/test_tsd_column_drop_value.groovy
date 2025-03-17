@@ -44,8 +44,8 @@ suite("test_tsd_column_drop_value") {
             `value` INT DEFAULT "0"
         )
         ENGINE=OLAP
-        UNIQUE KEY(`test`)
-        DISTRIBUTED BY HASH(`test`) BUCKETS 1
+        UNIQUE KEY(`test`, `id`)
+        DISTRIBUTED BY HASH(`id`) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true"
