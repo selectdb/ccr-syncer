@@ -154,6 +154,14 @@ func (j JobState) String() string {
 	}
 }
 
+type PartialSnapshotParams struct {
+	TableId    int64    `json:"table_id"`
+	TableName  string   `json:"table"`
+	Partitions []string `json:"partitions"`
+	IsView     bool     `json:"is_view"`
+	Replace    bool     `json:"replace"`
+}
+
 type JobExtra struct {
 	// Reuse the upstream txn label as the downstream txn label.
 	ReuseBinlogLabel bool `json:"reuse_binlog_label,omitempty"`
@@ -174,6 +182,9 @@ type JobExtra struct {
 	// A counter and a channel used to signal the job routine to release the lock.
 	InterruptSignal int32         `json:"-"`
 	InterruptCh     chan struct{} `json:"-"`
+
+	// New partial snapshot info
+	PartialSnapshotParams *PartialSnapshotParams `json:"-"`
 }
 
 type Job struct {
@@ -1904,7 +1915,12 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			for _, destTableId := range inMemoryData.DestTableIds {
 				// When txn insert, use subTxnInfos to commit rather than commitInfos.
 				subTxnInfos, err := j.ingestBinlogForTxnInsert(commitSeq, txnId, tableRecords, stidMap, destTableId)
-				if err != nil {
+				if err == errTriggerPartialSnapshot {
+					if j.Extra.PartialSnapshotParams == nil {
+						panic("partial snapshot params is nil when trigger partial snapshot")
+					}
+					j.progress.NextSubCheckpoint(RollbackTransaction, inMemoryData)
+				} else if err != nil {
 					rollback(err, inMemoryData)
 					return err
 				} else {
@@ -1916,7 +1932,12 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 			inMemoryData.SubTxnInfos = allSubTxnInfos
 		} else {
 			commitInfos, err := j.ingestBinlog(commitSeq, txnId, tableRecords)
-			if err != nil {
+			if err == errTriggerPartialSnapshot {
+				if j.Extra.PartialSnapshotParams == nil {
+					panic("partial snapshot params is nil when trigger partial snapshot")
+				}
+				j.progress.NextSubCheckpoint(RollbackTransaction, inMemoryData)
+			} else if err != nil {
 				rollback(err, inMemoryData)
 				return err
 			} else {
@@ -2306,6 +2327,10 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 	alterJob, err := record.NewAlterJobV2FromJson(data)
 	if err != nil {
 		return err
+	}
+
+	if j.isBinlogCommitted(alterJob.TableId, binlog.GetCommitSeq()) {
+		return nil
 	}
 
 	if isAsyncMv, err := j.IsMaterializedViewTable(alterJob.TableId); err != nil {
@@ -3008,6 +3033,13 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 		}
 
 		// Step 2: check job state, if not incrementalSync, such as DBPartialSync, break
+		if j.Extra.PartialSnapshotParams != nil {
+			params := j.Extra.PartialSnapshotParams
+			if err := j.newPartialSnapshot(params.TableId, params.TableName, params.Partitions, params.Replace, params.IsView); err != nil {
+				return err, false
+			}
+			return nil, true
+		}
 		if !j.isIncrementalSync() {
 			log.Tracef("job state is not incremental sync, back to run loop, job state: %s", j.progress.SyncState)
 			return nil, true
@@ -3815,6 +3847,7 @@ func (j *Job) newPartialSnapshot(tableId int64, table string, partitions []strin
 			commitSeq, tableId, table, partitions, isView)
 	}
 
+	j.Extra.PartialSnapshotParams = nil
 	switch j.SyncType {
 	case TableSync:
 		j.progress.NextWithPersist(commitSeq, TablePartialSync, BeginCreateSnapshot, "")

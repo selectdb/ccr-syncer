@@ -38,6 +38,7 @@ import (
 )
 
 var errNotFoundDestMappingTableId = xerror.NewWithoutStack(xerror.Meta, "not found dest mapping table id")
+var errTriggerPartialSnapshot = xerror.NewWithoutStack(xerror.Normal, "trigger new partial snapshot")
 
 type commitInfosCollector struct {
 	commitInfos     []*ttypes.TTabletCommitInfo
@@ -757,7 +758,27 @@ func (j *IngestBinlogJob) applyDropRollupBinlog() {
 			return
 		}
 
+		if binlog.GetType() == festruct.TBinlogType_ALTER_JOB {
+			log.Infof("txn %d ingest binlog: trigger new partial snapshot by alter job binlog, commitSeq: %d", j.txnId, commitSeq)
+			alterJobRecord, err := record.NewAlterJobV2FromJson(binlog.GetData())
+			if err != nil {
+				j.setError(err)
+				return
+			}
+
+			j.ccrJob.Extra.PartialSnapshotParams = &PartialSnapshotParams{
+				TableId:    alterJobRecord.TableId,
+				TableName:  alterJobRecord.TableName,
+				Partitions: nil,
+				Replace:    true,
+				IsView:     false,
+			}
+			j.setError(errTriggerPartialSnapshot)
+			return
+		}
+
 		if binlog.GetType() != festruct.TBinlogType_DROP_ROLLUP {
+			log.Tracef("txn %d ingest binlog: skip drop binlog %s data %s", j.txnId, binlog.GetType(), binlog.GetData())
 			continue
 		}
 
