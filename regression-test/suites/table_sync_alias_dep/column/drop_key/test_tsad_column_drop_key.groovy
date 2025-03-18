@@ -47,8 +47,8 @@ suite("test_tsad_column_drop_key") {
             `value` INT
         )
         ENGINE=OLAP
-        DUPLICATE KEY(`test`)
-        DISTRIBUTED BY HASH(`test`) BUCKETS 1
+        DUPLICATE KEY(`test`, `id`)
+        DISTRIBUTED BY HASH(`id`) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true"
