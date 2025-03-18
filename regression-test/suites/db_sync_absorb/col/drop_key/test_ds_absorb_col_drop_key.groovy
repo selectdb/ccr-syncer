@@ -18,6 +18,8 @@ suite("test_ds_absorb_col_drop_key") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    def dbName = context.dbName
+    def dbNameTarget = "TEST_" + context.dbName
     def tableName = "tbl_" + helper.randomSuffix()
     def test_num = 0
     def test_new_column_num = 1
