@@ -60,17 +60,25 @@ suite("test_ds_absorb_col_drop_key") {
 
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "target"))
 
-    // 1. Pause ccr job
-    helper.ccrJobPause()
-
-    // 2. Insert N data
+    // 0. Insert N data
     for (int index = 0; index < insert_num; index++) {
         sql """
             INSERT INTO ${tableName} VALUES (${test_num}, ${index}, ${index})
             """
     }
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "target"))
+    // 1. Pause ccr job
+    helper.ccrJobPause()
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> return r.size() == insert_num }, 60, "sql"))
+    // 2. Insert N data
+    for (int index = insert_num; index < insert_num * 2; index++) {
+        sql """
+            INSERT INTO ${tableName} VALUES (${test_num}, ${index}, ${index})
+            """
+    }
+
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> return r.size() == insert_num * 2 }, 60, "sql"))
 
     // 3. Do operation & wait it finishes upstream
     sql """
@@ -82,13 +90,13 @@ suite("test_ds_absorb_col_drop_key") {
 
 
     // 4. Insert N data
-    for (int index = insert_num; index < insert_num * 2; index++) {
+    for (int index = insert_num * 2; index < insert_num * 3; index++) {
         sql """
             INSERT INTO ${tableName} VALUES (${test_num}, ${index})
             """
     }
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2 }, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3 }, 60, "sql"))
 
     // 5. Force trigger fullsnapshot
     helper.force_fullsync()
@@ -97,7 +105,7 @@ suite("test_ds_absorb_col_drop_key") {
     helper.ccrJobResume()
   
     // 7. Verify data and operation are synced downstream
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2 }, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3 }, 60, "target"))
     assertTrue(helper.checkShowTimesOf(""" show columns from ${tableName} """, { r -> return r.size() == 2 }, 60, "target"))
 }
 

@@ -61,11 +61,19 @@ suite("test_ds_absorb_tbl_create_alt_synced") {
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistSynced, 60, "sql"))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existSynced, 60, "target"))
 
+    // 0. Insert N data
+    for (int index = 0; index < insert_num; index++) {
+        sql """
+            INSERT INTO ${tableName}_1 VALUES (${test_num}, ${index})
+            """
+    }
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num}, 60, "target"))
     // 1. Pause ccr job
     helper.ccrJobPause()
 
     // 2. Insert N data
-    for (int index = 0; index < insert_num; index++) {
+    for (int index = insert_num; index < insert_num * 2; index++) {
         sql """
             INSERT INTO ${tableName}_1 VALUES (${test_num}, ${index})
             """
@@ -91,19 +99,19 @@ suite("test_ds_absorb_tbl_create_alt_synced") {
         ALTER TABLE ${tableName}_1 SET ("is_being_synced" = "false")
         """
     // 4. Insert N data
-    for (int index = insert_num; index < insert_num * 2; index++) {
+    for (int index = insert_num * 2; index < insert_num * 3; index++) {
         sql """
             INSERT INTO ${tableName}_1 VALUES (${test_num}, ${index})
             """
     }
-    for (int index = 0; index < insert_num * 2; index++) {
+    for (int index = 0; index < insert_num * 3; index++) {
         sql """
             INSERT INTO ${tableName}_2 VALUES (${test_num}, ${index})
             """
     }
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 3}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 3}, 60, "sql"))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistSynced, 60, "sql"))
     // don't sync
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existSynced, 60, "target"))
@@ -114,8 +122,8 @@ suite("test_ds_absorb_tbl_create_alt_synced") {
     helper.ccrJobResume()
   
     // 7. Verify data and operation are synced downstream
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "target"))
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 3}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 3}, 60, "target"))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", notExistSynced, 60, "sql"))
     // don't sync
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", existSynced, 60, "target"))

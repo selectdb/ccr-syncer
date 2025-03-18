@@ -100,11 +100,19 @@ suite("test_ds_absorb_tbl_create_alt_dynamic_partition_sp") {
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, exist, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, exist, 60, "target"))
 
+    // 0. Insert N data
+    for (int index = 0; index < insert_num; index++) {
+        sql """
+            INSERT INTO ${tableName}_1 VALUES (${test_num}, ${index}, curdate())
+            """
+    }
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num}, 60, "target"))
     // 1. Pause ccr job
     helper.ccrJobPause()
 
     // 2. Insert N data
-    for (int index = 0; index < insert_num; index++) {
+    for (int index = insert_num; index < insert_num * 2; index++) {
         sql """
             INSERT INTO ${tableName}_1 VALUES (${test_num}, ${index}, curdate())
             """
@@ -144,19 +152,19 @@ suite("test_ds_absorb_tbl_create_alt_dynamic_partition_sp") {
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_2" """, exist, 60, "sql"))
 
     // 4. Insert N data
-    for (int index = insert_num; index < insert_num * 2; index++) {
+    for (int index = insert_num * 2; index < insert_num * 3; index++) {
         sql """
             INSERT INTO ${tableName}_1 VALUES (${test_num}, ${index}, curdate())
             """
     }
-    for (int index = 0; index < insert_num * 2; index++) {
+    for (int index = 0; index < insert_num * 3; index++) {
         sql """
             INSERT INTO ${tableName}_2 VALUES (${test_num}, ${index}, curdate())
             """
     }
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 3}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 3}, 60, "sql"))
 
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", { res -> return res[0][1].contains("\"dynamic_partition.end\" = \"3\"")}, 60, 'sql'))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", { res -> return res[0][1].contains("\"dynamic_partition.storage_policy\" = \"${policyName}\"")}, 60, 'sql'))
@@ -167,8 +175,8 @@ suite("test_ds_absorb_tbl_create_alt_dynamic_partition_sp") {
     helper.ccrJobResume()
   
     // 7. Verify data and operation are synced downstream
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "target"))
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 3}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 3}, 60, "target"))
 
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", { res -> return res[0][1].contains("\"dynamic_partition.end\" = \"3\"")}, 60, 'target'))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}_1", { res -> return !res[0][1].contains("\"dynamic_partition.storage_policy\" = \"${policyName}\"")}, 60, 'target'))

@@ -96,11 +96,19 @@ suite("test_ds_absorb_tbl_alt_prop_row_store") {
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", notExistRowStore, 60, "sql"))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", notExistRowStore, 60, "target"))
 
+    // 0. Insert N data
+    for (int index = 0; index < insert_num; index++) {
+        sql """
+            INSERT INTO ${tableName} VALUES (${test_num}, ${index})
+            """
+    }
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "target"))
     // 1. Pause ccr job
     helper.ccrJobPause()
 
     // 2. Insert N data
-    for (int index = 0; index < insert_num; index++) {
+    for (int index = insert_num; index < insert_num * 2; index++) {
         sql """
             INSERT INTO ${tableName} VALUES (${test_num}, ${index})
             """
@@ -128,13 +136,13 @@ suite("test_ds_absorb_tbl_alt_prop_row_store") {
                             """,
                             has_count(state.size() + 2), 30))
     // 4. Insert N data
-    for (int index = insert_num; index < insert_num * 2; index++) {
+    for (int index = insert_num * 2; index < insert_num * 3; index++) {
         sql """
             INSERT INTO ${tableName} VALUES (${test_num}, ${index})
             """
     }
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3}, 60, "sql"))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", existRowStore, 60, "sql"))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", notExistRowStore, 60, "target"))
     // 5. Force trigger fullsnapshot
@@ -144,7 +152,7 @@ suite("test_ds_absorb_tbl_alt_prop_row_store") {
     helper.ccrJobResume()
   
     // 7. Verify data and operation are synced downstream
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3}, 60, "target"))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", existRowStore, 60, "sql"))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", existRowStore, 60, "target"))
 }

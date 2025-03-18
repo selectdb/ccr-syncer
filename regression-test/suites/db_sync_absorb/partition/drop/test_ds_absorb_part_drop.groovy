@@ -21,7 +21,7 @@ suite("test_ds_absorb_part_drop") {
     def dbName = context.dbName
     def tableName = "tbl_" + helper.randomSuffix()
     def test_num = 0
-    def insert_num = 10
+    def insert_num = 5
 
     def exist = { res -> Boolean
         return res.size() != 0
@@ -75,11 +75,19 @@ suite("test_ds_absorb_part_drop") {
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "target"))
 
+    // 0. Insert N data
+    for (int index = 0; index < insert_num; index++) {
+        sql """
+            INSERT INTO ${tableName} VALUES (${test_num}, ${index})
+            """
+    }
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "target"))
     // 1. Pause ccr job
     helper.ccrJobPause()
 
     // 2. Insert N data
-    for (int index = 0; index < insert_num; index++) {
+    for (int index = insert_num; index < insert_num * 2; index++) {
         sql """
             INSERT INTO ${tableName} VALUES (${test_num}, ${index})
             """
@@ -92,13 +100,13 @@ suite("test_ds_absorb_part_drop") {
         """
 
     // 4. Insert N data
-    for (int index = insert_num; index < insert_num * 2; index++) {
+    for (int index = insert_num * 2; index < insert_num * 3; index++) {
         sql """
             INSERT INTO ${tableName} VALUES (${test_num}, ${index})
             """
     }
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2 - 5}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3 - 5}, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" show create table ${tableName} """, dropedPartition, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" show create table ${tableName} """, notDropedPartition, 60, "target"))
 
@@ -109,7 +117,7 @@ suite("test_ds_absorb_part_drop") {
     helper.ccrJobResume()
   
     // 7. Verify data and operation are synced downstream
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2 - 5}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3 - 5}, 60, "target"))
     assertTrue(helper.checkShowTimesOf(""" show create table ${tableName} """, dropedPartition, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" show create table ${tableName} """, dropedPartition, 60, "target"))
 }
