@@ -101,7 +101,7 @@ suite('test_tsad_rollup_modify_column') {
 
     helper.ccrJobResume(tableName)
 
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", 4, 30))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${aliasTableName}", 4, 30))
     assertTrue(helper.checkShowTimesOf("""
                                 SHOW ALTER TABLE COLUMN
                                 FROM TEST_${context.dbName}

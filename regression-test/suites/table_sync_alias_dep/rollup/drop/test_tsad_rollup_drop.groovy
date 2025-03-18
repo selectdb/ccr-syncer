@@ -109,6 +109,6 @@ suite('test_tsad_rollup_drop') {
 
     assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${aliasTableName} ALL",
                                 hasRollupDropped, 30, 'target'))
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", 4, 30))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${aliasTableName}", 4, 30))
 }
 

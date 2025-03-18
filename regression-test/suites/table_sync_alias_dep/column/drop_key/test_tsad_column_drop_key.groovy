@@ -43,16 +43,16 @@ suite("test_tsad_column_drop_key") {
         CREATE TABLE if NOT EXISTS ${tableName}
         (
             `test` INT,
-            `id` INT,
-            `value` INT
+            `value` INT,
+            `id` INT
         )
         ENGINE=OLAP
-        DUPLICATE KEY(`test`, `id`)
-        DISTRIBUTED BY HASH(`id`) BUCKETS 1
+        DUPLICATE KEY(`test`, `value`)
+        DISTRIBUTED BY HASH(`value`) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true"
-        )
+        );
     """
 
     helper.enableDbBinlog()
