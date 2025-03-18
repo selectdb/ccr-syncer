@@ -62,7 +62,7 @@ suite("test_ds_absorb_col_add_key_drop_key") {
     // 0. Insert N data
     for (int index = 0; index < insert_num; index++) {
         sql """
-            INSERT INTO ${tableName} VALUES (${test_num}, ${index})
+            INSERT INTO ${tableName} VALUES (${index}, ${index})
             """
     }
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "sql"))
