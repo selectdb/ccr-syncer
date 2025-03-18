@@ -77,7 +77,7 @@ suite('test_tsad_rollup_add_column') {
     assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${aliasTableName}\"", exist, 30, 'target'))
     assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${aliasTableName} ALL", hasRollupAdded, 30, 'target'))
 
-    helper.ccrJobPause()
+    helper.ccrJobPause(tableName)
     sql """ INSERT INTO ${tableName} VALUES (1, 1, 1, 1, 1) """
     sql """ INSERT INTO ${tableName} VALUES (2, 2, 2, 2, 2) """
     sql """
@@ -99,7 +99,7 @@ suite('test_tsad_rollup_add_column') {
     helper.ccrJobResume(tableName)
 
     assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${aliasTableName} ALL", hasRollupAdded, 30, 'target'))
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", 4, 30))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${aliasTableName}", 4, 30))
     assertTrue(helper.checkShowTimesOf("""
                                 SHOW ALTER TABLE COLUMN
                                 FROM TEST_${context.dbName}

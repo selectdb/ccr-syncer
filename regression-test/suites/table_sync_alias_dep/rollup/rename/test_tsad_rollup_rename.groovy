@@ -99,7 +99,7 @@ suite('test_tsad_rollup_rename') {
     helper.ccrJobResume(tableName)
 
     assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${aliasTableName} ALL", hasNewRollupAdded, 30, 'target'))
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", 4, 30))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${aliasTableName}", 4, 30))
     assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${aliasTableName} ALL", hasNewRollupAdded, 30, 'target'))
 
 }

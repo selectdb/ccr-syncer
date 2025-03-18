@@ -98,13 +98,6 @@ suite('test_tsd_rollup_drop_column') {
 
     assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${tableName} ALL", hasRollupAdded, 30, 'target'))
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", 4, 30))
-    assertTrue(helper.checkShowTimesOf("""
-                                SHOW ALTER TABLE COLUMN
-                                FROM TEST_${context.dbName}
-                                WHERE TableName = "${tableName}"
-                                    AND IndexName = "rollup_${tableName}_full"
-                                    AND State = "FINISHED"
-                                """,
-                                has_count(1), 30, "target"))
+    assertTrue(helper.check_table_describe_times(tableName, 30))
 }
 

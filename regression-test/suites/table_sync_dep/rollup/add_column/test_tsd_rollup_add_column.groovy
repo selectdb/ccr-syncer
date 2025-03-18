@@ -75,7 +75,7 @@ suite('test_tsd_rollup_add_column') {
     assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${tableName}\"", exist, 30, 'target'))
     assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${tableName} ALL", hasRollupAdded, 30, 'target'))
 
-    helper.ccrJobPause()
+    helper.ccrJobPause(tableName)
     sql """ INSERT INTO ${tableName} VALUES (1, 1, 1, 1, 1) """
     sql """ INSERT INTO ${tableName} VALUES (2, 2, 2, 2, 2) """
     sql """
