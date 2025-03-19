@@ -59,7 +59,7 @@ const (
 )
 
 var (
-	featureSchemaChangePartialSync      bool
+	FeatureSchemaChangePartialSync      bool
 	featureCleanTableAndPartitions      bool
 	featureAtomicRestore                bool
 	featureCreateViewDropExists         bool
@@ -67,7 +67,7 @@ var (
 	featureFilterShadowIndexesUpsert    bool
 	featureReuseRunningBackupRestoreJob bool
 	featureCompressedSnapshot           bool
-	featureSkipRollupBinlogs            bool
+	FeatureSkipRollupBinlogs            bool
 	featureTxnInsert                    bool
 	featureFilterStorageMedium          bool
 	featureRestoreReplaceDiffSchema     bool
@@ -81,7 +81,7 @@ var (
 )
 
 func init() {
-	flag.BoolVar(&featureSchemaChangePartialSync, "feature_schema_change_partial_sync", true,
+	flag.BoolVar(&FeatureSchemaChangePartialSync, "feature_schema_change_partial_sync", true,
 		"use partial sync when working with schema change")
 
 	// The default value is false, since clean tables will erase views unexpectedly.
@@ -99,7 +99,7 @@ func init() {
 		"reuse the running backup/restore issued by the job self")
 	flag.BoolVar(&featureCompressedSnapshot, "feature_compressed_snapshot", true,
 		"compress the snapshot job info and meta")
-	flag.BoolVar(&featureSkipRollupBinlogs, "feature_skip_rollup_binlogs", false,
+	flag.BoolVar(&FeatureSkipRollupBinlogs, "feature_skip_rollup_binlogs", false,
 		"skip the rollup related binlogs")
 	flag.BoolVar(&featureTxnInsert, "feature_txn_insert", false,
 		"enable txn insert support")
@@ -446,7 +446,7 @@ func (j *Job) handlePartialSyncTableNotFound() error {
 		log.Warnf("force new partial snapshot, since table %d has renamed from %s to %s", tableId, table, newTableName)
 		replace := true // replace the old data to avoid blocking reading
 		isView := false
-		return j.newPartialSnapshot(tableId, newTableName, nil, replace, isView)
+		return j.NewPartialSnapshot(tableId, newTableName, nil, replace, isView)
 	} else {
 		return xerror.Errorf(xerror.Normal, "table sync but table has renamed from %s to %s, table id %d",
 			table, newTableName, tableId)
@@ -476,7 +476,7 @@ func (j *Job) partialSync() error {
 		log.Infof("partial sync status: done")
 		withAlias := len(j.progress.TableAliases) > 0
 		isView := j.progress.PartialSyncData.IsView
-		if err := j.newPartialSnapshot(tableId, table, partitions, withAlias, isView); err != nil {
+		if err := j.NewPartialSnapshot(tableId, table, partitions, withAlias, isView); err != nil {
 			return err
 		}
 
@@ -504,7 +504,7 @@ func (j *Job) partialSync() error {
 			log.Warnf("partial sync status: partition not found in the upstream, step to table partial sync")
 			replace := true // replace the old data to avoid blocking reading
 			isView := false // partition not found, so it's not a view
-			return j.newPartialSnapshot(tableId, table, nil, replace, isView)
+			return j.NewPartialSnapshot(tableId, table, nil, replace, isView)
 		} else if err != nil && err == base.ErrBackupTableNotFound {
 			return j.handlePartialSyncTableNotFound()
 		} else if err != nil {
@@ -555,7 +555,7 @@ func (j *Job) partialSync() error {
 				snapshotResp.Status.GetStatusCode())
 			replace := len(j.progress.TableAliases) > 0
 			isView := j.progress.PartialSyncData.IsView
-			return j.newPartialSnapshot(tableId, table, partitions, replace, isView)
+			return j.NewPartialSnapshot(tableId, table, partitions, replace, isView)
 		} else if snapshotResp.Status.GetStatusCode() != tstatus.TStatusCode_OK {
 			err = xerror.Errorf(xerror.FE, "get snapshot failed, status: %v", snapshotResp.Status)
 			return err
@@ -740,13 +740,13 @@ func (j *Job) partialSync() error {
 			log.Infof("force partial sync, because the snapshot %s is expired", restoreSnapshotName)
 			replace := len(j.progress.TableAliases) > 0
 			isView := j.progress.PartialSyncData.IsView
-			return j.newPartialSnapshot(tableId, table, partitions, replace, isView)
+			return j.NewPartialSnapshot(tableId, table, partitions, replace, isView)
 		}
 
 		restoreFinished, err := j.IDest.CheckRestoreFinished(restoreSnapshotName)
 		if errors.Is(err, base.ErrRestoreSignatureNotMatched) {
 			log.Warnf("force partial sync with replace, because the snapshot %s signature is not matched", restoreSnapshotName)
-			return j.newPartialSnapshot(tableId, table, nil, true, false) // only in partition sync.
+			return j.NewPartialSnapshot(tableId, table, nil, true, false) // only in partition sync.
 		} else if err != nil {
 			j.progress.NextSubVolatile(RestoreSnapshot, inMemoryData)
 			return err
@@ -2139,7 +2139,7 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 	if createTable.IsCreateTableWithInvertedIndex() {
 		log.Infof("create table %s with inverted index, force partial snapshot, commit seq : %d", createTable.TableName, binlog.GetCommitSeq())
 		// we need to force replace table to ensure the index id is consistent
-		return j.newPartialSnapshot(createTable.TableId, createTable.TableName, nil, true, false)
+		return j.NewPartialSnapshot(createTable.TableId, createTable.TableName, nil, true, false)
 	}
 
 	// Some operations, such as DROP TABLE, will be skiped in the partial/full snapshot,
@@ -2155,7 +2155,7 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 				createTable.TableName, binlog.GetCommitSeq())
 			replace := true
 			isView := false
-			return j.newPartialSnapshot(createTable.TableId, createTable.TableName, nil, replace, isView)
+			return j.NewPartialSnapshot(createTable.TableId, createTable.TableName, nil, replace, isView)
 		}
 	}
 
@@ -2177,14 +2177,14 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 				binlog.GetCommitSeq(), errMsg)
 			replace := false // new view no need to replace
 			isView := true
-			return j.newPartialSnapshot(createTable.TableId, createTable.TableName, nil, replace, isView)
+			return j.NewPartialSnapshot(createTable.TableId, createTable.TableName, nil, replace, isView)
 		}
 		if len(createTable.TableName) > 0 && IsSessionVariableRequired(errMsg) { // ignore doris 2.0.3
 			log.Infof("a session variable is required to create table %s, force partial snapshot, commit seq: %d, msg: %s",
 				createTable.TableName, binlog.GetCommitSeq(), errMsg)
 			replace := false // new table no need to replace
 			isView := false
-			return j.newPartialSnapshot(createTable.TableId, createTable.TableName, nil, replace, isView)
+			return j.NewPartialSnapshot(createTable.TableId, createTable.TableName, nil, replace, isView)
 		}
 		return xerror.Wrapf(err, xerror.Normal, "create table %d", createTable.TableId)
 	}
@@ -2340,21 +2340,21 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	if featureSkipRollupBinlogs && alterJob.Type == record.ALTER_JOB_ROLLUP {
+	if FeatureSkipRollupBinlogs && alterJob.Type == record.ALTER_JOB_ROLLUP {
 		log.Warnf("skip rollup alter job: %s", alterJob)
 		return nil
 	}
 
 	if alterJob.Type == record.ALTER_JOB_SCHEMA_CHANGE {
-		return j.handleSchemaChange(alterJob)
+		return j.HandleSchemaChange(alterJob)
 	} else if alterJob.Type == record.ALTER_JOB_ROLLUP {
-		return j.handleAlterRollup(alterJob)
+		return j.HandleAlterRollup(alterJob)
 	} else {
 		return xerror.Errorf(xerror.Normal, "unsupported alter job type: %s", alterJob.Type)
 	}
 }
 
-func (j *Job) handleAlterRollup(alterJob *record.AlterJobV2) error {
+func (j *Job) HandleAlterRollup(alterJob *record.AlterJobV2) error {
 	if !alterJob.IsFinished() {
 		switch alterJob.JobState {
 		case record.ALTER_JOB_STATE_PENDING:
@@ -2378,10 +2378,10 @@ func (j *Job) handleAlterRollup(alterJob *record.AlterJobV2) error {
 
 	replace := true
 	isView := false
-	return j.newPartialSnapshot(alterJob.TableId, alterJob.TableName, nil, replace, isView)
+	return j.NewPartialSnapshot(alterJob.TableId, alterJob.TableName, nil, replace, isView)
 }
 
-func (j *Job) handleSchemaChange(alterJob *record.AlterJobV2) error {
+func (j *Job) HandleSchemaChange(alterJob *record.AlterJobV2) error {
 	if !alterJob.IsFinished() {
 		switch alterJob.JobState {
 		case record.ALTER_JOB_STATE_PENDING:
@@ -2412,7 +2412,7 @@ func (j *Job) handleSchemaChange(alterJob *record.AlterJobV2) error {
 		destTableName = alterJob.TableName
 	}
 
-	if featureSchemaChangePartialSync && alterJob.Type == record.ALTER_JOB_SCHEMA_CHANGE {
+	if FeatureSchemaChangePartialSync && alterJob.Type == record.ALTER_JOB_SCHEMA_CHANGE {
 		// Once partial snapshot finished, the shadow indexes will be convert to normal indexes.
 		for shadowIndexId := range alterJob.ShadowIndexes {
 			delete(j.progress.ShadowIndexes, shadowIndexId)
@@ -2420,7 +2420,7 @@ func (j *Job) handleSchemaChange(alterJob *record.AlterJobV2) error {
 
 		replaceTable := true
 		isView := false
-		return j.newPartialSnapshot(alterJob.TableId, alterJob.TableName, nil, replaceTable, isView)
+		return j.NewPartialSnapshot(alterJob.TableId, alterJob.TableName, nil, replaceTable, isView)
 	}
 
 	var allViewDeleted bool = false
@@ -2585,14 +2585,14 @@ func (j *Job) handleReplacePartitions(binlog *festruct.TBinlog) error {
 		log.Warnf("replace partitions with non strict range is not supported yet, replace partition record: %s", string(data))
 		replace := true
 		isView := false
-		return j.newPartialSnapshot(replacePartition.TableId, replacePartition.TableName, nil, replace, isView)
+		return j.NewPartialSnapshot(replacePartition.TableId, replacePartition.TableName, nil, replace, isView)
 	}
 
 	if replacePartition.UseTempName {
 		log.Warnf("replace partitions with use tmp name is not supported yet, replace partition record: %s", string(data))
 		replace := true
 		isView := false
-		return j.newPartialSnapshot(replacePartition.TableId, replacePartition.TableName, nil, replace, isView)
+		return j.NewPartialSnapshot(replacePartition.TableId, replacePartition.TableName, nil, replace, isView)
 	}
 
 	oldPartitions := strings.Join(replacePartition.Partitions, ",")
@@ -2602,7 +2602,7 @@ func (j *Job) handleReplacePartitions(binlog *festruct.TBinlog) error {
 
 	partitions := replacePartition.Partitions
 	isView := false
-	return j.newPartialSnapshot(replacePartition.TableId, replacePartition.TableName, partitions, false, isView)
+	return j.NewPartialSnapshot(replacePartition.TableId, replacePartition.TableName, partitions, false, isView)
 }
 
 func (j *Job) handleModifyPartitions(binlog *festruct.TBinlog) error {
@@ -2711,7 +2711,7 @@ func (j *Job) handleReplaceTable(binlog *festruct.TBinlog) error {
 		} else if originTableSynced && record.SwapTable {
 			log.Infof("force new partial snapshot, origin table %s id %d already synced, commit seq: %d",
 				record.OriginTableName, record.OriginTableId, commitSeq)
-			return j.newPartialSnapshot(record.NewTableId, record.OriginTableName, nil, false, false)
+			return j.NewPartialSnapshot(record.NewTableId, record.OriginTableName, nil, false, false)
 		} else if newTableSynced && !record.SwapTable {
 			log.Infof("filter replace table binlog, the new table %s id %d already synced, commit seq: %d, swap = false",
 				record.NewTableName, record.NewTableId, commitSeq)
@@ -2719,7 +2719,7 @@ func (j *Job) handleReplaceTable(binlog *festruct.TBinlog) error {
 		} else if newTableSynced && record.SwapTable {
 			log.Infof("force new partial snapshot, new table %s id %d already synced, commit seq: %d",
 				record.NewTableName, record.NewTableId, commitSeq)
-			return j.newPartialSnapshot(record.OriginTableId, record.NewTableName, nil, false, false)
+			return j.NewPartialSnapshot(record.OriginTableId, record.NewTableName, nil, false, false)
 		}
 	}
 
@@ -2785,7 +2785,7 @@ func (j *Job) handleModifyTableAddOrDropInvertedIndices(binlog *festruct.TBinlog
 
 	replace := true
 	isView := false
-	return j.newPartialSnapshot(record.TableId, tableName, nil, replace, isView)
+	return j.NewPartialSnapshot(record.TableId, tableName, nil, replace, isView)
 }
 
 func (j *Job) handleIndexChangeJob(binlog *festruct.TBinlog) error {
@@ -2876,7 +2876,7 @@ func (j *Job) handleRenamePartition(binlog *festruct.TBinlog) error {
 			tableName = j.Src.Table
 		}
 		isView := false
-		return j.newPartialSnapshot(renamePartition.TableId, tableName, nil, replace, isView)
+		return j.NewPartialSnapshot(renamePartition.TableId, tableName, nil, replace, isView)
 	}
 	return j.IDest.RenamePartition(destTableName, oldPartition, newPartition)
 }
@@ -2913,7 +2913,7 @@ func (j *Job) handleRenameRollup(binlog *festruct.TBinlog) error {
 			tableName = j.Src.Table
 		}
 		isView := false
-		return j.newPartialSnapshot(renameRollup.TableId, tableName, nil, replace, isView)
+		return j.NewPartialSnapshot(renameRollup.TableId, tableName, nil, replace, isView)
 	}
 
 	return j.IDest.RenameRollup(destTableName, oldRollup, newRollup)
@@ -2976,7 +2976,7 @@ func (j *Job) handleRecoverInfo(binlog *festruct.TBinlog) error {
 		}
 		log.Infof("recover info with for table %s, will trigger partial sync", tableName)
 		isView := false
-		return j.newPartialSnapshot(recoverInfo.TableId, tableName, nil, true, isView)
+		return j.NewPartialSnapshot(recoverInfo.TableId, tableName, nil, true, isView)
 	}
 
 	var partitions []string
@@ -2990,7 +2990,7 @@ func (j *Job) handleRecoverInfo(binlog *festruct.TBinlog) error {
 	// if source does multiple recover of partition, then there is a race
 	// condition and some recover might miss due to commitseq change after snapshot.
 	isView := false
-	return j.newPartialSnapshot(recoverInfo.TableId, recoverInfo.TableName, nil, true, isView)
+	return j.NewPartialSnapshot(recoverInfo.TableId, recoverInfo.TableName, nil, true, isView)
 }
 
 func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
@@ -3035,7 +3035,7 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 		// Step 2: check job state, if not incrementalSync, such as DBPartialSync, break
 		if j.Extra.PartialSnapshotParams != nil {
 			params := j.Extra.PartialSnapshotParams
-			if err := j.newPartialSnapshot(params.TableId, params.TableName, params.Partitions, params.Replace, params.IsView); err != nil {
+			if err := j.NewPartialSnapshot(params.TableId, params.TableName, params.Partitions, params.Replace, params.IsView); err != nil {
 				return err, false
 			}
 			return nil, true
@@ -3813,7 +3813,7 @@ func (j *Job) NewSnapshot(commitSeq int64, fullSyncInfo string) error {
 //
 // If the replace is true, the restore task will load data into a new table and replaces the old
 // one when restore finished. So replace requires whole table partial sync.
-func (j *Job) newPartialSnapshot(tableId int64, table string, partitions []string, replace, isView bool) error {
+func (j *Job) NewPartialSnapshot(tableId int64, table string, partitions []string, replace, isView bool) error {
 	if !isView && j.SyncType == TableSync && table != j.Src.Table {
 		return xerror.Errorf(xerror.Normal,
 			"partial sync table name is not equals to the source name %s, table: %s, sync type: table", j.Src.Table, table)

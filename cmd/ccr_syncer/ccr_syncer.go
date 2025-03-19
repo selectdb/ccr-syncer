@@ -33,6 +33,7 @@ import (
 	"github.com/hashicorp/go-metrics/prometheus"
 	"github.com/selectdb/ccr_syncer/pkg/ccr"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
+	_ "github.com/selectdb/ccr_syncer/pkg/ccr/handle"
 	"github.com/selectdb/ccr_syncer/pkg/rpc"
 	"github.com/selectdb/ccr_syncer/pkg/service"
 	"github.com/selectdb/ccr_syncer/pkg/storage"
