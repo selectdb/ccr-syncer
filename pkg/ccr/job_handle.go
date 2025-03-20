@@ -59,7 +59,7 @@ func buildGenericHandleMethod[T record.Record](handle JobHandle[T]) HandleFn {
 		}
 
 		tableId := record.GetTableId()
-		if job.isBinlogCommitted(tableId, progress.CommitSeq) {
+		if job.IsBinlogCommitted(tableId, progress.CommitSeq) {
 			return nil
 		}
 

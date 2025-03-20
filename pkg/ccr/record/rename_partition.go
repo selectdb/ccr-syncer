@@ -31,26 +31,36 @@ type RenamePartition struct {
 	OldPartitionName string `json:"oP"`
 }
 
-func NewRenamePartitionFromJson(data string) (*RenamePartition, error) {
-	var rename RenamePartition
-	err := json.Unmarshal([]byte(data), &rename)
+func (renamePartition *RenamePartition) Deserialize(data string) error {
+	err := json.Unmarshal([]byte(data), &renamePartition)
 	if err != nil {
-		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal rename partition record error")
+		return xerror.Wrap(err, xerror.Normal, "unmarshal rename partition record error")
 	}
 
-	if rename.TableId == 0 {
-		return nil, xerror.Errorf(xerror.Normal, "rename partition record table id not found")
+	if renamePartition.TableId == 0 {
+		return xerror.Errorf(xerror.Normal, "rename partition record table id not found")
 	}
 
-	if rename.PartitionId == 0 {
-		return nil, xerror.Errorf(xerror.Normal, "rename partition record partition id not found")
+	if renamePartition.PartitionId == 0 {
+		return xerror.Errorf(xerror.Normal, "rename partition record partition id not found")
 	}
 
-	if rename.NewPartitionName == "" {
-		return nil, xerror.Errorf(xerror.Normal, "rename partition record new partition name not found")
+	if renamePartition.NewPartitionName == "" {
+		return xerror.Errorf(xerror.Normal, "rename partition record new partition name not found")
 	}
+	return nil
+}
 
-	return &rename, nil
+func NewRenamePartitionFromJson(data string) (*RenamePartition, error) {
+	var renamePartition RenamePartition
+	if err := renamePartition.Deserialize(data); err != nil {
+		return nil, err
+	}
+	return &renamePartition, nil
+}
+
+func (renamePartition *RenamePartition) GetTableId() int64 {
+	return renamePartition.TableId
 }
 
 // Stringer
