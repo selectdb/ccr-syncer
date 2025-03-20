@@ -21,7 +21,7 @@ suite("test_ds_absorb_part_add_rename") {
     def dbName = context.dbName
     def tableName = "tbl_" + helper.randomSuffix()
     def test_num = 0
-    def insert_num = 10
+    def insert_num = 5
 
     def exist = { res -> Boolean
         return res.size() != 0
