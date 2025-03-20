@@ -8,18 +8,35 @@ import (
 )
 
 func init() {
-	ccr.RegisterJobHandle[*record.RenamePartition](festruct.TBinlogType_ADD_PARTITION, &RenamePartitionHandle{})
+	ccr.RegisterJobHandle[*record.RenamePartition](festruct.TBinlogType_RENAME_PARTITION, &RenamePartitionHandle{})
 }
 
 type RenamePartitionHandle struct {
-	// The adding partition binlog is idempotent
-	IdempotentJobHandle[*record.RenamePartition]
+}
+
+func (h *RenamePartitionHandle) IsBinlogCommitted(j *ccr.Job, r *record.RenamePartition) (bool, error) {
+	_, err := j.GetDestNameBySrcId(r.TableId)
+	if err != nil {
+		return false, err
+	}
+
+	partitionName, err := j.GetDestMeta().GetPartitionName(r.TableId, r.PartitionId)
+	if err != nil {
+		return false, err
+	}
+
+	if partitionName == r.OldPartitionName {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func (h *RenamePartitionHandle) IsIdempotent() bool {
+	return false
 }
 
 func (h *RenamePartitionHandle) Handle(j *ccr.Job, commitSeq int64, renamePartition *record.RenamePartition) error {
-	log.Infof("handle rename partition binlog, prevCommitSeq: %d, commitSeq: %d",
-		j.GetJobProgress().PrevCommitSeq, j.GetJobProgress().CommitSeq)
-
 	if j.IsBinlogCommitted(renamePartition.TableId, commitSeq) {
 		return nil
 	}
