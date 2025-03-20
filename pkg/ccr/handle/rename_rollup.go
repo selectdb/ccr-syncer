@@ -17,9 +17,6 @@ type RenameRollupHandle struct {
 }
 
 func (h *RenameRollupHandle) Handle(j *ccr.Job, commitSeq int64, renameRollup *record.RenameRollup) error {
-	log.Infof("handle rename rollup binlog, prevCommitSeq: %d, commitSeq: %d",
-		j.GetJobProgress().PrevCommitSeq, j.GetJobProgress().CommitSeq)
-
 	destTableName, err := j.GetDestNameBySrcId(renameRollup.TableId)
 	if err != nil {
 		return nil
