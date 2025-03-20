@@ -37,10 +37,6 @@ func (h *RenamePartitionHandle) IsIdempotent() bool {
 }
 
 func (h *RenamePartitionHandle) Handle(j *ccr.Job, commitSeq int64, renamePartition *record.RenamePartition) error {
-	if j.IsBinlogCommitted(renamePartition.TableId, commitSeq) {
-		return nil
-	}
-
 	destTableName, err := j.GetDestNameBySrcId(renamePartition.TableId)
 	if err != nil {
 		return err
