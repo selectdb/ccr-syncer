@@ -18,6 +18,8 @@ suite("test_ds_absorb_col_add_key_drop_val") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    def dbName = context.dbName
+    def dbNameTarget = "TEST_" + context.dbName
     def tableName = "tbl_" + helper.randomSuffix()
     def insert_num = 5
 
@@ -58,17 +60,25 @@ suite("test_ds_absorb_col_add_key_drop_val") {
 
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "target"))
 
-    // 1. Pause ccr job
-    helper.ccrJobPause()
-
-    // 2. Insert N data
+    // 0. Insert N data
     for (int index = 0; index < insert_num; index++) {
         sql """
             INSERT INTO ${tableName} VALUES (${index}, ${index}, ${index})
             """
     }
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "target"))
+    // 1. Pause ccr job
+    helper.ccrJobPause()
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num }, 60, "sql"))
+    // 2. Insert N data
+    for (int index = insert_num; index < insert_num * 2; index++) {
+        sql """
+            INSERT INTO ${tableName} VALUES (${index}, ${index}, ${index})
+            """
+    }
+
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2}, 60, "sql"))
 
     // 3. Do operation & wait it finishes upstream
     sql """
@@ -85,13 +95,13 @@ suite("test_ds_absorb_col_add_key_drop_val") {
     assertTrue(helper.checkShowTimesOf(""" show columns from ${tableName} """, { r -> return r.size() == 3 }, 60, "sql"))
 
     // 4. Insert N data
-    for (int index = insert_num; index < insert_num * 2; index++) {
+    for (int index = insert_num * 2; index < insert_num * 3; index++) {
         sql """
             INSERT INTO ${tableName} VALUES (${index}, ${index}, ${index})
             """
     }
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2 }, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3 }, 60, "sql"))
 
     // 5. Force trigger fullsnapshot
     helper.force_fullsync()
@@ -100,7 +110,7 @@ suite("test_ds_absorb_col_add_key_drop_val") {
     helper.ccrJobResume()
   
     // 7. Verify data and operation are synced downstream
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2 }, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3 }, 60, "target"))
     assertTrue(helper.checkShowTimesOf(""" show columns from ${tableName} """, { r -> return r[0][0] == 'first' }, 60, "target"))
     assertTrue(helper.checkShowTimesOf(""" show columns from ${tableName} """, { r -> return r.size() == 3 }, 60, "target"))
 }

@@ -55,11 +55,19 @@ suite("test_ds_absorb_tbl_create_drop") {
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}_1", 180))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, exist, 60, "sql"))
 
+    // 0. Insert N data
+    for (int index = 0; index < insert_num; index++) {
+        sql """
+            INSERT INTO ${tableName}_1 VALUES (${test_num}, ${index})
+            """
+    }
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num}, 60, "target"))
     // 1. Pause ccr job
     helper.ccrJobPause()
 
     // 2. Insert N data
-    for (int index = 0; index < insert_num; index++) {
+    for (int index = insert_num; index < insert_num * 2; index++) {
         sql """
             INSERT INTO ${tableName}_1 VALUES (${test_num}, ${index})
             """

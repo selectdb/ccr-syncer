@@ -75,11 +75,19 @@ suite("test_ds_absorb_tbl_alt_prop_comment") {
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "target"))
 
+    // 0. Insert N data
+    for (int index = 0; index < insert_num; index++) {
+        sql """
+            INSERT INTO ${tableName} VALUES (${test_num}, ${index})
+            """
+    }
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "target"))
     // 1. Pause ccr job
     helper.ccrJobPause()
 
     // 2. Insert N data
-    for (int index = 0; index < insert_num; index++) {
+    for (int index = insert_num; index < insert_num * 2; index++) {
         sql """
             INSERT INTO ${tableName} VALUES (${test_num}, ${index})
             """
@@ -94,13 +102,13 @@ suite("test_ds_absorb_tbl_alt_prop_comment") {
         """
 
     // 4. Insert N data
-    for (int index = insert_num; index < insert_num * 2; index++) {
+    for (int index = insert_num * 2; index < insert_num * 3; index++) {
         sql """
             INSERT INTO ${tableName} VALUES (${test_num}, ${index})
             """
     }
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3}, 60, "sql"))
     
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", existComment, 60, "sql"))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", notExistComment, 60, "target"))
@@ -112,7 +120,7 @@ suite("test_ds_absorb_tbl_alt_prop_comment") {
     helper.ccrJobResume()
   
     // 7. Verify data and operation are synced downstream
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3}, 60, "target"))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", existComment, 60, "sql"))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", existComment, 60, "target"))
 }

@@ -55,17 +55,25 @@ suite("test_ds_absorb_tbl_rename") {
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "target"))
 
-    // 1. Pause ccr job
-    helper.ccrJobPause()
-
-    // 2. Insert N data
+    // 0. Insert N data
     for (int index = 0; index < insert_num; index++) {
         sql """
             INSERT INTO ${tableName} VALUES (${test_num}, ${index})
             """
     }
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "target"))
+    // 1. Pause ccr job
+    helper.ccrJobPause()
+
+    // 2. Insert N data
+    for (int index = insert_num; index < insert_num * 2; index++) {
+        sql """
+            INSERT INTO ${tableName} VALUES (${test_num}, ${index})
+            """
+    }
     def res = sql " select * from ${tableName}";
-    for (int index = 0; index < insert_num; index++) {
+    for (int index = 0; index < insert_num * 2; index++) {
         assertTrue(checkValue(res, index, index))
     }
     // 3. Do operation & wait it finishes upstream
@@ -74,14 +82,14 @@ suite("test_ds_absorb_tbl_rename") {
         """
 
     // 4. Insert N data
-    for (int index = insert_num; index < insert_num * 2; index++) {
+    for (int index = insert_num * 2; index < insert_num * 3; index++) {
         sql """
             INSERT INTO ${tableName}_1 VALUES (${test_num}, ${index})
             """
     }
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 180, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 3}, 180, "sql"))
     res = sql " select * from ${tableName}_1";
-    for (int index = 0; index < insert_num * 2; index++) {
+    for (int index = 0; index < insert_num * 3; index++) {
         assertTrue(checkValue(res, index, index))
     }
     // 5. Force trigger fullsnapshot
@@ -92,9 +100,9 @@ suite("test_ds_absorb_tbl_rename") {
   
     // 7. Verify data and operation are synced downstream
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, exist, 60, "target"))
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 3}, 60, "target"))
     res = target_sql " select * from ${tableName}_1" 
-    for (int index = 0; index < insert_num * 2; index++) {
+    for (int index = 0; index < insert_num * 3; index++) {
         assertTrue(checkValue(res, index, index))
     }
 }

@@ -55,18 +55,26 @@ suite("test_ds_absorb_tbl_drop_create_schema_consist") {
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 180))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "sql"))
 
+    // 0. Insert N data
+    for (int index = 0; index < insert_num; index++) {
+        sql """
+            INSERT INTO ${tableName} VALUES (${test_num}, ${index})
+            """
+    }
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "target"))
     // 1. Pause ccr job
     helper.ccrJobPause()
 
     // 2. Insert N data
-    for (int index = 0; index < insert_num; index++) {
+    for (int index = insert_num; index < insert_num * 2; index++) {
         sql """
             INSERT INTO ${tableName} VALUES (${test_num}, ${index})
             """
     }
 
     def res = sql " select * from ${tableName}";
-    for (int index = 0; index < insert_num; index++) {
+    for (int index = 0; index < insert_num * 2; index++) {
         assertTrue(checkValue(res, index, index))
     }
     // 3. Do operation & wait it finishes upstream
@@ -87,15 +95,15 @@ suite("test_ds_absorb_tbl_drop_create_schema_consist") {
     """
 
     // 4. Insert N data
-    for (int index = insert_num; index < insert_num * 2; index++) {
+    for (int index = insert_num * 2; index < insert_num * 4; index++) {
         sql """
             INSERT INTO ${tableName} VALUES (${test_num}, ${index})
             """
     }
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num }, 180, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2}, 180, "sql"))
     res = sql " select * from ${tableName}";
-    for (int index = 0; index < insert_num; index++) {
-        assertTrue(checkValue(res, index, index + insert_num))
+    for (int index = 0; index < insert_num * 2; index++) {
+        assertTrue(checkValue(res, index, index + 2 * insert_num))
     }
     // 5. Force trigger fullsnapshot
     helper.force_fullsync()
@@ -105,9 +113,9 @@ suite("test_ds_absorb_tbl_drop_create_schema_consist") {
   
     // 7. Verify data and operation are synced downstream
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "target"))
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num }, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2}, 60, "target"))
     res = target_sql " select * from ${tableName}";
-    for (int index = 0; index < insert_num; index++) {
-        assertTrue(checkValue(res, index, index + insert_num))
+    for (int index = 0; index < insert_num * 2; index++) {
+        assertTrue(checkValue(res, index, index + 2 * insert_num))
     }
 }

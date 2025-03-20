@@ -72,16 +72,31 @@ suite("test_ds_absorb_tbl_replace") {
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_1" """, exist, 60, "target"))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_2" """, exist, 60, "target"))
 
-    // 1. Pause ccr job
-    helper.ccrJobPause()
-
-    // 2. Insert N data
+    // 0. Insert N data
     for (int index = 0; index < insert_num; index++) {
         sql """
             INSERT INTO ${tableName}_1 VALUES (${test_num}, ${index})
             """
     }
-    for (int index = insert_num * 2; index < insert_num * 3; index++) {
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num}, 60, "target"))
+    for (int index = insert_num * 3; index < insert_num * 4; index++) {
+        sql """
+            INSERT INTO ${tableName}_2 VALUES (${test_num}, ${index})
+            """
+    }
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num}, 60, "target"))
+    // 1. Pause ccr job
+    helper.ccrJobPause()
+
+    // 2. Insert N data
+    for (int index = insert_num; index < insert_num * 2; index++) {
+        sql """
+            INSERT INTO ${tableName}_1 VALUES (${test_num}, ${index})
+            """
+    }
+    for (int index = insert_num * 4; index < insert_num * 5; index++) {
         sql """
             INSERT INTO ${tableName}_2 VALUES (${test_num}, ${index})
             """
@@ -92,25 +107,25 @@ suite("test_ds_absorb_tbl_replace") {
         """
 
     // 4. Insert N data
-    for (int index = insert_num * 3; index < insert_num * 4; index++) {
+    for (int index = insert_num * 5; index < insert_num * 6; index++) {
         sql """
             INSERT INTO ${tableName}_1 VALUES (${test_num}, ${index})
             """
     }
-    for (int index = insert_num; index < insert_num * 2; index++) {
+    for (int index = insert_num * 2; index < insert_num * 3; index++) {
         sql """
             INSERT INTO ${tableName}_2 VALUES (${test_num}, ${index})
             """
     }
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 180, "sql"))
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 180, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 3}, 180, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 3}, 180, "sql"))
     def res = sql " select * from ${tableName}_2";
-    for (int index = 0; index < insert_num * 2; index++) {
+    for (int index = 0; index < insert_num * 3; index++) {
         checkValue(res, index, index)
     }
     res = sql " select * from ${tableName}_1";
-    for (int index = 0; index < insert_num * 2; index++) {
-        checkValue(res, index, index + insert_num * 2)
+    for (int index = 0; index < insert_num * 3; index++) {
+        checkValue(res, index, index + insert_num * 3)
     }
     // 5. Force trigger fullsnapshot
     helper.force_fullsync()
@@ -119,14 +134,14 @@ suite("test_ds_absorb_tbl_replace") {
     helper.ccrJobResume()
   
     // 7. Verify data and operation are synced downstream
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 2}, 60, "target"))
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 2}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_1 """, { r -> r.size() == insert_num * 3}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 3}, 60, "target"))
     res = target_sql " select * from ${tableName}_2";
-    for (int index = 0; index < insert_num * 2; index++) {
+    for (int index = 0; index < insert_num * 3; index++) {
         checkValue(res, index, index)
     }
     res = target_sql " select * from ${tableName}_1";
-    for (int index = 0; index < insert_num * 2; index++) {
-        checkValue(res, index, index + insert_num * 2)
+    for (int index = 0; index < insert_num * 3; index++) {
+        checkValue(res, index, index + insert_num * 3)
     }
 }

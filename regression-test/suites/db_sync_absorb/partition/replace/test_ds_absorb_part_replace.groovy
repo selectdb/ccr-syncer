@@ -20,7 +20,7 @@ suite("test_ds_absorb_part_replace") {
 
     def tableName = "tbl_" + helper.randomSuffix()
     def test_num = 3
-    def insert_num = 20
+    def insert_num = 10
 
     def exist = { res -> Boolean
         return res.size() != 0
@@ -29,11 +29,11 @@ suite("test_ds_absorb_part_replace") {
         return res.size() == 0
     }
 
-    sql "DROP TABLE IF EXISTS ${tableName}_0"
-    target_sql "DROP TABLE IF EXISTS ${tableName}_0"
+    sql "DROP TABLE IF EXISTS ${tableName}"
+    target_sql "DROP TABLE IF EXISTS ${tableName}"
 
     sql """
-        CREATE TABLE if NOT EXISTS ${tableName}_0
+        CREATE TABLE if NOT EXISTS ${tableName}
         (
             `test` INT,
             `id` INT
@@ -57,34 +57,43 @@ suite("test_ds_absorb_part_replace") {
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 
-    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_0" """, exist, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "target"))
+
+    // 0. Insert N data
+    for (int index = 0; index < insert_num; index++) {
+        sql """
+            INSERT INTO ${tableName} VALUES (${test_num}, ${index})
+            """
+    }
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "target"))
 
     // 1. Pause ccr job
     helper.ccrJobPause()
 
     // 2. Insert N data
-    for (int index = 0; index < insert_num; index++) {
+    for (int index = insert_num; index < insert_num * 2; index++) {
         sql """
-            INSERT INTO ${tableName}_0 VALUES (${test_num}, ${index})
+            INSERT INTO ${tableName} VALUES (${test_num}, ${index})
             """
     }
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_0 """, { r -> r.size() == insert_num }, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2}, 60, "sql"))
 
     // 3. Do operation & wait it finishes upstream
     sql """
-        ALTER TABLE ${tableName}_0 ADD TEMPORARY PARTITION p5 VALUES [("10"), ("20"))
+        ALTER TABLE ${tableName} ADD TEMPORARY PARTITION p5 VALUES [("10"), ("20"))
         """
-    sql "ALTER TABLE ${tableName}_0 REPLACE PARTITION (p2) WITH TEMPORARY PARTITION (p5)"
-    assertTrue(helper.checkShowTimesOf(""" SHOW PARTITIONS FROM ${tableName}_0 where PartitionName = "p2" """, exist, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf(""" SHOW PARTITIONS FROM ${tableName}_0 where PartitionName = "p5" """, notExist, 60, "sql"))
+    sql "ALTER TABLE ${tableName} REPLACE PARTITION (p2) WITH TEMPORARY PARTITION (p5)"
+    assertTrue(helper.checkShowTimesOf(""" SHOW PARTITIONS FROM ${tableName} where PartitionName = "p2" """, exist, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" SHOW PARTITIONS FROM ${tableName} where PartitionName = "p5" """, notExist, 60, "sql"))
 
     // 4. Insert N data
-    for (int index = 0; index < insert_num; index++) {
+    for (int index = insert_num; index < insert_num * 2; index++) {
         sql """
-            INSERT INTO ${tableName}_0 VALUES (${test_num}, ${index})
+            INSERT INTO ${tableName} VALUES (${test_num}, ${index})
             """
     }
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_0 """, { r -> r.size() == insert_num }, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2}, 60, "sql"))
 
     // 5. Force trigger fullsnapshot
     helper.force_fullsync()
@@ -93,7 +102,7 @@ suite("test_ds_absorb_part_replace") {
     helper.ccrJobResume()
   
     // 7. Verify data and operation are synced downstream
-    assertTrue(helper.checkShowTimesOf(""" SHOW PARTITIONS FROM ${tableName}_0 where PartitionName = "p2" """, exist, 60, "target"))
-    assertTrue(helper.checkShowTimesOf(""" SHOW PARTITIONS FROM ${tableName}_0 where PartitionName = "p5" """, notExist, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_0 """, { r -> r.size() == insert_num }, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" SHOW PARTITIONS FROM ${tableName} where PartitionName = "p2" """, exist, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" SHOW PARTITIONS FROM ${tableName} where PartitionName = "p5" """, notExist, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2}, 60, "target"))
 }
