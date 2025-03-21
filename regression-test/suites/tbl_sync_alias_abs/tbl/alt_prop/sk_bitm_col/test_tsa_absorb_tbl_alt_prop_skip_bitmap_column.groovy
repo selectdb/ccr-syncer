@@ -1,0 +1,143 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+suite("test_tsa_absorb_tbl_alt_prop_skip_bitmap_column") {
+    def helper = new GroovyShell(new Binding(['suite': delegate]))
+            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
+
+    if (!helper.is_version_supported([30099, 20199, 20099])) {
+        def version = helper.upstream_version()
+        logger.info("skip this suite because version is not supported, upstream version ${version}")
+        return
+    }
+
+    def dbName = context.dbName
+    def tableName = "tbl_" + helper.randomSuffix()
+    def aliasTableName = "alias_tbl_" + helper.randomSuffix()
+    def test_num = 0
+    def test_new_column_num = 1
+    def insert_num = 5
+
+    helper.set_alias(aliasTableName)
+
+    def exist = { res -> Boolean
+        return res.size() != 0
+    }
+
+    def notExist = { res -> Boolean
+        return res.size() == 0
+    }
+    def hasHiddenCol = { res -> Boolean
+        for (List<Object> row : res) {
+            if ((row[0] as String) == "__DORIS_SKIP_BITMAP_COL__") {
+                return true
+            }
+        }
+        return false
+    }
+
+    def notHasHiddenCol = { res -> Boolean
+        for (List<Object> row : res) {
+            if ((row[0] as String) == "__DORIS_SKIP_BITMAP_COL__") {
+                return false
+            }
+        }
+        return true
+    }
+
+    def notEnableSkip = { res -> Boolean
+        return !res[0][1].contains("\"enable_unique_key_skip_bitmap_column\" = \"true\"")
+    }
+
+    def enableSkip = { res -> Boolean
+        return res[0][1].contains("\"enable_unique_key_skip_bitmap_column\" = \"true\"")
+    }
+
+    sql """
+        CREATE TABLE ${tableName}
+        (
+            `k` int(11) NULL, 
+            `v1` BIGINT NULL,
+            `v2` BIGINT NULL DEFAULT "9876",
+            `v3` BIGINT NOT NULL,
+            `v4` BIGINT NOT NULL DEFAULT "1234",
+            `v5` BIGINT NULL
+        ) 
+        UNIQUE KEY(`k`) 
+        DISTRIBUTED BY HASH(`k`) BUCKETS 1
+        PROPERTIES (
+            "replication_num" = "1",
+            "enable_unique_key_merge_on_write" = "true",
+            "enable_unique_key_skip_bitmap_column" = "false",
+            "light_schema_change" = "true",
+            "store_row_column" = "false",
+            "binlog.enable" = "true"
+        );
+    """
+
+    helper.enableDbBinlog()
+    helper.ccrJobDelete(tableName)
+    helper.ccrJobCreate(tableName)
+
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 180))
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${aliasTableName}" """, exist, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", notEnableSkip, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${aliasTableName}", notEnableSkip, 60, "target"))
+
+    // 0. Insert N data
+    for (int index = 0; index < insert_num; index++) {
+        sql """
+            INSERT INTO ${tableName} VALUES (${index}, ${index}, ${index}, ${index}, ${index}, ${index})
+            """
+    }
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${aliasTableName} """, { r -> r.size() == insert_num}, 60, "target"))
+    // 1. Pause ccr job
+    helper.ccrJobPause(tableName)
+
+    // 2. Insert N data
+    for (int index = insert_num; index < insert_num * 2; index++) {
+        sql """
+            INSERT INTO ${tableName} VALUES (${index}, ${index}, ${index}, ${index}, ${index}, ${index})
+            """
+    }
+
+    // 3. Do operation & wait it finishes upstream
+    sql """
+        ALTER TABLE ${tableName} ENABLE FEATURE "UPDATE_FLEXIBLE_COLUMNS";
+        """
+    // 4. Insert N data
+    for (int index = insert_num * 2; index < insert_num * 3; index++) {
+        sql """
+            INSERT INTO ${tableName} VALUES (${index}, ${index}, ${index}, ${index}, ${index}, ${index})
+            """
+    }
+
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", enableSkip, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${aliasTableName}", notEnableSkip, 60, "target"))
+    // 5. Force trigger fullsnapshot
+    helper.force_fullsync(tableName)
+
+    // 6. Resume ccr job
+    helper.ccrJobResume(tableName)
+  
+    // 7. Verify data and operation are synced downstream
+    assertTrue(helper.checkShowTimesOf(""" select * from ${aliasTableName} """, { r -> r.size() == insert_num * 3}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", enableSkip, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${aliasTableName}", enableSkip, 60, "target"))
+}
