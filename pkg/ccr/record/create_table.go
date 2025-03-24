@@ -40,26 +40,38 @@ type CreateTable struct {
 
 func NewCreateTableFromJson(data string) (*CreateTable, error) {
 	var createTable CreateTable
-	err := json.Unmarshal([]byte(data), &createTable)
-	if err != nil {
-		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal create table error")
-	}
-
-	if createTable.Sql == "" {
-		// TODO: fallback to create sql from other fields
-		return nil, xerror.Errorf(xerror.Normal, "create table sql is empty")
-	}
-
-	if createTable.TableId == 0 {
-		return nil, xerror.Errorf(xerror.Normal, "table id not found")
+	if err := createTable.Deserialize(data); err != nil {
+		return &createTable, err
 	}
 
 	return &createTable, nil
 }
 
+func (createTable *CreateTable) Deserialize(data string) error {
+	err := json.Unmarshal([]byte(data), &createTable)
+	if err != nil {
+		return xerror.Wrap(err, xerror.Normal, "unmarshal create table error")
+	}
+
+	if createTable.Sql == "" {
+		// TODO: fallback to create sql from other fields
+		return xerror.Errorf(xerror.Normal, "create table sql is empty")
+	}
+
+	if createTable.TableId == 0 {
+		return xerror.Errorf(xerror.Normal, "table id not found")
+	}
+
+	return nil
+}
+
 func (c *CreateTable) IsCreateView() bool {
 	viewRegex := regexp.MustCompile(`(?i)^CREATE(\s+)VIEW`)
 	return viewRegex.MatchString(c.Sql)
+}
+
+func (createTable *CreateTable) GetTableId() int64 {
+	return createTable.TableId
 }
 
 // String
