@@ -1443,7 +1443,7 @@ func (j *Job) IsMaterializedViewTable(srcTableId int64) (bool, error) {
 	return false, nil
 }
 
-func (j *Job) getDestTableIdBySrc(srcTableId int64) (int64, error) {
+func (j *Job) GetDestTableIdBySrc(srcTableId int64) (int64, error) {
 	if j.SyncType == TableSync {
 		return j.Dest.TableId, nil
 	}
@@ -1478,7 +1478,7 @@ func (j *Job) GetDestNameBySrcId(srcTableId int64) (string, error) {
 		return j.Dest.Table, nil
 	}
 
-	destTableId, err := j.getDestTableIdBySrc(srcTableId)
+	destTableId, err := j.GetDestTableIdBySrc(srcTableId)
 	if err != nil {
 		return "", err
 	}
@@ -1803,7 +1803,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 				} else if isAsyncMv {
 					// ignore the upsert of materialized view table.
 					continue
-				} else if destTableId, err := j.getDestTableIdBySrc(tableRecord.Id); err != nil {
+				} else if destTableId, err := j.GetDestTableIdBySrc(tableRecord.Id); err != nil {
 					return err
 				} else {
 					savedRecords = append(savedRecords, tableRecord)
@@ -3264,7 +3264,7 @@ func (j *Job) isRenameRollupCommitted(record *record.RenameRollup) (bool, error)
 }
 
 func (j *Job) isRenamePartitionCommitted(record *record.RenamePartition) (bool, error) {
-	destTableId, err := j.getDestTableIdBySrc(record.TableId)
+	destTableId, err := j.GetDestTableIdBySrc(record.TableId)
 	if err != nil {
 		return false, err
 	}

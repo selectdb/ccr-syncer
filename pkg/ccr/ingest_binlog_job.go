@@ -585,7 +585,7 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 		destTableId = job.Dest.TableId
 	case DBSync:
 		srcTableId = tableRecord.Id
-		destTableId, err = job.getDestTableIdBySrc(tableRecord.Id)
+		destTableId, err = job.GetDestTableIdBySrc(tableRecord.Id)
 		if err != nil {
 			break
 		}

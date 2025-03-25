@@ -14,21 +14,31 @@ func init() {
 type RenamePartitionHandle struct {
 }
 
-func (h *RenamePartitionHandle) IsBinlogCommitted(j *ccr.Job, r *record.RenamePartition) (bool, error) {
-	_, err := j.GetDestNameBySrcId(r.TableId)
+func (h *RenamePartitionHandle) IsBinlogCommitted(j *ccr.Job, record *record.RenamePartition) (bool, error) {
+	destTableId, err := j.GetDestTableIdBySrc(record.TableId)
 	if err != nil {
 		return false, err
 	}
 
-	partitionName, err := j.GetDestMeta().GetPartitionName(r.TableId, r.PartitionId)
+	if err := j.GetDestMeta().UpdatePartitions(destTableId); err != nil {
+		return false, err
+	}
+
+	partitions, err := j.GetDestMeta().GetPartitionIdMap(destTableId)
 	if err != nil {
 		return false, err
 	}
 
-	if partitionName == r.OldPartitionName {
-		return false, nil
+	for _, partition := range partitions {
+		if partition.Name == record.OldPartitionName {
+			log.Infof("partition %s is not renamed to %s in dest table %d, this binlog is not committed",
+				record.OldPartitionName, record.NewPartitionName, destTableId)
+			return false, nil
+		}
 	}
 
+	log.Infof("partition %s is renamed to %s in dest table %d, this binlog is not committed",
+		record.OldPartitionName, record.NewPartitionName, destTableId)
 	return true, nil
 }
 
