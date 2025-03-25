@@ -14,30 +14,32 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_ds_absorb_col_add_val") {
+suite("test_ds_absorb_tbl_alt_comment") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    if (!helper.is_version_supported([20108, 20017, 30004])) {
+        def version = helper.upstream_version()
+        logger.info("Skip the test case because the version is not supported. current version ${version}")
+    }
     def dbName = context.dbName
-    def dbNameTarget = "TEST_" + context.dbName
     def tableName = "tbl_" + helper.randomSuffix()
     def test_num = 0
-    def test_new_column_num = 1
-    def insert_num = 5
+    def insert_num = 10
 
     def exist = { res -> Boolean
         return res.size() != 0
     }
 
-    def has_count = { count ->
-        return { res -> Boolean
-            res.size() == count
-        }
+    def notExist = { res -> Boolean
+        return res.size() == 0
     }
 
-    helper.enableDbBinlog()
-    sql "DROP TABLE IF EXISTS ${dbName}.${tableName}"
-    target_sql "DROP TABLE IF EXISTS ${dbNameTarget}.${tableName}"
+    def checkComment = { res -> Boolean
+        def expected = "this is a test table"
+        return res.size() > 0 && (res[0][1] as String).contains(expected)
+    }
+
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (
@@ -46,6 +48,11 @@ suite("test_ds_absorb_col_add_val") {
         )
         ENGINE=OLAP
         UNIQUE KEY(`test`, `id`)
+        PARTITION BY RANGE(`id`)
+        (
+            PARTITION p10 values less than (10),
+            PARTITION p100 values less than (100)
+        )
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
@@ -57,8 +64,8 @@ suite("test_ds_absorb_col_add_val") {
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 
-    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
-
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 180))
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "target"))
 
     // 0. Insert N data
@@ -79,24 +86,22 @@ suite("test_ds_absorb_col_add_val") {
             """
     }
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2 }, 60, "sql"))
-
     // 3. Do operation & wait it finishes upstream
+
     sql """
         ALTER TABLE ${tableName}
-        ADD COLUMN `value` INT DEFAULT "1" AFTER `id`
+        MODIFY COMMENT "this is a test table"
         """
-    assertTrue(helper.checkShowTimesOf(""" show columns from ${tableName} """, { r -> return r[2][0] == 'value' }, 60, "sql"))
-
+    assertTrue(helper.checkShowTimesOf(""" show create table ${tableName} """, checkComment, 60, "sql"))
 
     // 4. Insert N data
     for (int index = insert_num * 2; index < insert_num * 3; index++) {
         sql """
-            INSERT INTO ${tableName} VALUES (${test_num}, ${index}, ${test_new_column_num})
+            INSERT INTO ${tableName} VALUES (${test_num}, ${index})
             """
     }
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3 }, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3}, 60, "sql"))
 
     // 5. Force trigger fullsnapshot
     helper.force_fullsync()
@@ -105,7 +110,6 @@ suite("test_ds_absorb_col_add_val") {
     helper.ccrJobResume()
   
     // 7. Verify data and operation are synced downstream
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3 }, 60, "target"))
-    assertTrue(helper.checkShowTimesOf(""" show columns from ${tableName} """, { r -> return r[2][0] == 'value' }, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" show create table ${tableName} """, checkComment, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3}, 60, "target"))
 }
-

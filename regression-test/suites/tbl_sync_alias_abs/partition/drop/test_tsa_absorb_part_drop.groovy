@@ -14,27 +14,39 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_ts_absorb_tbl_alt_prop_light_schema_change") {
+suite("test_tsa_absorb_part_drop") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    def dbName = context.dbName
     def tableName = "tbl_" + helper.randomSuffix()
     def test_num = 0
-    def insert_num = 10
+    def insert_num = 5
+    def aliasTableName = "alias_tbl_" + helper.randomSuffix()
+    helper.set_alias(aliasTableName)
 
     def exist = { res -> Boolean
         return res.size() != 0
     }
+
     def notExist = { res -> Boolean
         return res.size() == 0
     }
 
-    def lightSchemaChange = { res -> Boolean
-        return res[0][1].contains("\"light_schema_change\" = \"true\"")
+    def checkShowResult = { target_res, property -> Boolean
+        if(!target_res[0][1].contains(property)){
+            logger.info("don't contains {}", property)
+            return false
+        }
+            return true 
     }
 
-    def notLightSchemaChange = { res -> Boolean
-        return !res[0][1].contains("\"light_schema_change\" = \"false\"")
+    def dropedPartition = { res -> Boolean
+        return !checkShowResult(res, """PARTITION p5""")
+    }
+
+    def notDropedPartition = { res -> Boolean
+        return checkShowResult(res, """PARTITION p5""")
     }
 
     sql """
@@ -45,11 +57,15 @@ suite("test_ts_absorb_tbl_alt_prop_light_schema_change") {
         )
         ENGINE=OLAP
         UNIQUE KEY(`test`, `id`)
+        PARTITION BY RANGE(`id`)
+        (
+            PARTITION p5 values less than (5),
+            PARTITION p100 values less than (100)
+        )
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
-            "binlog.enable" = "true",
-            "light_schema_change" = "false"
+            "binlog.enable" = "true"
         )
     """
 
@@ -59,7 +75,7 @@ suite("test_ts_absorb_tbl_alt_prop_light_schema_change") {
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 180))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${aliasTableName}" """, exist, 60, "target"))
 
     // 0. Insert N data
     for (int index = 0; index < insert_num; index++) {
@@ -68,7 +84,7 @@ suite("test_ts_absorb_tbl_alt_prop_light_schema_change") {
             """
     }
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${aliasTableName} """, { r -> r.size() == insert_num}, 60, "target"))
     // 1. Pause ccr job
     helper.ccrJobPause(tableName)
 
@@ -80,10 +96,10 @@ suite("test_ts_absorb_tbl_alt_prop_light_schema_change") {
     }
 
     // 3. Do operation & wait it finishes upstream
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", notLightSchemaChange, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", notLightSchemaChange, 60, "target"))
-
-    sql """ALTER TABLE ${tableName} SET ("light_schema_change" = "true");"""
+    sql """
+        ALTER TABLE ${tableName}
+        DROP PARTITION p5;
+        """
 
     // 4. Insert N data
     for (int index = insert_num * 2; index < insert_num * 3; index++) {
@@ -92,9 +108,10 @@ suite("test_ts_absorb_tbl_alt_prop_light_schema_change") {
             """
     }
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3}, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", lightSchemaChange, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", notLightSchemaChange, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3 - 5}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" show create table ${tableName} """, dropedPartition, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" show create table ${aliasTableName} """, notDropedPartition, 60, "target"))
+
     // 5. Force trigger fullsnapshot
     helper.force_fullsync(tableName)
 
@@ -102,7 +119,7 @@ suite("test_ts_absorb_tbl_alt_prop_light_schema_change") {
     helper.ccrJobResume(tableName)
   
     // 7. Verify data and operation are synced downstream
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3}, 60, "target"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", lightSchemaChange, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", lightSchemaChange, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${aliasTableName} """, { r -> r.size() == insert_num * 3 - 5}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" show create table ${tableName} """, dropedPartition, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" show create table ${aliasTableName} """, dropedPartition, 60, "target"))
 }

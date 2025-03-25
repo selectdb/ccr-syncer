@@ -14,30 +14,26 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_ds_absorb_col_add_val") {
+suite("test_tsa_absorb_part_replace") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
-    def dbName = context.dbName
-    def dbNameTarget = "TEST_" + context.dbName
     def tableName = "tbl_" + helper.randomSuffix()
-    def test_num = 0
-    def test_new_column_num = 1
-    def insert_num = 5
+    def test_num = 3
+    def insert_num = 10
+    def aliasTableName = "alias_tbl_" + helper.randomSuffix()
+    helper.set_alias(aliasTableName)
 
     def exist = { res -> Boolean
         return res.size() != 0
     }
-
-    def has_count = { count ->
-        return { res -> Boolean
-            res.size() == count
-        }
+    def notExist = { res -> Boolean
+        return res.size() == 0
     }
 
-    helper.enableDbBinlog()
-    sql "DROP TABLE IF EXISTS ${dbName}.${tableName}"
-    target_sql "DROP TABLE IF EXISTS ${dbNameTarget}.${tableName}"
+    sql "DROP TABLE IF EXISTS ${tableName}"
+    target_sql "DROP TABLE IF EXISTS ${aliasTableName}"
+
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (
@@ -46,6 +42,12 @@ suite("test_ds_absorb_col_add_val") {
         )
         ENGINE=OLAP
         UNIQUE KEY(`test`, `id`)
+        PARTITION BY RANGE(`id`) (
+            PARTITION `p0` VALUES LESS THAN ("0"),
+            PARTITION `p1` VALUES LESS THAN ("10"),
+            PARTITION `p2` VALUES LESS THAN ("20"),
+            PARTITION `p3` VALUES LESS THAN ("30")
+        )
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
@@ -54,12 +56,10 @@ suite("test_ds_absorb_col_add_val") {
     """
 
     helper.enableDbBinlog()
-    helper.ccrJobDelete()
-    helper.ccrJobCreate()
+    helper.ccrJobDelete(tableName)
+    helper.ccrJobCreate(tableName)
 
-    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
-
-    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${aliasTableName}" """, exist, 60, "target"))
 
     // 0. Insert N data
     for (int index = 0; index < insert_num; index++) {
@@ -68,9 +68,10 @@ suite("test_ds_absorb_col_add_val") {
             """
     }
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${aliasTableName} """, { r -> r.size() == insert_num}, 60, "target"))
+
     // 1. Pause ccr job
-    helper.ccrJobPause()
+    helper.ccrJobPause(tableName)
 
     // 2. Insert N data
     for (int index = insert_num; index < insert_num * 2; index++) {
@@ -78,34 +79,32 @@ suite("test_ds_absorb_col_add_val") {
             INSERT INTO ${tableName} VALUES (${test_num}, ${index})
             """
     }
-
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2 }, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2}, 60, "sql"))
 
     // 3. Do operation & wait it finishes upstream
     sql """
-        ALTER TABLE ${tableName}
-        ADD COLUMN `value` INT DEFAULT "1" AFTER `id`
+        ALTER TABLE ${tableName} ADD TEMPORARY PARTITION p5 VALUES [("10"), ("20"))
         """
-    assertTrue(helper.checkShowTimesOf(""" show columns from ${tableName} """, { r -> return r[2][0] == 'value' }, 60, "sql"))
-
+    sql "ALTER TABLE ${tableName} REPLACE PARTITION (p2) WITH TEMPORARY PARTITION (p5)"
+    assertTrue(helper.checkShowTimesOf(""" SHOW PARTITIONS FROM ${tableName} where PartitionName = "p2" """, exist, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" SHOW PARTITIONS FROM ${tableName} where PartitionName = "p5" """, notExist, 60, "sql"))
 
     // 4. Insert N data
-    for (int index = insert_num * 2; index < insert_num * 3; index++) {
+    for (int index = insert_num; index < insert_num * 2; index++) {
         sql """
-            INSERT INTO ${tableName} VALUES (${test_num}, ${index}, ${test_new_column_num})
+            INSERT INTO ${tableName} VALUES (${test_num}, ${index})
             """
     }
-
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3 }, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2}, 60, "sql"))
 
     // 5. Force trigger fullsnapshot
-    helper.force_fullsync()
+    helper.force_fullsync(tableName)
 
     // 6. Resume ccr job
-    helper.ccrJobResume()
+    helper.ccrJobResume(tableName)
   
     // 7. Verify data and operation are synced downstream
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3 }, 60, "target"))
-    assertTrue(helper.checkShowTimesOf(""" show columns from ${tableName} """, { r -> return r[2][0] == 'value' }, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" SHOW PARTITIONS FROM ${aliasTableName} where PartitionName = "p2" """, exist, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" SHOW PARTITIONS FROM ${tableName} where PartitionName = "p5" """, notExist, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${aliasTableName} """, { r -> r.size() == insert_num * 2}, 60, "target"))
 }
-

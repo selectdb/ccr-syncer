@@ -14,7 +14,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_ds_absorb_col_add_val") {
+suite("test_ts_absorb_col_add_val") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -54,8 +54,8 @@ suite("test_ds_absorb_col_add_val") {
     """
 
     helper.enableDbBinlog()
-    helper.ccrJobDelete()
-    helper.ccrJobCreate()
+    helper.ccrJobDelete(tableName)
+    helper.ccrJobCreate(tableName)
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
 
@@ -70,7 +70,7 @@ suite("test_ds_absorb_col_add_val") {
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "target"))
     // 1. Pause ccr job
-    helper.ccrJobPause()
+    helper.ccrJobPause(tableName)
 
     // 2. Insert N data
     for (int index = insert_num; index < insert_num * 2; index++) {
@@ -99,10 +99,10 @@ suite("test_ds_absorb_col_add_val") {
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3 }, 60, "sql"))
 
     // 5. Force trigger fullsnapshot
-    helper.force_fullsync()
+    helper.force_fullsync(tableName)
 
     // 6. Resume ccr job
-    helper.ccrJobResume()
+    helper.ccrJobResume(tableName)
   
     // 7. Verify data and operation are synced downstream
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3 }, 60, "target"))

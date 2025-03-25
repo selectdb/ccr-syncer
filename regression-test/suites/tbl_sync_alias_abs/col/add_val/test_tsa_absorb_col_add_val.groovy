@@ -14,7 +14,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_ds_absorb_col_add_val") {
+suite("test_tsa_absorb_col_add_val") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -24,6 +24,8 @@ suite("test_ds_absorb_col_add_val") {
     def test_num = 0
     def test_new_column_num = 1
     def insert_num = 5
+    def aliasTableName = "alias_tbl_" + helper.randomSuffix()
+    helper.set_alias(aliasTableName)
 
     def exist = { res -> Boolean
         return res.size() != 0
@@ -37,7 +39,7 @@ suite("test_ds_absorb_col_add_val") {
 
     helper.enableDbBinlog()
     sql "DROP TABLE IF EXISTS ${dbName}.${tableName}"
-    target_sql "DROP TABLE IF EXISTS ${dbNameTarget}.${tableName}"
+    target_sql "DROP TABLE IF EXISTS ${dbNameTarget}.${aliasTableName}"
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (
@@ -54,12 +56,12 @@ suite("test_ds_absorb_col_add_val") {
     """
 
     helper.enableDbBinlog()
-    helper.ccrJobDelete()
-    helper.ccrJobCreate()
+    helper.ccrJobDelete(tableName)
+    helper.ccrJobCreate(tableName)
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
 
-    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${aliasTableName}" """, exist, 60, "target"))
 
     // 0. Insert N data
     for (int index = 0; index < insert_num; index++) {
@@ -68,9 +70,9 @@ suite("test_ds_absorb_col_add_val") {
             """
     }
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${aliasTableName} """, { r -> r.size() == insert_num}, 60, "target"))
     // 1. Pause ccr job
-    helper.ccrJobPause()
+    helper.ccrJobPause(tableName)
 
     // 2. Insert N data
     for (int index = insert_num; index < insert_num * 2; index++) {
@@ -99,13 +101,13 @@ suite("test_ds_absorb_col_add_val") {
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3 }, 60, "sql"))
 
     // 5. Force trigger fullsnapshot
-    helper.force_fullsync()
+    helper.force_fullsync(tableName)
 
     // 6. Resume ccr job
-    helper.ccrJobResume()
+    helper.ccrJobResume(tableName)
   
     // 7. Verify data and operation are synced downstream
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3 }, 60, "target"))
-    assertTrue(helper.checkShowTimesOf(""" show columns from ${tableName} """, { r -> return r[2][0] == 'value' }, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${aliasTableName} """, { r -> r.size() == insert_num * 3 }, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" show columns from ${aliasTableName} """, { r -> return r[2][0] == 'value' }, 60, "target"))
 }
 
