@@ -17,7 +17,8 @@ type ReplaceTableHandle struct {
 }
 
 func (h *ReplaceTableHandle) IsBinlogCommitted(j *ccr.Job, r *record.ReplaceTableRecord) (bool, error) {
-	return true, nil
+	// We can't determine whether the binlog is committed or not, trigger full sync.
+	return true, j.NewSnapshot(j.GetJobProgress().UnknownCommitSeq, "the REPLACE_TABLE binlog state is unknown")
 }
 
 func (h *ReplaceTableHandle) IsIdempotent() bool {
