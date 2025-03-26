@@ -14,30 +14,47 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_ds_absorb_col_add_val") {
+suite("test_ts_absorb_part_add_rename") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
     def dbName = context.dbName
-    def dbNameTarget = "TEST_" + context.dbName
     def tableName = "tbl_" + helper.randomSuffix()
     def test_num = 0
-    def test_new_column_num = 1
     def insert_num = 5
 
     def exist = { res -> Boolean
         return res.size() != 0
     }
 
-    def has_count = { count ->
-        return { res -> Boolean
-            res.size() == count
-        }
+    def notExist = { res -> Boolean
+        return res.size() == 0
     }
 
-    helper.enableDbBinlog()
-    sql "DROP TABLE IF EXISTS ${dbName}.${tableName}"
-    target_sql "DROP TABLE IF EXISTS ${dbNameTarget}.${tableName}"
+    def checkShowResult = { target_res, property -> Boolean
+        if(!target_res[0][1].contains(property)){
+            logger.info("don't contains {}", property)
+            return false
+        }
+            return true 
+    }
+
+    def notRenamePartition = { res -> Boolean
+        return checkShowResult(res, """PARTITION p5""")
+    }
+
+    def renamePartition = { res -> Boolean
+        return checkShowResult(res, """PARTITION pp5""")
+    }
+
+    def addedPartition = { res -> Boolean
+        return checkShowResult(res, """PARTITION p100""")
+    }
+
+    def notAddedPartition = { res -> Boolean
+        return !checkShowResult(res, """PARTITION p100""")
+    }
+
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (
@@ -46,6 +63,11 @@ suite("test_ds_absorb_col_add_val") {
         )
         ENGINE=OLAP
         UNIQUE KEY(`test`, `id`)
+        PARTITION BY RANGE(`id`)
+        (
+            PARTITION p5 values less than (5),
+            PARTITION p10 values less than (10)
+        )
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
@@ -54,11 +76,11 @@ suite("test_ds_absorb_col_add_val") {
     """
 
     helper.enableDbBinlog()
-    helper.ccrJobDelete()
-    helper.ccrJobCreate()
+    helper.ccrJobDelete(tableName)
+    helper.ccrJobCreate(tableName)
 
-    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
-
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 180))
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "target"))
 
     // 0. Insert N data
@@ -70,7 +92,7 @@ suite("test_ds_absorb_col_add_val") {
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "target"))
     // 1. Pause ccr job
-    helper.ccrJobPause()
+    helper.ccrJobPause(tableName)
 
     // 2. Insert N data
     for (int index = insert_num; index < insert_num * 2; index++) {
@@ -79,33 +101,39 @@ suite("test_ds_absorb_col_add_val") {
             """
     }
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2 }, 60, "sql"))
-
     // 3. Do operation & wait it finishes upstream
     sql """
         ALTER TABLE ${tableName}
-        ADD COLUMN `value` INT DEFAULT "1" AFTER `id`
+        ADD PARTITION p100 VALUES LESS THAN (100);
         """
-    assertTrue(helper.checkShowTimesOf(""" show columns from ${tableName} """, { r -> return r[2][0] == 'value' }, 60, "sql"))
-
+    sql """
+        ALTER TABLE ${tableName}
+        RENAME PARTITION p5 pp5;
+        """
 
     // 4. Insert N data
     for (int index = insert_num * 2; index < insert_num * 3; index++) {
         sql """
-            INSERT INTO ${tableName} VALUES (${test_num}, ${index}, ${test_new_column_num})
+            INSERT INTO ${tableName} VALUES (${test_num}, ${index})
             """
     }
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3 }, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" show create table ${tableName} """, addedPartition, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" show create table ${tableName} """, renamePartition, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" show create table ${tableName} """, notAddedPartition, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" show create table ${tableName} """, notRenamePartition, 60, "target"))
 
     // 5. Force trigger fullsnapshot
-    helper.force_fullsync()
+    helper.force_fullsync(tableName)
 
     // 6. Resume ccr job
-    helper.ccrJobResume()
+    helper.ccrJobResume(tableName)
   
     // 7. Verify data and operation are synced downstream
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3 }, 60, "target"))
-    assertTrue(helper.checkShowTimesOf(""" show columns from ${tableName} """, { r -> return r[2][0] == 'value' }, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" show create table ${tableName} """, addedPartition, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" show create table ${tableName} """, renamePartition, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" show create table ${tableName} """, addedPartition, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" show create table ${tableName} """, renamePartition, 60, "target"))
 }
-

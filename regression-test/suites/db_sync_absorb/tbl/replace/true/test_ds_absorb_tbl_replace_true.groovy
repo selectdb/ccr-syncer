@@ -14,7 +14,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_ds_absorb_tbl_replace") {
+suite("test_ds_absorb_tbl_replace_true") {
 
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
@@ -121,11 +121,11 @@ suite("test_ds_absorb_tbl_replace") {
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 3}, 180, "sql"))
     def res = sql " select * from ${tableName}_2";
     for (int index = 0; index < insert_num * 3; index++) {
-        checkValue(res, index, index)
+        assertTrue(checkValue(res, index, index))
     }
     res = sql " select * from ${tableName}_1";
     for (int index = 0; index < insert_num * 3; index++) {
-        checkValue(res, index, index + insert_num * 3)
+        assertTrue(checkValue(res, index, index + insert_num * 3))
     }
     // 5. Force trigger fullsnapshot
     helper.force_fullsync()
@@ -138,10 +138,10 @@ suite("test_ds_absorb_tbl_replace") {
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName}_2 """, { r -> r.size() == insert_num * 3}, 60, "target"))
     res = target_sql " select * from ${tableName}_2";
     for (int index = 0; index < insert_num * 3; index++) {
-        checkValue(res, index, index)
+        assertTrue(checkValue(res, index, index))
     }
     res = target_sql " select * from ${tableName}_1";
     for (int index = 0; index < insert_num * 3; index++) {
-        checkValue(res, index, index + insert_num * 3)
+        assertTrue(checkValue(res, index, index + insert_num * 3))
     }
 }

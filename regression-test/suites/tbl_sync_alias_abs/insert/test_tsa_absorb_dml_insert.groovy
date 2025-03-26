@@ -30,7 +30,7 @@ suite("test_tsa_absorb_dml_insert") {
 
     helper.enableDbBinlog()
     sql "DROP TABLE IF EXISTS ${tableName}"
-    target_sql "DROP TABLE IF EXISTS ${tableName}"
+    target_sql "DROP TABLE IF EXISTS ${aliasTableName}"
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (
