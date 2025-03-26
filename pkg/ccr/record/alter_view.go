@@ -29,17 +29,27 @@ type AlterView struct {
 	Comment       string `json:"comment"`
 }
 
-func NewAlterViewFromJson(data string) (*AlterView, error) {
-	var alterView AlterView
+func (alterView *AlterView) Deserialize(data string) error {
 	err := json.Unmarshal([]byte(data), &alterView)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal alter view error: %v", err)
+		return fmt.Errorf("unmarshal alter view error: %v", err)
 	}
 
 	if alterView.TableId == 0 {
-		return nil, fmt.Errorf("table id not found")
+		return fmt.Errorf("table id not found")
 	}
+	return nil
+}
 
+func (alterView *AlterView) GetTableId() int64 {
+	return alterView.TableId
+}
+
+func NewAlterViewFromJson(data string) (*AlterView, error) {
+	var alterView AlterView
+	if err := alterView.Deserialize(data); err != nil {
+		return nil, err
+	}
 	return &alterView, nil
 }
 
