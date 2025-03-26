@@ -375,7 +375,7 @@ func (j *Job) isIncrementalSync() bool {
 	}
 }
 
-func (j *Job) isTableSyncWithAlias() bool {
+func (j *Job) IsTableSyncWithAlias() bool {
 	return j.SyncType == TableSync && j.Src.Table != j.Dest.Table
 }
 
@@ -692,7 +692,7 @@ func (j *Job) partialSync() error {
 				AliasName: &aliasName,
 			}
 			tableRefs = append(tableRefs, tableRef)
-		} else if j.isTableSyncWithAlias() {
+		} else if j.IsTableSyncWithAlias() {
 			log.Infof("table sync snapshot not same name, table: %s, dest table: %s", j.Src.Table, j.Dest.Table)
 			tableRefs = make([]*festruct.TTableRef, 0)
 			tableRef := &festruct.TTableRef{
@@ -773,7 +773,7 @@ func (j *Job) partialSync() error {
 		// Step 7: Update job progress && dest table id
 		// update job info, only for dest table id
 		var targetName = table
-		if j.isTableSyncWithAlias() {
+		if j.IsTableSyncWithAlias() {
 			targetName = j.Dest.Table
 		}
 		if alias, ok := j.progress.TableAliases[table]; ok {
@@ -1082,7 +1082,7 @@ func (j *Job) fullSync() error {
 		log.Infof("fullsync status: begin restore snapshot %s to %s", snapshotName, restoreSnapshotName)
 
 		var tableRefs []*festruct.TTableRef
-		if j.isTableSyncWithAlias() {
+		if j.IsTableSyncWithAlias() {
 			log.Debugf("table sync snapshot not same name, table: %s, dest table: %s", j.Src.Table, j.Dest.Table)
 			tableRefs = make([]*festruct.TTableRef, 0)
 			tableRef := &festruct.TTableRef{
@@ -1284,7 +1284,7 @@ func (j *Job) fullSync() error {
 			for _, table := range tables {
 				alias := j.progress.TableAliases[table]
 				targetName := table
-				if j.isTableSyncWithAlias() {
+				if j.IsTableSyncWithAlias() {
 					targetName = j.Dest.Table
 				}
 
@@ -2473,7 +2473,7 @@ func (j *Job) handleLightningSchemaChange(binlog *festruct.TBinlog) error {
 	}
 
 	tableAlias := ""
-	if j.isTableSyncWithAlias() {
+	if j.IsTableSyncWithAlias() {
 		tableAlias = j.Dest.Table
 	}
 	return j.IDest.LightningSchemaChange(j.Src.Database, tableAlias, lightningSchemaChange)
@@ -2872,7 +2872,7 @@ func (j *Job) handleRenamePartition(binlog *festruct.TBinlog) error {
 			newPartition, renamePartition.PartitionId, renamePartition.TableId, commitSeq)
 		replace := true
 		tableName := destTableName
-		if j.isTableSyncWithAlias() {
+		if j.IsTableSyncWithAlias() {
 			tableName = j.Src.Table
 		}
 		isView := false
@@ -2909,7 +2909,7 @@ func (j *Job) handleRenameRollup(binlog *festruct.TBinlog) error {
 			newRollup, renameRollup.IndexId, renameRollup.TableId, commitSeq)
 		replace := true
 		tableName := destTableName
-		if j.isTableSyncWithAlias() {
+		if j.IsTableSyncWithAlias() {
 			tableName = j.Src.Table
 		}
 		isView := false
