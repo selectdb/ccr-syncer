@@ -59,7 +59,7 @@ const (
 )
 
 var (
-	featureSchemaChangePartialSync      bool
+	FeatureSchemaChangePartialSync      bool
 	featureCleanTableAndPartitions      bool
 	featureAtomicRestore                bool
 	FeatureCreateViewDropExists         bool
@@ -67,7 +67,7 @@ var (
 	featureFilterShadowIndexesUpsert    bool
 	featureReuseRunningBackupRestoreJob bool
 	featureCompressedSnapshot           bool
-	featureSkipRollupBinlogs            bool
+	FeatureSkipRollupBinlogs            bool
 	featureTxnInsert                    bool
 	FeatureFilterStorageMedium          bool
 	featureRestoreReplaceDiffSchema     bool
@@ -81,7 +81,7 @@ var (
 )
 
 func init() {
-	flag.BoolVar(&featureSchemaChangePartialSync, "feature_schema_change_partial_sync", true,
+	flag.BoolVar(&FeatureSchemaChangePartialSync, "feature_schema_change_partial_sync", true,
 		"use partial sync when working with schema change")
 
 	// The default value is false, since clean tables will erase views unexpectedly.
@@ -99,7 +99,7 @@ func init() {
 		"reuse the running backup/restore issued by the job self")
 	flag.BoolVar(&featureCompressedSnapshot, "feature_compressed_snapshot", true,
 		"compress the snapshot job info and meta")
-	flag.BoolVar(&featureSkipRollupBinlogs, "feature_skip_rollup_binlogs", false,
+	flag.BoolVar(&FeatureSkipRollupBinlogs, "feature_skip_rollup_binlogs", false,
 		"skip the rollup related binlogs")
 	flag.BoolVar(&featureTxnInsert, "feature_txn_insert", false,
 		"enable txn insert support")
@@ -2340,21 +2340,21 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	if featureSkipRollupBinlogs && alterJob.Type == record.ALTER_JOB_ROLLUP {
+	if FeatureSkipRollupBinlogs && alterJob.Type == record.ALTER_JOB_ROLLUP {
 		log.Warnf("skip rollup alter job: %s", alterJob)
 		return nil
 	}
 
 	if alterJob.Type == record.ALTER_JOB_SCHEMA_CHANGE {
-		return j.handleSchemaChange(alterJob)
+		return j.HandleSchemaChange(alterJob)
 	} else if alterJob.Type == record.ALTER_JOB_ROLLUP {
-		return j.handleAlterRollup(alterJob)
+		return j.HandleAlterRollup(alterJob)
 	} else {
 		return xerror.Errorf(xerror.Normal, "unsupported alter job type: %s", alterJob.Type)
 	}
 }
 
-func (j *Job) handleAlterRollup(alterJob *record.AlterJobV2) error {
+func (j *Job) HandleAlterRollup(alterJob *record.AlterJobV2) error {
 	if !alterJob.IsFinished() {
 		switch alterJob.JobState {
 		case record.ALTER_JOB_STATE_PENDING:
@@ -2381,7 +2381,7 @@ func (j *Job) handleAlterRollup(alterJob *record.AlterJobV2) error {
 	return j.NewPartialSnapshot(alterJob.TableId, alterJob.TableName, nil, replace, isView)
 }
 
-func (j *Job) handleSchemaChange(alterJob *record.AlterJobV2) error {
+func (j *Job) HandleSchemaChange(alterJob *record.AlterJobV2) error {
 	if !alterJob.IsFinished() {
 		switch alterJob.JobState {
 		case record.ALTER_JOB_STATE_PENDING:
@@ -2412,7 +2412,7 @@ func (j *Job) handleSchemaChange(alterJob *record.AlterJobV2) error {
 		destTableName = alterJob.TableName
 	}
 
-	if featureSchemaChangePartialSync && alterJob.Type == record.ALTER_JOB_SCHEMA_CHANGE {
+	if FeatureSchemaChangePartialSync && alterJob.Type == record.ALTER_JOB_SCHEMA_CHANGE {
 		// Once partial snapshot finished, the shadow indexes will be convert to normal indexes.
 		for shadowIndexId := range alterJob.ShadowIndexes {
 			delete(j.progress.ShadowIndexes, shadowIndexId)
