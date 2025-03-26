@@ -1443,7 +1443,7 @@ func (j *Job) IsMaterializedViewTable(srcTableId int64) (bool, error) {
 	return false, nil
 }
 
-func (j *Job) getDestTableIdBySrc(srcTableId int64) (int64, error) {
+func (j *Job) GetDestTableIdBySrc(srcTableId int64) (int64, error) {
 	if j.SyncType == TableSync {
 		return j.Dest.TableId, nil
 	}
@@ -1478,7 +1478,7 @@ func (j *Job) GetDestNameBySrcId(srcTableId int64) (string, error) {
 		return j.Dest.Table, nil
 	}
 
-	destTableId, err := j.getDestTableIdBySrc(srcTableId)
+	destTableId, err := j.GetDestTableIdBySrc(srcTableId)
 	if err != nil {
 		return "", err
 	}
@@ -1496,7 +1496,7 @@ func (j *Job) GetDestNameBySrcId(srcTableId int64) (string, error) {
 	return name, nil
 }
 
-func (j *Job) isBinlogCommitted(tableId int64, binlogCommitSeq int64) bool {
+func (j *Job) IsBinlogCommitted(tableId int64, binlogCommitSeq int64) bool {
 	if _, ok := j.Extra.AppliedBinlogs[binlogCommitSeq]; ok {
 		return true
 	}
@@ -1803,7 +1803,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 				} else if isAsyncMv {
 					// ignore the upsert of materialized view table.
 					continue
-				} else if destTableId, err := j.getDestTableIdBySrc(tableRecord.Id); err != nil {
+				} else if destTableId, err := j.GetDestTableIdBySrc(tableRecord.Id); err != nil {
 					return err
 				} else {
 					savedRecords = append(savedRecords, tableRecord)
@@ -2043,7 +2043,7 @@ func (j *Job) handleAddPartition(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	if j.isBinlogCommitted(addPartition.TableId, binlog.GetCommitSeq()) {
+	if j.IsBinlogCommitted(addPartition.TableId, binlog.GetCommitSeq()) {
 		return nil
 	}
 
@@ -2082,7 +2082,7 @@ func (j *Job) handleDropPartition(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
-	if j.isBinlogCommitted(dropPartition.TableId, binlog.GetCommitSeq()) {
+	if j.IsBinlogCommitted(dropPartition.TableId, binlog.GetCommitSeq()) {
 		return nil
 	}
 
@@ -2115,7 +2115,7 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	if j.isBinlogCommitted(createTable.TableId, binlog.GetCommitSeq()) {
+	if j.IsBinlogCommitted(createTable.TableId, binlog.GetCommitSeq()) {
 		return nil
 	}
 
@@ -2246,7 +2246,7 @@ func (j *Job) handleDropTable(binlog *festruct.TBinlog) error {
 		}
 	}
 
-	if j.isBinlogCommitted(dropTable.TableId, binlog.GetCommitSeq()) {
+	if j.IsBinlogCommitted(dropTable.TableId, binlog.GetCommitSeq()) {
 		// So that the sync state would convert to DBIncrementalSync,
 		// see handlePartialSyncTableNotFound for details.
 		return nil
@@ -2307,7 +2307,7 @@ func (j *Job) handleModifyProperty(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	if j.isBinlogCommitted(modifyProperty.TableId, binlog.GetCommitSeq()) {
+	if j.IsBinlogCommitted(modifyProperty.TableId, binlog.GetCommitSeq()) {
 		return nil
 	}
 
@@ -2329,7 +2329,7 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	if j.isBinlogCommitted(alterJob.TableId, binlog.GetCommitSeq()) {
+	if j.IsBinlogCommitted(alterJob.TableId, binlog.GetCommitSeq()) {
 		return nil
 	}
 
@@ -2468,7 +2468,7 @@ func (j *Job) handleLightningSchemaChange(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	if j.isBinlogCommitted(lightningSchemaChange.TableId, binlog.GetCommitSeq()) {
+	if j.IsBinlogCommitted(lightningSchemaChange.TableId, binlog.GetCommitSeq()) {
 		return nil
 	}
 
@@ -2491,7 +2491,7 @@ func (j *Job) handleRenameColumn(binlog *festruct.TBinlog) error {
 	}
 
 	commitSeq := binlog.GetCommitSeq()
-	if j.isBinlogCommitted(renameColumn.TableId, commitSeq) {
+	if j.IsBinlogCommitted(renameColumn.TableId, commitSeq) {
 		return nil
 	}
 
@@ -2515,7 +2515,7 @@ func (j *Job) handleModifyComment(binlog *festruct.TBinlog) error {
 	}
 
 	commitSeq := binlog.GetCommitSeq()
-	if j.isBinlogCommitted(modifyComment.TableId, commitSeq) {
+	if j.IsBinlogCommitted(modifyComment.TableId, commitSeq) {
 		return nil
 	}
 
@@ -2537,7 +2537,7 @@ func (j *Job) handleTruncateTable(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	if j.isBinlogCommitted(truncateTable.TableId, binlog.GetCommitSeq()) {
+	if j.IsBinlogCommitted(truncateTable.TableId, binlog.GetCommitSeq()) {
 		return nil
 	}
 
@@ -2570,7 +2570,7 @@ func (j *Job) handleReplacePartitions(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	if j.isBinlogCommitted(replacePartition.TableId, binlog.GetCommitSeq()) {
+	if j.IsBinlogCommitted(replacePartition.TableId, binlog.GetCommitSeq()) {
 		return nil
 	}
 
@@ -2631,7 +2631,7 @@ func (j *Job) handleRenameTable(binlog *festruct.TBinlog) error {
 	}
 
 	commitSeq := binlog.GetCommitSeq()
-	if j.isBinlogCommitted(renameTable.TableId, commitSeq) {
+	if j.IsBinlogCommitted(renameTable.TableId, commitSeq) {
 		return nil
 	}
 
@@ -2757,7 +2757,7 @@ func (j *Job) handleModifyTableAddOrDropInvertedIndices(binlog *festruct.TBinlog
 	}
 
 	commitSeq := binlog.GetCommitSeq()
-	if j.isBinlogCommitted(record.TableId, commitSeq) {
+	if j.IsBinlogCommitted(record.TableId, commitSeq) {
 		return nil
 	}
 
@@ -2799,7 +2799,7 @@ func (j *Job) handleIndexChangeJob(binlog *festruct.TBinlog) error {
 	}
 
 	commitSeq := binlog.GetCommitSeq()
-	if j.isBinlogCommitted(indexChangeJob.TableId, commitSeq) {
+	if j.IsBinlogCommitted(indexChangeJob.TableId, commitSeq) {
 		return nil
 	}
 
@@ -2832,7 +2832,7 @@ func (j *Job) handleAlterViewDef(binlog *festruct.TBinlog) error {
 	}
 
 	commitSeq := binlog.GetCommitSeq()
-	if j.isBinlogCommitted(alterView.TableId, commitSeq) {
+	if j.IsBinlogCommitted(alterView.TableId, commitSeq) {
 		return nil
 	}
 
@@ -2855,7 +2855,7 @@ func (j *Job) handleRenamePartition(binlog *festruct.TBinlog) error {
 	}
 
 	commitSeq := binlog.GetCommitSeq()
-	if j.isBinlogCommitted(renamePartition.TableId, commitSeq) {
+	if j.IsBinlogCommitted(renamePartition.TableId, commitSeq) {
 		return nil
 	}
 
@@ -2892,7 +2892,7 @@ func (j *Job) handleRenameRollup(binlog *festruct.TBinlog) error {
 	}
 
 	commitSeq := binlog.GetCommitSeq()
-	if j.isBinlogCommitted(renameRollup.TableId, commitSeq) {
+	if j.IsBinlogCommitted(renameRollup.TableId, commitSeq) {
 		return nil
 	}
 
@@ -2930,7 +2930,7 @@ func (j *Job) handleDropRollup(binlog *festruct.TBinlog, allowNotExists bool) er
 	}
 
 	commitSeq := binlog.GetCommitSeq()
-	if j.isBinlogCommitted(dropRollup.TableId, commitSeq) {
+	if j.IsBinlogCommitted(dropRollup.TableId, commitSeq) {
 		return nil
 	}
 
@@ -2963,7 +2963,7 @@ func (j *Job) handleRecoverInfo(binlog *festruct.TBinlog) error {
 	}
 
 	commitSeq := binlog.GetCommitSeq()
-	if j.isBinlogCommitted(recoverInfo.TableId, commitSeq) {
+	if j.IsBinlogCommitted(recoverInfo.TableId, commitSeq) {
 		return nil
 	}
 
@@ -3264,7 +3264,7 @@ func (j *Job) isRenameRollupCommitted(record *record.RenameRollup) (bool, error)
 }
 
 func (j *Job) isRenamePartitionCommitted(record *record.RenamePartition) (bool, error) {
-	destTableId, err := j.getDestTableIdBySrc(record.TableId)
+	destTableId, err := j.GetDestTableIdBySrc(record.TableId)
 	if err != nil {
 		return false, err
 	}
