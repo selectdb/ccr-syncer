@@ -24,6 +24,7 @@ type Backend struct {
 	BePort   uint16
 	HttpPort uint16
 	BrpcPort uint16
+	Alive    bool
 }
 
 // Backend Stringer

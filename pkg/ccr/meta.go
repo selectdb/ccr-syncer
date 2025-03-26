@@ -532,7 +532,11 @@ func (m *Meta) UpdateBackends() error {
 			return xerror.Wrapf(err, xerror.Normal, query)
 		}
 		backend.BrpcPort = uint16(port)
-
+		alive, err := rowParser.GetBool("Alive")
+		if err != nil {
+			return xerror.Wrapf(err, xerror.Normal, query)
+		}
+		backend.Alive = alive
 		log.Debugf("backend: %v", &backend)
 		backends = append(backends, &backend)
 	}
@@ -1212,6 +1216,10 @@ func (m *Meta) checkBEsBinlogFeature() error {
 
 	var disabledBinlogBEs []string
 	for _, backend := range backends {
+		if !backend.Alive {
+			log.Warnf("backend %v:%v is not alive, skip check", backend.Host, backend.HttpPort)
+			continue
+		}
 		url := fmt.Sprintf("http://%v:%v/api/show_config?conf_item=enable_feature_binlog",
 			backend.Host, backend.HttpPort)
 		resp, err := http.Get(url)
