@@ -45,31 +45,41 @@ type IndexChangeJob struct {
 	Indexes        []Index `json:"alterInvertedIndexes"`
 }
 
+func (indexChangeJob *IndexChangeJob) Deserialize(data string) error {
+	if err := json.Unmarshal([]byte(data), &indexChangeJob); err != nil {
+		return xerror.Wrap(err, xerror.Normal, "unmarshal index change job error")
+	}
+
+	if indexChangeJob.TableId == 0 {
+		return xerror.Errorf(xerror.Normal, "index change job table id not found")
+	}
+
+	if indexChangeJob.PartitionId == 0 {
+		return xerror.Errorf(xerror.Normal, "index change job partition id not found")
+	}
+
+	if indexChangeJob.JobState == "" {
+		return xerror.Errorf(xerror.Normal, "index change job state not found")
+	}
+
+	if len(indexChangeJob.Indexes) == 0 {
+		return xerror.Errorf(xerror.Normal, "index change job alter inverted indexes is empty")
+	}
+
+	if !indexChangeJob.IsDropOp && len(indexChangeJob.Indexes) != 1 {
+		return xerror.Errorf(xerror.Normal, "index change job alter inverted indexes length is not 1")
+	}
+	return nil
+}
+
+func (indexChangeJob *IndexChangeJob) GetTableId() int64 {
+	return indexChangeJob.TableId
+}
+
 func NewIndexChangeJobFromJson(data string) (*IndexChangeJob, error) {
-	m := &IndexChangeJob{}
-	if err := json.Unmarshal([]byte(data), m); err != nil {
-		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal index change job error")
+	var indexChangeJob IndexChangeJob
+	if err := indexChangeJob.Deserialize(data); err != nil {
+		return nil, err
 	}
-
-	if m.TableId == 0 {
-		return nil, xerror.Errorf(xerror.Normal, "index change job table id not found")
-	}
-
-	if m.PartitionId == 0 {
-		return nil, xerror.Errorf(xerror.Normal, "index change job partition id not found")
-	}
-
-	if m.JobState == "" {
-		return nil, xerror.Errorf(xerror.Normal, "index change job state not found")
-	}
-
-	if len(m.Indexes) == 0 {
-		return nil, xerror.Errorf(xerror.Normal, "index change job alter inverted indexes is empty")
-	}
-
-	if !m.IsDropOp && len(m.Indexes) != 1 {
-		return nil, xerror.Errorf(xerror.Normal, "index change job alter inverted indexes length is not 1")
-	}
-
-	return m, nil
+	return &indexChangeJob, nil
 }
