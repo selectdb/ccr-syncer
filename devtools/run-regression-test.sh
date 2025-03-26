@@ -136,16 +136,22 @@ fi
 # Copy test file to target directory
 cp "$test_file" "$TARGET_DIR"
 
-# Copy output file to output directory if exists
-if [ "$file_count" -ne 0  ]; then
-  cp "$output_file" "$OUTPUT_DIR"
-fi
-
 # Check if copy was successful
 if [ $? -ne 0 ]; then
   echo "ERROR: Failed to copy test file. Please check path and permissions."
   rm -rf "$TARGET_DIR"
   exit 1
+fi
+
+# Copy output file to output directory if exists
+if [ "$file_count" -ne 0  ]; then
+  cp "$output_file" "$OUTPUT_DIR"
+  # Check if copy was successful
+  if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to copy output file. Please check path and permissions."
+    rm -rf "$OUTPUT_DIR"
+    exit 1
+  fi
 fi
 
 # Run regression-test.sh script directly with the suite name
@@ -155,13 +161,13 @@ sh "$DORIS_HOME/run-regression-test.sh" --run "$suite_name"
 if [ $? -ne 0 ]; then
   echo "ERROR: Failed to run regression-test.sh script."
   # If run failed, delete target directory
-  rm -rf "$TARGET_DIR"
   rm -rf "$OUTPUT_DIR"
+  rm -rf "$TARGET_DIR"
   exit 1
 fi
 
-rm -rf "$TARGET_DIR"
 rm -rf "$OUTPUT_DIR"
+rm -rf "$TARGET_DIR"
 
 if [ $? -ne 0 ]; then
   echo "WARNING: Failed to delete directory $TARGET_DIR. Please check permissions."
