@@ -7,13 +7,11 @@ print_help() {
   echo "  -d, --doris-home DIR  Set Doris home directory (default: $DORIS_HOME)"
   echo "  -s, --source-dir DIR  Set test files source directory (default: $TEST_FILES_DIR)"
   echo "  -t, --target-dir DIR  Set target directory (default: $TARGET_DIR)"
-  # echo "  -o, --output-dir DIR  Set test output file directory (default: $OUTPUT_DIR)"
   echo ""
   echo "Environment variables:"
   echo "  DORIS_HOME            Set Doris home directory"
   echo "  TEST_FILES_DIR        Set test files source directory"
   echo "  TARGET_DIR            Set target directory"
-  # echo "  OUTPUT_DIR            Set output file directory"
   echo ""
   echo "Example:"
   echo "  $0 test_suite          # Will look for test_suite.groovy in any subdirectory"
@@ -40,10 +38,6 @@ while [[ $# -gt 0 ]]; do
       TARGET_DIR="$2"
       shift 2
       ;;
-    # -o|--output-dir)
-    #   OUTPUT_DIR="$2"
-    #   shift 2
-    #   ;;
     -*)
       echo "Unknown option: $1"
       print_help
