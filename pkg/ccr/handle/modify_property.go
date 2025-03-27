@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	ccr.RegisterJobHandle[*record.ModifyTableProperty](festruct.TBinlogType_MODIFY_PARTITIONS, &ModifyTablePropertyHandle{})
+	ccr.RegisterJobHandle[*record.ModifyTableProperty](festruct.TBinlogType_MODIFY_TABLE_PROPERTY, &ModifyTablePropertyHandle{})
 }
 
 type ModifyTablePropertyHandle struct {
