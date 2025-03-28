@@ -18,6 +18,8 @@ package ccr
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -540,9 +542,11 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64,
 		destPartitionId: destPartitionId,
 		deltaRows:       deltaRows,
 	}
+	droppedIndexes := []int64{}
 	for _, indexId := range indexIds {
 		if j.srcMeta.IsIndexDropped(indexId) {
 			log.Infof("txn %d ingest binlog: skip the dropped index %d", j.txnId, indexId)
+			droppedIndexes = append(droppedIndexes, indexId)
 			continue
 		}
 		if featureFilterShadowIndexesUpsert {
@@ -557,6 +561,18 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64,
 		prepareIndexArg.srcIndexMeta = srcIndexMeta
 		prepareIndexArg.destIndexMeta = destIndexMeta
 		j.prepareIndex(&prepareIndexArg)
+	}
+
+	if len(droppedIndexes) > 0 && len(droppedIndexes) != len(indexIds) {
+		var sb strings.Builder
+		for indexId, commitSeq := range j.srcMeta.GetDroppedIndexMap() {
+			sb.WriteString(fmt.Sprintf("%d=%d", indexId, commitSeq))
+			if sb.Len() != 0 {
+				sb.WriteString(", ")
+			}
+		}
+		log.Warnf("txn %d ingest binlog: not all indexes are dropped, skip indexes: %v, total indexes: %v, src dropped indexes: [%s]",
+			j.txnId, droppedIndexes, indexIds, sb.String())
 	}
 }
 
