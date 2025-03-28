@@ -208,8 +208,8 @@ func TestNormalizeCreateTableSql(t *testing.T) {
 		},
 		// some part contain internal, but some not
 		{
-			origin: "CREATE VIEW `target`.`view` AS SELECT `k1` AS `k1`, `v1` AS `v1` FROM `source`.`table` GROUP BY `internal`.`source`.`table`;",
-			expect: "CREATE VIEW `target`.`view` AS SELECT `k1` AS `k1`, `v1` AS `v1` FROM `internal`.`target`.`table` GROUP BY `internal`.`target`.`table`;",
+			origin: "CREATE VIEW `target`.`view` AS SELECT `k1` AS `k1`, `v1` AS `v1` FROM `source`.`table` GROUP BY `internal`.`source`.`table`.`k1`, `source`.`table`.`v1`;",
+			expect: "CREATE VIEW `target`.`view` AS SELECT `k1` AS `k1`, `v1` AS `v1` FROM `internal`.`target`.`table` GROUP BY `internal`.`target`.`table`.`k1`, `internal`.`target`.`table`.`v1`;",
 		},
 		// nothing
 		{
