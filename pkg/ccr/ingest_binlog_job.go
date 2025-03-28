@@ -739,8 +739,8 @@ func (j *IngestBinlogJob) prepareMeta() {
 	j.destMeta = destMeta
 }
 
-// Apply the drop rollup binlog to the dest cluster, to avoid blocking the ingest binlog.
-func (j *IngestBinlogJob) applyDropRollupBinlog() {
+// Apply the dropped binlogs to the dest cluster, to avoid blocking the ingest binlog.
+func (j *IngestBinlogJob) applyDroppedBinlogs() {
 	droppedIndexMap := j.srcMeta.GetDroppedIndexMap()
 	for _, commitSeq := range droppedIndexMap {
 		if commitSeq < j.commitSeq {
@@ -764,6 +764,17 @@ func (j *IngestBinlogJob) applyDropRollupBinlog() {
 			if err != nil {
 				j.setError(err)
 				return
+			}
+
+			anyTables := false
+			for _, tableRecord := range j.tableRecords {
+				if alterJobRecord.TableId == tableRecord.Id {
+					anyTables = true
+					break
+				}
+			}
+			if !anyTables {
+				continue
 			}
 
 			j.ccrJob.Extra.PartialSnapshotParams = &PartialSnapshotParams{
@@ -801,7 +812,7 @@ func (j *IngestBinlogJob) applyDropRollupBinlog() {
 func (j *IngestBinlogJob) Run() {
 	steps := []func(){
 		j.prepareMeta,
-		j.applyDropRollupBinlog,
+		j.applyDroppedBinlogs,
 		j.prepareBackendMap,
 		j.prepareTabletIngestJobs,
 		j.runTabletIngestJobs,
