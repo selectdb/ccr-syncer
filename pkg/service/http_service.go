@@ -761,7 +761,8 @@ func (s *HttpService) forceFullsyncHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := s.jobManager.SkipBinlog(request.Name, 0, ccr.SkipByFullSync); err != nil {
+	params := ccr.SkipBinlogParams{SkipBy: ccr.SkipByFullSync}
+	if err := s.jobManager.SkipBinlog(request.Name, params); err != nil {
 		log.Warnf("force fullsync failed: %+v", err)
 		result = newErrorResult(err.Error())
 	} else {
@@ -850,6 +851,8 @@ func (s *HttpService) skipBinlogHandler(w http.ResponseWriter, r *http.Request) 
 		CcrCommonRequest
 		SkipCommitSeq int64  `json:"skip_commit_seq"`
 		SkipBy        string `json:"skip_by"`
+		SkipTable     string `json:"skip_table"`
+		SkipTableId   int64  `json:"skip_table_id"`
 	}
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
@@ -864,28 +867,19 @@ func (s *HttpService) skipBinlogHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	skipBy := strings.ToLower(request.SkipBy)
-	if skipBy != ccr.SkipBySilence && skipBy != ccr.SkipByFullSync {
-		log.Warnf("skip binlog failed: unknown skip way %s", request.SkipBy)
-		result = newErrorResult(fmt.Sprintf("unknown skip way: %s", request.SkipBy))
-		return
-	}
-
-	if request.SkipCommitSeq <= 0 && skipBy != "fullsync" {
-		log.Warnf("skip binlog failed: commit seq is not specified for %s, commit seq: %d",
-			request.SkipBy, request.SkipCommitSeq)
-		result = newErrorResult(fmt.Sprintf("commit seq is not specified for %s, commit seq: %d",
-			request.SkipBy, request.SkipCommitSeq))
-		return
-	}
-
 	if s.redirect(request.Name, w, r) {
 		return
 	}
 
-	log.Infof("skip binlog with %s, commit seq %d, job %s",
-		request.SkipBy, request.SkipCommitSeq, request.Name)
-	if err := s.jobManager.SkipBinlog(request.Name, request.SkipCommitSeq, request.SkipBy); err != nil {
+	log.Infof("skip binlog with %s, commit seq %d, skip table %s, skip table id %d, job %s",
+		request.SkipBy, request.SkipCommitSeq, request.SkipTable, request.SkipTableId, request.Name)
+	params := ccr.SkipBinlogParams{
+		SkipBy:        strings.ToLower(request.SkipBy),
+		SkipCommitSeq: request.SkipCommitSeq,
+		SkipTable:     request.SkipTable,
+		SkipTableId:   request.SkipTableId,
+	}
+	if err := s.jobManager.SkipBinlog(request.Name, params); err != nil {
 		log.Warnf("skip binlog failed: %+v", err)
 		result = newErrorResult(err.Error())
 	} else {

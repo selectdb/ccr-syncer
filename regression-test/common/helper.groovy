@@ -664,12 +664,42 @@ class Helper {
         addFailpoint(failpoint, null, tableName)
     }
 
-    void forceSkipBinlogBy(String skipBy, Integer commitSeq = 0, String tableName = "") {
+    void forceSkipBinlogBy(String skipBy, Long commitSeq = 0, String tableName = "") {
         def gson = new com.google.gson.Gson()
         def request_body = [
             name: get_ccr_job_name(tableName),
             skip_commit_seq: commitSeq,
             skip_by: skipBy,
+        ]
+        def skip_binlog_uri = { check_func ->
+            suite.httpTest {
+                uri "/job_skip_binlog"
+                endpoint syncerAddress
+                body gson.toJson(request_body)
+                op "post"
+                check check_func
+            }
+        }
+
+        skip_binlog_uri.call() { code, body ->
+            if (!"${code}".toString().equals("200")) {
+                throw "request failed, code: ${code}, body: ${body}"
+            }
+            def jsonSlurper = new groovy.json.JsonSlurper()
+            def object = jsonSlurper.parseText "${body}"
+            if (!object.success) {
+                throw "request failed, error msg: ${object.error_msg}"
+            }
+        }
+    }
+
+    void forceSkipBinlogByPartialSync(String table, Long tableId, String tableName = "") {
+        def gson = new com.google.gson.Gson()
+        def request_body = [
+            name: get_ccr_job_name(tableName),
+            skip_by: "partialsync",
+            skip_table: table,
+            skip_table_id: tableId,
         ]
         def skip_binlog_uri = { check_func ->
             suite.httpTest {
