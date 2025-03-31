@@ -99,7 +99,7 @@ suite('test_tsad_rollup_drop_column') {
     helper.ccrJobResume(tableName)
 
     assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${aliasTableName} ALL", hasRollupAdded, 30, 'target'))
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", 4, 30))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${aliasTableName}", 4, 30))
     assertTrue(helper.check_table_describe_times(tableName, 30))
 }
 
