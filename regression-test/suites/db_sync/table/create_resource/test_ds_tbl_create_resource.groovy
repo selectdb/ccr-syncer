@@ -98,7 +98,7 @@ suite("test_ds_tbl_create_resource") {
                        )  where k1 > 100  order by k3,k2,k1;
         """
 
-    assertTrue(helper.checkShowTimesOf("SHOW VIEWS WHERE Tables_in_${dbName} = \"${viewName}\"", exist, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf("SHOW VIEWS LIKE \"${viewName}\"", exist, 60, "sql"))
 
-    assertTrue(helper.checkShowTimesOf("SHOW VIEWS WHERE Tables_in_TEST_${dbName} = \"${viewName}\"", notExist, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW VIEWS LIKE \"${viewName}\"", notExist, 60, "target"))
 }

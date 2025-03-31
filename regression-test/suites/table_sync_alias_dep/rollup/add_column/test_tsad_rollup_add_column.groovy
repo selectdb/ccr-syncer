@@ -104,7 +104,7 @@ suite('test_tsad_rollup_add_column') {
                                 SHOW ALTER TABLE COLUMN
                                 FROM TEST_${context.dbName}
                                 WHERE TableName = "${aliasTableName}"
-                                    AND IndexName = "rollup_${aliasTableName}_full"
+                                    AND IndexName = "rollup_${tableName}_full"
                                     AND State = "FINISHED"
                                 """,
                                 has_count(1), 30, "target"))

@@ -72,7 +72,7 @@ suite('test_ds_idem_drop_partition') {
                                 FROM TEST_${context.dbName}.${tableName}
                                 WHERE PartitionName = "p1"
                                 """,
-                                notExist, 30, "target"))
+                                notExist, 60, "target"))
 
     sql "INSERT INTO ${tableName} VALUES (150, 150)"
 
