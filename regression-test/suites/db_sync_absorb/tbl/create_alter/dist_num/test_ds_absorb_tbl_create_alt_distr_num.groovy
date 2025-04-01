@@ -14,7 +14,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_ds_absorb_tbl_create_alt_distr_type") {
+suite("test_ds_absorb_tbl_create_alt_distr_num") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -40,11 +40,11 @@ suite("test_ds_absorb_tbl_create_alt_distr_type") {
     }
 
     def existBucketNew = { res -> Boolean
-        return res[0][1].contains("DISTRIBUTED BY RANDOM BUCKETS 20")
+        return res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
     }
 
     def notExistBucketNew = { res -> Boolean
-        return res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
+        return !res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
     }
 
     sql "DROP TABLE IF EXISTS ${dbName}.${tableName}_1"
@@ -57,13 +57,13 @@ suite("test_ds_absorb_tbl_create_alt_distr_type") {
             `id` INT
         )
         ENGINE=OLAP
-        DUPLICATE KEY(`test`, `id`)
+        UNIQUE KEY(`test`, `id`)
         PARTITION BY RANGE(`id`)
         (
             PARTITION p10 values less than (10),
             PARTITION p100 values less than (100)
         )
-        DISTRIBUTED BY HASH(id) BUCKETS 20
+        DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true"
@@ -119,8 +119,8 @@ suite("test_ds_absorb_tbl_create_alt_distr_type") {
             "binlog.enable" = "true"
         )
     """
-    sql """ 
-        ALTER TABLE ${tableName}_1 SET ("distribution_type" = "random")
+    sql """
+        ALTER TABLE ${tableName}_1 MODIFY DISTRIBUTION DISTRIBUTED BY HASH(id) BUCKETS 20;
         """
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_2" """, exist, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}_2" """, notExist, 60, "target"))
