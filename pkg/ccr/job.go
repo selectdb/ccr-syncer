@@ -1742,6 +1742,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		log.Debugf("txn %d committed, commitSeq: %d, cleanup", inMemoryData.TxnId, j.progress.CommitSeq)
 		commitSeq := j.progress.CommitSeq
 		destTableIds := inMemoryData.DestTableIds
+		j.progress.PrevTxnId = inMemoryData.TxnId
 		if j.SyncType == DBSync && len(j.progress.TableCommitSeqMap) > 0 {
 			for _, tableId := range destTableIds {
 				tableCommitSeq, ok := j.progress.TableCommitSeqMap[tableId]
@@ -3446,6 +3447,13 @@ func (j *Job) handleNonBarrierBinlog(binlog *festruct.TBinlog) error {
 
 	if binlogType == festruct.TBinlogType_UPSERT {
 		return j.handleUpsertWithRetry(binlog)
+	}
+
+	if prevTxnId := j.progress.PrevTxnId; prevTxnId != -1 {
+		dest := &j.Dest
+		log.Infof("wait prev txn id: %d published", prevTxnId)
+		dest.WaitTransactionDone(prevTxnId)
+		j.progress.PrevTxnId = -1
 	}
 
 	// handle ddl binlog
