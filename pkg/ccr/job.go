@@ -52,8 +52,9 @@ import (
 const (
 	SyncDuration = time.Second * 3
 
-	SkipBySilence  = "silence"
-	SkipByFullSync = "fullsync"
+	SkipBySilence     = "silence"
+	SkipByFullSync    = "fullsync"
+	SkipByPartialSync = "partialsync"
 
 	LockLastBinlogCommitSeq = -1
 )
@@ -169,10 +170,12 @@ type JobExtra struct {
 	allowTableExists bool `json:"-"` // Only for FirstRun(), don't need to persist.
 
 	// Skip a specified binlog or binlogs, don't need to persist.
-	// if the SkipCommitSeq is not specified, trigger a fullsync unconditionally.
+	// See Job.SkipBinlog for more details.
 	SkipBinlog    bool   `json:"skip_binlog,omitempty"`
 	SkipCommitSeq int64  `json:"skip_commit_seq,omitempty"`
 	SkipBy        string `json:"skip_by,omitempty"`
+	SkipTable     string `json:"skip_table,omitempty"`
+	SkipTableId   int64  `json:"skip_table_id,omitempty"`
 
 	// The cached binlogs used for missing binlogs,don't need to persist.
 	CachedBinlogs map[int64]*festruct.TBinlog `json:"-"`
@@ -3566,6 +3569,19 @@ func (j *Job) incrementalSync() error {
 		info := fmt.Sprintf("the user required skipping the binlog, commit seq %d", j.progress.CommitSeq)
 		log.Warnf("force full sync, because %s", info)
 		return j.NewSnapshot(j.progress.CommitSeq, info)
+	} else if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipByPartialSync {
+		log.Warnf("force partial sync, because the user required skipping the binlog, commit seq %d, table id %d, table %s",
+			j.progress.CommitSeq, j.Extra.SkipTableId, j.Extra.SkipTable)
+		if exists, err := j.IsSourceTableExists(j.Extra.SkipTableId, j.Extra.SkipTable); err != nil {
+			return err
+		} else if !exists {
+			log.Warnf("the user required table %s (id %d) is not exists in source, ignore this skipping requirement",
+				j.Extra.SkipTable, j.Extra.SkipTableId)
+			j.Extra.SkipBinlog = false
+		} else {
+			replace, isView := true, false
+			return j.NewPartialSnapshot(j.Extra.SkipTableId, j.Extra.SkipTable, nil, replace, isView)
+		}
 	}
 
 	// Step 1: get binlog
@@ -3704,14 +3720,19 @@ func (j *Job) sync() error {
 				// The fullsync has been triggered.
 				committed = true
 			}
+		case SkipByPartialSync:
+			if (j.progress.SyncState == DBPartialSync || j.progress.SyncState == TablePartialSync) &&
+				j.progress.PartialSyncData.Table == j.Extra.SkipTable &&
+				j.progress.PartialSyncData.TableId == j.Extra.SkipTableId &&
+				j.progress.PartialSyncData.Partitions == nil {
+				// The partial sync has been triggered.
+				committed = true
+			}
 		}
 		if committed {
 			j.Extra.SkipBinlog = false
-			log.Infof("reset skip binlog, skip by: %s, skip commit seq: %d, prev commit seq: %d",
-				j.Extra.SkipBy, j.Extra.SkipCommitSeq, j.progress.PrevCommitSeq)
-			if err := j.persistJob(); err != nil {
-				return err
-			}
+			log.Infof("reset skip binlog, skip by: %s, skip commit seq: %d, prev commit seq: %d, skip table: %s, skip table id: %d",
+				j.Extra.SkipBy, j.Extra.SkipCommitSeq, j.progress.PrevCommitSeq, j.Extra.SkipTable, j.Extra.SkipTableId)
 		}
 	}
 
@@ -4234,21 +4255,42 @@ func (j *Job) UpdateHostMapping(srcHostMaps, destHostMaps map[string]string) err
 	return nil
 }
 
-func (j *Job) SkipBinlog(skipCommitSeq int64, skipBy string) error {
+type SkipBinlogParams struct {
+	// The skip method, supports: ["fullsync", "silence", "partialsync"]
+	SkipBy string
+	// The commit seq to skip
+	SkipCommitSeq int64
+	// The skip table, required for partial sync
+	SkipTable string
+	// The skip table id, required for partial sync
+	SkipTableId int64
+}
+
+func (j *Job) SkipBinlog(params SkipBinlogParams) error {
+	if params.SkipBy == SkipByPartialSync {
+		if params.SkipTable == "" || params.SkipTableId == 0 {
+			return xerror.Errorf(xerror.Normal, "invalid skip table: %s, table id: %d", params.SkipTable, params.SkipTableId)
+		}
+	} else if params.SkipBy == SkipBySilence {
+		if params.SkipCommitSeq <= 0 {
+			return xerror.Errorf(xerror.Normal, "invalid skip commit seq: %d", params.SkipCommitSeq)
+		}
+	} else if params.SkipBy != SkipByFullSync {
+		return xerror.Errorf(xerror.Normal, "invalid skip method: %s", params.SkipBy)
+	}
+
 	defer j.raiseInterruptSignal()()
 	j.lock.Lock()
 	defer j.lock.Unlock()
 
-	savedExtra := j.Extra
 	j.Extra.SkipBinlog = true
-	j.Extra.SkipCommitSeq = skipCommitSeq
-	j.Extra.SkipBy = skipBy
-	if err := j.persistJob(); err != nil {
-		j.Extra = savedExtra
-		return err
-	}
+	j.Extra.SkipCommitSeq = params.SkipCommitSeq
+	j.Extra.SkipBy = params.SkipBy
+	j.Extra.SkipTable = params.SkipTable
+	j.Extra.SkipTableId = params.SkipTableId
 
-	log.Infof("skip binlog by %s, commit seq %d, job %s", skipBy, skipCommitSeq, j.Name)
+	log.Infof("skip binlog by %s, commit seq %d, skip table %s, skip table id %d, job %s",
+		params.SkipBy, params.SkipCommitSeq, params.SkipTable, params.SkipTableId, j.Name)
 	return nil
 }
 
@@ -4360,6 +4402,25 @@ func (j *Job) lockBinlog(lockCommitSeq int64) error {
 
 	j.progress.LockedCommitSeq = lockedCommitSeq
 	return nil
+}
+
+func (j *Job) IsSourceTableExists(tableId int64, tableName string) (bool, error) {
+	if tableId == 0 || tableName == "" {
+		return false, xerror.Errorf(xerror.Normal, "table id or table name is empty")
+	}
+
+	if j.SyncType == TableSync {
+		return j.Src.TableId == tableId && j.Src.Table == tableName, nil
+	}
+
+	table, err := j.srcMeta.UpdateTable("", tableId)
+	if err != nil && xerror.IsCategory(err, xerror.Meta) { // table not found
+		return false, nil
+	} else if err != nil {
+		return false, err
+	} else {
+		return table.Name == tableName, nil
+	}
 }
 
 func (j *Job) GetJobProgress() *JobProgress {

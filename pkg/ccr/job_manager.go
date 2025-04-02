@@ -267,12 +267,12 @@ func (jm *JobManager) UpdateHostMapping(jobName string, srcHostMapping, destHost
 	}
 }
 
-func (jm *JobManager) SkipBinlog(jobName string, skipCommitSeq int64, skipBy string) error {
+func (jm *JobManager) SkipBinlog(jobName string, params SkipBinlogParams) error {
 	jm.lock.Lock()
 	defer jm.lock.Unlock()
 
 	if job, ok := jm.jobs[jobName]; ok {
-		return job.SkipBinlog(skipCommitSeq, skipBy)
+		return job.SkipBinlog(params)
 	} else {
 		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
 	}
