@@ -188,6 +188,7 @@ type JobProgress struct {
 
 	// The tables need to be replaced rather than dropped during sync.
 	TableAliases map[string]string `json:"table_aliases,omitempty"`
+	PrevTxnId    int64             `json:"prev_txn_id,omitempty"`
 
 	// The shadow indexes of the pending schema changes
 	ShadowIndexes map[int64]int64 `json:"shadow_index_map,omitempty"`
@@ -246,6 +247,7 @@ func NewJobProgress(jobName string, syncType SyncType, db storage.DB) *JobProgre
 		FullSyncStartAt:        0,
 		IncrementalSyncStartAt: 0,
 		IngestBinlogAt:         0,
+		PrevTxnId:              -1,
 	}
 }
 
