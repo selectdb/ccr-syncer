@@ -14,14 +14,18 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_ds_absorb_tbl_alt_prop_distr_type") {
+suite("test_tsa_absorb_tbl_alt_prop_distr_num") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
     def dbName = context.dbName
     def tableName = "tbl_" + helper.randomSuffix()
+    def aliasTableName = "alias_tbl_" + helper.randomSuffix()
     def test_num = 0
-    def insert_num = 10
+    def test_new_column_num = 1
+    def insert_num = 5
+
+    helper.set_alias(aliasTableName)
 
     def exist = { res -> Boolean
         return res.size() != 0
@@ -40,11 +44,11 @@ suite("test_ds_absorb_tbl_alt_prop_distr_type") {
     }
 
     def existBucketNew = { res -> Boolean
-        return res[0][1].contains("DISTRIBUTED BY RANDOM BUCKETS 20")
+        return res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
     }
 
     def notExistBucketNew = { res -> Boolean
-        return res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
+        return !res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
     }
 
     sql """
@@ -54,13 +58,13 @@ suite("test_ds_absorb_tbl_alt_prop_distr_type") {
             `id` INT
         )
         ENGINE=OLAP
-        DUPLICATE KEY(`test`, `id`)
+        UNIQUE KEY(`test`, `id`)
         PARTITION BY RANGE(`id`)
         (
             PARTITION p10 values less than (10),
             PARTITION p100 values less than (100)
         )
-        DISTRIBUTED BY HASH(id) BUCKETS 20
+        DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true"
@@ -68,12 +72,12 @@ suite("test_ds_absorb_tbl_alt_prop_distr_type") {
     """
 
     helper.enableDbBinlog()
-    helper.ccrJobDelete()
-    helper.ccrJobCreate()
+    helper.ccrJobDelete(tableName)
+    helper.ccrJobCreate(tableName)
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 180))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${aliasTableName}" """, exist, 60, "target"))
 
     // 0. Insert N data
     for (int index = 0; index < insert_num; index++) {
@@ -82,9 +86,9 @@ suite("test_ds_absorb_tbl_alt_prop_distr_type") {
             """
     }
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${aliasTableName} """, { r -> r.size() == insert_num}, 60, "target"))
     // 1. Pause ccr job
-    helper.ccrJobPause()
+    helper.ccrJobPause(tableName)
 
     // 2. Insert N data
     for (int index = insert_num; index < insert_num * 2; index++) {
@@ -95,10 +99,10 @@ suite("test_ds_absorb_tbl_alt_prop_distr_type") {
 
     // 3. Do operation & wait it finishes upstream
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", notExistBucketNew, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", notExistBucketNew, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${aliasTableName}", notExistBucketNew, 60, "target"))
 
     sql """
-        ALTER TABLE ${tableName} SET ("distribution_type" = "random")
+        ALTER TABLE ${tableName} MODIFY DISTRIBUTION DISTRIBUTED BY HASH(id) BUCKETS 20;
         """
 
     // 4. Insert N data
@@ -111,16 +115,16 @@ suite("test_ds_absorb_tbl_alt_prop_distr_type") {
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3}, 60, "sql"))
 
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", existBucketNew, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", notExistBucketNew, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${aliasTableName}", notExistBucketNew, 60, "target"))
 
     // 5. Force trigger fullsnapshot
-    helper.force_fullsync()
+    helper.force_fullsync(tableName)
 
     // 6. Resume ccr job
-    helper.ccrJobResume()
+    helper.ccrJobResume(tableName)
   
     // 7. Verify data and operation are synced downstream
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${aliasTableName} """, { r -> r.size() == insert_num * 3}, 60, "target"))
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", existBucketNew, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", existBucketNew, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${aliasTableName}", existBucketNew, 60, "target"))
 }

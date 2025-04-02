@@ -14,7 +14,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_ds_absorb_tbl_alt_prop_distr_type") {
+suite("test_ts_absorb_tbl_alt_prop_distr_num") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -40,11 +40,11 @@ suite("test_ds_absorb_tbl_alt_prop_distr_type") {
     }
 
     def existBucketNew = { res -> Boolean
-        return res[0][1].contains("DISTRIBUTED BY RANDOM BUCKETS 20")
+        return res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
     }
 
     def notExistBucketNew = { res -> Boolean
-        return res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
+        return !res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
     }
 
     sql """
@@ -54,13 +54,13 @@ suite("test_ds_absorb_tbl_alt_prop_distr_type") {
             `id` INT
         )
         ENGINE=OLAP
-        DUPLICATE KEY(`test`, `id`)
+        UNIQUE KEY(`test`, `id`)
         PARTITION BY RANGE(`id`)
         (
             PARTITION p10 values less than (10),
             PARTITION p100 values less than (100)
         )
-        DISTRIBUTED BY HASH(id) BUCKETS 20
+        DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true"
@@ -68,8 +68,8 @@ suite("test_ds_absorb_tbl_alt_prop_distr_type") {
     """
 
     helper.enableDbBinlog()
-    helper.ccrJobDelete()
-    helper.ccrJobCreate()
+    helper.ccrJobDelete(tableName)
+    helper.ccrJobCreate(tableName)
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 180))
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "sql"))
@@ -84,7 +84,7 @@ suite("test_ds_absorb_tbl_alt_prop_distr_type") {
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "sql"))
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "target"))
     // 1. Pause ccr job
-    helper.ccrJobPause()
+    helper.ccrJobPause(tableName)
 
     // 2. Insert N data
     for (int index = insert_num; index < insert_num * 2; index++) {
@@ -98,7 +98,7 @@ suite("test_ds_absorb_tbl_alt_prop_distr_type") {
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", notExistBucketNew, 60, "target"))
 
     sql """
-        ALTER TABLE ${tableName} SET ("distribution_type" = "random")
+        ALTER TABLE ${tableName} MODIFY DISTRIBUTION DISTRIBUTED BY HASH(id) BUCKETS 20;
         """
 
     // 4. Insert N data
@@ -114,10 +114,10 @@ suite("test_ds_absorb_tbl_alt_prop_distr_type") {
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", notExistBucketNew, 60, "target"))
 
     // 5. Force trigger fullsnapshot
-    helper.force_fullsync()
+    helper.force_fullsync(tableName)
 
     // 6. Resume ccr job
-    helper.ccrJobResume()
+    helper.ccrJobResume(tableName)
   
     // 7. Verify data and operation are synced downstream
     assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3}, 60, "target"))

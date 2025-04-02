@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_ds_alt_prop_distr_type") {
+suite("test_ts_alt_prop_distr_num") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -26,11 +26,11 @@ suite("test_ds_alt_prop_distr_type") {
         return res.size() != 0
     }
     def existBucketNew = { res -> Boolean
-        return res[0][1].contains("DISTRIBUTED BY RANDOM BUCKETS 20")
+        return res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
     }
 
     def notExistBucketNew = { res -> Boolean
-        return res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
+        return !res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
     }
 
     sql "DROP TABLE IF EXISTS ${dbName}.${tableName}"
@@ -45,19 +45,19 @@ suite("test_ds_alt_prop_distr_type") {
             `id` INT
         )
         ENGINE=OLAP
-        DUPLICATE KEY(`test`, `id`)
+        AGGREGATE KEY(`test`, `id`)
         PARTITION BY RANGE(`id`)
         (
         )
-        DISTRIBUTED BY HASH(id) BUCKETS 20
+        DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true"
         )
     """
 
-    helper.ccrJobDelete()
-    helper.ccrJobCreate()
+    helper.ccrJobDelete(tableName)
+    helper.ccrJobCreate(tableName)
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
 
@@ -74,7 +74,7 @@ suite("test_ds_alt_prop_distr_type") {
     logger.info("=== Test 2: alter table set property distribution ===")
 
     sql """
-        ALTER TABLE ${tableName} SET ("distribution_type" = "random")
+        ALTER TABLE ${tableName} MODIFY DISTRIBUTION DISTRIBUTED BY HASH(id) BUCKETS 20;
         """
         
 
