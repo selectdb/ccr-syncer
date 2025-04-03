@@ -184,9 +184,8 @@ func (h *tabletIngestBinlogHandler) handleReplica(srcReplica, destReplica *Repli
 	go func() {
 		defer h.wg.Done()
 
-		gls.ResetGls(gls.GoID(), map[interface{}]interface{}{})
-		gls.Set("job", j.ccrJob.Name)
-		defer gls.ResetGls(gls.GoID(), map[interface{}]interface{}{})
+		gls.ResetGls(gls.GoID(), map[any]any{"job": j.ccrJob.Name})
+		defer gls.DeleteGls(gls.GoID())
 
 		cwind.Acquire()
 		defer cwind.Release()

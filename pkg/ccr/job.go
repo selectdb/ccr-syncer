@@ -3786,7 +3786,6 @@ func (j *Job) run() {
 
 		select {
 		case <-j.stop:
-			gls.DeleteGls(gls.GoID())
 			log.Infof("job stopped, job: %s", j.Name)
 			return
 
@@ -3893,8 +3892,8 @@ func (j *Job) NewPartialSnapshot(tableId int64, table string, partitions []strin
 
 // run job
 func (j *Job) Run() error {
-	gls.ResetGls(gls.GoID(), map[interface{}]interface{}{})
-	gls.Set("job", j.Name)
+	gls.ResetGls(gls.GoID(), map[any]any{"job": j.Name})
+	defer gls.DeleteGls(gls.GoID())
 
 	// retry 3 times to check IsProgressExist
 	var isProgressExist bool
