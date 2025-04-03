@@ -34,20 +34,32 @@ type RecoverInfo struct {
 	NewPartitionName string `json:"newPartitionName"`
 }
 
-func NewRecoverInfoFromJson(data string) (*RecoverInfo, error) {
-	var recoverInfo RecoverInfo
+func (recoverInfo *RecoverInfo) Deserialize(data string) error {
 	err := json.Unmarshal([]byte(data), &recoverInfo)
 	if err != nil {
-		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal create table error")
+		return fmt.Errorf("unmarshal alter view error: %v", err)
 	}
 
 	if recoverInfo.TableId == 0 {
-		return nil, xerror.Errorf(xerror.Normal, "table id not found")
+		return xerror.Errorf(xerror.Normal, "table id not found")
 	}
 
 	// table name must exist. partition name not checked since optional.
 	if recoverInfo.TableName == "" {
-		return nil, xerror.Errorf(xerror.Normal, "Table Name can not be null")
+		return xerror.Errorf(xerror.Normal, "Table Name can not be null")
+	}
+	return nil
+}
+
+func (recoverInfo *RecoverInfo) GetTableId() int64 {
+	return recoverInfo.TableId
+}
+
+func NewRecoverInfoFromJson(data string) (*RecoverInfo, error) {
+	var recoverInfo RecoverInfo
+
+	if err := recoverInfo.Deserialize(data); err != nil {
+		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal create table error")
 	}
 	return &recoverInfo, nil
 }
