@@ -72,7 +72,7 @@ suite('test_ds_idem_recover_info') {
     """
 
     assertTrue(helper.checkSelectTimesOf("select * from ${tableName}", 3, 30))
-
+    // recover table
     sql """
         DROP TABLE ${tableName}
     """
@@ -81,9 +81,36 @@ suite('test_ds_idem_recover_info') {
     assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${tableName}\"", notExist, 60, "target"))
 
     sql """
-        ADMIN REPAIR TABLE ${tableName}
+        RECOVER TABLE ${tableName}
     """
     assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${tableName}\"", exist, 60, "sql"))
     assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${tableName}\"", exist, 60, "target"))
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", 3, 60))
+
+    sql """
+        INSERT INTO ${tableName} VALUES (150, 150), (151, 152), (153, 153)
+    """
+
+    assertTrue(helper.checkSelectTimesOf("select * from ${tableName}", 6, 30))
+    // recover partition
+    sql """
+        ALTER TABLE ${tableName} DROP PARTITION `p1`
+    """
+    assertTrue(helper.checkShowTimesOf("""
+                                SHOW PARTITIONS
+                                FROM TEST_${context.dbName}.${tableName}
+                                WHERE PartitionName = "p1"
+                                """,
+                                notExist, 60, "target"))
+
+    sql """
+        RECOVER PARTITION p1 FROM ${tableName}
+    """
+    assertTrue(helper.checkShowTimesOf("""
+                                SHOW PARTITIONS
+                                FROM TEST_${context.dbName}.${tableName}
+                                WHERE PartitionName = "p1"
+                                """,
+                                exist, 60, "target"))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", 6, 60))
 }
