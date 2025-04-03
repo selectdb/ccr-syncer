@@ -12,5 +12,5 @@ func (h *IdempotentJobHandle[T]) IsIdempotent() bool {
 }
 
 func (h *IdempotentJobHandle[T]) IsBinlogCommitted(job *ccr.Job, record T) (bool, error) {
-	return true, nil
+	return false, nil
 }

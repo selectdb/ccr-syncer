@@ -71,7 +71,7 @@ func buildGenericHandleMethod[T record.Record](handle JobHandle[T]) HandleFn {
 func buildGenericCommittedMethod[T record.Record](handle JobHandle[T]) CommittedFn {
 	return func(job *Job, binlog *festruct.TBinlog) (bool, error) {
 		if handle.IsIdempotent() {
-			return true, nil
+			return false, nil
 		}
 
 		data := binlog.GetData()
