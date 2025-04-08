@@ -75,6 +75,7 @@ var (
 	featureIdempotentDDL                bool
 	featureSkipWaitingTxnPublish        bool
 	featureSkipCheckAsyncMvTable        bool
+	featurePipelineCommit               bool
 
 	flagBinlogBatchSize int64
 
@@ -114,6 +115,8 @@ func init() {
 		"skip waiting for the txn publish")
 	flag.BoolVar(&featureSkipCheckAsyncMvTable, "feature_skip_check_async_mv_table", true,
 		"skip checking async mv table, the async mv binlogs will be filtered by doris")
+	flag.BoolVar(&featurePipelineCommit, "feature_pipeline_commit", false,
+		"enable pipeline commit for upsert binlogs")
 
 	flag.Int64Var(&flagBinlogBatchSize, "binlog_batch_size", 16, "the max num of binlogs to get in a batch")
 }
@@ -218,6 +221,7 @@ type Job struct {
 
 	asyncMvTableCache  map[int64]struct{}      `json:"-"`
 	concurrencyManager *rpc.ConcurrencyManager `json:"-"`
+	pipelineCtx        *JobPipelineContext     `json:"-"`
 
 	lock sync.Mutex `json:"-"`
 }
@@ -3486,6 +3490,14 @@ func (j *Job) recoverIncrementalSync() error {
 }
 
 func (j *Job) incrementalSync() error {
+	if featurePipelineCommit {
+		return j.pipelineSync()
+	} else {
+		return j.incrementalSyncInternal()
+	}
+}
+
+func (j *Job) incrementalSyncInternal() error {
 	if !j.progress.IsDone() {
 		log.Infof("job progress is not done, need recover. state: %s, prevCommitSeq: %d, commitSeq: %d",
 			j.progress.SubSyncState, j.progress.PrevCommitSeq, j.progress.CommitSeq)

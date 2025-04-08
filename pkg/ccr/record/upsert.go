@@ -57,8 +57,12 @@ type Upsert struct {
 	Stids        []int64                `json:"stids"`
 }
 
+func (u *Upsert) IsTxnInsert() bool {
+	return len(u.Stids) > 0
+}
+
 // Stringer
-func (u Upsert) String() string {
+func (u *Upsert) String() string {
 	return fmt.Sprintf("Upsert{CommitSeq: %d, TxnID: %d, TimeStamp: %d, Label: %s, DbID: %d, TableRecords: %v, Stids: %v}", u.CommitSeq, u.TxnID, u.TimeStamp, u.Label, u.DbID, u.TableRecords, u.Stids)
 }
 

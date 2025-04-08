@@ -855,3 +855,22 @@ func (j *IngestBinlogJob) Run() {
 		}
 	}
 }
+
+func (j *IngestBinlogJob) Prepare() {
+	steps := []func(){
+		j.prepareMeta,
+		j.applyDroppedBinlogs,
+		j.prepareBackendMap,
+		j.prepareTabletIngestJobs,
+	}
+	for _, step := range steps {
+		step()
+		if err := j.Error(); err != nil {
+			return
+		}
+	}
+}
+
+func (j *IngestBinlogJob) Ingest() {
+	j.runTabletIngestJobs()
+}
