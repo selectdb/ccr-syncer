@@ -445,7 +445,7 @@ func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 			destTablet:      destTablet,
 			destPartitionId: arg.destPartitionId,
 			destTableId:     arg.destTableId,
-			deltaRows:       arg.deltaRows[arg.srcIndexMeta.Id],
+			deltaRows:       arg.deltaRows[srcTablet.Id],
 
 			commitInfosCollector: newCommitInfosCollector(),
 			subTxnInfosCollector: newSubTxnInfosCollector(),
