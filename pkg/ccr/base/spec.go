@@ -1466,6 +1466,23 @@ func (s *Spec) DropRollup(destTableName, rollup string) error {
 	return s.Exec(dropRollupSql)
 }
 
+func (s *Spec) ModifyDistributionBucketNum(destTableName string, bucketType string, autoBucket bool, bucketNum int, columnsName string) error {
+	dbName := utils.FormatKeywordName(s.Database)
+	destTableName = utils.FormatKeywordName(destTableName)
+	modifyDistributionBucketNumSql := "ALTER TABLE " + dbName + "." + destTableName + " MODIFY DISTRIBUTION DISTRIBUTED BY " + bucketType
+	if bucketType == "HASH" {
+		modifyDistributionBucketNumSql += fmt.Sprintf("(%s)", columnsName)
+	}
+	modifyDistributionBucketNumSql += " BUCKETS "
+	if autoBucket {
+		modifyDistributionBucketNumSql += "AUTO"
+	} else {
+		modifyDistributionBucketNumSql += fmt.Sprintf("%d", bucketNum)
+	}
+	log.Infof("modify distribution bucket num sql: %s", modifyDistributionBucketNumSql)
+	return s.Exec(modifyDistributionBucketNumSql)
+}
+
 func (s *Spec) SyncTables(tables ...string) error {
 	var err error
 
