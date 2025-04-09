@@ -180,11 +180,14 @@ type JobExtra struct {
 	// The cached binlogs used for missing binlogs,don't need to persist.
 	CachedBinlogs map[int64]*festruct.TBinlog `json:"-"`
 	// The binlog already applied to the dest cluster, don't need to persist.
-	AppliedBinlogs map[int64]struct{} `json:"-"`
+	AppliedBinlogs map[int64]any `json:"-"`
+	// The dropped indexes, is used to avoid the parallel execution of drop index and upsert.
+	// It does not need to be persisted and falls back to fullsync after restart.
+	DroppedIndexes map[int64]any
 
 	// A counter and a channel used to signal the job routine to release the lock.
-	InterruptSignal int32         `json:"-"`
-	InterruptCh     chan struct{} `json:"-"`
+	InterruptSignal int32    `json:"-"`
+	InterruptCh     chan any `json:"-"`
 
 	// New partial snapshot info
 	PartialSnapshotParams *PartialSnapshotParams `json:"-"`
@@ -256,7 +259,7 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 			allowTableExists: jobContext.AllowTableExists,
 			ReuseBinlogLabel: jobContext.ReuseBinlogLabel,
 			SkipBinlog:       false,
-			InterruptCh:      make(chan struct{}, 1),
+			InterruptCh:      make(chan any, 1),
 		},
 
 		factory: factory,
@@ -305,7 +308,7 @@ func NewJobFromJson(jsonData string, db storage.DB, factory *Factory) (*Job, err
 	job.stop = make(chan struct{})
 	job.jobFactory = NewJobFactory()
 	job.concurrencyManager = rpc.NewConcurrencyManager()
-	job.Extra.InterruptCh = make(chan struct{}, 1)
+	job.Extra.InterruptCh = make(chan any, 1)
 	return &job, nil
 }
 

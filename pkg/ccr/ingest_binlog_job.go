@@ -508,7 +508,7 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64,
 	}
 
 	for _, indexId := range indexIds {
-		if j.srcMeta.IsIndexDropped(indexId) {
+		if _, ok := j.ccrJob.Extra.DroppedIndexes[indexId]; ok || j.srcMeta.IsIndexDropped(indexId) {
 			continue
 		}
 		if featureFilterShadowIndexesUpsert {
@@ -543,7 +543,7 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64,
 	}
 	droppedIndexes := []int64{}
 	for _, indexId := range indexIds {
-		if j.srcMeta.IsIndexDropped(indexId) {
+		if _, ok := j.ccrJob.Extra.DroppedIndexes[indexId]; ok || j.srcMeta.IsIndexDropped(indexId) {
 			log.Infof("txn %d ingest binlog: skip the dropped index %d", j.txnId, indexId)
 			droppedIndexes = append(droppedIndexes, indexId)
 			continue
@@ -757,7 +757,11 @@ func (j *IngestBinlogJob) prepareMeta() {
 // Apply the dropped binlogs to the dest cluster, to avoid blocking the ingest binlog.
 func (j *IngestBinlogJob) applyDroppedBinlogs() {
 	droppedIndexMap := j.srcMeta.GetDroppedIndexMap()
-	for _, commitSeq := range droppedIndexMap {
+	for indexId, commitSeq := range droppedIndexMap {
+		if j.ccrJob.Extra.DroppedIndexes == nil {
+			j.ccrJob.Extra.DroppedIndexes = make(map[int64]any)
+		}
+		j.ccrJob.Extra.DroppedIndexes[indexId] = struct{}{}
 		if commitSeq < j.commitSeq {
 			// ignore the binlog that has been committed
 			continue
@@ -818,7 +822,7 @@ func (j *IngestBinlogJob) applyDroppedBinlogs() {
 		}
 
 		if j.ccrJob.Extra.AppliedBinlogs == nil {
-			j.ccrJob.Extra.AppliedBinlogs = make(map[int64]struct{})
+			j.ccrJob.Extra.AppliedBinlogs = make(map[int64]any)
 		}
 		j.ccrJob.Extra.AppliedBinlogs[commitSeq] = struct{}{}
 	}
