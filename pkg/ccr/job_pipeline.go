@@ -309,6 +309,13 @@ func (j *Job) pipelineSync() error {
 			data.consumeCommitableTxn()
 			j.progress.DoneSubCheckpoint(CommitPipeline, data)
 
+			// release the binlogs before PrevCommitSeq.
+			if err := j.lockBinlog(j.progress.PrevCommitSeq); err != nil {
+				return err
+			}
+
+			j.updateJobStatus()
+
 		case RollbackPipeline:
 			// NOTE: pipelineCtx may be nil, if the pipeline is not started.
 			log.Tracef("pipeline sync: rollback pipeline")

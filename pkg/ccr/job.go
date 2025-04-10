@@ -3001,6 +3001,13 @@ func (j *Job) handleBinlog(binlog *festruct.TBinlog) (error, bool) {
 		j.progress.Done()
 	}
 
+	// release the binlogs before PrevCommitSeq.
+	if err := j.lockBinlog(j.progress.PrevCommitSeq); err != nil {
+		return err, false
+	}
+
+	j.updateJobStatus()
+
 	return nil, false
 }
 
@@ -3603,13 +3610,6 @@ func (j *Job) incrementalSyncInternal() error {
 		} else if backToRunLoop {
 			return nil
 		}
-
-		// release the binlogs before PrevCommitSeq.
-		if err = j.lockBinlog(j.progress.PrevCommitSeq); err != nil {
-			return err
-		}
-
-		j.updateJobStatus()
 	}
 	return nil
 }
