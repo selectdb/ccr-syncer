@@ -379,6 +379,10 @@ func (j *IngestBinlogJob) GetTabletCommitInfos() []*ttypes.TTabletCommitInfo {
 	return j.commitInfos
 }
 
+func (j *IngestBinlogJob) GetSubTxnInfos() []*festruct.TSubTxnInfo {
+	return j.SubTxnInfos()
+}
+
 func (j *IngestBinlogJob) setError(err error) {
 	j.errLock.Lock()
 	defer j.errLock.Unlock()

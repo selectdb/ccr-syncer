@@ -16,8 +16,6 @@ import (
 
 // TODO:
 // 1. support skip_by operation
-// 2. recognize the META error and retry.
-// 3. support the txn insert
 type TxnLink struct {
 	// The previous txn link
 	Prev <-chan any
@@ -472,10 +470,8 @@ func (j *Job) launchTxn(binlog *festruct.TBinlog) error {
 		return nil
 	} else if err = j.beginTxn(ctx); err != nil {
 		return err
-	} else if ctx.IsTxnInsert {
-		return j.launchTxnInsertIngestJob(ctx)
 	} else {
-		return j.launchNormalIngestJob(ctx)
+		return j.launchIngestJob(ctx)
 	}
 }
 
@@ -622,104 +618,7 @@ func (j *Job) beginTxn(ctx *TxnContext) error {
 	return nil
 }
 
-func (j *Job) launchTxnInsertIngestJob(ctx *TxnContext) error {
-	// make stidMap, source_stid to dest_stid
-	stidMap := make(map[int64]int64)
-	sourceStids := ctx.SourceStids
-	destStids := ctx.DestStids
-	if len(sourceStids) == len(destStids) {
-		for i := 0; i < len(sourceStids); i++ {
-			stidMap[sourceStids[i]] = destStids[i]
-		}
-	}
-
-	var allSubTxnInfos = make([]*festruct.TSubTxnInfo, 0, len(stidMap))
-	ingestJobList := make([]*IngestBinlogJob, 0, len(ctx.DestTableIds))
-	for _, destTableId := range ctx.DestTableIds {
-		// When txn insert, use subTxnInfos to commit rather than commitInfos.
-		job, err := j.prepareIngestJobWithRetry(ctx)
-		if err == errTriggerPartialSnapshot {
-			if j.Extra.PartialSnapshotParams == nil {
-				panic("partial snapshot params is nil when trigger partial snapshot")
-			}
-			j.pipelineCtx.Close = true
-			// Send a trigger signal to the commit channel, force pipeline to commit previous txns and rollback the current txn.
-			go func() {
-				ctx.Link.Wait() // Wait the previous txn
-				j.pipelineCtx.CommitCh <- TxnIngestResult{Context: ctx, Err: err}
-				ctx.Link.Notify() // Notify the next txn link
-			}()
-			return nil
-		} else if err != nil {
-			return err
-		}
-		ingestJobList = append(ingestJobList, job)
-	}
-
-	for _, job := range ingestJobList {
-		go func(job *IngestBinlogJob) {
-
-			stidToCommitInfos := ingestBinlogJob.SubTxnToCommitInfos()
-			subTxnInfos := make([]*festruct.TSubTxnInfo, 0, len(stidMap))
-			destStids := j.getStidsByDestTableId(destTableId, tableRecords, stidMap)
-
-			for _, destStid := range destStids {
-				destStid := destStid
-				commitInfos := stidToCommitInfos[destStid]
-				if commitInfos == nil {
-					log.Warnf("no commit infos from dest stid %d, just skip", destStid)
-					continue
-				}
-
-				tSubTxnInfo := &festruct.TSubTxnInfo{
-					SubTxnId:          &destStid,
-					TableId:           &destTableId,
-					TabletCommitInfos: commitInfos,
-				}
-
-				subTxnInfos = append(subTxnInfos, tSubTxnInfo)
-			}
-
-			return subTxnInfos, nil
-		}(job)
-	}
-	{
-		subTxnInfos, err := j.ingestBinlogForTxnInsert(commitSeq, txnId, tableRecords, stidMap, destTableId)
-
-		job, err := j.jobFactory.CreateJob(NewIngestContextForTxnInsert(commitSeq, txnId, tableRecords, j.progress.TableMapping, stidMap), j, "IngestBinlog")
-		if err != nil {
-			return nil, err
-		}
-
-		ingestBinlogJob, ok := job.(*IngestBinlogJob)
-		if !ok {
-			return nil, xerror.Errorf(xerror.Normal, "invalid job type, job: %+v", job)
-		}
-
-		job.Run()
-		if err := job.Error(); err != nil {
-			return nil, err
-		}
-
-		if err == errTriggerPartialSnapshot {
-			if j.Extra.PartialSnapshotParams == nil {
-				panic("partial snapshot params is nil when trigger partial snapshot")
-			}
-			j.progress.NextSubCheckpoint(RollbackTransaction, inMemoryData)
-		} else if err != nil {
-			rollback(err, inMemoryData)
-			return err
-		} else {
-			subTxnInfos := subTxnInfos
-			allSubTxnInfos = append(allSubTxnInfos, subTxnInfos...)
-			j.progress.NextSubCheckpoint(CommitTransaction, inMemoryData)
-		}
-	}
-	inMemoryData.SubTxnInfos = allSubTxnInfos
-	return nil
-}
-
-func (j *Job) launchNormalIngestJob(ctx *TxnContext) error {
+func (j *Job) launchIngestJob(ctx *TxnContext) error {
 	ingestJob, err := j.prepareIngestJobWithRetry(ctx)
 	if err == errTriggerPartialSnapshot {
 		if j.Extra.PartialSnapshotParams == nil {
@@ -747,6 +646,9 @@ func (j *Job) launchNormalIngestJob(ctx *TxnContext) error {
 		err := ingestJob.Error()
 		if err == nil {
 			ctx.CommitInfos = ingestJob.GetTabletCommitInfos()
+			if ctx.IsTxnInsert {
+				ctx.SubTxnInfos = ingestJob.GetSubTxnInfos()
+			}
 		}
 
 		ctx.Link.Wait() // Wait the previous txn
@@ -776,9 +678,8 @@ func (j *Job) prepareIngestJob(ctx *TxnContext) (*IngestBinlogJob, error) {
 
 	log.Tracef("prepare ingest job, commitSeq: %d, txnId: %d, is txn insert: %t", commitSeq, txnId, isTxnInsert)
 
-	var stidMap map[int64]int64 = nil
+	stidMap := make(map[int64]int64)
 	if isTxnInsert {
-		stidMap := make(map[int64]int64)
 		sourceStids := ctx.SourceStids
 		destStids := ctx.DestStids
 		if len(sourceStids) == len(destStids) {
