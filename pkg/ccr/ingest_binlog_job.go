@@ -299,15 +299,14 @@ type IngestContext struct {
 	stidMapping  map[int64]int64
 }
 
-func NewIngestContext(commitSeq, txnId int64, tableRecords []*record.TableRecord, tableMapping map[int64]int64,
-	stidMapping map[int64]int64) *IngestContext {
+func NewIngestContext(commitSeq, txnId int64, tableRecords []*record.TableRecord,
+	tableMapping map[int64]int64, stidMapping map[int64]int64) *IngestContext {
 	return &IngestContext{
 		Context:      context.Background(),
 		commitSeq:    commitSeq,
 		txnId:        txnId,
 		tableRecords: tableRecords,
 		tableMapping: tableMapping,
-		stidMapping:  stidMapping,
 	}
 }
 
