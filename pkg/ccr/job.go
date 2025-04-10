@@ -115,7 +115,7 @@ func init() {
 		"skip waiting for the txn publish")
 	flag.BoolVar(&featureSkipCheckAsyncMvTable, "feature_skip_check_async_mv_table", true,
 		"skip checking async mv table, the async mv binlogs will be filtered by doris")
-	flag.BoolVar(&featurePipelineCommit, "feature_pipeline_commit", false,
+	flag.BoolVar(&featurePipelineCommit, "feature_pipeline_commit", true,
 		"enable pipeline commit for upsert binlogs")
 
 	flag.Int64Var(&flagBinlogBatchSize, "binlog_batch_size", 16, "the max num of binlogs to get in a batch")
