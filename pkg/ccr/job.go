@@ -2963,61 +2963,72 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 
 	for _, binlog := range binlogs {
 		// Step 1: dispatch handle binlog
-		if err := j.handleBinlog(binlog); err != nil {
-			log.Errorf("handle binlog failed, prevCommitSeq: %d, commitSeq: %d, binlog type: %s, binlog data: %s",
-				j.progress.PrevCommitSeq, j.progress.CommitSeq, binlog.GetType(), binlog.GetData())
+		if err, ok := j.handleBinlog(binlog); err != nil {
 			return err, false
-		}
-
-		// Step 2: check job state, if not incrementalSync, such as DBPartialSync, break
-		if j.Extra.PartialSnapshotParams != nil {
-			params := j.Extra.PartialSnapshotParams
-			if err := j.NewPartialSnapshot(params.TableId, params.TableName, params.Partitions, params.Replace, params.IsView); err != nil {
-				return err, false
-			}
-			return nil, true
-		}
-		if !j.isIncrementalSync() {
-			log.Tracef("job state is not incremental sync, back to run loop, job state: %s", j.progress.SyncState)
-			return nil, true
-		}
-
-		// Step 3: update progress
-		commitSeq := binlog.GetCommitSeq()
-		if j.SyncType == DBSync && j.progress.TableCommitSeqMap != nil {
-			// when all table commit seq > commitSeq, it's true
-			reachSwitchToDBIncrementalSync := true
-			for _, tableCommitSeq := range j.progress.TableCommitSeqMap {
-				if tableCommitSeq > commitSeq {
-					reachSwitchToDBIncrementalSync = false
-					break
-				}
-			}
-			for _, partitionCommitSeq := range j.progress.PartitionCommitSeqMap {
-				if partitionCommitSeq > commitSeq {
-					reachSwitchToDBIncrementalSync = false
-					break
-				}
-			}
-
-			if reachSwitchToDBIncrementalSync {
-				log.Infof("all table/partition commit seq reach the commit seq, switch to incremental sync, commit seq: %d", commitSeq)
-				j.progress.TableCommitSeqMap = nil
-				j.progress.PartitionCommitSeqMap = nil
-				j.progress.NextWithPersist(j.progress.CommitSeq, DBIncrementalSync, Done, "")
-			}
-		}
-
-		// Step 4: update progress to db
-		if !j.progress.IsDone() {
-			j.progress.Done()
-		}
-
-		if j.hasInterruptSignal() {
+		} else if ok || j.hasInterruptSignal() {
 			return nil, true // back to run loop
 		}
 	}
 	return nil, false
+}
+
+func (j *Job) handleBinlog(binlog *festruct.TBinlog) (error, bool) {
+	if err := j.handleBinlogInternal(binlog); err != nil {
+		log.Errorf("handle binlog failed, prevCommitSeq: %d, commitSeq: %d, binlog type: %s, binlog data: %s",
+			j.progress.PrevCommitSeq, j.progress.CommitSeq, binlog.GetType(), binlog.GetData())
+		return err, false
+	}
+
+	if j.Extra.PartialSnapshotParams != nil {
+		params := j.Extra.PartialSnapshotParams
+		if err := j.NewPartialSnapshot(params.TableId, params.TableName, params.Partitions, params.Replace, params.IsView); err != nil {
+			return err, false
+		}
+		return nil, true
+	}
+
+	// Step 2: check job state, if not incrementalSync, such as DBPartialSync, break
+	if !j.isIncrementalSync() {
+		log.Tracef("job state is not incremental sync, back to run loop, job state: %s", j.progress.SyncState)
+		return nil, true
+	}
+
+	// Step 3: update progress
+	j.afterHandleBinlog(binlog.GetCommitSeq())
+
+	// Step 4: update progress to db
+	if !j.progress.IsDone() {
+		j.progress.Done()
+	}
+
+	return nil, false
+}
+
+// After the binlog is handled ...
+func (j *Job) afterHandleBinlog(commitSeq int64) {
+	if j.SyncType == DBSync && j.progress.TableCommitSeqMap != nil {
+		// when all table commit seq > commitSeq, it's true
+		reachSwitchToDBIncrementalSync := true
+		for _, tableCommitSeq := range j.progress.TableCommitSeqMap {
+			if tableCommitSeq > commitSeq {
+				reachSwitchToDBIncrementalSync = false
+				break
+			}
+		}
+		for _, partitionCommitSeq := range j.progress.PartitionCommitSeqMap {
+			if partitionCommitSeq > commitSeq {
+				reachSwitchToDBIncrementalSync = false
+				break
+			}
+		}
+
+		if reachSwitchToDBIncrementalSync {
+			log.Infof("all table/partition commit seq reach the commit seq, switch to incremental sync, commit seq: %d", commitSeq)
+			j.progress.TableCommitSeqMap = nil
+			j.progress.PartitionCommitSeqMap = nil
+			j.progress.SyncState = DBIncrementalSync
+		}
+	}
 }
 
 func (j *Job) isModifyTableColumnsCommitted(record *record.ModifyTableAddOrDropColumns) (bool, error) {
@@ -3341,7 +3352,7 @@ func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
 	}
 }
 
-func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
+func (j *Job) handleBinlogInternal(binlog *festruct.TBinlog) error {
 	if binlog == nil || !binlog.IsSetCommitSeq() {
 		return xerror.Errorf(xerror.Normal, "invalid binlog: %v", binlog)
 	}

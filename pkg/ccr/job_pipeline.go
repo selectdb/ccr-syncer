@@ -18,7 +18,6 @@ import (
 // 1. support skip_by operation
 // 2. recognize the META error and retry.
 // 3. support the txn insert
-// 4. switch to incremental sync
 type TxnLink struct {
 	// The previous txn link
 	Prev <-chan any
@@ -217,8 +216,8 @@ func (j *Job) pipelineSync() error {
 				continue
 			}
 
-			binlogs := []*festruct.TBinlog{j.pipelineCtx.takeNextBinlog()}
-			if err, back := j.handleBinlogs(binlogs); err != nil {
+			binlog := j.pipelineCtx.takeNextBinlog()
+			if err, back := j.handleBinlog(binlog); err != nil {
 				return err
 			} else if back {
 				return nil
@@ -724,7 +723,6 @@ func (j *Job) applyTxn(ctx *TxnContext) {
 	destTableIds := ctx.DestTableIds
 	j.progress.PrevTxnId = ctx.TxnId
 	j.progress.CommitSeq = commitSeq
-	j.progress.PrevCommitSeq = commitSeq // Mark this binlog as committed
 	if j.SyncType == DBSync && len(j.progress.TableCommitSeqMap) > 0 {
 		for _, tableId := range destTableIds {
 			tableCommitSeq, ok := j.progress.TableCommitSeqMap[tableId]
@@ -737,6 +735,8 @@ func (j *Job) applyTxn(ctx *TxnContext) {
 			}
 		}
 	}
+
+	j.afterHandleBinlog(commitSeq)
 }
 
 func (j *Job) rollbackTxn(ctx *TxnContext) error {
