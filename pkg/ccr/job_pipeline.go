@@ -206,6 +206,12 @@ func (j *Job) pipelineSync() error {
 				return j.recoverIncrementalSync()
 			}
 
+			if exit, err := j.maySkipBinlog(); err != nil {
+				return err
+			} else if exit {
+				return nil
+			}
+
 			j.mayInitialPipeline()
 
 			// Step launch transaction if no binlogs or the next binlog is an upsert binlog.
@@ -215,7 +221,13 @@ func (j *Job) pipelineSync() error {
 			}
 
 			binlog := j.pipelineCtx.takeNextBinlog()
-			if err, back := j.handleBinlog(binlog); err != nil {
+			commitSeq := binlog.GetCommitSeq()
+			// Skip binlog conditionally
+			if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipBySilence && j.Extra.SkipCommitSeq == commitSeq {
+				log.Warnf("silently skip binlog %d by user, binlog type: %s, binlog data: %s",
+					commitSeq, binlog.GetType(), binlog.GetData())
+				return nil
+			} else if err, back := j.handleBinlog(binlog); err != nil {
 				return err
 			} else if back {
 				return nil

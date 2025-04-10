@@ -3508,6 +3508,29 @@ func (j *Job) incrementalSync() error {
 	}
 }
 
+func (j *Job) maySkipBinlog() (bool, error) {
+	// Force fullsync unconditionally
+	if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipByFullSync {
+		info := fmt.Sprintf("the user required skipping the binlog, commit seq %d", j.progress.CommitSeq)
+		log.Warnf("force full sync, because %s", info)
+		return true, j.NewSnapshot(j.progress.CommitSeq, info)
+	} else if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipByPartialSync {
+		log.Warnf("force partial sync, because the user required skipping the binlog, commit seq %d, table id %d, table %s",
+			j.progress.CommitSeq, j.Extra.SkipTableId, j.Extra.SkipTable)
+		if exists, err := j.IsSourceTableExists(j.Extra.SkipTableId, j.Extra.SkipTable); err != nil {
+			return false, err
+		} else if !exists {
+			log.Warnf("the user required table %s (id %d) is not exists in source, ignore this skipping requirement",
+				j.Extra.SkipTable, j.Extra.SkipTableId)
+			j.Extra.SkipBinlog = false
+		} else {
+			replace, isView := true, false
+			return true, j.NewPartialSnapshot(j.Extra.SkipTableId, j.Extra.SkipTable, nil, replace, isView)
+		}
+	}
+	return false, nil
+}
+
 func (j *Job) incrementalSyncInternal() error {
 	if !j.progress.IsDone() {
 		log.Infof("job progress is not done, need recover. state: %s, prevCommitSeq: %d, commitSeq: %d",
@@ -3516,24 +3539,10 @@ func (j *Job) incrementalSyncInternal() error {
 		return j.recoverIncrementalSync()
 	}
 
-	// Force fullsync unconditionally
-	if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipByFullSync {
-		info := fmt.Sprintf("the user required skipping the binlog, commit seq %d", j.progress.CommitSeq)
-		log.Warnf("force full sync, because %s", info)
-		return j.NewSnapshot(j.progress.CommitSeq, info)
-	} else if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipByPartialSync {
-		log.Warnf("force partial sync, because the user required skipping the binlog, commit seq %d, table id %d, table %s",
-			j.progress.CommitSeq, j.Extra.SkipTableId, j.Extra.SkipTable)
-		if exists, err := j.IsSourceTableExists(j.Extra.SkipTableId, j.Extra.SkipTable); err != nil {
-			return err
-		} else if !exists {
-			log.Warnf("the user required table %s (id %d) is not exists in source, ignore this skipping requirement",
-				j.Extra.SkipTable, j.Extra.SkipTableId)
-			j.Extra.SkipBinlog = false
-		} else {
-			replace, isView := true, false
-			return j.NewPartialSnapshot(j.Extra.SkipTableId, j.Extra.SkipTable, nil, replace, isView)
-		}
+	if exit, err := j.maySkipBinlog(); err != nil {
+		return err
+	} else if exit {
+		return nil
 	}
 
 	// Step 1: get binlog
