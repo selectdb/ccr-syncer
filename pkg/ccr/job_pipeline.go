@@ -19,7 +19,6 @@ import (
 // 2. recognize the META error and retry.
 // 3. support the txn insert
 // 4. switch to incremental sync
-// 5. support trigger the partial snapshot
 type TxnLink struct {
 	// The previous txn link
 	Prev <-chan any
@@ -80,10 +79,10 @@ type JobPipelineContext struct {
 	Binlogs []*festruct.TBinlog
 	// The commitable upsert txns ingesting result
 	CommitCh chan TxnIngestResult
-	// The pipeline breaker
-	BreakerCh chan any
 	// The txn link
 	NextTxnLink chan any
+	// Is pipeline closed (no more txn will be launched)
+	Close bool
 }
 
 type PipelineInMemoryData struct {
@@ -193,6 +192,15 @@ func (j *Job) pipelineSync() error {
 		case Done:
 			log.Tracef("pipeline sync: done")
 
+			// Trigger a partial snapshot
+			if j.Extra.PartialSnapshotParams != nil {
+				params := j.Extra.PartialSnapshotParams
+				if err := j.NewPartialSnapshot(params.TableId, params.TableName, params.Partitions, params.Replace, params.IsView); err != nil {
+					return err
+				}
+				return nil
+			}
+
 			// For compatible with the old version, we need to check the upsert binlog progress.
 			if !j.progress.IsDone() {
 				log.Infof("job progress is not done, need recover. state: %s, prevCommitSeq: %d, commitSeq: %d",
@@ -231,11 +239,7 @@ func (j *Job) pipelineSync() error {
 
 			binlog := j.pipelineCtx.takeNextUpsertBinlog()
 			if binlog != nil {
-				if err := j.launchTxn(binlog); err == errTriggerPartialSnapshot {
-					if j.Extra.PartialSnapshotParams == nil {
-						panic("partial snapshot params is nil when trigger partial snapshot")
-					}
-				} else if err != nil {
+				if err := j.launchTxn(binlog); err != nil {
 					j.resetPipeline() // reset the pipeline context, to force the pipeline to rollback.
 					return nil
 				}
@@ -249,8 +253,10 @@ func (j *Job) pipelineSync() error {
 			if len(data.RunningTxnList) > 0 {
 				waitTxn := j.pipelineCtx.hasNonUpsertBinlog() || !(hasMoreBinlogs && data.hasAvailableSlot())
 				log.Tracef("pipeline sync: take next commitable txn, wait: %t", waitTxn)
-				ctx, err := j.pipelineCtx.takeNextCommitableTxn(waitTxn)
-				if err != nil {
+				if ctx, err := j.pipelineCtx.takeNextCommitableTxn(waitTxn); err == errTriggerPartialSnapshot {
+					j.progress.NextSubCheckpoint(RollbackPipeline, data)
+					continue
+				} else if err != nil {
 					j.resetPipeline() // reset the pipeline context, to force the pipeline to rollback.
 					return err
 				} else if ctx != nil {
@@ -269,10 +275,7 @@ func (j *Job) pipelineSync() error {
 			if j.pipelineCtx.hasNonUpsertBinlog() && !hasRunningTxn {
 				// All the txns are committed, and the pipeline is finished.
 				j.progress.NextSubCheckpoint(Done, nil)
-			} else if len(data.RunningTxnList) == 1 && j.Extra.PartialSnapshotParams != nil {
-				// A partial snapshot is triggered, rollback the last txn and trigger a snapshot.
-				j.progress.NextSubCheckpoint(RollbackPipeline, data)
-			} else if hasMoreBinlogs && data.hasAvailableSlot() {
+			} else if !j.pipelineCtx.Close && hasMoreBinlogs && data.hasAvailableSlot() {
 				// There is a chance that to launch more upsert binlogs
 				j.progress.NextSubVolatile(LaunchTransaction, data)
 			} else if !hasMoreBinlogs && !hasRunningTxn {
@@ -356,9 +359,9 @@ func (j *Job) mayInitialPipeline() {
 	txnLink <- struct{}{} // Send a signal to the channel, to indicate that the previous txn is ready.
 	j.pipelineCtx = &JobPipelineContext{
 		NextCommitSeq: j.progress.CommitSeq,
-		BreakerCh:     make(chan any),
 		CommitCh:      make(chan TxnIngestResult, 100),
 		NextTxnLink:   txnLink,
+		Close:         false,
 	}
 }
 
@@ -367,7 +370,6 @@ func (j *Job) resetPipeline() {
 		panic("should not be here")
 	}
 
-	close(j.pipelineCtx.BreakerCh) // close this channel, to cancel the inflights txns
 	j.pipelineCtx = nil
 }
 
@@ -474,7 +476,19 @@ func (j *Job) launchTxn(binlog *festruct.TBinlog) error {
 	}
 
 	ingestJob, err := j.prepareIngestJob(ctx)
-	if err != nil {
+	if err == errTriggerPartialSnapshot {
+		if j.Extra.PartialSnapshotParams == nil {
+			panic("partial snapshot params is nil when trigger partial snapshot")
+		}
+		j.pipelineCtx.Close = true
+		// Send a trigger signal to the commit channel, force pipeline to commit previous txns and rollback the current txn.
+		go func() {
+			ctx.Link.Wait() // Wait the previous txn
+			j.pipelineCtx.CommitCh <- TxnIngestResult{Context: ctx, Err: err}
+			ctx.Link.Notify() // Notify the next txn link
+		}()
+		return nil
+	} else if err != nil {
 		return err
 	}
 
