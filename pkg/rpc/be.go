@@ -34,7 +34,7 @@ import (
 type BeRpcOption func() callopt.Option
 
 type IBeRpc interface {
-	IngestBinlog(*bestruct.TIngestBinlogRequest, ...BeRpcOption) (*bestruct.TIngestBinlogResult_, error)
+	IngestBinlog(context.Context, *bestruct.TIngestBinlogRequest, ...BeRpcOption) (*bestruct.TIngestBinlogResult_, error)
 }
 
 type BeRpc struct {
@@ -42,7 +42,7 @@ type BeRpc struct {
 	client  beservice.Client
 }
 
-func (beRpc *BeRpc) IngestBinlog(req *bestruct.TIngestBinlogRequest, beOptions ...BeRpcOption) (*bestruct.TIngestBinlogResult_, error) {
+func (beRpc *BeRpc) IngestBinlog(ctx context.Context, req *bestruct.TIngestBinlogRequest, beOptions ...BeRpcOption) (*bestruct.TIngestBinlogResult_, error) {
 	log.Tracef("IngestBinlog req: %+v, txnId: %d, be: %v", req, req.GetTxnId(), beRpc.backend)
 
 	defer xmetrics.RecordBeRpc("IngestBinlog", beRpc.backend.Host, beRpc.backend.BePort)()
@@ -52,7 +52,7 @@ func (beRpc *BeRpc) IngestBinlog(req *bestruct.TIngestBinlogRequest, beOptions .
 		options = append(options, opt())
 	}
 	client := beRpc.client
-	if result, err := client.IngestBinlog(context.Background(), req, options...); err != nil {
+	if result, err := client.IngestBinlog(ctx, req, options...); err != nil {
 		return nil, xerror.Wrapf(err, xerror.Normal,
 			"IngestBinlog error: %v, txnId: %d, be: %v", err, req.GetTxnId(), beRpc.backend)
 	} else {

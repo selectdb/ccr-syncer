@@ -1,6 +1,7 @@
 package ccr
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"time"
@@ -14,8 +15,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// TODO:
-// 1. support skip_by operation
 type TxnLink struct {
 	// The previous txn link
 	Prev <-chan any
@@ -23,16 +22,13 @@ type TxnLink struct {
 	Next chan<- any
 }
 
-func (l *TxnLink) Wait() {
+func (l *TxnLink) Done(fn func()) {
 	if l.Prev != nil {
-		<-l.Prev
+		<-l.Prev // Wait the previous txn
 	}
-}
-
-func (l *TxnLink) Notify() {
-	// Notify the next txn link
+	fn()
 	if l.Next != nil {
-		l.Next <- struct{}{}
+		l.Next <- struct{}{} // Notify the next txn link
 	}
 }
 
@@ -80,6 +76,10 @@ type JobPipelineContext struct {
 	NextTxnLink chan any
 	// Is pipeline closed (no more txn will be launched)
 	Close bool
+	// The cancel context for the ingesting job
+	Context context.Context
+	// The cancel function for the ingesting job
+	Cancel context.CancelFunc
 }
 
 type PipelineInMemoryData struct {
@@ -354,11 +354,14 @@ func (j *Job) mayInitialPipeline() {
 	log.Debugf("initial a pipeline, commit seq: %d", j.progress.CommitSeq)
 	txnLink := make(chan any, 1)
 	txnLink <- struct{}{} // Send a signal to the channel, to indicate that the previous txn is ready.
+	ctx, cancel := context.WithCancel(context.Background())
 	j.pipelineCtx = &JobPipelineContext{
 		NextCommitSeq: j.progress.CommitSeq,
 		CommitCh:      make(chan TxnIngestResult, 100),
 		NextTxnLink:   txnLink,
 		Close:         false,
+		Context:       ctx,
+		Cancel:        cancel,
 	}
 }
 
@@ -367,6 +370,7 @@ func (j *Job) resetPipeline() {
 		panic("should not be here")
 	}
 
+	j.pipelineCtx.Cancel()
 	j.pipelineCtx = nil
 }
 
@@ -625,11 +629,12 @@ func (j *Job) launchIngestJob(ctx *TxnContext) error {
 			panic("partial snapshot params is nil when trigger partial snapshot")
 		}
 		j.pipelineCtx.Close = true
+		commitCh := j.pipelineCtx.CommitCh
 		// Send a trigger signal to the commit channel, force pipeline to commit previous txns and rollback the current txn.
 		go func() {
-			ctx.Link.Wait() // Wait the previous txn
-			j.pipelineCtx.CommitCh <- TxnIngestResult{Context: ctx, Err: err}
-			ctx.Link.Notify() // Notify the next txn link
+			ctx.Link.Done(func() {
+				commitCh <- TxnIngestResult{Context: ctx, Err: err}
+			})
 		}()
 		return nil
 	} else if err != nil {
@@ -638,11 +643,10 @@ func (j *Job) launchIngestJob(ctx *TxnContext) error {
 
 	// Try ingesting the binlogs in async
 	commitCh := j.pipelineCtx.CommitCh
+	cancelCtx := j.pipelineCtx.Context
 	go func() {
-		// TODO: support cancellation
-
 		// ATTN: this function is called in a goroutine, so we need to be careful about the context.
-		ingestJob.Ingest()
+		ingestJob.Ingest(cancelCtx)
 		err := ingestJob.Error()
 		if err == nil {
 			ctx.CommitInfos = ingestJob.GetTabletCommitInfos()
@@ -651,9 +655,9 @@ func (j *Job) launchIngestJob(ctx *TxnContext) error {
 			}
 		}
 
-		ctx.Link.Wait() // Wait the previous txn
-		commitCh <- TxnIngestResult{Context: ctx, Err: err}
-		ctx.Link.Notify() // Notify the next txn link
+		ctx.Link.Done(func() {
+			commitCh <- TxnIngestResult{Context: ctx, Err: err}
+		})
 	}()
 	return nil
 }

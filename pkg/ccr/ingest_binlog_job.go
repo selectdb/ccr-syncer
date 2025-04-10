@@ -143,7 +143,7 @@ type tabletIngestBinlogHandler struct {
 }
 
 // handle Replica
-func (h *tabletIngestBinlogHandler) handleReplica(srcReplica, destReplica *ReplicaMeta) bool {
+func (h *tabletIngestBinlogHandler) handleReplica(ctx context.Context, srcReplica, destReplica *ReplicaMeta) bool {
 	destReplicaId := destReplica.Id
 	log.Tracef("txn %d tablet ingest binlog: handle dest replica id: %d, dest tablet id %d",
 		h.ingestJob.txnId, destReplicaId, h.destTablet.Id)
@@ -227,7 +227,7 @@ func (h *tabletIngestBinlogHandler) handleReplica(srcReplica, destReplica *Repli
 			}
 		}
 
-		resp, err := destRpc.IngestBinlog(req, options...)
+		resp, err := destRpc.IngestBinlog(ctx, req, options...)
 		if err != nil {
 			j.setError(err)
 			return
@@ -255,7 +255,7 @@ func (h *tabletIngestBinlogHandler) handleReplica(srcReplica, destReplica *Repli
 	return true
 }
 
-func (h *tabletIngestBinlogHandler) handle() {
+func (h *tabletIngestBinlogHandler) handle(ctx context.Context) {
 	log.Tracef("txn %d, tablet ingest binlog, src tablet id: %d, dest tablet id: %d, total %d replicas",
 		h.ingestJob.txnId, h.srcTablet.Id, h.destTablet.Id, h.srcTablet.ReplicaMetas.Len())
 
@@ -278,7 +278,7 @@ func (h *tabletIngestBinlogHandler) handle() {
 		// round robbin
 		srcReplica := srcReplicas[srcReplicaIndex%len(srcReplicas)]
 		srcReplicaIndex++
-		return h.handleReplica(srcReplica, destReplica)
+		return h.handleReplica(ctx, srcReplica, destReplica)
 	})
 	h.wg.Wait()
 
@@ -702,12 +702,12 @@ func (j *IngestBinlogJob) prepareTabletIngestJobs() {
 	}
 }
 
-func (j *IngestBinlogJob) runTabletIngestJobs() {
+func (j *IngestBinlogJob) runTabletIngestJobs(ctx context.Context) {
 	log.Infof("txn %d ingest binlog: run %d tablet ingest jobs", j.txnId, len(j.tabletIngestJobs))
 	for _, tabletIngestJob := range j.tabletIngestJobs {
 		j.wg.Add(1)
 		go func(tabletIngestJob *tabletIngestBinlogHandler) {
-			tabletIngestJob.handle()
+			tabletIngestJob.handle(ctx)
 			j.wg.Done()
 		}(tabletIngestJob)
 	}
@@ -844,19 +844,11 @@ func (j *IngestBinlogJob) applyDroppedBinlogs() {
 }
 
 func (j *IngestBinlogJob) Run() {
-	steps := []func(){
-		j.prepareMeta,
-		j.applyDroppedBinlogs,
-		j.prepareBackendMap,
-		j.prepareTabletIngestJobs,
-		j.runTabletIngestJobs,
+	j.Prepare()
+	if err := j.Error(); err != nil {
+		return
 	}
-	for _, step := range steps {
-		step()
-		if err := j.Error(); err != nil {
-			return
-		}
-	}
+	j.Ingest(context.Background())
 }
 
 func (j *IngestBinlogJob) Prepare() {
@@ -874,6 +866,6 @@ func (j *IngestBinlogJob) Prepare() {
 	}
 }
 
-func (j *IngestBinlogJob) Ingest() {
-	j.runTabletIngestJobs()
+func (j *IngestBinlogJob) Ingest(ctx context.Context) {
+	j.runTabletIngestJobs(ctx)
 }
