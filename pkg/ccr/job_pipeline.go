@@ -729,9 +729,6 @@ func (j *Job) commitTxn(ctx *TxnContext) error {
 	dest := &j.Dest
 	txnId := ctx.TxnId
 	commitInfos := ctx.CommitInfos
-	if len(commitInfos) == 0 {
-		return xerror.Errorf(xerror.Normal, "txn %d commit infos is empty", txnId)
-	}
 
 	destRpc, err := j.factory.NewFeRpc(dest)
 	if err != nil {
