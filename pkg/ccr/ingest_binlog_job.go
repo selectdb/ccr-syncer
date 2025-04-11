@@ -797,14 +797,8 @@ func (j *IngestBinlogJob) applyDroppedBinlogs() {
 				return
 			}
 
-			anyTables := false
-			for _, tableRecord := range j.tableRecords {
-				if alterJobRecord.TableId == tableRecord.Id {
-					anyTables = true
-					break
-				}
-			}
-			if !anyTables {
+			if !isMatchTableId(j.tableRecords, alterJobRecord.TableId) {
+				log.Tracef("txn %d ingest binlog: skip alter job binlog, table id %d not in table records", j.txnId, alterJobRecord.TableId)
 				continue
 			}
 
@@ -822,6 +816,16 @@ func (j *IngestBinlogJob) applyDroppedBinlogs() {
 		if binlog.GetType() != festruct.TBinlogType_DROP_ROLLUP {
 			log.Tracef("txn %d ingest binlog: skip drop binlog %s data %s", j.txnId, binlog.GetType(), binlog.GetData())
 			continue
+		} else {
+			dropRollupRecord, err := record.NewDropRollupFromJson(binlog.GetData())
+			if err != nil {
+				j.setError(err)
+				return
+			}
+			if !isMatchTableId(j.tableRecords, dropRollupRecord.TableId) {
+				log.Tracef("txn %d ingest binlog: skip drop rollup binlog, table id %d not in table records", j.txnId, dropRollupRecord.TableId)
+				continue
+			}
 		}
 
 		// Apply the drop rollup binlog to the dest cluster
@@ -854,4 +858,13 @@ func (j *IngestBinlogJob) Run() {
 			return
 		}
 	}
+}
+
+func isMatchTableId(tableRecords []*record.TableRecord, tableId int64) bool {
+	for _, tableRecord := range tableRecords {
+		if tableRecord.Id == tableId {
+			return true
+		}
+	}
+	return false
 }
