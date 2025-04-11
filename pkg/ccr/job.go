@@ -708,6 +708,11 @@ func (j *Job) partialSync() error {
 			tableRefs = append(tableRefs, tableRef)
 		}
 
+		// view associated with the table may skip some operations due to the backup/restore of the table
+		// resulting in different schema of upstream and downstream views. we need to force replace
+		isForceReplace := featureRestoreReplaceDiffSchema && j.progress.PartialSyncData.IsView
+		isAtomicRestore := featureAtomicRestore && isForceReplace
+
 		restoreReq := rpc.RestoreSnapshotRequest{
 			TableRefs:      tableRefs,
 			SnapshotName:   restoreSnapshotName,
@@ -716,8 +721,9 @@ func (j *Job) partialSync() error {
 			// DO NOT drop exists tables and partitions
 			CleanPartitions: false,
 			CleanTables:     false,
-			AtomicRestore:   false,
+			AtomicRestore:   isAtomicRestore,
 			Compress:        false,
+			ForceReplace:    isForceReplace,
 		}
 		restoreResp, err := destRpc.RestoreSnapshot(dest, &restoreReq)
 		if err != nil {
@@ -2759,7 +2765,16 @@ func (j *Job) handleAlterViewDef(binlog *festruct.TBinlog) error {
 		return err
 	}
 
-	return j.IDest.AlterViewDef(j.Src.Database, viewName, alterView)
+	if err := j.IDest.AlterViewDef(j.Src.Database, viewName, alterView); err != nil {
+		if strings.Contains(err.Error(), "Unknown column") {
+			log.Warnf("alter view but the column is not found, trigger partial snapshot, commit seq: %d, msg: %s",
+				binlog.GetCommitSeq(), err.Error())
+			replace := false
+			isView := true
+			return j.NewPartialSnapshot(alterView.TableId, viewName, nil, replace, isView)
+		}
+	}
+	return nil
 }
 
 func (j *Job) handleRenamePartition(binlog *festruct.TBinlog) error {

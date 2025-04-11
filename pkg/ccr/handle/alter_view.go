@@ -1,9 +1,12 @@
 package handle
 
 import (
+	"strings"
+
 	"github.com/selectdb/ccr_syncer/pkg/ccr"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/record"
 	festruct "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/frontendservice"
+	log "github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -21,5 +24,14 @@ func (h *AlterViewDefHandle) Handle(j *ccr.Job, commitSeq int64, alterView *reco
 		return err
 	}
 
-	return j.IDest.AlterViewDef(j.Src.Database, viewName, alterView)
+	if err := j.IDest.AlterViewDef(j.Src.Database, viewName, alterView); err != nil {
+		if strings.Contains(err.Error(), "Unknown column") {
+			log.Warnf("alter view but the column is not found, trigger partial snapshot, commit seq: %d, msg: %s",
+				commitSeq, err.Error())
+			replace := false
+			isView := true
+			return j.NewPartialSnapshot(alterView.TableId, viewName, nil, replace, isView)
+		}
+	}
+	return nil
 }
