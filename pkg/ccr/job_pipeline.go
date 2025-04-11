@@ -250,7 +250,7 @@ func (j *Job) pipelineSync() error {
 			if binlog != nil {
 				if err := j.launchTxn(binlog); err != nil {
 					j.resetPipeline() // reset the pipeline context, to force the pipeline to rollback.
-					return nil
+					return err
 				}
 			}
 
@@ -260,7 +260,16 @@ func (j *Job) pipelineSync() error {
 			log.Tracef("pipeline sync: commit pipeline")
 			data := j.progress.InMemoryData.(*PipelineInMemoryData)
 			if len(data.RunningTxnList) > 0 {
-				waitTxn := j.pipelineCtx.hasNonUpsertBinlog() || !(hasMoreBinlogs && data.hasAvailableSlot())
+				// The situations to wait new txn
+				// 1. The pipeline is closed:
+				// 		when the left txns are committed, the pipeline will be closed.
+				// 2. The pipeline no more binlogs to launch:
+				// 		yield the pipeline when the left txns are committed.
+				// 3. The pipeline has no available slot to launch new txns:
+				// 		wait for the txns to be committed.
+				// 4. The pipeline has non-upsert binlogs:
+				// 		when the left txns are committed, the pipeline will be closed.
+				waitTxn := j.pipelineCtx.Close || !hasMoreBinlogs || !data.hasAvailableSlot() || j.pipelineCtx.hasNonUpsertBinlog()
 				log.Tracef("pipeline sync: take next commitable txn, wait: %t", waitTxn)
 				if ctx, err := j.pipelineCtx.takeNextCommitableTxn(waitTxn); err == errTriggerPartialSnapshot {
 					j.progress.NextSubCheckpoint(RollbackPipeline, data)
@@ -281,8 +290,10 @@ func (j *Job) pipelineSync() error {
 
 			// Determine the next state
 			hasRunningTxn := len(data.RunningTxnList) > 0
-			if j.pipelineCtx.hasNonUpsertBinlog() && !hasRunningTxn {
+			if (j.Extra.SkipBinlog || j.pipelineCtx.hasNonUpsertBinlog() || j.pipelineCtx.Close) && !hasRunningTxn {
 				// All the txns are committed, and the pipeline is finished.
+				log.Tracef("pipeline sync step done, skip binlog: %t, pipeline close: %t, has running txn: %t, has non upsert binlog: %t",
+					j.Extra.SkipBinlog, j.pipelineCtx.Close, hasRunningTxn, j.pipelineCtx.hasNonUpsertBinlog())
 				j.progress.NextSubCheckpoint(Done, nil)
 			} else if !j.pipelineCtx.Close && hasMoreBinlogs && data.hasAvailableSlot() {
 				// There is a chance that to launch more upsert binlogs
@@ -367,6 +378,7 @@ func (j *Job) mayLoadPipelineInMemoryData() error {
 
 func (j *Job) mayInitialPipeline() {
 	if j.pipelineCtx != nil {
+		j.pipelineCtx.Close = false
 		return
 	}
 
@@ -484,6 +496,10 @@ func (j *Job) launchTxn(binlog *festruct.TBinlog) error {
 	if binlog.GetType() != festruct.TBinlogType_UPSERT {
 		return xerror.Errorf(xerror.Normal, "launch txn but binlog type: %v is not a UPSERT", binlog.GetType())
 	}
+
+	commitSeq := binlog.GetCommitSeq()
+	binlogType := binlog.GetType()
+	log.Debugf("binlog type: %s, commit seq: %d, binlog data: %s", binlogType, commitSeq, binlog.GetData())
 
 	ctx, err := j.buildTxnContextWithRetry(binlog)
 	if err != nil {
@@ -647,6 +663,7 @@ func (j *Job) launchIngestJob(ctx *TxnContext) error {
 		if j.Extra.PartialSnapshotParams == nil {
 			panic("partial snapshot params is nil when trigger partial snapshot")
 		}
+		log.Debugf("txn %d launch ingest job, close the pipeline to trigger partial snapshot, commit seq: %d", ctx.TxnId, ctx.CommitSeq)
 		j.pipelineCtx.Close = true
 		commitCh := j.pipelineCtx.CommitCh
 		// Send a trigger signal to the commit channel, force pipeline to commit previous txns and rollback the current txn.
@@ -756,18 +773,16 @@ func (j *Job) commitTxn(ctx *TxnContext) error {
 		return err
 	}
 
-	log.Infof("commit txn %d success", txnId)
+	log.Infof("commit txn %d success, commit seq: %d", txnId, ctx.CommitSeq)
 
 	j.applyTxn(ctx)
 	return nil
 }
 
 func (j *Job) applyTxn(ctx *TxnContext) {
-	txnId := ctx.TxnId
 	commitSeq := ctx.CommitSeq
-	log.Debugf("txn %d committed, commitSeq: %d, cleanup", txnId, commitSeq)
-
 	destTableIds := ctx.DestTableIds
+
 	j.progress.PrevTxnId = ctx.TxnId
 	j.progress.CommitSeq = commitSeq
 	if j.SyncType == DBSync && len(j.progress.TableCommitSeqMap) > 0 {
