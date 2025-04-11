@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"time"
 
 	"github.com/selectdb/ccr_syncer/pkg/ccr/record"
@@ -125,13 +126,15 @@ func (ctx *JobPipelineContext) hasNonUpsertBinlog() bool {
 	return len(ctx.Binlogs) > 0 && ctx.Binlogs[0].GetType() != festruct.TBinlogType_UPSERT
 }
 
-func (ctx *JobPipelineContext) takeNextBinlog() *festruct.TBinlog {
-	binlog := ctx.Binlogs[0]
-	ctx.Binlogs = ctx.Binlogs[1:]
-	return binlog
+func (ctx *JobPipelineContext) getNextBinlog() *festruct.TBinlog {
+	return ctx.Binlogs[0]
 }
 
-func (ctx *JobPipelineContext) takeNextUpsertBinlog() *festruct.TBinlog {
+func (ctx *JobPipelineContext) consumeNextBinlog() {
+	ctx.Binlogs = ctx.Binlogs[1:]
+}
+
+func (ctx *JobPipelineContext) getNextUpsertBinlog() *festruct.TBinlog {
 	if len(ctx.Binlogs) == 0 {
 		return nil
 	}
@@ -139,7 +142,6 @@ func (ctx *JobPipelineContext) takeNextUpsertBinlog() *festruct.TBinlog {
 	if binlog.GetType() != festruct.TBinlogType_UPSERT {
 		return nil
 	}
-	ctx.Binlogs = ctx.Binlogs[1:]
 	return binlog
 }
 
@@ -191,18 +193,20 @@ func (j *Job) pipelineSync() error {
 
 			// Trigger a partial snapshot
 			if j.Extra.PartialSnapshotParams != nil {
-				params := j.Extra.PartialSnapshotParams
-				if err := j.NewPartialSnapshot(params.TableId, params.TableName, params.Partitions, params.Replace, params.IsView); err != nil {
-					return err
+				if j.pipelineCtx != nil {
+					j.resetPipeline()
 				}
-				return nil
+				params := j.Extra.PartialSnapshotParams
+				return j.NewPartialSnapshot(params.TableId, params.TableName, params.Partitions, params.Replace, params.IsView)
 			}
 
 			// For compatible with the old version, we need to check the upsert binlog progress.
 			if !j.progress.IsDone() {
 				log.Infof("job progress is not done, need recover. state: %s, prevCommitSeq: %d, commitSeq: %d",
 					j.progress.SubSyncState, j.progress.PrevCommitSeq, j.progress.CommitSeq)
-
+				if j.pipelineCtx != nil {
+					j.resetPipeline()
+				}
 				return j.recoverIncrementalSync()
 			}
 
@@ -212,7 +216,7 @@ func (j *Job) pipelineSync() error {
 				return nil
 			}
 
-			j.mayInitialPipeline()
+			j.initializePipelineContext()
 
 			// Step launch transaction if no binlogs or the next binlog is an upsert binlog.
 			if !j.pipelineCtx.hasNonUpsertBinlog() {
@@ -220,17 +224,14 @@ func (j *Job) pipelineSync() error {
 				continue
 			}
 
-			binlog := j.pipelineCtx.takeNextBinlog()
-			commitSeq := binlog.GetCommitSeq()
-			// Skip binlog conditionally
-			if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipBySilence && j.Extra.SkipCommitSeq == commitSeq {
-				log.Warnf("silently skip binlog %d by user, binlog type: %s, binlog data: %s",
-					commitSeq, binlog.GetType(), binlog.GetData())
-				return nil
-			} else if err, back := j.handleBinlog(binlog); err != nil {
+			binlog := j.pipelineCtx.getNextBinlog()
+			if err, back := j.handleBinlog(binlog); err != nil {
 				return err
 			} else if back {
+				j.resetPipeline()
 				return nil
+			} else {
+				j.pipelineCtx.consumeNextBinlog()
 			}
 
 		case LaunchTransaction:
@@ -246,12 +247,13 @@ func (j *Job) pipelineSync() error {
 				hasMoreBinlogs = len(j.pipelineCtx.Binlogs) > 0
 			}
 
-			binlog := j.pipelineCtx.takeNextUpsertBinlog()
+			binlog := j.pipelineCtx.getNextUpsertBinlog()
 			if binlog != nil {
 				if err := j.launchTxn(binlog); err != nil {
 					j.resetPipeline() // reset the pipeline context, to force the pipeline to rollback.
 					return err
 				}
+				j.pipelineCtx.consumeNextBinlog()
 			}
 
 			j.progress.NextSubVolatile(CommitPipeline, j.progress.InMemoryData)
@@ -376,7 +378,7 @@ func (j *Job) mayLoadPipelineInMemoryData() error {
 	return nil
 }
 
-func (j *Job) mayInitialPipeline() {
+func (j *Job) initializePipelineContext() {
 	if j.pipelineCtx != nil {
 		j.pipelineCtx.Close = false
 		return
@@ -447,6 +449,10 @@ func (j *Job) getNextBinlogs() error {
 	}
 
 	commitSeq := j.pipelineCtx.NextCommitSeq
+	if commitSeq < j.progress.PrevCommitSeq {
+		panic(fmt.Sprintf("the prev commit seq in pipeline ctx %d less than the progress prev commit seq: %d", commitSeq, j.progress.PrevCommitSeq))
+	}
+
 	src := &j.Src
 	srcRpc, err := j.factory.NewFeRpc(src)
 	if err != nil {
@@ -495,6 +501,11 @@ func (j *Job) getNextBinlogs() error {
 func (j *Job) launchTxn(binlog *festruct.TBinlog) error {
 	if binlog.GetType() != festruct.TBinlogType_UPSERT {
 		return xerror.Errorf(xerror.Normal, "launch txn but binlog type: %v is not a UPSERT", binlog.GetType())
+	}
+
+	if utils.HasJobFailpoint(j.Name, "handle_binlog_failed") {
+		log.Warnf("fail to handle binlog by failpoint, binlog type: %s, binlog data: %s", festruct.TBinlogType_UPSERT, binlog.GetData())
+		return xerror.Errorf(xerror.Normal, "fail to handle binlog by failpoint")
 	}
 
 	commitSeq := binlog.GetCommitSeq()
