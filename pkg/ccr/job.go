@@ -1552,40 +1552,6 @@ func (j *Job) getDbSyncTableRecords(upsert *record.Upsert) []*record.TableRecord
 	return tableRecords
 }
 
-func (j *Job) getStidsByDestTableId(destTableId int64, tableRecords []*record.TableRecord, stidMaps map[int64]int64) []int64 {
-	destStids := make([]int64, 0, 1)
-	uniqStids := make(map[int64]int64)
-
-	// first, get the source table id from j.progress.TableMapping
-	for sourceId, destId := range j.progress.TableMapping {
-		if destId != destTableId {
-			continue
-		}
-
-		// second, get the source stids from tableRecords
-		for _, tableRecord := range tableRecords {
-			if tableRecord.Id != sourceId {
-				continue
-			}
-
-			// third, get dest stids from partition
-			for _, partition := range tableRecord.PartitionRecords {
-				destStid := stidMaps[partition.Stid]
-				if destStid != 0 {
-					uniqStids[destStid] = 1
-				}
-			}
-		}
-	}
-
-	// dest stids may be repeated, get the unique stids
-	for key := range uniqStids {
-		destStid := key
-		destStids = append(destStids, destStid)
-	}
-	return destStids
-}
-
 func (j *Job) getRelatedTableRecords(upsert *record.Upsert) ([]*record.TableRecord, error) {
 	var tableRecords []*record.TableRecord //, 0, len(upsert.TableRecords))
 
@@ -1628,67 +1594,33 @@ func (j *Job) getRelatedTableRecords(upsert *record.Upsert) ([]*record.TableReco
 }
 
 // Table ingestBinlog
-func (j *Job) ingestBinlog(commitSeq, txnId int64, tableRecords []*record.TableRecord) ([]*ttypes.TTabletCommitInfo, error) {
-	log.Tracef("txn %d ingest binlog, commitSeq: %d", txnId, commitSeq)
+func (j *Job) ingestBinlog(commitSeq, txnId int64, tableRecords []*record.TableRecord, stidMap map[int64]int64) (
+	[]*ttypes.TTabletCommitInfo, []*festruct.TSubTxnInfo, error) {
+	isTxnInsert := len(stidMap) > 0
+	log.Tracef("txn %d ingest binlog, commitSeq: %d, is txn insert: %t", txnId, commitSeq, isTxnInsert)
 
-	job, err := j.jobFactory.CreateJob(NewIngestContext(commitSeq, txnId, tableRecords, j.progress.TableMapping), j, "IngestBinlog")
+	job, err := j.jobFactory.CreateJob(NewIngestContext(commitSeq, txnId, tableRecords, j.progress.TableMapping, stidMap), j, "IngestBinlog")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	ingestBinlogJob, ok := job.(*IngestBinlogJob)
 	if !ok {
-		return nil, xerror.Errorf(xerror.Normal, "invalid job type, job: %+v", job)
+		return nil, nil, xerror.Errorf(xerror.Normal, "invalid job type, job: %+v", job)
 	}
 
 	job.Run()
 	if err := job.Error(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return ingestBinlogJob.CommitInfos(), nil
-}
-
-// Table ingestBinlog for txn insert
-func (j *Job) ingestBinlogForTxnInsert(commitSeq, txnId int64, tableRecords []*record.TableRecord, stidMap map[int64]int64, destTableId int64) ([]*festruct.TSubTxnInfo, error) {
-	log.Infof("txn %d ingestBinlogForTxnInsert, commitSeq: %d", txnId, commitSeq)
-
-	job, err := j.jobFactory.CreateJob(NewIngestContextForTxnInsert(commitSeq, txnId, tableRecords, j.progress.TableMapping, stidMap), j, "IngestBinlog")
-	if err != nil {
-		return nil, err
+	commitInfos := ingestBinlogJob.CommitInfos()
+	if !isTxnInsert {
+		return commitInfos, nil, nil
 	}
 
-	ingestBinlogJob, ok := job.(*IngestBinlogJob)
-	if !ok {
-		return nil, xerror.Errorf(xerror.Normal, "invalid job type, job: %+v", job)
-	}
-
-	job.Run()
-	if err := job.Error(); err != nil {
-		return nil, err
-	}
-
-	stidToCommitInfos := ingestBinlogJob.SubTxnToCommitInfos()
-	subTxnInfos := make([]*festruct.TSubTxnInfo, 0, len(stidMap))
-	destStids := j.getStidsByDestTableId(destTableId, tableRecords, stidMap)
-
-	for _, destStid := range destStids {
-		destStid := destStid
-		commitInfos := stidToCommitInfos[destStid]
-		if commitInfos == nil {
-			log.Warnf("no commit infos from dest stid %d, just skip", destStid)
-			continue
-		}
-
-		tSubTxnInfo := &festruct.TSubTxnInfo{
-			SubTxnId:          &destStid,
-			TableId:           &destTableId,
-			TabletCommitInfos: commitInfos,
-		}
-
-		subTxnInfos = append(subTxnInfos, tSubTxnInfo)
-	}
-
-	return subTxnInfos, nil
+	// When txn insert, use subTxnInfos to commit rather than commitInfos.
+	subTxnInfos := ingestBinlogJob.SubTxnInfos()
+	return commitInfos, subTxnInfos, nil
 }
 
 func (j *Job) handleUpsertWithRetry(binlog *festruct.TBinlog) error {
@@ -1711,7 +1643,7 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 	log.Infof("handle upsert binlog, sub sync state: %s, prevCommitSeq: %d, commitSeq: %d",
 		j.progress.SubSyncState, j.progress.PrevCommitSeq, j.progress.CommitSeq)
 
-	// inMemory will be update in state machine, but progress keep any, so progress.inMemory is also latest, well call NextSubCheckpoint don't need to upate inMemory in progress
+	// inMemory will be update in state machine, but progress keep any, so progress.inMemory is also latest, well call NextSubCheckpoint don't need to update inMemory in progress
 	type inMemoryData struct {
 		CommitSeq    int64                       `json:"commit_seq"`
 		TxnId        int64                       `json:"txn_id"`
@@ -1917,40 +1849,19 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		}
 
 		// Step 3: ingest binlog
-		if isTxnInsert {
-			var allSubTxnInfos = make([]*festruct.TSubTxnInfo, 0, len(stidMap))
-			for _, destTableId := range inMemoryData.DestTableIds {
-				// When txn insert, use subTxnInfos to commit rather than commitInfos.
-				subTxnInfos, err := j.ingestBinlogForTxnInsert(commitSeq, txnId, tableRecords, stidMap, destTableId)
-				if err == errTriggerPartialSnapshot {
-					if j.Extra.PartialSnapshotParams == nil {
-						panic("partial snapshot params is nil when trigger partial snapshot")
-					}
-					j.progress.NextSubCheckpoint(RollbackTransaction, inMemoryData)
-				} else if err != nil {
-					rollback(err, inMemoryData)
-					return err
-				} else {
-					subTxnInfos := subTxnInfos
-					allSubTxnInfos = append(allSubTxnInfos, subTxnInfos...)
-					j.progress.NextSubCheckpoint(CommitTransaction, inMemoryData)
-				}
+		commitInfos, subTxnInfos, err := j.ingestBinlog(commitSeq, txnId, tableRecords, stidMap)
+		if err == errTriggerPartialSnapshot {
+			if j.Extra.PartialSnapshotParams == nil {
+				panic("partial snapshot params is nil when trigger partial snapshot")
 			}
-			inMemoryData.SubTxnInfos = allSubTxnInfos
+			j.progress.NextSubCheckpoint(RollbackTransaction, inMemoryData)
+		} else if err != nil {
+			rollback(err, inMemoryData)
+			return err
 		} else {
-			commitInfos, err := j.ingestBinlog(commitSeq, txnId, tableRecords)
-			if err == errTriggerPartialSnapshot {
-				if j.Extra.PartialSnapshotParams == nil {
-					panic("partial snapshot params is nil when trigger partial snapshot")
-				}
-				j.progress.NextSubCheckpoint(RollbackTransaction, inMemoryData)
-			} else if err != nil {
-				rollback(err, inMemoryData)
-				return err
-			} else {
-				inMemoryData.CommitInfos = commitInfos
-				j.progress.NextSubCheckpoint(CommitTransaction, inMemoryData)
-			}
+			inMemoryData.CommitInfos = commitInfos
+			inMemoryData.SubTxnInfos = subTxnInfos
+			j.progress.NextSubCheckpoint(CommitTransaction, inMemoryData)
 		}
 
 	case CommitTransaction:

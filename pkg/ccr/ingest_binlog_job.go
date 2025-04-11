@@ -48,7 +48,8 @@ type commitInfosCollector struct {
 }
 
 type subTxnInfosCollector struct {
-	subTxnidToCommitInfos map[int64]([]*ttypes.TTabletCommitInfo)
+	subTxnDestTableId     map[int64]int64
+	subTxnIdToCommitInfos map[int64]([]*ttypes.TTabletCommitInfo)
 	subTxnInfosLock       sync.Mutex
 }
 
@@ -60,7 +61,8 @@ func newCommitInfosCollector() *commitInfosCollector {
 
 func newSubTxnInfosCollector() *subTxnInfosCollector {
 	return &subTxnInfosCollector{
-		subTxnidToCommitInfos: make(map[int64]([]*ttypes.TTabletCommitInfo)),
+		subTxnDestTableId:     make(map[int64]int64),
+		subTxnIdToCommitInfos: make(map[int64]([]*ttypes.TTabletCommitInfo)),
 	}
 }
 
@@ -71,21 +73,25 @@ func (cic *commitInfosCollector) appendCommitInfos(commitInfo ...*ttypes.TTablet
 	cic.commitInfos = append(cic.commitInfos, commitInfo...)
 }
 
-func (stic *subTxnInfosCollector) appendSubTxnCommitInfos(stid int64, commitInfo ...*ttypes.TTabletCommitInfo) {
-	stic.subTxnInfosLock.Lock()
-	defer stic.subTxnInfosLock.Unlock()
+func (c *subTxnInfosCollector) appendSubTxnCommitInfos(stid, destTableId int64, commitInfo ...*ttypes.TTabletCommitInfo) {
+	c.subTxnInfosLock.Lock()
+	defer c.subTxnInfosLock.Unlock()
 
-	if stic.subTxnidToCommitInfos == nil {
-		stic.subTxnidToCommitInfos = make(map[int64]([]*ttypes.TTabletCommitInfo))
+	if c.subTxnIdToCommitInfos == nil {
+		c.subTxnIdToCommitInfos = make(map[int64]([]*ttypes.TTabletCommitInfo))
 	}
+	if c.subTxnDestTableId == nil {
+		c.subTxnDestTableId = make(map[int64]int64)
+	}
+	c.subTxnDestTableId[stid] = destTableId
 
-	tabletCommitInfos := stic.subTxnidToCommitInfos[stid]
+	tabletCommitInfos := c.subTxnIdToCommitInfos[stid]
 	if tabletCommitInfos == nil {
 		tabletCommitInfos = make([]*ttypes.TTabletCommitInfo, 0)
 	}
 
 	tabletCommitInfos = append(tabletCommitInfos, commitInfo...)
-	stic.subTxnidToCommitInfos[stid] = tabletCommitInfos
+	c.subTxnIdToCommitInfos[stid] = tabletCommitInfos
 }
 
 func (cic *commitInfosCollector) CommitInfos() []*ttypes.TTabletCommitInfo {
@@ -95,11 +101,27 @@ func (cic *commitInfosCollector) CommitInfos() []*ttypes.TTabletCommitInfo {
 	return cic.commitInfos
 }
 
-func (stic *subTxnInfosCollector) SubTxnToCommitInfos() map[int64]([]*ttypes.TTabletCommitInfo) {
-	stic.subTxnInfosLock.Lock()
-	defer stic.subTxnInfosLock.Unlock()
+func (c *subTxnInfosCollector) SubTxnToCommitInfos() map[int64]([]*ttypes.TTabletCommitInfo) {
+	c.subTxnInfosLock.Lock()
+	defer c.subTxnInfosLock.Unlock()
 
-	return stic.subTxnidToCommitInfos
+	return c.subTxnIdToCommitInfos
+}
+
+func (c *subTxnInfosCollector) SubTxnInfos() []*festruct.TSubTxnInfo {
+	c.subTxnInfosLock.Lock()
+	defer c.subTxnInfosLock.Unlock()
+
+	subTxnInfos := make([]*festruct.TSubTxnInfo, 0, len(c.subTxnDestTableId))
+	for stid, destTableId := range c.subTxnDestTableId {
+		txnInfo := &festruct.TSubTxnInfo{
+			SubTxnId:          utils.ThriftValueWrapper(stid),
+			TableId:           utils.ThriftValueWrapper(destTableId),
+			TabletCommitInfos: c.subTxnIdToCommitInfos[stid],
+		}
+		subTxnInfos = append(subTxnInfos, txnInfo)
+	}
+	return subTxnInfos
 }
 
 type tabletIngestBinlogHandler struct {
@@ -225,7 +247,7 @@ func (h *tabletIngestBinlogHandler) handleReplica(srcReplica, destReplica *Repli
 
 			// for txn insert
 			if destStid != 0 {
-				h.appendSubTxnCommitInfos(destStid, commitInfo)
+				h.appendSubTxnCommitInfos(destStid, h.destTableId, commitInfo)
 			}
 		}
 	}()
@@ -264,7 +286,7 @@ func (h *tabletIngestBinlogHandler) handle() {
 	// for txn insert
 	if h.stid != 0 {
 		commitInfos := h.SubTxnToCommitInfos()[h.stid]
-		h.ingestJob.appendSubTxnCommitInfos(h.stid, commitInfos...)
+		h.ingestJob.appendSubTxnCommitInfos(h.stid, h.destTableId, commitInfos...)
 	}
 }
 
@@ -277,18 +299,8 @@ type IngestContext struct {
 	stidMapping  map[int64]int64
 }
 
-func NewIngestContext(commitSeq, txnId int64, tableRecords []*record.TableRecord, tableMapping map[int64]int64) *IngestContext {
-	return &IngestContext{
-		Context:      context.Background(),
-		commitSeq:    commitSeq,
-		txnId:        txnId,
-		tableRecords: tableRecords,
-		tableMapping: tableMapping,
-	}
-}
-
-func NewIngestContextForTxnInsert(commitSeq, txnId int64, tableRecords []*record.TableRecord,
-	tableMapping map[int64]int64, stidMapping map[int64]int64) *IngestContext {
+func NewIngestContext(commitSeq, txnId int64, tableRecords []*record.TableRecord, tableMapping map[int64]int64,
+	stidMapping map[int64]int64) *IngestContext {
 	return &IngestContext{
 		Context:      context.Background(),
 		commitSeq:    commitSeq,
