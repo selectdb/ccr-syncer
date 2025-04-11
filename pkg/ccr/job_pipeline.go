@@ -190,12 +190,11 @@ func (j *Job) pipelineSync() error {
 		switch j.progress.SubSyncState {
 		case Done:
 			log.Tracef("pipeline sync: done")
+			j.initializePipelineContext()
 
 			// Trigger a partial snapshot
 			if j.Extra.PartialSnapshotParams != nil {
-				if j.pipelineCtx != nil {
-					j.resetPipeline()
-				}
+				j.resetPipeline()
 				params := j.Extra.PartialSnapshotParams
 				return j.NewPartialSnapshot(params.TableId, params.TableName, params.Partitions, params.Replace, params.IsView)
 			}
@@ -204,19 +203,16 @@ func (j *Job) pipelineSync() error {
 			if !j.progress.IsDone() {
 				log.Infof("job progress is not done, need recover. state: %s, prevCommitSeq: %d, commitSeq: %d",
 					j.progress.SubSyncState, j.progress.PrevCommitSeq, j.progress.CommitSeq)
-				if j.pipelineCtx != nil {
-					j.resetPipeline()
-				}
+				j.resetPipeline()
 				return j.recoverIncrementalSync()
 			}
 
 			if exit, err := j.maySkipBinlog(); err != nil {
 				return err
 			} else if exit {
+				j.resetPipeline()
 				return nil
 			}
-
-			j.initializePipelineContext()
 
 			// Step launch transaction if no binlogs or the next binlog is an upsert binlog.
 			if !j.pipelineCtx.hasNonUpsertBinlog() {

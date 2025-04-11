@@ -3790,7 +3790,6 @@ func (j *Job) NewSnapshot(commitSeq int64, fullSyncInfo string) error {
 	j.progress.PartialSyncData = nil
 	j.progress.TableAliases = nil
 	j.progress.SyncId += 1
-	j.pipelineCtx = nil // clear pipeline context since the snapshot will change the commit seq.
 	switch j.SyncType {
 	case TableSync:
 		j.progress.NextWithPersist(commitSeq, TableFullSync, BeginCreateSnapshot, "")
@@ -3845,7 +3844,6 @@ func (j *Job) NewPartialSnapshot(tableId int64, table string, partitions []strin
 	}
 
 	j.Extra.PartialSnapshotParams = nil
-	j.pipelineCtx = nil // clear pipeline context since the snapshot will change the commit seq.
 	switch j.SyncType {
 	case TableSync:
 		j.progress.NextWithPersist(commitSeq, TablePartialSync, BeginCreateSnapshot, "")
