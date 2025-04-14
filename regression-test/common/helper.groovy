@@ -600,9 +600,13 @@ class Helper {
     }
 
     Boolean check_table_describe_times(String table, times = 30) {
+        return check_table_with_alias_describe_times(table, table, times)
+    }
+
+    Boolean check_table_with_alias_describe_times(String table, String alias, times = 30) {
         while (times > 0) {
             def upstream_describe = get_table_describe(table)
-            def downstream_describe = get_table_describe(table, "target")
+            def downstream_describe = get_table_describe(alias, "target")
             if (check_describes(upstream_describe, downstream_describe)) {
                 return true
             }
@@ -611,7 +615,7 @@ class Helper {
         }
 
         def upstream_describe = get_table_describe(table)
-        def downstream_describe = get_table_describe(table, "target")
+        def downstream_describe = get_table_describe(alias, "target")
         logger.info("upstream describe: ${upstream_describe}")
         logger.info("downstream describe: ${downstream_describe}")
         return false

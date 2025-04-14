@@ -75,6 +75,7 @@ var (
 	featureIdempotentDDL                bool
 	featureSkipWaitingTxnPublish        bool
 	featureSkipCheckAsyncMvTable        bool
+	featurePipelineCommit               bool
 
 	flagBinlogBatchSize int64
 
@@ -114,6 +115,8 @@ func init() {
 		"skip waiting for the txn publish")
 	flag.BoolVar(&featureSkipCheckAsyncMvTable, "feature_skip_check_async_mv_table", true,
 		"skip checking async mv table, the async mv binlogs will be filtered by doris")
+	flag.BoolVar(&featurePipelineCommit, "feature_pipeline_commit", true,
+		"enable pipeline commit for upsert binlogs")
 
 	flag.Int64Var(&flagBinlogBatchSize, "binlog_batch_size", 16, "the max num of binlogs to get in a batch")
 }
@@ -218,6 +221,7 @@ type Job struct {
 
 	asyncMvTableCache  map[int64]struct{}      `json:"-"`
 	concurrencyManager *rpc.ConcurrencyManager `json:"-"`
+	pipelineCtx        *JobPipelineContext     `json:"-"`
 
 	lock sync.Mutex `json:"-"`
 }
@@ -2959,61 +2963,79 @@ func (j *Job) handleBinlogs(binlogs []*festruct.TBinlog) (error, bool) {
 
 	for _, binlog := range binlogs {
 		// Step 1: dispatch handle binlog
-		if err := j.handleBinlog(binlog); err != nil {
-			log.Errorf("handle binlog failed, prevCommitSeq: %d, commitSeq: %d, binlog type: %s, binlog data: %s",
-				j.progress.PrevCommitSeq, j.progress.CommitSeq, binlog.GetType(), binlog.GetData())
+		if err, ok := j.handleBinlog(binlog); err != nil {
 			return err, false
-		}
-
-		// Step 2: check job state, if not incrementalSync, such as DBPartialSync, break
-		if j.Extra.PartialSnapshotParams != nil {
-			params := j.Extra.PartialSnapshotParams
-			if err := j.NewPartialSnapshot(params.TableId, params.TableName, params.Partitions, params.Replace, params.IsView); err != nil {
-				return err, false
-			}
-			return nil, true
-		}
-		if !j.isIncrementalSync() {
-			log.Tracef("job state is not incremental sync, back to run loop, job state: %s", j.progress.SyncState)
-			return nil, true
-		}
-
-		// Step 3: update progress
-		commitSeq := binlog.GetCommitSeq()
-		if j.SyncType == DBSync && j.progress.TableCommitSeqMap != nil {
-			// when all table commit seq > commitSeq, it's true
-			reachSwitchToDBIncrementalSync := true
-			for _, tableCommitSeq := range j.progress.TableCommitSeqMap {
-				if tableCommitSeq > commitSeq {
-					reachSwitchToDBIncrementalSync = false
-					break
-				}
-			}
-			for _, partitionCommitSeq := range j.progress.PartitionCommitSeqMap {
-				if partitionCommitSeq > commitSeq {
-					reachSwitchToDBIncrementalSync = false
-					break
-				}
-			}
-
-			if reachSwitchToDBIncrementalSync {
-				log.Infof("all table/partition commit seq reach the commit seq, switch to incremental sync, commit seq: %d", commitSeq)
-				j.progress.TableCommitSeqMap = nil
-				j.progress.PartitionCommitSeqMap = nil
-				j.progress.NextWithPersist(j.progress.CommitSeq, DBIncrementalSync, Done, "")
-			}
-		}
-
-		// Step 4: update progress to db
-		if !j.progress.IsDone() {
-			j.progress.Done()
-		}
-
-		if j.hasInterruptSignal() {
+		} else if ok || j.hasInterruptSignal() {
 			return nil, true // back to run loop
 		}
 	}
 	return nil, false
+}
+
+func (j *Job) handleBinlog(binlog *festruct.TBinlog) (error, bool) {
+	if err := j.handleBinlogInternal(binlog); err != nil {
+		log.Errorf("handle binlog failed, prevCommitSeq: %d, commitSeq: %d, binlog type: %s, binlog data: %s",
+			j.progress.PrevCommitSeq, j.progress.CommitSeq, binlog.GetType(), binlog.GetData())
+		return err, false
+	}
+
+	if j.Extra.PartialSnapshotParams != nil {
+		params := j.Extra.PartialSnapshotParams
+		if err := j.NewPartialSnapshot(params.TableId, params.TableName, params.Partitions, params.Replace, params.IsView); err != nil {
+			return err, false
+		}
+		return nil, true
+	}
+
+	// Step 2: check job state, if not incrementalSync, such as DBPartialSync, break
+	if !j.isIncrementalSync() {
+		log.Tracef("job state is not incremental sync, back to run loop, job state: %s", j.progress.SyncState)
+		return nil, true
+	}
+
+	// Step 3: update progress
+	j.afterHandleBinlog(binlog.GetCommitSeq())
+
+	// Step 4: update progress to db
+	if !j.progress.IsDone() {
+		j.progress.Done()
+	}
+
+	// release the binlogs before PrevCommitSeq.
+	if err := j.lockBinlog(j.progress.PrevCommitSeq); err != nil {
+		return err, false
+	}
+
+	j.updateJobStatus()
+
+	return nil, false
+}
+
+// After the binlog is handled ...
+func (j *Job) afterHandleBinlog(commitSeq int64) {
+	if j.SyncType == DBSync && j.progress.TableCommitSeqMap != nil {
+		// when all table commit seq > commitSeq, it's true
+		reachSwitchToDBIncrementalSync := true
+		for _, tableCommitSeq := range j.progress.TableCommitSeqMap {
+			if tableCommitSeq > commitSeq {
+				reachSwitchToDBIncrementalSync = false
+				break
+			}
+		}
+		for _, partitionCommitSeq := range j.progress.PartitionCommitSeqMap {
+			if partitionCommitSeq > commitSeq {
+				reachSwitchToDBIncrementalSync = false
+				break
+			}
+		}
+
+		if reachSwitchToDBIncrementalSync {
+			log.Infof("all table/partition commit seq reach the commit seq, switch to incremental sync, commit seq: %d", commitSeq)
+			j.progress.TableCommitSeqMap = nil
+			j.progress.PartitionCommitSeqMap = nil
+			j.progress.SyncState = DBIncrementalSync
+		}
+	}
 }
 
 func (j *Job) isModifyTableColumnsCommitted(record *record.ModifyTableAddOrDropColumns) (bool, error) {
@@ -3337,7 +3359,7 @@ func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
 	}
 }
 
-func (j *Job) handleBinlog(binlog *festruct.TBinlog) error {
+func (j *Job) handleBinlogInternal(binlog *festruct.TBinlog) error {
 	if binlog == nil || !binlog.IsSetCommitSeq() {
 		return xerror.Errorf(xerror.Normal, "invalid binlog: %v", binlog)
 	}
@@ -3486,6 +3508,37 @@ func (j *Job) recoverIncrementalSync() error {
 }
 
 func (j *Job) incrementalSync() error {
+	if featurePipelineCommit {
+		return j.pipelineSync()
+	} else {
+		return j.incrementalSyncInternal()
+	}
+}
+
+func (j *Job) maySkipBinlog() (bool, error) {
+	// Force fullsync unconditionally
+	if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipByFullSync {
+		info := fmt.Sprintf("the user required skipping the binlog, commit seq %d", j.progress.CommitSeq)
+		log.Warnf("force full sync, because %s", info)
+		return true, j.NewSnapshot(j.progress.CommitSeq, info)
+	} else if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipByPartialSync {
+		log.Warnf("force partial sync, because the user required skipping the binlog, commit seq %d, table id %d, table %s",
+			j.progress.CommitSeq, j.Extra.SkipTableId, j.Extra.SkipTable)
+		if exists, err := j.IsSourceTableExists(j.Extra.SkipTableId, j.Extra.SkipTable); err != nil {
+			return false, err
+		} else if !exists {
+			log.Warnf("the user required table %s (id %d) is not exists in source, ignore this skipping requirement",
+				j.Extra.SkipTable, j.Extra.SkipTableId)
+			j.Extra.SkipBinlog = false
+		} else {
+			replace, isView := true, false
+			return true, j.NewPartialSnapshot(j.Extra.SkipTableId, j.Extra.SkipTable, nil, replace, isView)
+		}
+	}
+	return false, nil
+}
+
+func (j *Job) incrementalSyncInternal() error {
 	if !j.progress.IsDone() {
 		log.Infof("job progress is not done, need recover. state: %s, prevCommitSeq: %d, commitSeq: %d",
 			j.progress.SubSyncState, j.progress.PrevCommitSeq, j.progress.CommitSeq)
@@ -3493,24 +3546,10 @@ func (j *Job) incrementalSync() error {
 		return j.recoverIncrementalSync()
 	}
 
-	// Force fullsync unconditionally
-	if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipByFullSync {
-		info := fmt.Sprintf("the user required skipping the binlog, commit seq %d", j.progress.CommitSeq)
-		log.Warnf("force full sync, because %s", info)
-		return j.NewSnapshot(j.progress.CommitSeq, info)
-	} else if j.Extra.SkipBinlog && j.Extra.SkipBy == SkipByPartialSync {
-		log.Warnf("force partial sync, because the user required skipping the binlog, commit seq %d, table id %d, table %s",
-			j.progress.CommitSeq, j.Extra.SkipTableId, j.Extra.SkipTable)
-		if exists, err := j.IsSourceTableExists(j.Extra.SkipTableId, j.Extra.SkipTable); err != nil {
-			return err
-		} else if !exists {
-			log.Warnf("the user required table %s (id %d) is not exists in source, ignore this skipping requirement",
-				j.Extra.SkipTable, j.Extra.SkipTableId)
-			j.Extra.SkipBinlog = false
-		} else {
-			replace, isView := true, false
-			return j.NewPartialSnapshot(j.Extra.SkipTableId, j.Extra.SkipTable, nil, replace, isView)
-		}
+	if exit, err := j.maySkipBinlog(); err != nil {
+		return err
+	} else if exit {
+		return nil
 	}
 
 	// Step 1: get binlog
@@ -3571,13 +3610,6 @@ func (j *Job) incrementalSync() error {
 		} else if backToRunLoop {
 			return nil
 		}
-
-		// release the binlogs before PrevCommitSeq.
-		if err = j.lockBinlog(j.progress.PrevCommitSeq); err != nil {
-			return err
-		}
-
-		j.updateJobStatus()
 	}
 	return nil
 }

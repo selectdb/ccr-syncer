@@ -121,6 +121,12 @@ var (
 
 	// IncrementalSync state machine states
 	DB_1 SubSyncState = SubSyncState{State: 100, BinlogType: BinlogNone}
+
+	// Pipeline commit state machine states
+	LaunchTransaction         SubSyncState = SubSyncState{State: 200, BinlogType: BinlogNone} // Launch the continuous upsert binlog
+	CommitPipeline            SubSyncState = SubSyncState{State: 201, BinlogType: BinlogNone} // All continuous upsert binlogs are launched, but not yet committed
+	CommitPipelineTransaction SubSyncState = SubSyncState{State: 202, BinlogType: BinlogNone} // Commit an upsert binlog
+	RollbackPipeline          SubSyncState = SubSyncState{State: 203, BinlogType: BinlogNone} // A upsert binlog commit failed, rollback all the following upsert binlogs
 )
 
 // SubSyncState Stringer
@@ -146,6 +152,14 @@ func (s SubSyncState) String() string {
 		return "CommitTransaction"
 	case RollbackTransaction:
 		return "RollbackTransaction"
+	case LaunchTransaction:
+		return "LaunchTransaction"
+	case CommitPipeline:
+		return "CommitPipeline"
+	case CommitPipelineTransaction:
+		return "CommitPipelineTransaction"
+	case RollbackPipeline:
+		return "RollbackPipeline"
 	default:
 		return fmt.Sprintf("Unknown sub sync state: %d, binlog type: %d", s.State, s.BinlogType)
 	}
@@ -167,6 +181,7 @@ type JobProgress struct {
 	SyncState SyncState `json:"sync_state"`
 	// Sub sync state machine states
 	SubSyncState SubSyncState `json:"sub_sync_state"`
+	InPipeline   bool         `json:"-"` // whether the job is in pipeline commit mode
 
 	// The sync id of full/partial snapshot
 	SyncId int64 `json:"job_sync_id"`
@@ -320,6 +335,18 @@ func _convertToPersistData(persistData any) string {
 	}
 }
 
+func (j *JobProgress) DoneSubCheckpoint(subSyncState SubSyncState, persistData any) {
+	log.Debugf("job %s step next, sync state: %s, commitSeq: %d, prevCommitSeq: %d",
+		j.JobName, j.SyncState, j.CommitSeq, j.PrevCommitSeq)
+
+	j.SubSyncState = Done
+	j.PrevCommitSeq = j.CommitSeq
+	j.SubSyncState = subSyncState
+	j.PersistData = _convertToPersistData(persistData)
+
+	j.Persist()
+}
+
 // Persist is checkpint, next state only get it from persistData
 func (j *JobProgress) NextSubCheckpoint(subSyncState SubSyncState, persistData any) {
 	if subSyncState == IngestBinlog {
@@ -341,6 +368,11 @@ func (j *JobProgress) CommitNextSubWithPersist(commitSeq int64, subSyncState Sub
 	j.PersistData = _convertToPersistData(persistData)
 
 	// TODO: check
+	j.Persist()
+}
+
+func (j *JobProgress) PersistInMemoryData() {
+	j.PersistData = _convertToPersistData(j.InMemoryData)
 	j.Persist()
 }
 

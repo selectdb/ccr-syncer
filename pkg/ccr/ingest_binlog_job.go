@@ -143,7 +143,7 @@ type tabletIngestBinlogHandler struct {
 }
 
 // handle Replica
-func (h *tabletIngestBinlogHandler) handleReplica(srcReplica, destReplica *ReplicaMeta) bool {
+func (h *tabletIngestBinlogHandler) handleReplica(ctx context.Context, srcReplica, destReplica *ReplicaMeta) bool {
 	destReplicaId := destReplica.Id
 	log.Tracef("txn %d tablet ingest binlog: handle dest replica id: %d, dest tablet id %d",
 		h.ingestJob.txnId, destReplicaId, h.destTablet.Id)
@@ -227,7 +227,7 @@ func (h *tabletIngestBinlogHandler) handleReplica(srcReplica, destReplica *Repli
 			}
 		}
 
-		resp, err := destRpc.IngestBinlog(req, options...)
+		resp, err := destRpc.IngestBinlog(ctx, req, options...)
 		if err != nil {
 			j.setError(err)
 			return
@@ -255,7 +255,7 @@ func (h *tabletIngestBinlogHandler) handleReplica(srcReplica, destReplica *Repli
 	return true
 }
 
-func (h *tabletIngestBinlogHandler) handle() {
+func (h *tabletIngestBinlogHandler) handle(ctx context.Context) {
 	log.Tracef("txn %d, tablet ingest binlog, src tablet id: %d, dest tablet id: %d, total %d replicas",
 		h.ingestJob.txnId, h.srcTablet.Id, h.destTablet.Id, h.srcTablet.ReplicaMetas.Len())
 
@@ -278,7 +278,7 @@ func (h *tabletIngestBinlogHandler) handle() {
 		// round robbin
 		srcReplica := srcReplicas[srcReplicaIndex%len(srcReplicas)]
 		srcReplicaIndex++
-		return h.handleReplica(srcReplica, destReplica)
+		return h.handleReplica(ctx, srcReplica, destReplica)
 	})
 	h.wg.Wait()
 
@@ -299,15 +299,14 @@ type IngestContext struct {
 	stidMapping  map[int64]int64
 }
 
-func NewIngestContext(commitSeq, txnId int64, tableRecords []*record.TableRecord, tableMapping map[int64]int64,
-	stidMapping map[int64]int64) *IngestContext {
+func NewIngestContext(commitSeq, txnId int64, tableRecords []*record.TableRecord,
+	tableMapping map[int64]int64, stidMapping map[int64]int64) *IngestContext {
 	return &IngestContext{
 		Context:      context.Background(),
 		commitSeq:    commitSeq,
 		txnId:        txnId,
 		tableRecords: tableRecords,
 		tableMapping: tableMapping,
-		stidMapping:  stidMapping,
 	}
 }
 
@@ -378,6 +377,10 @@ func (j *IngestBinlogJob) GetDestBackend(destBackendId int64) *base.Backend {
 
 func (j *IngestBinlogJob) GetTabletCommitInfos() []*ttypes.TTabletCommitInfo {
 	return j.commitInfos
+}
+
+func (j *IngestBinlogJob) GetSubTxnInfos() []*festruct.TSubTxnInfo {
+	return j.SubTxnInfos()
 }
 
 func (j *IngestBinlogJob) setError(err error) {
@@ -699,12 +702,12 @@ func (j *IngestBinlogJob) prepareTabletIngestJobs() {
 	}
 }
 
-func (j *IngestBinlogJob) runTabletIngestJobs() {
+func (j *IngestBinlogJob) runTabletIngestJobs(ctx context.Context) {
 	log.Infof("txn %d ingest binlog: run %d tablet ingest jobs", j.txnId, len(j.tabletIngestJobs))
 	for _, tabletIngestJob := range j.tabletIngestJobs {
 		j.wg.Add(1)
 		go func(tabletIngestJob *tabletIngestBinlogHandler) {
-			tabletIngestJob.handle()
+			tabletIngestJob.handle(ctx)
 			j.wg.Done()
 		}(tabletIngestJob)
 	}
@@ -845,12 +848,19 @@ func (j *IngestBinlogJob) applyDroppedBinlogs() {
 }
 
 func (j *IngestBinlogJob) Run() {
+	j.Prepare()
+	if err := j.Error(); err != nil {
+		return
+	}
+	j.Ingest(context.Background())
+}
+
+func (j *IngestBinlogJob) Prepare() {
 	steps := []func(){
 		j.prepareMeta,
 		j.applyDroppedBinlogs,
 		j.prepareBackendMap,
 		j.prepareTabletIngestJobs,
-		j.runTabletIngestJobs,
 	}
 	for _, step := range steps {
 		step()
@@ -867,4 +877,8 @@ func isMatchTableId(tableRecords []*record.TableRecord, tableId int64) bool {
 		}
 	}
 	return false
+}
+
+func (j *IngestBinlogJob) Ingest(ctx context.Context) {
+	j.runTabletIngestJobs(ctx)
 }
