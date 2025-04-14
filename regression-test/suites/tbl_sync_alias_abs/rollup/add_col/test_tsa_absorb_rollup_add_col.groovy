@@ -14,9 +14,9 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_tsa_absorb_rollup_add_col") {
+suite('test_tsa_absorb_rollup_add_col') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
-            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
+            .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
     if (helper.has_feature('feature_skip_rollup_binlogs')) {
         logger.info('skip this suite because feature_skip_rollup_binlogs is enabled')
@@ -24,10 +24,10 @@ suite("test_tsa_absorb_rollup_add_col") {
     }
 
     def dbName = context.dbName
-    def tableName = "tbl_" + helper.randomSuffix()
+    def tableName = 'tbl_' + helper.randomSuffix()
     def test_num = 0
     def insert_num = 10
-    def aliasTableName = "alias_tbl_" + helper.randomSuffix()
+    def aliasTableName = 'alias_tbl_' + helper.randomSuffix()
     helper.set_alias(aliasTableName)
 
     def exist = { res -> Boolean
@@ -78,10 +78,10 @@ suite("test_tsa_absorb_rollup_add_col") {
     helper.ccrJobCreate(tableName)
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 180))
-    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${aliasTableName}" """, exist, 60, "target"))
-    assertTrue(helper.checkShowTimesOf("DESC ${context.dbName}.${tableName} ALL", hasRollupAdded, 30, "sql"))
-    assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${aliasTableName} ALL", hasRollupAdded, 30, "target"))
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, 'sql'))
+    assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${aliasTableName}" """, exist, 60, 'target'))
+    assertTrue(helper.checkShowTimesOf("DESC ${context.dbName}.${tableName} ALL", hasRollupAdded, 30, 'sql'))
+    assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${aliasTableName} ALL", hasRollupAdded, 30, 'target'))
 
     // 0. Insert N data
     for (int index = insert_num; index < insert_num * 2; index++) {
@@ -89,8 +89,8 @@ suite("test_tsa_absorb_rollup_add_col") {
             INSERT INTO ${tableName} VALUES (${index}, ${index}, ${index}, ${index}, ${index})
             """
     }
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num}, 60, "sql"))
-    assertTrue(helper.checkShowTimesOf(""" select * from ${aliasTableName} """, { r -> r.size() == insert_num}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName } """, { r -> r.size() == insert_num}, 60, 'sql'))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${aliasTableName } """, { r -> r.size() == insert_num}, 60, 'target'))
     // 1. Pause ccr job
     helper.ccrJobPause(tableName)
 
@@ -120,14 +120,16 @@ suite("test_tsa_absorb_rollup_add_col") {
             """
     }
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 3}, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName } """, { r -> r.size() == insert_num * 3}, 60, 'sql'))
 
     // 5. Force trigger fullsnapshot
     helper.force_fullsync(tableName)
 
     // 6. Resume ccr job
     helper.ccrJobResume(tableName)
-  
+
     // 7. Verify data and operation are synced downstream
-    assertTrue(helper.checkShowTimesOf(""" select * from ${aliasTableName} """, { r -> r.size() == insert_num * 3}, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${aliasTableName } """, { r -> r.size() == insert_num * 3}, 60, 'target'))
+
+    assertTrue(helper.check_table_with_alias_describe_times(tableName, aliasTableName))
 }
