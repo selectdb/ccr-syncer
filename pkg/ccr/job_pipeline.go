@@ -468,6 +468,13 @@ func (j *Job) getNextBinlogs() error {
 	case tstatus.TStatusCode_OK:
 	case tstatus.TStatusCode_BINLOG_TOO_OLD_COMMIT_SEQ:
 	case tstatus.TStatusCode_BINLOG_TOO_NEW_COMMIT_SEQ:
+		// consume prev txn id for not to check and wait prev transaction finished
+		if j.progress.PrevTxnId != -1 {
+			log.Infof("consume prev txn id: %d", j.progress.PrevTxnId)
+			j.Dest.WaitTransactionDone(j.progress.PrevTxnId)
+			j.progress.PrevTxnId = -1
+			j.progress.Persist()
+		}
 		return nil
 	case tstatus.TStatusCode_BINLOG_DISABLE:
 		return xerror.Errorf(xerror.Normal, "binlog is disabled")
