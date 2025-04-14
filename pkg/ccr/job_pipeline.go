@@ -13,6 +13,7 @@ import (
 	ttypes "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/types"
 	utils "github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
+	"github.com/selectdb/ccr_syncer/pkg/xmetrics"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -56,6 +57,8 @@ type TxnContext struct {
 	TableRecords []*record.TableRecord `json:"table_records"`
 	// The txn link, to preserve the txn commit sequence
 	Link TxnLink `json:"-"`
+	// The defer metrics handle
+	DeferMetricsHandle func() `json:"-"`
 }
 
 type TxnIngestResult struct {
@@ -555,6 +558,9 @@ func (j *Job) buildTxnContext(binlog *festruct.TBinlog) (*TxnContext, error) {
 		return nil, xerror.Errorf(xerror.Normal, "The txn insert is not supported yet")
 	}
 
+	commitSeq := upsert.CommitSeq
+	metricsHandle := xmetrics.RecordHandlingBinlog(j.Name, commitSeq)
+
 	// Step 1: get related tableRecords
 	tableRecords, err := j.getRelatedTableRecords(upsert)
 	if err != nil {
@@ -598,13 +604,14 @@ func (j *Job) buildTxnContext(binlog *festruct.TBinlog) (*TxnContext, error) {
 	j.pipelineCtx.NextTxnLink = linkCh
 	link := TxnLink{Prev: prevCh, Next: linkCh}
 	ctx := &TxnContext{
-		CommitSeq:    upsert.CommitSeq,
-		Label:        upsert.Label,
-		IsTxnInsert:  isTxnInsert,
-		SourceStids:  upsert.Stids,
-		DestTableIds: destTableIds,
-		TableRecords: tableRecords,
-		Link:         link,
+		CommitSeq:          upsert.CommitSeq,
+		Label:              upsert.Label,
+		IsTxnInsert:        isTxnInsert,
+		SourceStids:        upsert.Stids,
+		DestTableIds:       destTableIds,
+		TableRecords:       tableRecords,
+		Link:               link,
+		DeferMetricsHandle: metricsHandle,
 	}
 	return ctx, nil
 }
@@ -812,6 +819,10 @@ func (j *Job) applyTxn(ctx *TxnContext) {
 		}
 	}
 
+	if ctx.DeferMetricsHandle != nil {
+		ctx.DeferMetricsHandle()
+	}
+
 	j.afterHandleBinlog(commitSeq)
 }
 
@@ -839,6 +850,10 @@ func (j *Job) rollbackTxn(ctx *TxnContext) error {
 		} else {
 			return xerror.Errorf(xerror.Normal, "rollback txn failed, status: %v", resp.Status)
 		}
+	}
+
+	if ctx.DeferMetricsHandle != nil {
+		ctx.DeferMetricsHandle()
 	}
 
 	log.Infof("rollback txn %d success", txnId)
