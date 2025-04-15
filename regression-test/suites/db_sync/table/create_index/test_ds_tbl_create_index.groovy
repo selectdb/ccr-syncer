@@ -160,7 +160,7 @@ suite("test_ds_tbl_create_index") {
         assertEquals(originIndexId, targetIndexId)
 
         sql """ set enable_match_without_inverted_index = false """
-        res = sql """ SELECT /*+ SET_VAR(inverted_index_skip_threshold = 0, enable_common_expr_pushdown = true) */ * FROM ${tableNameIndex} WHERE value MATCH_ANY "11" """
+        def res = sql """ SELECT /*+ SET_VAR(inverted_index_skip_threshold = 0, enable_common_expr_pushdown = true) */ * FROM ${tableNameIndex} WHERE value MATCH_ANY "11" """
         logger.info(res[0][1])
         assertTrue(res.size() > 0)
 

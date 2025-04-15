@@ -65,6 +65,7 @@ suite("test_db_partial_sync_cache") {
         """
     sql "sync"
 
+    helper.ccrJobDelete()
     helper.ccrJobCreate()
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))

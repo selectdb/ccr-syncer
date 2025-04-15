@@ -20,8 +20,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
@@ -254,6 +255,29 @@ func (s *SQLiteDB) GetStampAndJobs(hostInfo string) (int64, []string, error) {
 	}
 
 	return timestamp, jobs, nil
+}
+
+func (s *SQLiteDB) GetJobs() ([]string, error) {
+	jobs := make([]string, 0)
+	rows, err := s.db.Query("SELECT job_name FROM jobs")
+	if err != nil {
+		return nil, xerror.Wrapf(err, xerror.DB, "sqlite: get job names failed.")
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var jobName string
+		if err = rows.Scan(&jobName); err != nil {
+			return nil, xerror.Wrapf(err, xerror.DB, "sqlite: scan job_name failed.")
+		}
+		jobs = append(jobs, jobName)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, xerror.Wrapf(err, xerror.DB, "sqlite: get job names failed.")
+	}
+
+	return jobs, nil
 }
 
 func (s *SQLiteDB) GetDeadSyncers(expiredTime int64) ([]string, error) {

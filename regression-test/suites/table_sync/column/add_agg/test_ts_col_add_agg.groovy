@@ -58,6 +58,7 @@ suite("test_ts_col_add_agg") {
         """
     sql "sync"
 
+    helper.ccrJobDelete()
     helper.ccrJobCreate(tableName)
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))

@@ -24,6 +24,10 @@ import (
 	"github.com/tidwall/btree"
 )
 
+const (
+	IndexTypeInverted string = "INVERTED"
+)
+
 type DatabaseMeta struct {
 	Id     int64
 	Tables map[int64]*TableMeta // tableId -> tableMeta
@@ -82,6 +86,42 @@ type ReplicaMeta struct {
 	Version    int64
 }
 
+type MaterializedIndexDesc struct {
+	IndexName     string
+	IndexKeysType string
+	ColumnDesc    []ColumnDesc
+}
+
+func (m *MaterializedIndexDesc) String() string {
+	return fmt.Sprintf("MaterializedIndexDesc{ indexName:%s, indexKeysType:%s, columnDesc:%v}",
+		m.IndexName, m.IndexKeysType, m.ColumnDesc)
+}
+
+type ColumnDesc struct {
+	Name         string
+	Type         string
+	InternalType string
+	IsNull       bool
+	IsKey        bool
+	Default      string
+	Extra        string
+	Visible      bool
+}
+
+func (c *ColumnDesc) String() string {
+	return fmt.Sprintf("ColumnDesc{ name:%s, type:%s, isNull:%t, isKey:%t, visible:%t}",
+		c.Name, c.Type, c.IsNull, c.IsKey, c.Visible)
+}
+
+type IndexDesc struct {
+	Name      string
+	IndexType string
+}
+
+func (i *IndexDesc) String() string {
+	return fmt.Sprintf("IndexDesc{ name:%s, indexType:%s}", i.Name, i.IndexType)
+}
+
 type MetaCleaner interface {
 	ClearDB(dbName string)
 	ClearTable(dbName string, tableName string)
@@ -97,6 +137,7 @@ type IngestBinlogMetaer interface {
 	IsPartitionDropped(partitionId int64) bool
 	IsTableDropped(tableId int64) bool
 	IsIndexDropped(indexId int64) bool
+	GetDroppedIndexMap() map[int64]int64
 }
 
 type Metaer interface {
@@ -108,6 +149,7 @@ type Metaer interface {
 	GetTableId(tableName string) (int64, error)
 	GetTableNameById(tableId int64) (string, error)
 	GetTables() (map[int64]*TableMeta, error)
+	DescribeTableAll(tableName string) (map[string]*MaterializedIndexDesc, error)
 
 	UpdatePartitions(tableId int64) error
 	GetPartitionIdMap(tableId int64) (map[int64]*PartitionMeta, error)
@@ -122,6 +164,8 @@ type Metaer interface {
 	GetBackendId(host, portStr string) (int64, error)
 
 	UpdateIndexes(tableId, partitionId int64) error
+	ShowIndexes(tableName string) ([]*IndexDesc, error)
+	ShowTables() ([]string, error)
 
 	UpdateReplicas(tableId, partitionId int64) error
 	GetReplicas(tableId, partitionId int64) (*btree.Map[int64, *ReplicaMeta], error)

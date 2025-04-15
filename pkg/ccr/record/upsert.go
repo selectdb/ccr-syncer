@@ -40,9 +40,10 @@ type TableRecord struct {
 	Id               int64             `json:"_"`
 	PartitionRecords []PartitionRecord `json:"partitionRecords"`
 	IndexIds         []int64           `json:"indexIds"`
+	DeltaRows        map[int64]int64   `json:"deltaRows"`
 }
 
-func (t TableRecord) String() string {
+func (t *TableRecord) String() string {
 	return fmt.Sprintf("TableRecord{Id: %d, PartitionRecords: %v, IndexIds: %v}", t.Id, t.PartitionRecords, t.IndexIds)
 }
 
@@ -56,8 +57,12 @@ type Upsert struct {
 	Stids        []int64                `json:"stids"`
 }
 
+func (u *Upsert) IsTxnInsert() bool {
+	return len(u.Stids) > 0
+}
+
 // Stringer
-func (u Upsert) String() string {
+func (u *Upsert) String() string {
 	return fmt.Sprintf("Upsert{CommitSeq: %d, TxnID: %d, TimeStamp: %d, Label: %s, DbID: %d, TableRecords: %v, Stids: %v}", u.CommitSeq, u.TxnID, u.TimeStamp, u.Label, u.DbID, u.TableRecords, u.Stids)
 }
 

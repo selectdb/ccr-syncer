@@ -53,30 +53,35 @@ type AlterJobV2 struct {
 
 func NewAlterJobV2FromJson(data string) (*AlterJobV2, error) {
 	var alterJob AlterJobV2
-	err := json.Unmarshal([]byte(data), &alterJob)
-	if err != nil {
-		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal alter job error")
+	if err := alterJob.Deserialize(data); err != nil {
+		return nil, err
 	}
-
-	// rollup not contain RawSql
-	// if alterJob.RawSql == "" {
-	// 	// TODO: fallback to create sql from other fields
-	// 	return nil, xerror.Errorf(xerror.Normal, "alter job raw sql is empty")
-	// }
-
-	if alterJob.TableId == 0 {
-		return nil, xerror.Errorf(xerror.Normal, "invalid alter job, table id not found")
-	}
-
-	if alterJob.TableName == "" {
-		return nil, xerror.Errorf(xerror.Normal, "invalid alter job, tableName is empty")
-	}
-
 	return &alterJob, nil
 }
 
-func (a *AlterJobV2) IsFinished() bool {
-	return a.JobState == ALTER_JOB_STATE_FINISHED
+func (alterJob *AlterJobV2) IsFinished() bool {
+	return alterJob.JobState == ALTER_JOB_STATE_FINISHED
+}
+
+func (alterJob *AlterJobV2) Deserialize(data string) error {
+	err := json.Unmarshal([]byte(data), &alterJob)
+	if err != nil {
+		return xerror.Wrap(err, xerror.Normal, "unmarshal alter job error")
+	}
+
+	if alterJob.TableId == 0 {
+		return xerror.Errorf(xerror.Normal, "invalid alter job, table id not found")
+	}
+
+	if alterJob.TableName == "" {
+		return xerror.Errorf(xerror.Normal, "invalid alter job, tableName is empty")
+	}
+
+	return nil
+}
+
+func (alterJob *AlterJobV2) GetTableId() int64 {
+	return alterJob.TableId
 }
 
 // Stringer

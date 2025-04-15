@@ -23,26 +23,38 @@ import (
 )
 
 type DropPartition struct {
-	TableId int64  `json:"tableId"`
-	Sql     string `json:"sql"`
-	IsTemp  bool   `json:"isTempPartition"`
+	TableId       int64  `json:"tableId"`
+	Sql           string `json:"sql"`
+	IsTemp        bool   `json:"isTempPartition"`
+	PartitionName string `json:"partitionName"`
+	ForceDrop     bool   `json:"forceDrop"`
+}
+
+func (dropPartition *DropPartition) Deserialize(data string) error {
+	err := json.Unmarshal([]byte(data), &dropPartition)
+	if err != nil {
+		return xerror.Wrap(err, xerror.Normal, "unmarshal drop partition error")
+	}
+
+	if dropPartition.Sql == "" {
+		return xerror.Errorf(xerror.Normal, "drop partition sql is empty")
+	}
+
+	if dropPartition.TableId == 0 {
+		return xerror.Errorf(xerror.Normal, "table id not found")
+	}
+
+	return nil
+}
+
+func (dropPartition *DropPartition) GetTableId() int64 {
+	return dropPartition.TableId
 }
 
 func NewDropPartitionFromJson(data string) (*DropPartition, error) {
 	var dropPartition DropPartition
-	err := json.Unmarshal([]byte(data), &dropPartition)
-	if err != nil {
-		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal drop partition error")
+	if err := dropPartition.Deserialize(data); err != nil {
+		return nil, err
 	}
-
-	if dropPartition.Sql == "" {
-		// TODO: fallback to create sql from other fields
-		return nil, xerror.Errorf(xerror.Normal, "drop partition sql is empty")
-	}
-
-	if dropPartition.TableId == 0 {
-		return nil, xerror.Errorf(xerror.Normal, "table id not found")
-	}
-
 	return &dropPartition, nil
 }

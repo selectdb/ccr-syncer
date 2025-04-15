@@ -3095,6 +3095,188 @@ func (p *TQueryOptions) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 150:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField150(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 151:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField151(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 152:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField152(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 153:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField153(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 154:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField154(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 155:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField155(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 156:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField156(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 157:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField157(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 158:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField158(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 159:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField159(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 160:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField160(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 161:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField161(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 162:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField162(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 1000:
 			if fieldTypeId == thrift.BOOL {
 				l, err = p.FastReadField1000(buf[offset:])
@@ -5093,6 +5275,188 @@ func (p *TQueryOptions) FastReadField149(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TQueryOptions) FastReadField150(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.EnableRuntimeFilterPartitionPrune = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField151(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.MinimumOperatorMemoryRequiredKb = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField152(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.EnableMemOvercommit = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField153(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.QuerySlotCount = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField154(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.EnableSpill = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField155(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.EnableReserveMemory = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField156(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.RevocableMemoryHighWatermarkPercent = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField157(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.SpillSortMemLimit = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField158(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.SpillSortBatchBytes = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField159(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.SpillAggregationPartitionCount = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField160(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.SpillHashJoinPartitionCount = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField161(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.LowMemoryModeBufferLimit = v
+
+	}
+	return offset, nil
+}
+
+func (p *TQueryOptions) FastReadField162(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		p.DumpHeapProfileWhenMemLimitExceeded = v
+
+	}
+	return offset, nil
+}
+
 func (p *TQueryOptions) FastReadField1000(buf []byte) (int, error) {
 	offset := 0
 
@@ -5251,6 +5615,19 @@ func (p *TQueryOptions) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryW
 		offset += p.fastWriteField147(buf[offset:], binaryWriter)
 		offset += p.fastWriteField148(buf[offset:], binaryWriter)
 		offset += p.fastWriteField149(buf[offset:], binaryWriter)
+		offset += p.fastWriteField150(buf[offset:], binaryWriter)
+		offset += p.fastWriteField151(buf[offset:], binaryWriter)
+		offset += p.fastWriteField152(buf[offset:], binaryWriter)
+		offset += p.fastWriteField153(buf[offset:], binaryWriter)
+		offset += p.fastWriteField154(buf[offset:], binaryWriter)
+		offset += p.fastWriteField155(buf[offset:], binaryWriter)
+		offset += p.fastWriteField156(buf[offset:], binaryWriter)
+		offset += p.fastWriteField157(buf[offset:], binaryWriter)
+		offset += p.fastWriteField158(buf[offset:], binaryWriter)
+		offset += p.fastWriteField159(buf[offset:], binaryWriter)
+		offset += p.fastWriteField160(buf[offset:], binaryWriter)
+		offset += p.fastWriteField161(buf[offset:], binaryWriter)
+		offset += p.fastWriteField162(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1000(buf[offset:], binaryWriter)
 		offset += p.fastWriteField18(buf[offset:], binaryWriter)
 		offset += p.fastWriteField42(buf[offset:], binaryWriter)
@@ -5407,6 +5784,19 @@ func (p *TQueryOptions) BLength() int {
 		l += p.field147Length()
 		l += p.field148Length()
 		l += p.field149Length()
+		l += p.field150Length()
+		l += p.field151Length()
+		l += p.field152Length()
+		l += p.field153Length()
+		l += p.field154Length()
+		l += p.field155Length()
+		l += p.field156Length()
+		l += p.field157Length()
+		l += p.field158Length()
+		l += p.field159Length()
+		l += p.field160Length()
+		l += p.field161Length()
+		l += p.field162Length()
 		l += p.field1000Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
@@ -6947,6 +7337,149 @@ func (p *TQueryOptions) fastWriteField149(buf []byte, binaryWriter bthrift.Binar
 	if p.IsSetMinScanSchedulerConcurrency() {
 		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "min_scan_scheduler_concurrency", thrift.I32, 149)
 		offset += bthrift.Binary.WriteI32(buf[offset:], p.MinScanSchedulerConcurrency)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField150(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetEnableRuntimeFilterPartitionPrune() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_runtime_filter_partition_prune", thrift.BOOL, 150)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableRuntimeFilterPartitionPrune)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField151(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetMinimumOperatorMemoryRequiredKb() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "minimum_operator_memory_required_kb", thrift.I32, 151)
+		offset += bthrift.Binary.WriteI32(buf[offset:], p.MinimumOperatorMemoryRequiredKb)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField152(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetEnableMemOvercommit() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_mem_overcommit", thrift.BOOL, 152)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableMemOvercommit)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField153(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetQuerySlotCount() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "query_slot_count", thrift.I32, 153)
+		offset += bthrift.Binary.WriteI32(buf[offset:], p.QuerySlotCount)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField154(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetEnableSpill() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_spill", thrift.BOOL, 154)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableSpill)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField155(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetEnableReserveMemory() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "enable_reserve_memory", thrift.BOOL, 155)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.EnableReserveMemory)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField156(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetRevocableMemoryHighWatermarkPercent() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "revocable_memory_high_watermark_percent", thrift.I32, 156)
+		offset += bthrift.Binary.WriteI32(buf[offset:], p.RevocableMemoryHighWatermarkPercent)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField157(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetSpillSortMemLimit() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "spill_sort_mem_limit", thrift.I64, 157)
+		offset += bthrift.Binary.WriteI64(buf[offset:], p.SpillSortMemLimit)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField158(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetSpillSortBatchBytes() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "spill_sort_batch_bytes", thrift.I64, 158)
+		offset += bthrift.Binary.WriteI64(buf[offset:], p.SpillSortBatchBytes)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField159(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetSpillAggregationPartitionCount() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "spill_aggregation_partition_count", thrift.I32, 159)
+		offset += bthrift.Binary.WriteI32(buf[offset:], p.SpillAggregationPartitionCount)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField160(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetSpillHashJoinPartitionCount() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "spill_hash_join_partition_count", thrift.I32, 160)
+		offset += bthrift.Binary.WriteI32(buf[offset:], p.SpillHashJoinPartitionCount)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField161(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetLowMemoryModeBufferLimit() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "low_memory_mode_buffer_limit", thrift.I64, 161)
+		offset += bthrift.Binary.WriteI64(buf[offset:], p.LowMemoryModeBufferLimit)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TQueryOptions) fastWriteField162(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetDumpHeapProfileWhenMemLimitExceeded() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "dump_heap_profile_when_mem_limit_exceeded", thrift.BOOL, 162)
+		offset += bthrift.Binary.WriteBool(buf[offset:], p.DumpHeapProfileWhenMemLimitExceeded)
 
 		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
 	}
@@ -8497,6 +9030,149 @@ func (p *TQueryOptions) field149Length() int {
 	if p.IsSetMinScanSchedulerConcurrency() {
 		l += bthrift.Binary.FieldBeginLength("min_scan_scheduler_concurrency", thrift.I32, 149)
 		l += bthrift.Binary.I32Length(p.MinScanSchedulerConcurrency)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field150Length() int {
+	l := 0
+	if p.IsSetEnableRuntimeFilterPartitionPrune() {
+		l += bthrift.Binary.FieldBeginLength("enable_runtime_filter_partition_prune", thrift.BOOL, 150)
+		l += bthrift.Binary.BoolLength(p.EnableRuntimeFilterPartitionPrune)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field151Length() int {
+	l := 0
+	if p.IsSetMinimumOperatorMemoryRequiredKb() {
+		l += bthrift.Binary.FieldBeginLength("minimum_operator_memory_required_kb", thrift.I32, 151)
+		l += bthrift.Binary.I32Length(p.MinimumOperatorMemoryRequiredKb)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field152Length() int {
+	l := 0
+	if p.IsSetEnableMemOvercommit() {
+		l += bthrift.Binary.FieldBeginLength("enable_mem_overcommit", thrift.BOOL, 152)
+		l += bthrift.Binary.BoolLength(p.EnableMemOvercommit)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field153Length() int {
+	l := 0
+	if p.IsSetQuerySlotCount() {
+		l += bthrift.Binary.FieldBeginLength("query_slot_count", thrift.I32, 153)
+		l += bthrift.Binary.I32Length(p.QuerySlotCount)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field154Length() int {
+	l := 0
+	if p.IsSetEnableSpill() {
+		l += bthrift.Binary.FieldBeginLength("enable_spill", thrift.BOOL, 154)
+		l += bthrift.Binary.BoolLength(p.EnableSpill)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field155Length() int {
+	l := 0
+	if p.IsSetEnableReserveMemory() {
+		l += bthrift.Binary.FieldBeginLength("enable_reserve_memory", thrift.BOOL, 155)
+		l += bthrift.Binary.BoolLength(p.EnableReserveMemory)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field156Length() int {
+	l := 0
+	if p.IsSetRevocableMemoryHighWatermarkPercent() {
+		l += bthrift.Binary.FieldBeginLength("revocable_memory_high_watermark_percent", thrift.I32, 156)
+		l += bthrift.Binary.I32Length(p.RevocableMemoryHighWatermarkPercent)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field157Length() int {
+	l := 0
+	if p.IsSetSpillSortMemLimit() {
+		l += bthrift.Binary.FieldBeginLength("spill_sort_mem_limit", thrift.I64, 157)
+		l += bthrift.Binary.I64Length(p.SpillSortMemLimit)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field158Length() int {
+	l := 0
+	if p.IsSetSpillSortBatchBytes() {
+		l += bthrift.Binary.FieldBeginLength("spill_sort_batch_bytes", thrift.I64, 158)
+		l += bthrift.Binary.I64Length(p.SpillSortBatchBytes)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field159Length() int {
+	l := 0
+	if p.IsSetSpillAggregationPartitionCount() {
+		l += bthrift.Binary.FieldBeginLength("spill_aggregation_partition_count", thrift.I32, 159)
+		l += bthrift.Binary.I32Length(p.SpillAggregationPartitionCount)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field160Length() int {
+	l := 0
+	if p.IsSetSpillHashJoinPartitionCount() {
+		l += bthrift.Binary.FieldBeginLength("spill_hash_join_partition_count", thrift.I32, 160)
+		l += bthrift.Binary.I32Length(p.SpillHashJoinPartitionCount)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field161Length() int {
+	l := 0
+	if p.IsSetLowMemoryModeBufferLimit() {
+		l += bthrift.Binary.FieldBeginLength("low_memory_mode_buffer_limit", thrift.I64, 161)
+		l += bthrift.Binary.I64Length(p.LowMemoryModeBufferLimit)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TQueryOptions) field162Length() int {
+	l := 0
+	if p.IsSetDumpHeapProfileWhenMemLimitExceeded() {
+		l += bthrift.Binary.FieldBeginLength("dump_heap_profile_when_mem_limit_exceeded", thrift.BOOL, 162)
+		l += bthrift.Binary.BoolLength(p.DumpHeapProfileWhenMemLimitExceeded)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

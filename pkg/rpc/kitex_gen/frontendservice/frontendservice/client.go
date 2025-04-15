@@ -44,6 +44,7 @@ type Client interface {
 	StreamLoadPut(ctx context.Context, request *frontendservice.TStreamLoadPutRequest, callOptions ...callopt.Option) (r *frontendservice.TStreamLoadPutResult_, err error)
 	StreamLoadMultiTablePut(ctx context.Context, request *frontendservice.TStreamLoadPutRequest, callOptions ...callopt.Option) (r *frontendservice.TStreamLoadMultiTablePutResult_, err error)
 	SnapshotLoaderReport(ctx context.Context, request *frontendservice.TSnapshotLoaderReportRequest, callOptions ...callopt.Option) (r *status.TStatus, err error)
+	GetAliveSessions(ctx context.Context, request *frontendservice.TFrontendReportAliveSessionRequest, callOptions ...callopt.Option) (r *frontendservice.TFrontendReportAliveSessionResult_, err error)
 	Ping(ctx context.Context, request *frontendservice.TFrontendPingFrontendRequest, callOptions ...callopt.Option) (r *frontendservice.TFrontendPingFrontendResult_, err error)
 	InitExternalCtlMeta(ctx context.Context, request *frontendservice.TInitExternalCtlMetaRequest, callOptions ...callopt.Option) (r *frontendservice.TInitExternalCtlMetaResult_, err error)
 	FetchSchemaTableData(ctx context.Context, request *frontendservice.TFetchSchemaTableDataRequest, callOptions ...callopt.Option) (r *frontendservice.TFetchSchemaTableDataResult_, err error)
@@ -258,6 +259,11 @@ func (p *kFrontendServiceClient) StreamLoadMultiTablePut(ctx context.Context, re
 func (p *kFrontendServiceClient) SnapshotLoaderReport(ctx context.Context, request *frontendservice.TSnapshotLoaderReportRequest, callOptions ...callopt.Option) (r *status.TStatus, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.SnapshotLoaderReport(ctx, request)
+}
+
+func (p *kFrontendServiceClient) GetAliveSessions(ctx context.Context, request *frontendservice.TFrontendReportAliveSessionRequest, callOptions ...callopt.Option) (r *frontendservice.TFrontendReportAliveSessionResult_, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetAliveSessions(ctx, request)
 }
 
 func (p *kFrontendServiceClient) Ping(ctx context.Context, request *frontendservice.TFrontendPingFrontendRequest, callOptions ...callopt.Option) (r *frontendservice.TFrontendPingFrontendResult_, err error) {

@@ -194,3 +194,34 @@ func TestHandleDefaultValue(t *testing.T) {
 		}
 	}
 }
+
+func TestNormalizeCreateTableSql(t *testing.T) {
+	type TestCase struct {
+		origin, expect string
+	}
+
+	testCases := []TestCase{
+		// not contain internal.
+		{
+			origin: "CREATE VIEW `target`.`view` AS SELECT `k` AS `k`, `v` AS `v` FROM `source`.`table`;",
+			expect: "CREATE VIEW `target`.`view` AS SELECT `k` AS `k`, `v` AS `v` FROM `internal`.`target`.`table`;",
+		},
+		// some part contain internal, but some not
+		{
+			origin: "CREATE VIEW `target`.`view` AS SELECT `k1` AS `k1`, `v1` AS `v1` FROM `source`.`table` GROUP BY `internal`.`source`.`table`.`k1`, `source`.`table`.`v1`;",
+			expect: "CREATE VIEW `target`.`view` AS SELECT `k1` AS `k1`, `v1` AS `v1` FROM `internal`.`target`.`table` GROUP BY `internal`.`target`.`table`.`k1`, `internal`.`target`.`table`.`v1`;",
+		},
+		// nothing
+		{
+			origin: "CREATE VIEW `target`.`view` AS SELECT `k` AS `k`, `v` AS `v` FROM `internal`.`source`.`table`;",
+			expect: "CREATE VIEW `target`.`view` AS SELECT `k` AS `k`, `v` AS `v` FROM `internal`.`target`.`table`;",
+		},
+	}
+
+	for i, c := range testCases {
+		// target db name, origin db name, origin sql
+		if actual := base.NormalizeCreateViewSql("target", "source", c.origin); actual != c.expect {
+			t.Errorf("case %d failed, expect %s, but got %s", i, c.expect, actual)
+		}
+	}
+}

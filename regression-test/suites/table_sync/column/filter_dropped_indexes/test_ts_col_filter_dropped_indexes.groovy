@@ -14,11 +14,11 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_ts_col_filter_dropped_indexes") {
+suite('test_ts_col_filter_dropped_indexes') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
-            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
+            .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
-    def tableName = "tbl_" + helper.randomSuffix()
+    def tableName = 'tbl_' + helper.randomSuffix()
     def test_num = 0
     def insert_num = 5
 
@@ -49,28 +49,28 @@ suite("test_ts_col_filter_dropped_indexes") {
         )
     """
 
-    def values = [];
+    def values = []
     for (int index = 0; index < insert_num; index++) {
         values.add("(${test_num}, ${index}, ${index})")
     }
     sql """
-        INSERT INTO ${tableName} VALUES ${values.join(",")}
+        INSERT INTO ${tableName} VALUES ${values.join(',')}
         """
-    sql "sync"
+    sql 'sync'
 
     helper.ccrJobCreate(tableName)
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", insert_num, 60))
 
-    logger.info("=== pause job, insert data and issue schema change ===")
+    logger.info('=== pause job, insert data and issue schema change ===')
 
     helper.ccrJobPause(tableName)
     sql "INSERT INTO ${tableName} VALUES (100, 100, 100)"
     sql "INSERT INTO ${tableName} VALUES (101, 101, 101)"
     sql "INSERT INTO ${tableName} VALUES (102, 102, 102)"
 
-    logger.info("=== add first column ===")
+    logger.info('=== add first column ===')
     // binlog type: ALTER_JOB, binlog data:
     //  {
     //      "type":"SCHEMA_CHANGE",
@@ -85,7 +85,7 @@ suite("test_ts_col_filter_dropped_indexes") {
         ALTER TABLE ${tableName}
         ADD COLUMN `first` INT KEY DEFAULT "0" FIRST
         """
-    sql "sync"
+    sql 'sync'
 
     assertTrue(helper.checkShowTimesOf("""
                                 SHOW ALTER TABLE COLUMN
@@ -96,7 +96,7 @@ suite("test_ts_col_filter_dropped_indexes") {
 
     def first_job_progress = helper.get_job_progress(tableName)
 
-    logger.info("resume ccr job and wait sync job")
+    logger.info('resume ccr job and wait sync job')
     helper.ccrJobResume(tableName)
 
     def has_column_first = { res -> Boolean
@@ -104,19 +104,16 @@ suite("test_ts_col_filter_dropped_indexes") {
         return res[0][0] == 'first' && (res[0][3] == 'YES' || res[0][3] == 'true')
     }
 
-    assertTrue(helper.checkShowTimesOf("SHOW COLUMNS FROM `${tableName}`", has_column_first, 60, "target_sql"))
+    assertTrue(helper.checkShowTimesOf("SHOW COLUMNS FROM `${tableName}`", has_column_first, 60, 'target_sql'))
 
     sql "INSERT INTO ${tableName} VALUES (123, 123, 123, 123)"
 
     // cache must be clear and reload.
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", insert_num + 4, 60))
 
-    if (helper.has_feature("feature_schema_change_partial_sync")) {
+    if (helper.has_feature('feature_schema_change_partial_sync')) {
         // no full sync triggered.
         def last_job_progress = helper.get_job_progress(tableName)
         assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
     }
 }
-
-
-

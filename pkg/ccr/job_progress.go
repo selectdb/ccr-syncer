@@ -40,7 +40,7 @@ const (
 	// Database sync state machine states
 	DBFullSync              SyncState = 0
 	DBTablesIncrementalSync SyncState = 1
-	DBSpecificTableFullSync SyncState = 2
+	DBSpecificTableFullSync SyncState = 2 // Deprecated by DBPartialSync
 	DBIncrementalSync       SyncState = 3
 	DBPartialSync           SyncState = 4 // sync partitions
 
@@ -121,6 +121,12 @@ var (
 
 	// IncrementalSync state machine states
 	DB_1 SubSyncState = SubSyncState{State: 100, BinlogType: BinlogNone}
+
+	// Pipeline commit state machine states
+	LaunchTransaction         SubSyncState = SubSyncState{State: 200, BinlogType: BinlogNone} // Launch the continuous upsert binlog
+	CommitPipeline            SubSyncState = SubSyncState{State: 201, BinlogType: BinlogNone} // All continuous upsert binlogs are launched, but not yet committed
+	CommitPipelineTransaction SubSyncState = SubSyncState{State: 202, BinlogType: BinlogNone} // Commit an upsert binlog
+	RollbackPipeline          SubSyncState = SubSyncState{State: 203, BinlogType: BinlogNone} // A upsert binlog commit failed, rollback all the following upsert binlogs
 )
 
 // SubSyncState Stringer
@@ -146,6 +152,14 @@ func (s SubSyncState) String() string {
 		return "CommitTransaction"
 	case RollbackTransaction:
 		return "RollbackTransaction"
+	case LaunchTransaction:
+		return "LaunchTransaction"
+	case CommitPipeline:
+		return "CommitPipeline"
+	case CommitPipelineTransaction:
+		return "CommitPipelineTransaction"
+	case RollbackPipeline:
+		return "RollbackPipeline"
 	default:
 		return fmt.Sprintf("Unknown sub sync state: %d, binlog type: %d", s.State, s.BinlogType)
 	}
@@ -154,6 +168,7 @@ func (s SubSyncState) String() string {
 type JobPartialSyncData struct {
 	TableId      int64    `json:"table_id"`
 	Table        string   `json:"table"`
+	IsView       bool     `json:"is_view"`
 	PartitionIds []int64  `json:"partition_ids"`
 	Partitions   []string `json:"partitions"`
 }
@@ -166,15 +181,17 @@ type JobProgress struct {
 	SyncState SyncState `json:"sync_state"`
 	// Sub sync state machine states
 	SubSyncState SubSyncState `json:"sub_sync_state"`
+	InPipeline   bool         `json:"-"` // whether the job is in pipeline commit mode
 
 	// The sync id of full/partial snapshot
 	SyncId int64 `json:"job_sync_id"`
 	// The commit seq where the target cluster has synced.
-	PrevCommitSeq   int64           `json:"prev_commit_seq"`
-	CommitSeq       int64           `json:"commit_seq"`
-	LastCommitSeq   int64           `json:"last_commit_seq"` // the last commit seq try to sync
-	LockedCommitSeq int64           `json:"-"`
-	TableMapping    map[int64]int64 `json:"table_mapping,omitempty"`
+	PrevCommitSeq    int64           `json:"prev_commit_seq"`
+	CommitSeq        int64           `json:"commit_seq"`
+	LastCommitSeq    int64           `json:"last_commit_seq"` // the last commit seq try to sync
+	LockedCommitSeq  int64           `json:"-"`
+	UnknownCommitSeq int64           `json:"unknown_commit_seq"`
+	TableMapping     map[int64]int64 `json:"table_mapping,omitempty"`
 	// the upstream table id to name mapping, build during the fullsync,
 	// keep snapshot to avoid rename. it might be staled.
 	TableNameMapping      map[int64]string    `json:"table_name_mapping,omitempty"`
@@ -186,16 +203,25 @@ type JobProgress struct {
 
 	// The tables need to be replaced rather than dropped during sync.
 	TableAliases map[string]string `json:"table_aliases,omitempty"`
+	PrevTxnId    int64             `json:"prev_txn_id,omitempty"`
 
 	// The shadow indexes of the pending schema changes
 	ShadowIndexes map[int64]int64 `json:"shadow_index_map,omitempty"`
 
 	// Some fields to save the unix epoch time of the key timepoint.
-	CreatedAt              int64 `json:"created_at,omitempty"`
-	FullSyncStartAt        int64 `json:"full_sync_start_at,omitempty"`
-	PartialSyncStartAt     int64 `json:"partial_sync_start_at,omitempty"`
-	IncrementalSyncStartAt int64 `json:"incremental_sync_start_at,omitempty"`
-	IngestBinlogAt         int64 `json:"ingest_binlog_at,omitempty"`
+	CreatedAt              int64        `json:"created_at,omitempty"`
+	FullSyncStartAt        int64        `json:"full_sync_start_at,omitempty"`
+	PartialSyncStartAt     int64        `json:"partial_sync_start_at,omitempty"`
+	IncrementalSyncStartAt int64        `json:"incremental_sync_start_at,omitempty"`
+	IngestBinlogAt         int64        `json:"ingest_binlog_at,omitempty"`
+	FullSyncInfo           FullSyncInfo `json:"full_sync_info,omitempty"`
+}
+
+type FullSyncInfo struct {
+	PrevCommitSeq int64        `json:"prev_commit_seq"`
+	CommitSeq     int64        `json:"commit_seq"`
+	SubSyncState  SubSyncState `json:"sub_sync_state"`
+	Info          string       `json:"info"`
 }
 
 func (j *JobProgress) String() string {
@@ -214,13 +240,14 @@ func NewJobProgress(jobName string, syncType SyncType, db storage.DB) *JobProgre
 		JobName: jobName,
 		db:      db,
 
-		SyncId:          time.Now().Unix(),
-		SyncState:       syncState,
-		SubSyncState:    BeginCreateSnapshot,
-		CommitSeq:       0,
-		LastCommitSeq:   0,
-		LockedCommitSeq: 0,
-		TableMapping:    nil,
+		SyncId:           time.Now().Unix(),
+		SyncState:        syncState,
+		SubSyncState:     BeginCreateSnapshot,
+		CommitSeq:        0,
+		LastCommitSeq:    0,
+		LockedCommitSeq:  0,
+		UnknownCommitSeq: 0,
+		TableMapping:     nil,
 
 		TableNameMapping:      nil,
 		TableCommitSeqMap:     nil,
@@ -235,6 +262,7 @@ func NewJobProgress(jobName string, syncType SyncType, db storage.DB) *JobProgre
 		FullSyncStartAt:        0,
 		IncrementalSyncStartAt: 0,
 		IngestBinlogAt:         0,
+		PrevTxnId:              -1,
 	}
 }
 
@@ -307,6 +335,18 @@ func _convertToPersistData(persistData any) string {
 	}
 }
 
+func (j *JobProgress) DoneSubCheckpoint(subSyncState SubSyncState, persistData any) {
+	log.Debugf("job %s step next, sync state: %s, commitSeq: %d, prevCommitSeq: %d",
+		j.JobName, j.SyncState, j.CommitSeq, j.PrevCommitSeq)
+
+	j.SubSyncState = Done
+	j.PrevCommitSeq = j.CommitSeq
+	j.SubSyncState = subSyncState
+	j.PersistData = _convertToPersistData(persistData)
+
+	j.Persist()
+}
+
 // Persist is checkpint, next state only get it from persistData
 func (j *JobProgress) NextSubCheckpoint(subSyncState SubSyncState, persistData any) {
 	if subSyncState == IngestBinlog {
@@ -328,6 +368,11 @@ func (j *JobProgress) CommitNextSubWithPersist(commitSeq int64, subSyncState Sub
 	j.PersistData = _convertToPersistData(persistData)
 
 	// TODO: check
+	j.Persist()
+}
+
+func (j *JobProgress) PersistInMemoryData() {
+	j.PersistData = _convertToPersistData(j.InMemoryData)
 	j.Persist()
 }
 
@@ -365,31 +410,33 @@ func (j *JobProgress) IsDone() bool { return j.SubSyncState == Done && j.PrevCom
 
 // TODO(Drogon): check reset some fields
 func (j *JobProgress) Done() {
-	log.Debugf("job %s step next", j.JobName)
+	log.Debugf("job %s step next, sync state: %s, commitSeq: %d, prevCommitSeq: %d",
+		j.JobName, j.SyncState, j.CommitSeq, j.PrevCommitSeq)
 
 	j.SubSyncState = Done
 	j.PrevCommitSeq = j.CommitSeq
-
-	xmetrics.ConsumeBinlog(j.JobName, j.PrevCommitSeq)
 
 	j.Persist()
 }
 
 func (j *JobProgress) Rollback() {
-	log.Debugf("job %s step rollback", j.JobName)
+	log.Infof("rollback progress, set commitSeq from %d to %d", j.CommitSeq, j.PrevCommitSeq)
 
 	j.SubSyncState = Done
 	// if rollback, then prev commit seq is the last commit seq
+	j.UnknownCommitSeq = j.CommitSeq
 	j.CommitSeq = j.PrevCommitSeq
 
-	xmetrics.Rollback(j.JobName, j.PrevCommitSeq)
 	j.Persist()
 }
 
 // write progress to db, busy loop until success
 // TODO: add timeout check
 func (j *JobProgress) Persist() {
-	log.Trace("update job progress")
+	log.Tracef("update job progress, state: %s, subState: %s, commitSeq: %d, prevCommitSeq: %d",
+		j.SyncState, j.SubSyncState, j.CommitSeq, j.PrevCommitSeq)
+
+	defer xmetrics.RecordJobProgressPersist(j.JobName)()
 
 	for {
 		// Step 1: to json
@@ -414,4 +461,11 @@ func (j *JobProgress) Persist() {
 
 	log.Tracef("update job progress done, state: %s, subState: %s, commitSeq: %d, prevCommitSeq: %d",
 		j.SyncState, j.SubSyncState, j.CommitSeq, j.PrevCommitSeq)
+}
+
+func (j *JobProgress) SetFullSyncInfo(info string) {
+	j.FullSyncInfo.Info = info
+	j.FullSyncInfo.CommitSeq = j.CommitSeq
+	j.FullSyncInfo.PrevCommitSeq = j.PrevCommitSeq
+	j.FullSyncInfo.SubSyncState = j.SubSyncState
 }

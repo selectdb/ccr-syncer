@@ -9157,6 +9157,48 @@ func (p *TWorkloadGroupInfo) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 17:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField17(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 18:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField18(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 19:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField19(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -9400,6 +9442,47 @@ func (p *TWorkloadGroupInfo) FastReadField16(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TWorkloadGroupInfo) FastReadField17(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.TotalQuerySlotCount = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TWorkloadGroupInfo) FastReadField18(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.WriteBufferRatio = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TWorkloadGroupInfo) FastReadField19(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := TWgSlotMemoryPolicy(v)
+		p.SlotMemoryPolicy = &tmp
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TWorkloadGroupInfo) FastWrite(buf []byte) int {
 	return 0
@@ -9422,9 +9505,12 @@ func (p *TWorkloadGroupInfo) FastWriteNocopy(buf []byte, binaryWriter bthrift.Bi
 		offset += p.fastWriteField13(buf[offset:], binaryWriter)
 		offset += p.fastWriteField14(buf[offset:], binaryWriter)
 		offset += p.fastWriteField15(buf[offset:], binaryWriter)
+		offset += p.fastWriteField17(buf[offset:], binaryWriter)
+		offset += p.fastWriteField18(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 		offset += p.fastWriteField16(buf[offset:], binaryWriter)
+		offset += p.fastWriteField19(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -9451,6 +9537,9 @@ func (p *TWorkloadGroupInfo) BLength() int {
 		l += p.field14Length()
 		l += p.field15Length()
 		l += p.field16Length()
+		l += p.field17Length()
+		l += p.field18Length()
+		l += p.field19Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -9633,6 +9722,39 @@ func (p *TWorkloadGroupInfo) fastWriteField16(buf []byte, binaryWriter bthrift.B
 	return offset
 }
 
+func (p *TWorkloadGroupInfo) fastWriteField17(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetTotalQuerySlotCount() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "total_query_slot_count", thrift.I32, 17)
+		offset += bthrift.Binary.WriteI32(buf[offset:], *p.TotalQuerySlotCount)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TWorkloadGroupInfo) fastWriteField18(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetWriteBufferRatio() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "write_buffer_ratio", thrift.I32, 18)
+		offset += bthrift.Binary.WriteI32(buf[offset:], *p.WriteBufferRatio)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TWorkloadGroupInfo) fastWriteField19(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetSlotMemoryPolicy() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "slot_memory_policy", thrift.I32, 19)
+		offset += bthrift.Binary.WriteI32(buf[offset:], int32(*p.SlotMemoryPolicy))
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TWorkloadGroupInfo) field1Length() int {
 	l := 0
 	if p.IsSetId() {
@@ -9803,6 +9925,39 @@ func (p *TWorkloadGroupInfo) field16Length() int {
 	if p.IsSetTag() {
 		l += bthrift.Binary.FieldBeginLength("tag", thrift.STRING, 16)
 		l += bthrift.Binary.StringLengthNocopy(*p.Tag)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TWorkloadGroupInfo) field17Length() int {
+	l := 0
+	if p.IsSetTotalQuerySlotCount() {
+		l += bthrift.Binary.FieldBeginLength("total_query_slot_count", thrift.I32, 17)
+		l += bthrift.Binary.I32Length(*p.TotalQuerySlotCount)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TWorkloadGroupInfo) field18Length() int {
+	l := 0
+	if p.IsSetWriteBufferRatio() {
+		l += bthrift.Binary.FieldBeginLength("write_buffer_ratio", thrift.I32, 18)
+		l += bthrift.Binary.I32Length(*p.WriteBufferRatio)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TWorkloadGroupInfo) field19Length() int {
+	l := 0
+	if p.IsSetSlotMemoryPolicy() {
+		l += bthrift.Binary.FieldBeginLength("slot_memory_policy", thrift.I32, 19)
+		l += bthrift.Binary.I32Length(int32(*p.SlotMemoryPolicy))
 
 		l += bthrift.Binary.FieldEndLength()
 	}

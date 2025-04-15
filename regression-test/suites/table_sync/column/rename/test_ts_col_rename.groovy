@@ -72,7 +72,7 @@ suite("test_ts_col_rename") {
         INSERT INTO ${tableName} VALUES ${values.join(",")}
         """
 
-    result = sql "select * from ${tableName}"
+    def result = sql "select * from ${tableName}"
 
     assertEquals(result.size(), insert_num)
 
@@ -119,7 +119,7 @@ suite("test_ts_col_rename") {
 
     result = sql " select * from ${tableName} "
 
-    result_target = target_sql " select * from ${tableName} "
+    def result_target = target_sql " select * from ${tableName} "
 
     assertEquals(result, result_target)
 

@@ -15,15 +15,15 @@ import (
 type TPartitionType int64
 
 const (
-	TPartitionType_UNPARTITIONED                   TPartitionType = 0
-	TPartitionType_RANDOM                          TPartitionType = 1
-	TPartitionType_HASH_PARTITIONED                TPartitionType = 2
-	TPartitionType_RANGE_PARTITIONED               TPartitionType = 3
-	TPartitionType_LIST_PARTITIONED                TPartitionType = 4
-	TPartitionType_BUCKET_SHFFULE_HASH_PARTITIONED TPartitionType = 5
-	TPartitionType_TABLET_SINK_SHUFFLE_PARTITIONED TPartitionType = 6
-	TPartitionType_TABLE_SINK_HASH_PARTITIONED     TPartitionType = 7
-	TPartitionType_TABLE_SINK_RANDOM_PARTITIONED   TPartitionType = 8
+	TPartitionType_UNPARTITIONED                    TPartitionType = 0
+	TPartitionType_RANDOM                           TPartitionType = 1
+	TPartitionType_HASH_PARTITIONED                 TPartitionType = 2
+	TPartitionType_RANGE_PARTITIONED                TPartitionType = 3
+	TPartitionType_LIST_PARTITIONED                 TPartitionType = 4
+	TPartitionType_BUCKET_SHFFULE_HASH_PARTITIONED  TPartitionType = 5
+	TPartitionType_OLAP_TABLE_SINK_HASH_PARTITIONED TPartitionType = 6
+	TPartitionType_HIVE_TABLE_SINK_HASH_PARTITIONED TPartitionType = 7
+	TPartitionType_HIVE_TABLE_SINK_UNPARTITIONED    TPartitionType = 8
 )
 
 func (p TPartitionType) String() string {
@@ -40,12 +40,12 @@ func (p TPartitionType) String() string {
 		return "LIST_PARTITIONED"
 	case TPartitionType_BUCKET_SHFFULE_HASH_PARTITIONED:
 		return "BUCKET_SHFFULE_HASH_PARTITIONED"
-	case TPartitionType_TABLET_SINK_SHUFFLE_PARTITIONED:
-		return "TABLET_SINK_SHUFFLE_PARTITIONED"
-	case TPartitionType_TABLE_SINK_HASH_PARTITIONED:
-		return "TABLE_SINK_HASH_PARTITIONED"
-	case TPartitionType_TABLE_SINK_RANDOM_PARTITIONED:
-		return "TABLE_SINK_RANDOM_PARTITIONED"
+	case TPartitionType_OLAP_TABLE_SINK_HASH_PARTITIONED:
+		return "OLAP_TABLE_SINK_HASH_PARTITIONED"
+	case TPartitionType_HIVE_TABLE_SINK_HASH_PARTITIONED:
+		return "HIVE_TABLE_SINK_HASH_PARTITIONED"
+	case TPartitionType_HIVE_TABLE_SINK_UNPARTITIONED:
+		return "HIVE_TABLE_SINK_UNPARTITIONED"
 	}
 	return "<UNSET>"
 }
@@ -64,12 +64,12 @@ func TPartitionTypeFromString(s string) (TPartitionType, error) {
 		return TPartitionType_LIST_PARTITIONED, nil
 	case "BUCKET_SHFFULE_HASH_PARTITIONED":
 		return TPartitionType_BUCKET_SHFFULE_HASH_PARTITIONED, nil
-	case "TABLET_SINK_SHUFFLE_PARTITIONED":
-		return TPartitionType_TABLET_SINK_SHUFFLE_PARTITIONED, nil
-	case "TABLE_SINK_HASH_PARTITIONED":
-		return TPartitionType_TABLE_SINK_HASH_PARTITIONED, nil
-	case "TABLE_SINK_RANDOM_PARTITIONED":
-		return TPartitionType_TABLE_SINK_RANDOM_PARTITIONED, nil
+	case "OLAP_TABLE_SINK_HASH_PARTITIONED":
+		return TPartitionType_OLAP_TABLE_SINK_HASH_PARTITIONED, nil
+	case "HIVE_TABLE_SINK_HASH_PARTITIONED":
+		return TPartitionType_HIVE_TABLE_SINK_HASH_PARTITIONED, nil
+	case "HIVE_TABLE_SINK_UNPARTITIONED":
+		return TPartitionType_HIVE_TABLE_SINK_UNPARTITIONED, nil
 	}
 	return TPartitionType(0), fmt.Errorf("not a valid TPartitionType string")
 }

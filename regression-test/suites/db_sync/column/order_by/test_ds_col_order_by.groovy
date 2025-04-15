@@ -67,6 +67,7 @@ suite("test_ds_col_order_by") {
         """
     sql "sync"
 
+    helper.ccrJobDelete()
     helper.ccrJobCreate()
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
 

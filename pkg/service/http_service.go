@@ -27,7 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/selectdb/ccr_syncer/pkg/ccr"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	"github.com/selectdb/ccr_syncer/pkg/rpc"
@@ -35,6 +34,7 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/version"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
+	"github.com/selectdb/ccr_syncer/pkg/xmetrics"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -230,6 +230,8 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 		FirstBinlogTimestamp string  `json:"first_binlog_timestamp"`
 		LastBinlogTimestamp  string  `json:"last_binlog_timestamp"`
 		TimeInterval         float64 `json:"time_interval_secs"`
+		NextCommitSeq        int64   `json:"next_commit_seq"`
+		NextBinlogTimestamp  string  `json:"next_binlog_timestamp"`
 	}
 	var lagResult *result
 	defer func() { writeJson(w, lagResult) }()
@@ -317,20 +319,26 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 	lag := resp.GetLag()
 	firstCommitSeq := resp.GetFirstCommitSeq()
 	lastCommitSeq := resp.GetLastCommitSeq()
-	var firstBinlogTimestamp, lastBinlogTimestamp string
+	nextCommitSeq := resp.GetNextCommitSeq()
+	var nextBinlogTimestamp, lastBinlogTimestamp, firstBinlogTimestamp string
 
-	if ts := resp.GetFirstBinlogTimestamp(); ts != -1 {
-		firstBinlogTimestamp = ConvertTimestampToString(resp.GetFirstBinlogTimestamp())
+	if ts := resp.GetNextBinlogTimestamp(); ts != -1 {
+		nextBinlogTimestamp = ConvertTimestampToString(ts)
 	} else {
-		firstBinlogTimestamp = "1970-01-01 08:00:00"
+		nextBinlogTimestamp = "1970-01-01 08:00:00"
 	}
 	if ts := resp.GetLastBinlogTimestamp(); ts != -1 {
-		lastBinlogTimestamp = ConvertTimestampToString(resp.GetLastBinlogTimestamp())
+		lastBinlogTimestamp = ConvertTimestampToString(ts)
 	} else {
 		lastBinlogTimestamp = "1970-01-01 08:00:00"
 	}
+	if ts := resp.GetFirstBinlogTimestamp(); ts != -1 {
+		firstBinlogTimestamp = ConvertTimestampToString(ts)
+	} else {
+		firstBinlogTimestamp = "1970-01-01 08:00:00"
+	}
 
-	timeInterval := CalculateTimeDifferenceInSeconds(lastBinlogTimestamp, firstBinlogTimestamp)
+	timeInterval := CalculateTimeDifferenceInSeconds(lastBinlogTimestamp, nextBinlogTimestamp)
 
 	lagResult = &result{
 		defaultResult:        newSuccessResult(),
@@ -340,6 +348,8 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 		FirstBinlogTimestamp: firstBinlogTimestamp,
 		LastBinlogTimestamp:  lastBinlogTimestamp,
 		TimeInterval:         timeInterval,
+		NextCommitSeq:        nextCommitSeq,
+		NextBinlogTimestamp:  nextBinlogTimestamp,
 	}
 }
 
@@ -751,7 +761,8 @@ func (s *HttpService) forceFullsyncHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := s.jobManager.SkipBinlog(request.Name, 0, ccr.SkipByFullSync); err != nil {
+	params := ccr.SkipBinlogParams{SkipBy: ccr.SkipByFullSync}
+	if err := s.jobManager.SkipBinlog(request.Name, params); err != nil {
 		log.Warnf("force fullsync failed: %+v", err)
 		result = newErrorResult(err.Error())
 	} else {
@@ -840,6 +851,8 @@ func (s *HttpService) skipBinlogHandler(w http.ResponseWriter, r *http.Request) 
 		CcrCommonRequest
 		SkipCommitSeq int64  `json:"skip_commit_seq"`
 		SkipBy        string `json:"skip_by"`
+		SkipTable     string `json:"skip_table"`
+		SkipTableId   int64  `json:"skip_table_id"`
 	}
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
@@ -854,28 +867,19 @@ func (s *HttpService) skipBinlogHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	skipBy := strings.ToLower(request.SkipBy)
-	if skipBy != ccr.SkipBySilence && skipBy != ccr.SkipByFullSync {
-		log.Warnf("skip binlog failed: unknown skip way %s", request.SkipBy)
-		result = newErrorResult(fmt.Sprintf("unknown skip way: %s", request.SkipBy))
-		return
-	}
-
-	if request.SkipCommitSeq <= 0 && skipBy != "fullsync" {
-		log.Warnf("skip binlog failed: commit seq is not specified for %s, commit seq: %d",
-			request.SkipBy, request.SkipCommitSeq)
-		result = newErrorResult(fmt.Sprintf("commit seq is not specified for %s, commit seq: %d",
-			request.SkipBy, request.SkipCommitSeq))
-		return
-	}
-
 	if s.redirect(request.Name, w, r) {
 		return
 	}
 
-	log.Infof("skip binlog with %s, commit seq %d, job %s",
-		request.SkipBy, request.SkipCommitSeq, request.Name)
-	if err := s.jobManager.SkipBinlog(request.Name, request.SkipCommitSeq, request.SkipBy); err != nil {
+	log.Infof("skip binlog with %s, commit seq %d, skip table %s, skip table id %d, job %s",
+		request.SkipBy, request.SkipCommitSeq, request.SkipTable, request.SkipTableId, request.Name)
+	params := ccr.SkipBinlogParams{
+		SkipBy:        strings.ToLower(request.SkipBy),
+		SkipCommitSeq: request.SkipCommitSeq,
+		SkipTable:     request.SkipTable,
+		SkipTableId:   request.SkipTableId,
+	}
+	if err := s.jobManager.SkipBinlog(request.Name, params); err != nil {
 		log.Warnf("skip binlog failed: %+v", err)
 		result = newErrorResult(err.Error())
 	} else {
@@ -940,7 +944,7 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/update_host_mapping", s.updateHostMappingHandler)
 	s.mux.HandleFunc("/job_skip_binlog", s.skipBinlogHandler)
 	s.mux.HandleFunc("/failpoint", s.failpointHandler)
-	s.mux.Handle("/metrics", promhttp.Handler())
+	s.mux.Handle("/metrics", xmetrics.GetHttpHandler())
 	s.mux.HandleFunc("/sync", s.syncHandler)
 }
 
@@ -948,6 +952,7 @@ func (s *HttpService) Start() error {
 	addr := fmt.Sprintf(":%d", s.port)
 	log.Infof("Server listening on %s", addr)
 
+	s.mux = http.NewServeMux()
 	s.RegisterHandlers()
 
 	s.server = &http.Server{Addr: addr, Handler: s.mux}

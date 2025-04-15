@@ -15,18 +15,28 @@ type ModifyTableProperty struct {
 	Sql        string            `json:"sql"`
 }
 
-func NewModifyTablePropertyFromJson(data string) (*ModifyTableProperty, error) {
-	var modifyProperty ModifyTableProperty
+func (modifyProperty *ModifyTableProperty) Deserialize(data string) error {
 	err := json.Unmarshal([]byte(data), &modifyProperty)
 	if err != nil {
-		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal modify table property error")
+		return xerror.Wrap(err, xerror.Normal, "unmarshal modify table property error")
 	}
 
 	if modifyProperty.TableId == 0 {
-		return nil, xerror.Errorf(xerror.Normal, "table id not found")
+		return xerror.Errorf(xerror.Normal, "table id not found")
 	}
+	return nil
+}
 
+func NewModifyTablePropertyFromJson(data string) (*ModifyTableProperty, error) {
+	var modifyProperty ModifyTableProperty
+	if err := modifyProperty.Deserialize(data); err != nil {
+		return nil, err
+	}
 	return &modifyProperty, nil
+}
+
+func (modifyProperty *ModifyTableProperty) GetTableId() int64 {
+	return modifyProperty.TableId
 }
 
 func (m *ModifyTableProperty) String() string {

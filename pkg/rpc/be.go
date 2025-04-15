@@ -18,9 +18,12 @@ package rpc
 
 import (
 	"context"
+	"time"
 
+	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
+	"github.com/selectdb/ccr_syncer/pkg/xmetrics"
 
 	bestruct "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/backendservice"
 	beservice "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/backendservice/backendservice"
@@ -28,8 +31,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type BeRpcOption func() callopt.Option
+
 type IBeRpc interface {
-	IngestBinlog(*bestruct.TIngestBinlogRequest) (*bestruct.TIngestBinlogResult_, error)
+	IngestBinlog(context.Context, *bestruct.TIngestBinlogRequest, ...BeRpcOption) (*bestruct.TIngestBinlogResult_, error)
 }
 
 type BeRpc struct {
@@ -37,14 +42,26 @@ type BeRpc struct {
 	client  beservice.Client
 }
 
-func (beRpc *BeRpc) IngestBinlog(req *bestruct.TIngestBinlogRequest) (*bestruct.TIngestBinlogResult_, error) {
-	log.Debugf("IngestBinlog req: %+v, txnId: %d, be: %v", req, req.GetTxnId(), beRpc.backend)
+func (beRpc *BeRpc) IngestBinlog(ctx context.Context, req *bestruct.TIngestBinlogRequest, beOptions ...BeRpcOption) (*bestruct.TIngestBinlogResult_, error) {
+	log.Tracef("IngestBinlog req: %+v, txnId: %d, be: %v", req, req.GetTxnId(), beRpc.backend)
 
+	defer xmetrics.RecordBeRpc("IngestBinlog", beRpc.backend.Host, beRpc.backend.BePort)()
+
+	var options []callopt.Option
+	for _, opt := range beOptions {
+		options = append(options, opt())
+	}
 	client := beRpc.client
-	if result, err := client.IngestBinlog(context.Background(), req); err != nil {
+	if result, err := client.IngestBinlog(ctx, req, options...); err != nil {
 		return nil, xerror.Wrapf(err, xerror.Normal,
 			"IngestBinlog error: %v, txnId: %d, be: %v", err, req.GetTxnId(), beRpc.backend)
 	} else {
 		return result, nil
+	}
+}
+
+func WithBeRpcTimeout(timeout time.Duration) BeRpcOption {
+	return func() callopt.Option {
+		return callopt.WithRPCTimeout(timeout)
 	}
 }

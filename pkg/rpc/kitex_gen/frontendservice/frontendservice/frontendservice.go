@@ -52,6 +52,7 @@ func NewServiceInfo() *kitex.ServiceInfo {
 		"streamLoadPut":             kitex.NewMethodInfo(streamLoadPutHandler, newFrontendServiceStreamLoadPutArgs, newFrontendServiceStreamLoadPutResult, false),
 		"streamLoadMultiTablePut":   kitex.NewMethodInfo(streamLoadMultiTablePutHandler, newFrontendServiceStreamLoadMultiTablePutArgs, newFrontendServiceStreamLoadMultiTablePutResult, false),
 		"snapshotLoaderReport":      kitex.NewMethodInfo(snapshotLoaderReportHandler, newFrontendServiceSnapshotLoaderReportArgs, newFrontendServiceSnapshotLoaderReportResult, false),
+		"getAliveSessions":          kitex.NewMethodInfo(getAliveSessionsHandler, newFrontendServiceGetAliveSessionsArgs, newFrontendServiceGetAliveSessionsResult, false),
 		"ping":                      kitex.NewMethodInfo(pingHandler, newFrontendServicePingArgs, newFrontendServicePingResult, false),
 		"initExternalCtlMeta":       kitex.NewMethodInfo(initExternalCtlMetaHandler, newFrontendServiceInitExternalCtlMetaArgs, newFrontendServiceInitExternalCtlMetaResult, false),
 		"fetchSchemaTableData":      kitex.NewMethodInfo(fetchSchemaTableDataHandler, newFrontendServiceFetchSchemaTableDataArgs, newFrontendServiceFetchSchemaTableDataResult, false),
@@ -654,6 +655,24 @@ func newFrontendServiceSnapshotLoaderReportArgs() interface{} {
 
 func newFrontendServiceSnapshotLoaderReportResult() interface{} {
 	return frontendservice.NewFrontendServiceSnapshotLoaderReportResult()
+}
+
+func getAliveSessionsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*frontendservice.FrontendServiceGetAliveSessionsArgs)
+	realResult := result.(*frontendservice.FrontendServiceGetAliveSessionsResult)
+	success, err := handler.(frontendservice.FrontendService).GetAliveSessions(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newFrontendServiceGetAliveSessionsArgs() interface{} {
+	return frontendservice.NewFrontendServiceGetAliveSessionsArgs()
+}
+
+func newFrontendServiceGetAliveSessionsResult() interface{} {
+	return frontendservice.NewFrontendServiceGetAliveSessionsResult()
 }
 
 func pingHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1510,6 +1529,16 @@ func (p *kClient) SnapshotLoaderReport(ctx context.Context, request *frontendser
 	_args.Request = request
 	var _result frontendservice.FrontendServiceSnapshotLoaderReportResult
 	if err = p.c.Call(ctx, "snapshotLoaderReport", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetAliveSessions(ctx context.Context, request *frontendservice.TFrontendReportAliveSessionRequest) (r *frontendservice.TFrontendReportAliveSessionResult_, err error) {
+	var _args frontendservice.FrontendServiceGetAliveSessionsArgs
+	_args.Request = request
+	var _result frontendservice.FrontendServiceGetAliveSessionsResult
+	if err = p.c.Call(ctx, "getAliveSessions", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

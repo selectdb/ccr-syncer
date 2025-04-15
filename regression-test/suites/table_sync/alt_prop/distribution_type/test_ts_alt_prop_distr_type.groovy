@@ -26,11 +26,11 @@ suite("test_ts_alt_prop_distr_type") {
         return res.size() != 0
     }
     def existBucketNew = { res -> Boolean
-        return res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
+        return res[0][1].contains("DISTRIBUTED BY RANDOM BUCKETS 20")
     }
 
     def notExistBucketNew = { res -> Boolean
-        return !res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
+        return res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
     }
 
     sql "DROP TABLE IF EXISTS ${dbName}.${tableName}"
@@ -45,11 +45,11 @@ suite("test_ts_alt_prop_distr_type") {
             `id` INT
         )
         ENGINE=OLAP
-        AGGREGATE KEY(`test`, `id`)
+        DUPLICATE KEY(`test`, `id`)
         PARTITION BY RANGE(`id`)
         (
         )
-        DISTRIBUTED BY HASH(id) BUCKETS 1
+        DISTRIBUTED BY HASH(id) BUCKETS 20
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true"
@@ -74,7 +74,7 @@ suite("test_ts_alt_prop_distr_type") {
     logger.info("=== Test 2: alter table set property distribution ===")
 
     sql """
-        ALTER TABLE ${tableName} MODIFY DISTRIBUTION DISTRIBUTED BY HASH(id) BUCKETS 20;
+        ALTER TABLE ${tableName} SET ("distribution_type" = "random")
         """
         
 

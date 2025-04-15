@@ -37,7 +37,7 @@ var (
 )
 
 func init() {
-	flag.StringVar(&logLevel, "log_level", "trace", "log level")
+	flag.StringVar(&logLevel, "log_level", "debug", "log level")
 	flag.StringVar(&logFilename, "log_filename", "", "log filename")
 	flag.BoolVar(&logAlsoToStderr, "log_also_to_stderr", false, "log also to stderr")
 	flag.IntVar(&logRetainNum, "log_retain_num", 30, "log retain number")

@@ -75,7 +75,7 @@ suite("test_ts_idx_inverted_add_drop_multi") {
     sql """ INSERT INTO ${tableName} VALUES (1, 1, "1", "1") """
     assertTrue(helper.checkSelectTimesOf(
         """ SELECT * FROM ${tableName} """, insert_num + 1, 30))
-    show_indexes_result = target_sql_return_maparray "show indexes from ${tableName}"
+    def show_indexes_result = target_sql_return_maparray "show indexes from ${tableName}"
     assertTrue(show_indexes_result.any {
         it['Key_name'] == 'idx_inverted_1' && it['Index_type'] == 'INVERTED' })
     assertTrue(show_indexes_result.any {

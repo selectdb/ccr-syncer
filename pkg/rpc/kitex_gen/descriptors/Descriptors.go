@@ -142,6 +142,7 @@ const (
 	TSchemaTableType_SCH_TABLE_PROPERTIES                      TSchemaTableType = 50
 	TSchemaTableType_SCH_FILE_CACHE_STATISTICS                 TSchemaTableType = 51
 	TSchemaTableType_SCH_CATALOG_META_CACHE_STATISTICS         TSchemaTableType = 52
+	TSchemaTableType_SCH_BACKEND_KERBEROS_TICKET_CACHE         TSchemaTableType = 53
 )
 
 func (p TSchemaTableType) String() string {
@@ -252,6 +253,8 @@ func (p TSchemaTableType) String() string {
 		return "SCH_FILE_CACHE_STATISTICS"
 	case TSchemaTableType_SCH_CATALOG_META_CACHE_STATISTICS:
 		return "SCH_CATALOG_META_CACHE_STATISTICS"
+	case TSchemaTableType_SCH_BACKEND_KERBEROS_TICKET_CACHE:
+		return "SCH_BACKEND_KERBEROS_TICKET_CACHE"
 	}
 	return "<UNSET>"
 }
@@ -364,6 +367,8 @@ func TSchemaTableTypeFromString(s string) (TSchemaTableType, error) {
 		return TSchemaTableType_SCH_FILE_CACHE_STATISTICS, nil
 	case "SCH_CATALOG_META_CACHE_STATISTICS":
 		return TSchemaTableType_SCH_CATALOG_META_CACHE_STATISTICS, nil
+	case "SCH_BACKEND_KERBEROS_TICKET_CACHE":
+		return TSchemaTableType_SCH_BACKEND_KERBEROS_TICKET_CACHE, nil
 	}
 	return TSchemaTableType(0), fmt.Errorf("not a valid TSchemaTableType string")
 }

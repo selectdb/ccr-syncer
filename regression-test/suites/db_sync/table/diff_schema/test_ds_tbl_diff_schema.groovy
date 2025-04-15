@@ -68,8 +68,6 @@ suite("test_ds_tbl_diff_schema") {
     """
     helper.enableDbBinlog()
 
-    helper.enableDbBinlog()
-
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 

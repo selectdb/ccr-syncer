@@ -25,6 +25,7 @@ require (
 require golang.org/x/net v0.21.0 // indirect; https://github.com/selectdb/ccr-syncer/security/dependabot/2
 
 require (
+	github.com/avast/retry-go v3.0.0+incompatible // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bufbuild/protocompile v0.8.0 // indirect
 	github.com/bytedance/gopkg v0.0.0-20240202110943-5e26950c5e57 // indirect

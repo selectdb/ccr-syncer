@@ -36,6 +36,7 @@ Options:
     --db_port <arg>             the port of meta database
     --db_user <arg>             the user name of meta database
     --db_password <arg>         the password of meta database
+    --db_name <arg>             the db_name of meta database default is ccr
 "
     exit 1
 }
@@ -54,6 +55,7 @@ OPTS="$(getopt \
     -l 'db_port:' \
     -l 'db_user:' \
     -l 'db_password:' \
+    -l 'db_name:' \
     -l 'host:' \
     -l 'port:' \
     -l 'pid_dir:' \
@@ -76,6 +78,7 @@ DB_HOST="127.0.0.1"
 DB_PORT="3306"
 DB_USER=""
 DB_PASSWORD=""
+DB_NAME="ccr"
 PPROF="false"
 PPROF_PORT="6060"
 CONNECT_TIMEOUT="10s"
@@ -123,6 +126,10 @@ while true; do
         ;;
     --db_password)
         DB_PASSWORD=$2
+        shift 2
+        ;;
+    --db_name)
+        DB_NAME=$2
         shift 2
         ;;
     --host)
@@ -209,6 +216,7 @@ if [[ "${RUN_DAEMON}" -eq 1 ]]; then
           "-db_port=${DB_PORT}" \
           "-db_user=${DB_USER}" \
           "-db_password=${DB_PASSWORD}" \
+          "-db_name=${DB_NAME}" \
           "-config_file=${CONFIG_FILE}" \
           "-host=${HOST}" \
           "-port=${PORT}" \

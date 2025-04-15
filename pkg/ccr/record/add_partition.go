@@ -48,20 +48,31 @@ type AddPartition struct {
 
 func NewAddPartitionFromJson(data string) (*AddPartition, error) {
 	var addPartition AddPartition
+	if err := addPartition.Deserialize(data); err != nil {
+		return nil, err
+	}
+	return &addPartition, nil
+}
+
+func (addPartition *AddPartition) Deserialize(data string) error {
 	err := json.Unmarshal([]byte(data), &addPartition)
 	if err != nil {
-		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal add partition error")
+		return xerror.Wrap(err, xerror.Normal, "unmarshal add partition error")
 	}
 
 	if addPartition.Sql == "" {
-		return nil, xerror.Errorf(xerror.Normal, "add partition sql is empty")
+		return xerror.Errorf(xerror.Normal, "add partition sql is empty")
 	}
 
 	if addPartition.TableId == 0 {
-		return nil, xerror.Errorf(xerror.Normal, "table id not found")
+		return xerror.Errorf(xerror.Normal, "table id not found")
 	}
 
-	return &addPartition, nil
+	return nil
+}
+
+func (addPartition *AddPartition) GetTableId() int64 {
+	return addPartition.TableId
 }
 
 func (addPartition *AddPartition) getDistributionInfo() *DistributionInfo {

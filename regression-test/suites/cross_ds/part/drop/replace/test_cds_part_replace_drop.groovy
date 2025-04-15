@@ -32,7 +32,7 @@ suite("test_cds_part_replace_drop") {
     }
 
     logger.info("=== Create table ===")
-    tableName = "${baseTableName}"
+    def tableName = "${baseTableName}"
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (
