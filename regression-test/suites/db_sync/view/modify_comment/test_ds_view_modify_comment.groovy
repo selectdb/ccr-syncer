@@ -19,6 +19,10 @@ suite("test_ds_view_modify_comment") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    log.info("branch-3.0: not support modify view def")
+    return
+
+
     def viewName = "test_ds_view_modify_comment_view"
 
     def exist = { res -> Boolean

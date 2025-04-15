@@ -33,6 +33,8 @@ suite('test_dsd_rollup_drop_2') {
     sql "DROP TABLE IF EXISTS ${tableName}"
     target_sql "DROP TABLE IF EXISTS ${tableName}"
 
+    helper.enableDbBinlog()
+
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (

@@ -19,6 +19,9 @@ suite("test_ds_prop_unique_key_mow") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    log.info("branch-3.0: not support unique key merge on write for property 'enable_unique_key_skip_bitmap_column'")
+    return
+
     def dbName = context.dbName
     def tableName = "tbl_" + helper.randomSuffix()
     def test_num = 0

@@ -52,7 +52,8 @@ suite("test_cds_view_alter_view") {
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true",
-            "binlog.ttl_seconds" = "180"
+            "binlog.ttl_seconds" = "180",
+            "light_schema_change" = "true"
         )
     """
 
