@@ -76,6 +76,7 @@ var (
 	featureSkipWaitingTxnPublish        bool
 	featureSkipCheckAsyncMvTable        bool
 	featurePipelineCommit               bool
+	featureSeperatedHandles             bool
 
 	flagBinlogBatchSize int64
 
@@ -103,7 +104,7 @@ func init() {
 		"compress the snapshot job info and meta")
 	flag.BoolVar(&FeatureSkipRollupBinlogs, "feature_skip_rollup_binlogs", false,
 		"skip the rollup related binlogs")
-	flag.BoolVar(&featureTxnInsert, "feature_txn_insert", false,
+	flag.BoolVar(&featureTxnInsert, "feature_txn_insert", true,
 		"enable txn insert support")
 	flag.BoolVar(&FeatureFilterStorageMedium, "feature_filter_storage_medium", true,
 		"enable filter storage medium property")
@@ -117,6 +118,8 @@ func init() {
 		"skip checking async mv table, the async mv binlogs will be filtered by doris")
 	flag.BoolVar(&featurePipelineCommit, "feature_pipeline_commit", true,
 		"enable pipeline commit for upsert binlogs")
+	flag.BoolVar(&featureSeperatedHandles, "feature_seperated_handles", false,
+		"enable the seperated handles (the refactor)")
 
 	flag.Int64Var(&flagBinlogBatchSize, "binlog_batch_size", 16, "the max num of binlogs to get in a batch")
 }
