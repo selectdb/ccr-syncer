@@ -3433,7 +3433,7 @@ func (j *Job) handleNonBarrierBinlog(binlog *festruct.TBinlog) error {
 	}
 
 	var err error
-	if IsJobHandleRegistered(binlogType) {
+	if featureSeperatedHandles && IsJobHandleRegistered(binlogType) {
 		err = HandleBinlog(j, binlog)
 	} else {
 		switch binlogType {
