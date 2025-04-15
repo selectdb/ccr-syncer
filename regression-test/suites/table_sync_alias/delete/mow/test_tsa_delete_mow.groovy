@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite('test_tsa_delete') {
+suite('test_tsa_delete_mow') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
@@ -40,7 +40,8 @@ suite('test_tsa_delete') {
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true",
-            "binlog.ttl_seconds" = "180"
+            "binlog.ttl_seconds" = "180",
+            "enable_unique_key_merge_on_write" = "true"
         )
     """
     helper.ccrJobDelete(tableName)

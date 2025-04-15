@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite('test_ts_delete') {
+suite('test_ts_delete_mor') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
