@@ -118,7 +118,7 @@ func init() {
 		"skip checking async mv table, the async mv binlogs will be filtered by doris")
 	flag.BoolVar(&featurePipelineCommit, "feature_pipeline_commit", true,
 		"enable pipeline commit for upsert binlogs")
-	flag.BoolVar(&featureSeperatedHandles, "feature_seperated_handles", false,
+	flag.BoolVar(&featureSeperatedHandles, "feature_seperated_handles", true,
 		"enable the seperated handles (the refactor)")
 
 	flag.Int64Var(&flagBinlogBatchSize, "binlog_batch_size", 16, "the max num of binlogs to get in a batch")
