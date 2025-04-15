@@ -36,6 +36,7 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 	"github.com/selectdb/ccr_syncer/pkg/xmetrics"
 
+	"github.com/olekukonko/tablewriter"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -587,6 +588,21 @@ func (s *HttpService) syncHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *HttpService) getAllJobs() ([]string, error) {
+	var datum map[string][]string
+	var err error
+	// use GetAllData to get all jobs
+	if datum, err = s.db.GetAllData(); err != nil {
+		log.Warnf("when list jobs, get all data failed: %+v", err)
+		return nil, err
+	}
+	allJobs := make([]string, 0)
+	for _, eachJob := range datum["jobs"] {
+		allJobs = append(allJobs, strings.Trim(strings.Split(eachJob, ",")[0], " "))
+	}
+	return allJobs, nil
+}
+
 // ListJobs service
 func (s *HttpService) listJobsHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("list jobs")
@@ -599,24 +615,166 @@ func (s *HttpService) listJobsHandler(w http.ResponseWriter, r *http.Request) {
 	var jobResult *result
 	defer func() { writeJson(w, jobResult) }()
 
-	// use GetAllData to get all jobs
-	if datum, err := s.db.GetAllData(); err != nil {
+	if allJobs, err := s.getAllJobs(); err != nil {
 		log.Warnf("when list jobs, get all data failed: %+v", err)
 
 		jobResult = &result{
 			defaultResult: newErrorResult(err.Error()),
 		}
 	} else {
-		allJobs := make([]string, 0)
-		for _, eachJob := range datum["jobs"] {
-			allJobs = append(allJobs, strings.Trim(strings.Split(eachJob, ",")[0], " "))
-		}
-
 		jobResult = &result{
 			defaultResult: newSuccessResult(),
 			Jobs:          allJobs,
 		}
 	}
+}
+
+// show all jobs state
+func (s *HttpService) showJobStateHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("show job state")
+
+	var result *defaultResult
+
+	defer func() { writeJson(w, result) }()
+
+	allJobs, err := s.getAllJobs()
+	if err != nil {
+		log.Warnf("when show jobs state, get all data failed: %+v", err)
+		result = newErrorResult(err.Error())
+		return
+	}
+	data := [][]string{}
+	for _, jobName := range allJobs {
+		line := []string{}
+		// job name
+		line = append(line, jobName)
+		// job type
+		var job *ccr.Job
+
+		jobInfo, err := s.db.GetJobInfo(jobName)
+		if err != nil {
+			log.Warnf("db get job info failed: %+v", err)
+			result = newErrorResult(err.Error())
+			return
+		}
+
+		err = json.Unmarshal([]byte(jobInfo), &job)
+		if err != nil {
+			log.Warnf("unmarshal get job info failed: %+v", err)
+			result = newErrorResult(err.Error())
+			return
+		}
+
+		if job.IsTableSyncWithAlias() {
+			line = append(line, "table_sync_with_alias")
+		} else {
+			line = append(line, job.SyncType.String())
+		}
+
+		// lag
+		var jobProgress ccr.JobProgress
+		if jobProgressData, err := s.db.GetProgress(jobName); err != nil {
+			log.Warnf("get job progress failed: %+v", err)
+			result = newErrorResult(err.Error())
+			return
+		} else {
+			err := json.Unmarshal([]byte(jobProgressData), &jobProgress)
+			if err != nil {
+				log.Warnf("unmarshal get job progress error")
+				result = newErrorResult(err.Error())
+				return
+			}
+			jobProgress.PersistData = ""
+		}
+		srcSpec := &job.Src
+		feRpc, err := rpc.NewFeRpc(srcSpec)
+		if err != nil {
+			log.Warnf("new fe rpc failed: %+v", err)
+			result = newErrorResult(err.Error())
+			return
+		}
+
+		commitSeq := jobProgress.CommitSeq
+		resp, err := feRpc.GetBinlogLag(srcSpec, commitSeq)
+		if err != nil {
+			log.Warnf("rpc get binlog failed: %+v", err)
+			result = newErrorResult(err.Error())
+			return
+		}
+
+		lag := resp.GetLag()
+		line = append(line, fmt.Sprintf("%v", lag))
+		// lag(secs)
+		var lastBinlogTimestamp, firstBinlogTimestamp string
+
+		if ts := resp.GetLastBinlogTimestamp(); ts != -1 {
+			lastBinlogTimestamp = ConvertTimestampToString(ts)
+		} else {
+			lastBinlogTimestamp = "1970-01-01 08:00:00"
+		}
+		if ts := resp.GetFirstBinlogTimestamp(); ts != -1 {
+			firstBinlogTimestamp = ConvertTimestampToString(ts)
+		} else {
+			firstBinlogTimestamp = "1970-01-01 08:00:00"
+		}
+
+		totalTime := CalculateTimeDifferenceInSeconds(lastBinlogTimestamp, firstBinlogTimestamp)
+		line = append(line, fmt.Sprintf("%v", lag/int64(totalTime)))
+		// sync state
+		line = append(line, jobProgress.SyncState.String())
+		// sub sync state
+		line = append(line, jobProgress.SubSyncState.String())
+		// last fullsync time
+		line = append(line, fmt.Sprintf("%v", jobProgress.FullSyncStartAt))
+		// last fullsync reason
+		line = append(line, jobProgress.FullSyncInfo.Info)
+		// is hostmapping
+		line = append(line, fmt.Sprintf("%v", len(job.Dest.HostMapping)+len(job.Src.HostMapping) != 0))
+		// other args
+		line = append(line, "")
+		// append to data
+		data = append(data, line)
+	}
+	// the type default is html
+	if r.URL.RawQuery == "" {
+		r.URL.RawQuery = "type=html"
+	}
+	header := []string{"Job Name", "Type", "Lag", "Lag(Secs)", "Sync State", "Sub Sync State", "Last Fullsync Time", "Last Fullsync Reason", "Is Hostmapping", "Other Args"}
+	var sb strings.Builder
+	switch r.URL.RawQuery {
+	case "type=html":
+		sb.WriteString("<!DOCTYPE html>\n")
+		sb.WriteString("<html>\n<head>\n<title>Jobs State</title>\n</head>\n<body>\n")
+		sb.WriteString("<table border='1' style='border-collapse: collapse;'>\n")
+		sb.WriteString("<tr><th>" + strings.Join(header, "</th><th>") + "</th></tr>\n")
+
+		for _, states := range data {
+			sb.WriteString("<tr><td>" + strings.Join(states, "</td><td>") + "</td></tr>\n")
+		}
+
+		sb.WriteString("</table>\n</body>\n</html>\n")
+	case "type=table":
+		// using table writer to render the table
+		table := tablewriter.NewWriter(&sb)
+		table.SetHeader(header)
+		table.SetRowLine(true)
+		for _, line := range data {
+			table.Append(line)
+		}
+		table.Render()
+	case "type=raw":
+		// raw type output would using tab
+		sb.WriteString(strings.Join(header, "\t") + "\n")
+		for _, states := range data {
+			sb.WriteString(strings.Join(states, "\t") + "\n")
+		}
+	default:
+		log.Warnf("show job state with unknow type: %+v", r.URL.RawQuery)
+		result = newErrorResult(fmt.Sprintf("show job state with unknow type: %+v", r.URL.RawQuery))
+		return
+	}
+	result = newSuccessResult()
+	w.Write([]byte(sb.String()))
 }
 
 // get job progress
@@ -946,6 +1104,7 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/failpoint", s.failpointHandler)
 	s.mux.Handle("/metrics", xmetrics.GetHttpHandler())
 	s.mux.HandleFunc("/sync", s.syncHandler)
+	s.mux.HandleFunc("/view", s.showJobStateHandler)
 }
 
 func (s *HttpService) Start() error {

@@ -48,6 +48,12 @@ curl -X POST -H "Content-Type: application/json" -d {json_body} http://ccr_synce
     ```bash
     curl -X POST -L --post303 -H "Content-Type: application/json" -d '{}' http://ccr_syncer_host:ccr_syncer_port/list_jobs
     ```
+- `view`
+    列出展示所有job的状态
+    ```bash
+    curl -L --post303 http://ccr_syncer_host:ccr_syncer_port/view?type=$type
+    ```
+    type有三种类型`raw,html,table`, raw 表示TAB分割的表格，在 terminator 下用；html 是网页表格可通过浏览器请求查看；table 则是一些 ascii 字符形成的 table显示在terminal；默认是 html即不使用`?type=$type`
 - `job_detail`
     展示job的详细信息
     ```bash
