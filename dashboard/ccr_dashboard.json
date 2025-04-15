@@ -18,7 +18,7 @@
     "editable": true,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,
-    "id": 1,
+    "id": 3,
     "links": [],
     "panels": [
         {
@@ -393,8 +393,7 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green",
-                                        "value": null
+                                        "color": "green"
                                     },
                                     {
                                         "color": "red",
@@ -409,7 +408,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 0,
-                        "y": 98
+                        "y": 10
                     },
                     "id": 16,
                     "options": {
@@ -494,8 +493,7 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green",
-                                        "value": null
+                                        "color": "green"
                                     },
                                     {
                                         "color": "red",
@@ -511,7 +509,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 12,
-                        "y": 98
+                        "y": 10
                     },
                     "id": 12,
                     "options": {
@@ -613,8 +611,7 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green",
-                                        "value": null
+                                        "color": "green"
                                     },
                                     {
                                         "color": "red",
@@ -629,7 +626,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 0,
-                        "y": 106
+                        "y": 34
                     },
                     "id": 24,
                     "options": {
@@ -714,8 +711,7 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green",
-                                        "value": null
+                                        "color": "green"
                                     },
                                     {
                                         "color": "red",
@@ -731,7 +727,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 12,
-                        "y": 106
+                        "y": 34
                     },
                     "id": 25,
                     "options": {
@@ -830,8 +826,7 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green",
-                                        "value": null
+                                        "color": "green"
                                     },
                                     {
                                         "color": "red",
@@ -846,7 +841,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 0,
-                        "y": 11
+                        "y": 91
                     },
                     "id": 14,
                     "options": {
@@ -931,8 +926,7 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green",
-                                        "value": null
+                                        "color": "green"
                                     },
                                     {
                                         "color": "red",
@@ -948,7 +942,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 12,
-                        "y": 11
+                        "y": 91
                     },
                     "id": 17,
                     "options": {
@@ -1050,8 +1044,7 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green",
-                                        "value": null
+                                        "color": "green"
                                     },
                                     {
                                         "color": "red",
@@ -1066,7 +1059,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 0,
-                        "y": 19
+                        "y": 115
                     },
                     "id": 11,
                     "options": {
@@ -1151,8 +1144,7 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green",
-                                        "value": null
+                                        "color": "green"
                                     },
                                     {
                                         "color": "red",
@@ -1168,7 +1160,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 12,
-                        "y": 19
+                        "y": 115
                     },
                     "id": 15,
                     "options": {
@@ -1270,8 +1262,7 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green",
-                                        "value": null
+                                        "color": "green"
                                     },
                                     {
                                         "color": "red",
@@ -1286,7 +1277,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 0,
-                        "y": 27
+                        "y": 123
                     },
                     "id": 7,
                     "options": {
@@ -1388,8 +1379,7 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green",
-                                        "value": null
+                                        "color": "green"
                                     },
                                     {
                                         "color": "red",
@@ -1405,7 +1395,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 12,
-                        "y": 27
+                        "y": 123
                     },
                     "id": 8,
                     "options": {
@@ -1542,8 +1532,7 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green",
-                                        "value": null
+                                        "color": "green"
                                     },
                                     {
                                         "color": "red",
@@ -1558,7 +1547,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 0,
-                        "y": 35
+                        "y": 131
                     },
                     "id": 28,
                     "options": {
@@ -1676,8 +1665,7 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green",
-                                        "value": null
+                                        "color": "green"
                                     },
                                     {
                                         "color": "red",
@@ -1693,7 +1681,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 12,
-                        "y": 35
+                        "y": 131
                     },
                     "id": 29,
                     "options": {
@@ -1862,8 +1850,7 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green",
-                                        "value": null
+                                        "color": "green"
                                     },
                                     {
                                         "color": "red",
@@ -1878,7 +1865,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 0,
-                        "y": 43
+                        "y": 139
                     },
                     "id": 9,
                     "options": {
@@ -1963,8 +1950,7 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green",
-                                        "value": null
+                                        "color": "green"
                                     },
                                     {
                                         "color": "red",
@@ -1980,7 +1966,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 12,
-                        "y": 43
+                        "y": 139
                     },
                     "id": 10,
                     "options": {
@@ -2083,8 +2069,7 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green",
-                                        "value": null
+                                        "color": "green"
                                     },
                                     {
                                         "color": "red",
@@ -2099,7 +2084,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 0,
-                        "y": 51
+                        "y": 147
                     },
                     "id": 5,
                     "options": {
@@ -2184,8 +2169,7 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green",
-                                        "value": null
+                                        "color": "green"
                                     },
                                     {
                                         "color": "red",
@@ -2201,7 +2185,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 12,
-                        "y": 51
+                        "y": 147
                     },
                     "id": 6,
                     "options": {
@@ -2266,7 +2250,7 @@
                 "x": 0,
                 "y": 11
             },
-            "id": 2,
+            "id": 31,
             "panels": [
                 {
                     "datasource": {
@@ -2324,6 +2308,168 @@
                                         "value": 80
                                     }
                                 ]
+                            }
+                        },
+                        "overrides": []
+                    },
+                    "gridPos": {
+                        "h": 8,
+                        "w": 12,
+                        "x": 0,
+                        "y": 12
+                    },
+                    "id": 30,
+                    "options": {
+                        "legend": {
+                            "calcs": [],
+                            "displayMode": "list",
+                            "placement": "bottom",
+                            "showLegend": true
+                        },
+                        "tooltip": {
+                            "hideZeros": false,
+                            "mode": "single",
+                            "sort": "none"
+                        }
+                    },
+                    "pluginVersion": "11.5.2",
+                    "targets": [
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "builder",
+                            "expr": "ccr_job_running_sync_state{instance=\"$instance\"} == bool 0",
+                            "fullMetaSearch": false,
+                            "includeNullMetadata": true,
+                            "legendFormat": "{{name}} - DB Full Sync",
+                            "range": true,
+                            "refId": "A",
+                            "useBackend": false
+                        },
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "code",
+                            "expr": "ccr_job_running_sync_state{instance=\"$instance\"} == bool 4",
+                            "fullMetaSearch": false,
+                            "hide": false,
+                            "includeNullMetadata": true,
+                            "legendFormat": "{{name}} - DB Partial Sync",
+                            "range": true,
+                            "refId": "B",
+                            "useBackend": false
+                        },
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "code",
+                            "expr": "ccr_job_running_sync_state{instance=\"$instance\"} == bool 500",
+                            "fullMetaSearch": false,
+                            "hide": false,
+                            "includeNullMetadata": true,
+                            "legendFormat": "{{name}} - Table Full Sync",
+                            "range": true,
+                            "refId": "C",
+                            "useBackend": false
+                        },
+                        {
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "${datasource}"
+                            },
+                            "disableTextWrap": false,
+                            "editorMode": "code",
+                            "expr": "ccr_job_running_sync_state{instance=\"$instance\"} == bool 502",
+                            "fullMetaSearch": false,
+                            "hide": false,
+                            "includeNullMetadata": true,
+                            "legendFormat": "{{name}} - Table Partial Sync",
+                            "range": true,
+                            "refId": "D",
+                            "useBackend": false
+                        }
+                    ],
+                    "title": "Snapshot Sync",
+                    "type": "timeseries"
+                }
+            ],
+            "title": "Heavy Snapshot",
+            "type": "row"
+        },
+        {
+            "collapsed": true,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 12
+            },
+            "id": 2,
+            "panels": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "fieldConfig": {
+                        "defaults": {
+                            "color": {
+                                "mode": "palette-classic"
+                            },
+                            "custom": {
+                                "axisBorderShow": false,
+                                "axisCenteredZero": false,
+                                "axisColorMode": "text",
+                                "axisLabel": "",
+                                "axisPlacement": "auto",
+                                "barAlignment": 0,
+                                "barWidthFactor": 0.6,
+                                "drawStyle": "line",
+                                "fillOpacity": 0,
+                                "gradientMode": "none",
+                                "hideFrom": {
+                                    "legend": false,
+                                    "tooltip": false,
+                                    "viz": false
+                                },
+                                "insertNulls": false,
+                                "lineInterpolation": "linear",
+                                "lineWidth": 1,
+                                "pointSize": 5,
+                                "scaleDistribution": {
+                                    "type": "linear"
+                                },
+                                "showPoints": "auto",
+                                "spanNulls": false,
+                                "stacking": {
+                                    "group": "A",
+                                    "mode": "none"
+                                },
+                                "thresholdsStyle": {
+                                    "mode": "off"
+                                }
+                            },
+                            "mappings": [],
+                            "thresholds": {
+                                "mode": "absolute",
+                                "steps": [
+                                    {
+                                        "color": "green"
+                                    },
+                                    {
+                                        "color": "red",
+                                        "value": 80
+                                    }
+                                ]
                             },
                             "unit": "bytes"
                         },
@@ -2333,7 +2479,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 0,
-                        "y": 76
+                        "y": 172
                     },
                     "id": 1,
                     "options": {
@@ -2469,8 +2615,7 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green",
-                                        "value": null
+                                        "color": "green"
                                     },
                                     {
                                         "color": "red",
@@ -2485,7 +2630,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 12,
-                        "y": 76
+                        "y": 172
                     },
                     "id": 3,
                     "options": {
@@ -2532,7 +2677,7 @@
                 "h": 1,
                 "w": 24,
                 "x": 0,
-                "y": 12
+                "y": 13
             },
             "id": 27,
             "panels": [
@@ -2584,8 +2729,7 @@
                                 "mode": "absolute",
                                 "steps": [
                                     {
-                                        "color": "green",
-                                        "value": null
+                                        "color": "green"
                                     },
                                     {
                                         "color": "red",
@@ -2600,7 +2744,7 @@
                         "h": 8,
                         "w": 12,
                         "x": 0,
-                        "y": 85
+                        "y": 181
                     },
                     "id": 26,
                     "options": {
@@ -2699,6 +2843,6 @@
     "timezone": "browser",
     "title": "CCR Dashboard",
     "uid": "dedp1q59coxkwd",
-    "version": 130,
+    "version": 12,
     "weekStart": ""
 }
