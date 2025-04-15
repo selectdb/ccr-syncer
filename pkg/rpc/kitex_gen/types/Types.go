@@ -516,6 +516,7 @@ const (
 	TInvertedIndexFileStorageFormat_DEFAULT TInvertedIndexFileStorageFormat = 0
 	TInvertedIndexFileStorageFormat_V1      TInvertedIndexFileStorageFormat = 1
 	TInvertedIndexFileStorageFormat_V2      TInvertedIndexFileStorageFormat = 2
+	TInvertedIndexFileStorageFormat_V3      TInvertedIndexFileStorageFormat = 3
 )
 
 func (p TInvertedIndexFileStorageFormat) String() string {
@@ -526,6 +527,8 @@ func (p TInvertedIndexFileStorageFormat) String() string {
 		return "V1"
 	case TInvertedIndexFileStorageFormat_V2:
 		return "V2"
+	case TInvertedIndexFileStorageFormat_V3:
+		return "V3"
 	}
 	return "<UNSET>"
 }
@@ -538,6 +541,8 @@ func TInvertedIndexFileStorageFormatFromString(s string) (TInvertedIndexFileStor
 		return TInvertedIndexFileStorageFormat_V1, nil
 	case "V2":
 		return TInvertedIndexFileStorageFormat_V2, nil
+	case "V3":
+		return TInvertedIndexFileStorageFormat_V3, nil
 	}
 	return TInvertedIndexFileStorageFormat(0), fmt.Errorf("not a valid TInvertedIndexFileStorageFormat string")
 }
@@ -894,58 +899,6 @@ func (p *TTaskType) Scan(value interface{}) (err error) {
 }
 
 func (p *TTaskType) Value() (driver.Value, error) {
-	if p == nil {
-		return nil, nil
-	}
-	return int64(*p), nil
-}
-
-type TStmtType int64
-
-const (
-	TStmtType_QUERY   TStmtType = 0
-	TStmtType_DDL     TStmtType = 1
-	TStmtType_DML     TStmtType = 2
-	TStmtType_EXPLAIN TStmtType = 3
-)
-
-func (p TStmtType) String() string {
-	switch p {
-	case TStmtType_QUERY:
-		return "QUERY"
-	case TStmtType_DDL:
-		return "DDL"
-	case TStmtType_DML:
-		return "DML"
-	case TStmtType_EXPLAIN:
-		return "EXPLAIN"
-	}
-	return "<UNSET>"
-}
-
-func TStmtTypeFromString(s string) (TStmtType, error) {
-	switch s {
-	case "QUERY":
-		return TStmtType_QUERY, nil
-	case "DDL":
-		return TStmtType_DDL, nil
-	case "DML":
-		return TStmtType_DML, nil
-	case "EXPLAIN":
-		return TStmtType_EXPLAIN, nil
-	}
-	return TStmtType(0), fmt.Errorf("not a valid TStmtType string")
-}
-
-func TStmtTypePtr(v TStmtType) *TStmtType { return &v }
-func (p *TStmtType) Scan(value interface{}) (err error) {
-	var result sql.NullInt64
-	err = result.Scan(value)
-	*p = TStmtType(result.Int64)
-	return
-}
-
-func (p *TStmtType) Value() (driver.Value, error) {
 	if p == nil {
 		return nil, nil
 	}
@@ -2039,6 +1992,7 @@ const (
 	TMetadataType_WORKLOAD_SCHED_POLICY TMetadataType = 8
 	TMetadataType_PARTITIONS            TMetadataType = 9
 	TMetadataType_PARTITION_VALUES      TMetadataType = 10
+	TMetadataType_HUDI                  TMetadataType = 11
 )
 
 func (p TMetadataType) String() string {
@@ -2065,6 +2019,8 @@ func (p TMetadataType) String() string {
 		return "PARTITIONS"
 	case TMetadataType_PARTITION_VALUES:
 		return "PARTITION_VALUES"
+	case TMetadataType_HUDI:
+		return "HUDI"
 	}
 	return "<UNSET>"
 }
@@ -2093,6 +2049,8 @@ func TMetadataTypeFromString(s string) (TMetadataType, error) {
 		return TMetadataType_PARTITIONS, nil
 	case "PARTITION_VALUES":
 		return TMetadataType_PARTITION_VALUES, nil
+	case "HUDI":
+		return TMetadataType_HUDI, nil
 	}
 	return TMetadataType(0), fmt.Errorf("not a valid TMetadataType string")
 }
@@ -2143,6 +2101,43 @@ func (p *TIcebergQueryType) Scan(value interface{}) (err error) {
 }
 
 func (p *TIcebergQueryType) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
+type THudiQueryType int64
+
+const (
+	THudiQueryType_TIMELINE THudiQueryType = 0
+)
+
+func (p THudiQueryType) String() string {
+	switch p {
+	case THudiQueryType_TIMELINE:
+		return "TIMELINE"
+	}
+	return "<UNSET>"
+}
+
+func THudiQueryTypeFromString(s string) (THudiQueryType, error) {
+	switch s {
+	case "TIMELINE":
+		return THudiQueryType_TIMELINE, nil
+	}
+	return THudiQueryType(0), fmt.Errorf("not a valid THudiQueryType string")
+}
+
+func THudiQueryTypePtr(v THudiQueryType) *THudiQueryType { return &v }
+func (p *THudiQueryType) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = THudiQueryType(result.Int64)
+	return
+}
+
+func (p *THudiQueryType) Value() (driver.Value, error) {
 	if p == nil {
 		return nil, nil
 	}
@@ -7720,6 +7715,7 @@ type TJdbcExecutorCtorParams struct {
 	ConnectionPoolCacheClearTime *int32          `thrift:"connection_pool_cache_clear_time,14,optional" frugal:"14,optional,i32" json:"connection_pool_cache_clear_time,omitempty"`
 	ConnectionPoolKeepAlive      *bool           `thrift:"connection_pool_keep_alive,15,optional" frugal:"15,optional,bool" json:"connection_pool_keep_alive,omitempty"`
 	CatalogId                    *int64          `thrift:"catalog_id,16,optional" frugal:"16,optional,i64" json:"catalog_id,omitempty"`
+	JdbcDriverChecksum           *string         `thrift:"jdbc_driver_checksum,17,optional" frugal:"17,optional,string" json:"jdbc_driver_checksum,omitempty"`
 }
 
 func NewTJdbcExecutorCtorParams() *TJdbcExecutorCtorParams {
@@ -7872,6 +7868,15 @@ func (p *TJdbcExecutorCtorParams) GetCatalogId() (v int64) {
 	}
 	return *p.CatalogId
 }
+
+var TJdbcExecutorCtorParams_JdbcDriverChecksum_DEFAULT string
+
+func (p *TJdbcExecutorCtorParams) GetJdbcDriverChecksum() (v string) {
+	if !p.IsSetJdbcDriverChecksum() {
+		return TJdbcExecutorCtorParams_JdbcDriverChecksum_DEFAULT
+	}
+	return *p.JdbcDriverChecksum
+}
 func (p *TJdbcExecutorCtorParams) SetStatement(val *string) {
 	p.Statement = val
 }
@@ -7920,6 +7925,9 @@ func (p *TJdbcExecutorCtorParams) SetConnectionPoolKeepAlive(val *bool) {
 func (p *TJdbcExecutorCtorParams) SetCatalogId(val *int64) {
 	p.CatalogId = val
 }
+func (p *TJdbcExecutorCtorParams) SetJdbcDriverChecksum(val *string) {
+	p.JdbcDriverChecksum = val
+}
 
 var fieldIDToName_TJdbcExecutorCtorParams = map[int16]string{
 	1:  "statement",
@@ -7938,6 +7946,7 @@ var fieldIDToName_TJdbcExecutorCtorParams = map[int16]string{
 	14: "connection_pool_cache_clear_time",
 	15: "connection_pool_keep_alive",
 	16: "catalog_id",
+	17: "jdbc_driver_checksum",
 }
 
 func (p *TJdbcExecutorCtorParams) IsSetStatement() bool {
@@ -8002,6 +8011,10 @@ func (p *TJdbcExecutorCtorParams) IsSetConnectionPoolKeepAlive() bool {
 
 func (p *TJdbcExecutorCtorParams) IsSetCatalogId() bool {
 	return p.CatalogId != nil
+}
+
+func (p *TJdbcExecutorCtorParams) IsSetJdbcDriverChecksum() bool {
+	return p.JdbcDriverChecksum != nil
 }
 
 func (p *TJdbcExecutorCtorParams) Read(iprot thrift.TProtocol) (err error) {
@@ -8146,6 +8159,14 @@ func (p *TJdbcExecutorCtorParams) Read(iprot thrift.TProtocol) (err error) {
 		case 16:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField16(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 17:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField17(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -8358,6 +8379,17 @@ func (p *TJdbcExecutorCtorParams) ReadField16(iprot thrift.TProtocol) error {
 	p.CatalogId = _field
 	return nil
 }
+func (p *TJdbcExecutorCtorParams) ReadField17(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.JdbcDriverChecksum = _field
+	return nil
+}
 
 func (p *TJdbcExecutorCtorParams) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -8427,6 +8459,10 @@ func (p *TJdbcExecutorCtorParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField16(oprot); err != nil {
 			fieldId = 16
+			goto WriteFieldError
+		}
+		if err = p.writeField17(oprot); err != nil {
+			fieldId = 17
 			goto WriteFieldError
 		}
 	}
@@ -8751,6 +8787,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
 }
 
+func (p *TJdbcExecutorCtorParams) writeField17(oprot thrift.TProtocol) (err error) {
+	if p.IsSetJdbcDriverChecksum() {
+		if err = oprot.WriteFieldBegin("jdbc_driver_checksum", thrift.STRING, 17); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.JdbcDriverChecksum); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
+}
+
 func (p *TJdbcExecutorCtorParams) String() string {
 	if p == nil {
 		return "<nil>"
@@ -8811,6 +8866,9 @@ func (p *TJdbcExecutorCtorParams) DeepEqual(ano *TJdbcExecutorCtorParams) bool {
 		return false
 	}
 	if !p.Field16DeepEqual(ano.CatalogId) {
+		return false
+	}
+	if !p.Field17DeepEqual(ano.JdbcDriverChecksum) {
 		return false
 	}
 	return true
@@ -9004,6 +9062,18 @@ func (p *TJdbcExecutorCtorParams) Field16DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.CatalogId != *src {
+		return false
+	}
+	return true
+}
+func (p *TJdbcExecutorCtorParams) Field17DeepEqual(src *string) bool {
+
+	if p.JdbcDriverChecksum == src {
+		return true
+	} else if p.JdbcDriverChecksum == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.JdbcDriverChecksum, *src) != 0 {
 		return false
 	}
 	return true

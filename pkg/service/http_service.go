@@ -25,14 +25,16 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/selectdb/ccr_syncer/pkg/ccr"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
+	"github.com/selectdb/ccr_syncer/pkg/rpc"
 	"github.com/selectdb/ccr_syncer/pkg/storage"
 	"github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/version"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
+	"github.com/selectdb/ccr_syncer/pkg/xmetrics"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -93,9 +95,9 @@ func NewHttpServer(host string, port int, db storage.DB, jobManager *ccr.JobMana
 
 type CreateCcrRequest struct {
 	// must need all fields required
-	Name      string    `json:"name,required"`
-	Src       base.Spec `json:"src,required"`
-	Dest      base.Spec `json:"dest,required"`
+	Name      string    `json:"name"`
+	Src       base.Spec `json:"src"`
+	Dest      base.Spec `json:"dest"`
 	SkipError bool      `json:"skip_error"`
 	// For table sync, allow to create ccr job even if the target table already exists.
 	AllowTableExists bool `json:"allow_table_exists"`
@@ -213,7 +215,7 @@ func (s *HttpService) createHandler(w http.ResponseWriter, r *http.Request) {
 
 type CcrCommonRequest struct {
 	// must need all fields required
-	Name string `json:"name,required"`
+	Name string `json:"name"`
 }
 
 // GetLag service
@@ -222,7 +224,14 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 
 	type result struct {
 		*defaultResult
-		Lag int64 `json:"lag"`
+		Lag                  int64   `json:"lag"`
+		FirstCommitSeq       int64   `json:"first_commit_seq"`
+		LastCommitSeq        int64   `json:"last_commit_seq"`
+		FirstBinlogTimestamp string  `json:"first_binlog_timestamp"`
+		LastBinlogTimestamp  string  `json:"last_binlog_timestamp"`
+		TimeInterval         float64 `json:"time_interval_secs"`
+		NextCommitSeq        int64   `json:"next_commit_seq"`
+		NextBinlogTimestamp  string  `json:"next_binlog_timestamp"`
 	}
 	var lagResult *result
 	defer func() { writeJson(w, lagResult) }()
@@ -288,7 +297,7 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	srcSpec := &job.Src
-	rpc, err := s.jobManager.GetFactory().NewFeRpc(srcSpec)
+	feRpc, err := rpc.NewFeRpc(srcSpec)
 	if err != nil {
 		log.Warnf("new fe rpc failed: %+v", err)
 		lagResult = &result{
@@ -298,9 +307,9 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	commitSeq := jobProgress.CommitSeq
-	resp, err := rpc.GetBinlogLag(srcSpec, commitSeq)
+	resp, err := feRpc.GetBinlogLag(srcSpec, commitSeq)
 	if err != nil {
-		log.Warnf("rpc get bin log failed: %+v", err)
+		log.Warnf("rpc get binlog failed: %+v", err)
 		lagResult = &result{
 			defaultResult: newErrorResult(err.Error()),
 		}
@@ -308,10 +317,39 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	lag := resp.GetLag()
+	firstCommitSeq := resp.GetFirstCommitSeq()
+	lastCommitSeq := resp.GetLastCommitSeq()
+	nextCommitSeq := resp.GetNextCommitSeq()
+	var nextBinlogTimestamp, lastBinlogTimestamp, firstBinlogTimestamp string
+
+	if ts := resp.GetNextBinlogTimestamp(); ts != -1 {
+		nextBinlogTimestamp = ConvertTimestampToString(ts)
+	} else {
+		nextBinlogTimestamp = "1970-01-01 08:00:00"
+	}
+	if ts := resp.GetLastBinlogTimestamp(); ts != -1 {
+		lastBinlogTimestamp = ConvertTimestampToString(ts)
+	} else {
+		lastBinlogTimestamp = "1970-01-01 08:00:00"
+	}
+	if ts := resp.GetFirstBinlogTimestamp(); ts != -1 {
+		firstBinlogTimestamp = ConvertTimestampToString(ts)
+	} else {
+		firstBinlogTimestamp = "1970-01-01 08:00:00"
+	}
+
+	timeInterval := CalculateTimeDifferenceInSeconds(lastBinlogTimestamp, nextBinlogTimestamp)
 
 	lagResult = &result{
-		defaultResult: newSuccessResult(),
-		Lag:           lag,
+		defaultResult:        newSuccessResult(),
+		Lag:                  lag,
+		FirstCommitSeq:       firstCommitSeq,
+		LastCommitSeq:        lastCommitSeq,
+		FirstBinlogTimestamp: firstBinlogTimestamp,
+		LastBinlogTimestamp:  lastBinlogTimestamp,
+		TimeInterval:         timeInterval,
+		NextCommitSeq:        nextCommitSeq,
+		NextBinlogTimestamp:  nextBinlogTimestamp,
 	}
 }
 
@@ -513,6 +551,42 @@ func (s *HttpService) desyncHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *HttpService) syncHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("sync job")
+
+	var syncResult *defaultResult
+	defer func() { writeJson(w, syncResult) }()
+
+	// Parse the JSON request body
+	var request CcrCommonRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Warnf("sync job failed: %+v", err)
+
+		syncResult = newErrorResult(err.Error())
+		return
+	}
+
+	if request.Name == "" {
+		log.Warnf("sync job failed: name is empty")
+
+		syncResult = newErrorResult("name is empty")
+		return
+	}
+
+	if s.redirect(request.Name, w, r) {
+		return
+	}
+
+	if err := s.jobManager.Sync(request.Name); err != nil {
+		log.Warnf("sync job failed: %+v", err)
+
+		syncResult = newErrorResult(err.Error())
+	} else {
+		syncResult = newSuccessResult()
+	}
+}
+
 // ListJobs service
 func (s *HttpService) listJobsHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("list jobs")
@@ -526,17 +600,15 @@ func (s *HttpService) listJobsHandler(w http.ResponseWriter, r *http.Request) {
 	defer func() { writeJson(w, jobResult) }()
 
 	// use GetAllData to get all jobs
-	if ans, err := s.db.GetAllData(); err != nil {
+	if datum, err := s.db.GetAllData(); err != nil {
 		log.Warnf("when list jobs, get all data failed: %+v", err)
 
 		jobResult = &result{
 			defaultResult: newErrorResult(err.Error()),
 		}
 	} else {
-		var jobData []string
-		jobData = ans["jobs"]
 		allJobs := make([]string, 0)
-		for _, eachJob := range jobData {
+		for _, eachJob := range datum["jobs"] {
 			allJobs = append(allJobs, strings.Trim(strings.Split(eachJob, ",")[0], " "))
 		}
 
@@ -689,7 +761,8 @@ func (s *HttpService) forceFullsyncHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := s.jobManager.SkipBinlog(request.Name, 0, ccr.SkipByFullSync); err != nil {
+	params := ccr.SkipBinlogParams{SkipBy: ccr.SkipByFullSync}
+	if err := s.jobManager.SkipBinlog(request.Name, params); err != nil {
 		log.Warnf("force fullsync failed: %+v", err)
 		result = newErrorResult(err.Error())
 	} else {
@@ -739,8 +812,8 @@ func (s *HttpService) updateHostMappingHandler(w http.ResponseWriter, r *http.Re
 	// Parse the JSON request body
 	var request struct {
 		CcrCommonRequest
-		SrcHostMapping  map[string]string `json:"src_host_mapping,required"`
-		DestHostMapping map[string]string `json:"dest_host_mapping,required"`
+		SrcHostMapping  map[string]string `json:"src_host_mapping"`
+		DestHostMapping map[string]string `json:"dest_host_mapping"`
 	}
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
@@ -777,7 +850,9 @@ func (s *HttpService) skipBinlogHandler(w http.ResponseWriter, r *http.Request) 
 	var request struct {
 		CcrCommonRequest
 		SkipCommitSeq int64  `json:"skip_commit_seq"`
-		SkipBy        string `json:"skip_by,required"`
+		SkipBy        string `json:"skip_by"`
+		SkipTable     string `json:"skip_table"`
+		SkipTableId   int64  `json:"skip_table_id"`
 	}
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
@@ -792,28 +867,19 @@ func (s *HttpService) skipBinlogHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	skipBy := strings.ToLower(request.SkipBy)
-	if skipBy != ccr.SkipBySilence && skipBy != ccr.SkipByFullSync {
-		log.Warnf("skip binlog failed: unknown skip way %s", request.SkipBy)
-		result = newErrorResult(fmt.Sprintf("unknown skip way: %s", request.SkipBy))
-		return
-	}
-
-	if request.SkipCommitSeq <= 0 && skipBy != "fullsync" {
-		log.Warnf("skip binlog failed: commit seq is not specified for %s, commit seq: %d",
-			request.SkipBy, request.SkipCommitSeq)
-		result = newErrorResult(fmt.Sprintf("commit seq is not specified for %s, commit seq: %d",
-			request.SkipBy, request.SkipCommitSeq))
-		return
-	}
-
 	if s.redirect(request.Name, w, r) {
 		return
 	}
 
-	log.Infof("skip binlog with %s, commit seq %d, job %s",
-		request.SkipBy, request.SkipCommitSeq, request.Name)
-	if err := s.jobManager.SkipBinlog(request.Name, request.SkipCommitSeq, request.SkipBy); err != nil {
+	log.Infof("skip binlog with %s, commit seq %d, skip table %s, skip table id %d, job %s",
+		request.SkipBy, request.SkipCommitSeq, request.SkipTable, request.SkipTableId, request.Name)
+	params := ccr.SkipBinlogParams{
+		SkipBy:        strings.ToLower(request.SkipBy),
+		SkipCommitSeq: request.SkipCommitSeq,
+		SkipTable:     request.SkipTable,
+		SkipTableId:   request.SkipTableId,
+	}
+	if err := s.jobManager.SkipBinlog(request.Name, params); err != nil {
 		log.Warnf("skip binlog failed: %+v", err)
 		result = newErrorResult(err.Error())
 	} else {
@@ -829,8 +895,8 @@ func (s *HttpService) failpointHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Parse the JSON request body
 	var request struct {
-		Name      string      `json:"name,required"` // the ccr job name
-		Failpoint string      `json:"failpoint,required"`
+		Name      string      `json:"name"` // the ccr job name
+		Failpoint string      `json:"failpoint"`
 		Value     interface{} `json:"value"`
 	}
 	err := json.NewDecoder(r.Body).Decode(&request)
@@ -878,13 +944,15 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/update_host_mapping", s.updateHostMappingHandler)
 	s.mux.HandleFunc("/job_skip_binlog", s.skipBinlogHandler)
 	s.mux.HandleFunc("/failpoint", s.failpointHandler)
-	s.mux.Handle("/metrics", promhttp.Handler())
+	s.mux.Handle("/metrics", xmetrics.GetHttpHandler())
+	s.mux.HandleFunc("/sync", s.syncHandler)
 }
 
 func (s *HttpService) Start() error {
 	addr := fmt.Sprintf(":%d", s.port)
 	log.Infof("Server listening on %s", addr)
 
+	s.mux = http.NewServeMux()
 	s.RegisterHandlers()
 
 	s.server = &http.Server{Addr: addr, Handler: s.mux}
@@ -906,4 +974,15 @@ func (s *HttpService) Stop() error {
 		return xerror.Wrapf(err, xerror.Normal, "http server close failed")
 	}
 	return nil
+}
+
+func ConvertTimestampToString(timestamp int64) string {
+	return time.Unix(0, timestamp*int64(time.Millisecond)).Format(time.DateTime)
+}
+
+func CalculateTimeDifferenceInSeconds(timeStr1, timeStr2 string) float64 {
+	t1, _ := time.Parse(time.DateTime, timeStr1)
+	t2, _ := time.Parse(time.DateTime, timeStr2)
+	diff := t1.Sub(t2)
+	return diff.Seconds()
 }

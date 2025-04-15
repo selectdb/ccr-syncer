@@ -1,6 +1,43 @@
 # 更新日志
 
-## 2.1.8
+# 3.0.5/2.1.10
+
+### Fix
+
+- 修复 alias table sync 下 replace table/partial sync 失败的问题 (selectdb/ccr-syncer#382,selectdb/ccr-syncer#379)
+- 修复 alias table sync 下复用 restore job 出错的问题 (selectdb/ccr-syncer#412)
+- 修复 RPC 连接泄漏的问题 (selectdb/ccr-syncer#435)
+- 过滤 ALTER JOB 中涉及的 partition storage_policy (selectdb/ccr-syncer#480)
+- 修复 DROP INDEX 导致 UPSERT 找不到 index 的问题 (selectdb/ccr-syncer#490)
+- 修复 unknown column 导致的 VIEW 无法创建的问题 (selectdb/ccr-syncer#510)
+- 修复 gls 未释放导致的内存泄漏问题 (selectdb/ccr-syncer#576)
+
+### Feature
+
+- 支持 txn insert (selectdb/ccr-syncer#290)
+- 支持 lock binlog，提前释放不需要的 binlog，避免占用上游资源 (selectdb/ccr-syncer#399, selectdb/ccr-syncer#406, selectdb/ccr-syncer#407)
+- 支持一批获取多个 binlog (selectdb/ccr-syncer#400)
+- 增加 `metrics` 接口用于获取 ccr metrics (selectdb/ccr-syncer#402, selectdb/ccr-syncer#461)
+- 支持修改 view comment (selectdb/ccr-syncer#408)
+- 支持幂等性 (selectdb/ccr-syncer#409, selectdb/ccr-syncer#416, selectdb/ccr-syncer#415, selectdb/ccr-syncer#424, ...)
+- 增加 `desync.sh` 脚本 (selectdb/ccr-syncer#452)
+- 支持 pipline txn（并行 ingest，串行提交）(selectdb/ccr-syncer#585)
+
+### Improve
+
+- 增加 flag `log_retain_num` 和 `log_retain_days` 用于控制日志保留时间和天数 (selectdb/ccr-syncer#368)
+- 保存最近一次触发 fullsync 的原因，可以通过 `job_progress` 接口查询 (selectdb/ccr-syncer#389)
+- `get_lag` 接口返回更详细的信息 (selectdb/ccr-syncer#395)
+- restore 增加 `force_replace` 参数，直接跳过 signature 不匹配的 table/view (selectdb/ccr-syncer#396)
+- non-strict 或者 tmp partition 替换时，使用 partial sync (selectdb/ccr-syncer#455)
+- 根据 UPSERT delta rows 估算超时时间 (selectdb/ccr-syncer#476)
+- 增加 label name 检查 (selectdb/ccr-syncer#474)
+- 中断 job routine 避免阻塞用户 API 请求 (selectdb/ccr-syncer#496)
+- 允许不等待事务 publish 就执行下一条 ingest (selectdb/ccr-syncer#502)
+- 过滤跟 async mv 相关的 binlog (selectdb/ccr-syncer#509)
+
+
+## 3.0.4/2.1.8
 
 注意：从这个版本开始 doris 和 ccr-syncer 的 2.0 版本将不再更新，需要使用 ccr-syncer 的需要先升级到 2.1 及以上版本。
 
@@ -75,7 +112,6 @@
 - 增加 monitor，在日志中 dump 内存使用率 (selectdb/ccr-syncer#181)
 - 过滤 schema change 删除的 indexes，避免全量同步 (selectdb/ccr-syncer#185)
 - 过滤 schema change 创建的 shadow indexes 的更新，避免全量同步 (selectdb/ccr-syncer#187)
-- 支持同步 rename 操作 (selectdb/ccr-syncer#147)
 - 增加 `mysql_max_allowed_packet` 参数，控制 mysql sdk 允许发送的 packet 大小 (selectdb/ccr-syncer#196)
 - 限制一个 JOB 中单个 BE 的 ingest 并发数，减少对 BE 的连接数和文件描述符消耗 (selectdb/ccr-syncer#195)
 - 避免在获取 job status 等待锁 (selectdb/ccr-syncer#198)
@@ -110,6 +146,7 @@
 - 增加 `/force_fullsync` 用于强制触发 fullsync (selectdb/ccr-syncer#167)
 - 增加 `/features` 接口，用于列出当前有哪些 feature 以及是否打开 (selectdb/ccr-syncer#175)
 - 支持同步 drop view（drop table 失败后使用 drop view 重试）(selectdb/ccr-syncer#169)
+- 支持同步 rename 操作 (selectdb/ccr-syncer#147)
 - schema change 使用 partial sync 而不是 fullsync (selectdb/ccr-syncer#151)
 - partial sync 使用 rename 而不是直接修改 table，因此表的读写在同步过程中不受影响 (selectdb/ccr-syncer#148)
 - 支持 partial sync，减少需要同步的数据量 (selectdb/ccr-syncer#125)

@@ -26,22 +26,33 @@ type AlterView struct {
 	TableId       int64  `json:"tableId"`
 	InlineViewDef string `json:"inlineViewDef"`
 	SqlMode       int64  `json:"sqlMode"`
+	Comment       string `json:"comment"`
+}
+
+func (alterView *AlterView) Deserialize(data string) error {
+	err := json.Unmarshal([]byte(data), &alterView)
+	if err != nil {
+		return fmt.Errorf("unmarshal alter view error: %v", err)
+	}
+
+	if alterView.TableId == 0 {
+		return fmt.Errorf("table id not found")
+	}
+	return nil
+}
+
+func (alterView *AlterView) GetTableId() int64 {
+	return alterView.TableId
 }
 
 func NewAlterViewFromJson(data string) (*AlterView, error) {
 	var alterView AlterView
-	err := json.Unmarshal([]byte(data), &alterView)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal alter view error: %v", err)
+	if err := alterView.Deserialize(data); err != nil {
+		return nil, err
 	}
-
-	if alterView.TableId == 0 {
-		return nil, fmt.Errorf("table id not found")
-	}
-
 	return &alterView, nil
 }
 
 func (a *AlterView) String() string {
-	return fmt.Sprintf("AlterView: DbId: %d, TableId: %d, InlineViewDef: %s, SqlMode: %d", a.DbId, a.TableId, a.InlineViewDef, a.SqlMode)
+	return fmt.Sprintf("AlterView: DbId: %d, TableId: %d, InlineViewDef: %s, SqlMode: %d, Comment: %s", a.DbId, a.TableId, a.InlineViewDef, a.SqlMode, a.Comment)
 }

@@ -75,6 +75,7 @@ suite("test_ds_col_drop_val") {
         """
     sql "sync"
 
+    helper.ccrJobDelete()
     helper.ccrJobCreate()
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
 

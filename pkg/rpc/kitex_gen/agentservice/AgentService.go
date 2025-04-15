@@ -490,7 +490,7 @@ type TTabletSchema struct {
 	StoreRowColumn                bool                           `thrift:"store_row_column,16,optional" frugal:"16,optional,bool" json:"store_row_column,omitempty"`
 	EnableSingleReplicaCompaction bool                           `thrift:"enable_single_replica_compaction,17,optional" frugal:"17,optional,bool" json:"enable_single_replica_compaction,omitempty"`
 	SkipWriteIndexOnLoad          bool                           `thrift:"skip_write_index_on_load,18,optional" frugal:"18,optional,bool" json:"skip_write_index_on_load,omitempty"`
-	ClusterKeyIdxes               []int32                        `thrift:"cluster_key_idxes,19,optional" frugal:"19,optional,list<i32>" json:"cluster_key_idxes,omitempty"`
+	ClusterKeyUids                []int32                        `thrift:"cluster_key_uids,19,optional" frugal:"19,optional,list<i32>" json:"cluster_key_uids,omitempty"`
 	RowStoreColCids               []int32                        `thrift:"row_store_col_cids,20,optional" frugal:"20,optional,list<i32>" json:"row_store_col_cids,omitempty"`
 	RowStorePageSize              int64                          `thrift:"row_store_page_size,21,optional" frugal:"21,optional,i64" json:"row_store_page_size,omitempty"`
 	VariantEnableFlattenNested    bool                           `thrift:"variant_enable_flatten_nested,22,optional" frugal:"22,optional,bool" json:"variant_enable_flatten_nested,omitempty"`
@@ -663,13 +663,13 @@ func (p *TTabletSchema) GetSkipWriteIndexOnLoad() (v bool) {
 	return p.SkipWriteIndexOnLoad
 }
 
-var TTabletSchema_ClusterKeyIdxes_DEFAULT []int32
+var TTabletSchema_ClusterKeyUids_DEFAULT []int32
 
-func (p *TTabletSchema) GetClusterKeyIdxes() (v []int32) {
-	if !p.IsSetClusterKeyIdxes() {
-		return TTabletSchema_ClusterKeyIdxes_DEFAULT
+func (p *TTabletSchema) GetClusterKeyUids() (v []int32) {
+	if !p.IsSetClusterKeyUids() {
+		return TTabletSchema_ClusterKeyUids_DEFAULT
 	}
-	return p.ClusterKeyIdxes
+	return p.ClusterKeyUids
 }
 
 var TTabletSchema_RowStoreColCids_DEFAULT []int32
@@ -761,8 +761,8 @@ func (p *TTabletSchema) SetEnableSingleReplicaCompaction(val bool) {
 func (p *TTabletSchema) SetSkipWriteIndexOnLoad(val bool) {
 	p.SkipWriteIndexOnLoad = val
 }
-func (p *TTabletSchema) SetClusterKeyIdxes(val []int32) {
-	p.ClusterKeyIdxes = val
+func (p *TTabletSchema) SetClusterKeyUids(val []int32) {
+	p.ClusterKeyUids = val
 }
 func (p *TTabletSchema) SetRowStoreColCids(val []int32) {
 	p.RowStoreColCids = val
@@ -796,7 +796,7 @@ var fieldIDToName_TTabletSchema = map[int16]string{
 	16: "store_row_column",
 	17: "enable_single_replica_compaction",
 	18: "skip_write_index_on_load",
-	19: "cluster_key_idxes",
+	19: "cluster_key_uids",
 	20: "row_store_col_cids",
 	21: "row_store_page_size",
 	22: "variant_enable_flatten_nested",
@@ -855,8 +855,8 @@ func (p *TTabletSchema) IsSetSkipWriteIndexOnLoad() bool {
 	return p.SkipWriteIndexOnLoad != TTabletSchema_SkipWriteIndexOnLoad_DEFAULT
 }
 
-func (p *TTabletSchema) IsSetClusterKeyIdxes() bool {
-	return p.ClusterKeyIdxes != nil
+func (p *TTabletSchema) IsSetClusterKeyUids() bool {
+	return p.ClusterKeyUids != nil
 }
 
 func (p *TTabletSchema) IsSetRowStoreColCids() bool {
@@ -1386,7 +1386,7 @@ func (p *TTabletSchema) ReadField19(iprot thrift.TProtocol) error {
 	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
-	p.ClusterKeyIdxes = _field
+	p.ClusterKeyUids = _field
 	return nil
 }
 func (p *TTabletSchema) ReadField20(iprot thrift.TProtocol) error {
@@ -1911,14 +1911,14 @@ WriteFieldEndError:
 }
 
 func (p *TTabletSchema) writeField19(oprot thrift.TProtocol) (err error) {
-	if p.IsSetClusterKeyIdxes() {
-		if err = oprot.WriteFieldBegin("cluster_key_idxes", thrift.LIST, 19); err != nil {
+	if p.IsSetClusterKeyUids() {
+		if err = oprot.WriteFieldBegin("cluster_key_uids", thrift.LIST, 19); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteListBegin(thrift.I32, len(p.ClusterKeyIdxes)); err != nil {
+		if err := oprot.WriteListBegin(thrift.I32, len(p.ClusterKeyUids)); err != nil {
 			return err
 		}
-		for _, v := range p.ClusterKeyIdxes {
+		for _, v := range p.ClusterKeyUids {
 			if err := oprot.WriteI32(v); err != nil {
 				return err
 			}
@@ -2089,7 +2089,7 @@ func (p *TTabletSchema) DeepEqual(ano *TTabletSchema) bool {
 	if !p.Field18DeepEqual(ano.SkipWriteIndexOnLoad) {
 		return false
 	}
-	if !p.Field19DeepEqual(ano.ClusterKeyIdxes) {
+	if !p.Field19DeepEqual(ano.ClusterKeyUids) {
 		return false
 	}
 	if !p.Field20DeepEqual(ano.RowStoreColCids) {
@@ -2272,10 +2272,10 @@ func (p *TTabletSchema) Field18DeepEqual(src bool) bool {
 }
 func (p *TTabletSchema) Field19DeepEqual(src []int32) bool {
 
-	if len(p.ClusterKeyIdxes) != len(src) {
+	if len(p.ClusterKeyUids) != len(src) {
 		return false
 	}
-	for i, v := range p.ClusterKeyIdxes {
+	for i, v := range p.ClusterKeyUids {
 		_src := src[i]
 		if v != _src {
 			return false
@@ -20710,6 +20710,7 @@ type TCalcDeleteBitmapPartitionInfo struct {
 	CumulativeCompactionCnts []int64            `thrift:"cumulative_compaction_cnts,5,optional" frugal:"5,optional,list<i64>" json:"cumulative_compaction_cnts,omitempty"`
 	CumulativePoints         []int64            `thrift:"cumulative_points,6,optional" frugal:"6,optional,list<i64>" json:"cumulative_points,omitempty"`
 	SubTxnIds                []int64            `thrift:"sub_txn_ids,7,optional" frugal:"7,optional,list<i64>" json:"sub_txn_ids,omitempty"`
+	TabletStates             []int64            `thrift:"tablet_states,8,optional" frugal:"8,optional,list<i64>" json:"tablet_states,omitempty"`
 }
 
 func NewTCalcDeleteBitmapPartitionInfo() *TCalcDeleteBitmapPartitionInfo {
@@ -20766,6 +20767,15 @@ func (p *TCalcDeleteBitmapPartitionInfo) GetSubTxnIds() (v []int64) {
 	}
 	return p.SubTxnIds
 }
+
+var TCalcDeleteBitmapPartitionInfo_TabletStates_DEFAULT []int64
+
+func (p *TCalcDeleteBitmapPartitionInfo) GetTabletStates() (v []int64) {
+	if !p.IsSetTabletStates() {
+		return TCalcDeleteBitmapPartitionInfo_TabletStates_DEFAULT
+	}
+	return p.TabletStates
+}
 func (p *TCalcDeleteBitmapPartitionInfo) SetPartitionId(val types.TPartitionId) {
 	p.PartitionId = val
 }
@@ -20787,6 +20797,9 @@ func (p *TCalcDeleteBitmapPartitionInfo) SetCumulativePoints(val []int64) {
 func (p *TCalcDeleteBitmapPartitionInfo) SetSubTxnIds(val []int64) {
 	p.SubTxnIds = val
 }
+func (p *TCalcDeleteBitmapPartitionInfo) SetTabletStates(val []int64) {
+	p.TabletStates = val
+}
 
 var fieldIDToName_TCalcDeleteBitmapPartitionInfo = map[int16]string{
 	1: "partition_id",
@@ -20796,6 +20809,7 @@ var fieldIDToName_TCalcDeleteBitmapPartitionInfo = map[int16]string{
 	5: "cumulative_compaction_cnts",
 	6: "cumulative_points",
 	7: "sub_txn_ids",
+	8: "tablet_states",
 }
 
 func (p *TCalcDeleteBitmapPartitionInfo) IsSetBaseCompactionCnts() bool {
@@ -20812,6 +20826,10 @@ func (p *TCalcDeleteBitmapPartitionInfo) IsSetCumulativePoints() bool {
 
 func (p *TCalcDeleteBitmapPartitionInfo) IsSetSubTxnIds() bool {
 	return p.SubTxnIds != nil
+}
+
+func (p *TCalcDeleteBitmapPartitionInfo) IsSetTabletStates() bool {
+	return p.TabletStates != nil
 }
 
 func (p *TCalcDeleteBitmapPartitionInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -20890,6 +20908,14 @@ func (p *TCalcDeleteBitmapPartitionInfo) Read(iprot thrift.TProtocol) (err error
 		case 7:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -21077,6 +21103,29 @@ func (p *TCalcDeleteBitmapPartitionInfo) ReadField7(iprot thrift.TProtocol) erro
 	p.SubTxnIds = _field
 	return nil
 }
+func (p *TCalcDeleteBitmapPartitionInfo) ReadField8(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.TabletStates = _field
+	return nil
+}
 
 func (p *TCalcDeleteBitmapPartitionInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -21110,6 +21159,10 @@ func (p *TCalcDeleteBitmapPartitionInfo) Write(oprot thrift.TProtocol) (err erro
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
 			goto WriteFieldError
 		}
 	}
@@ -21297,6 +21350,33 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
 
+func (p *TCalcDeleteBitmapPartitionInfo) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTabletStates() {
+		if err = oprot.WriteFieldBegin("tablet_states", thrift.LIST, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.I64, len(p.TabletStates)); err != nil {
+			return err
+		}
+		for _, v := range p.TabletStates {
+			if err := oprot.WriteI64(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
 func (p *TCalcDeleteBitmapPartitionInfo) String() string {
 	if p == nil {
 		return "<nil>"
@@ -21330,6 +21410,9 @@ func (p *TCalcDeleteBitmapPartitionInfo) DeepEqual(ano *TCalcDeleteBitmapPartiti
 		return false
 	}
 	if !p.Field7DeepEqual(ano.SubTxnIds) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.TabletStates) {
 		return false
 	}
 	return true
@@ -21407,6 +21490,19 @@ func (p *TCalcDeleteBitmapPartitionInfo) Field7DeepEqual(src []int64) bool {
 		return false
 	}
 	for i, v := range p.SubTxnIds {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+func (p *TCalcDeleteBitmapPartitionInfo) Field8DeepEqual(src []int64) bool {
+
+	if len(p.TabletStates) != len(src) {
+		return false
+	}
+	for i, v := range p.TabletStates {
 		_src := src[i]
 		if v != _src {
 			return false

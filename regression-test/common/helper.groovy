@@ -52,6 +52,10 @@ class Helper {
         this.suite = suite
         this.context = suite.context
         this.logger = suite.logger
+
+        // Disable fuzzy config for the ccr test suites.
+        suite.try_sql """ ADMIN SET FRONTEND CONFIG ("random_add_cluster_keys_for_mow" = "false") """
+        suite.try_target_sql """ ADMIN SET FRONTEND CONFIG ("random_add_cluster_keys_for_mow" = "false") """
     }
 
     void set_alias(String alias) {
@@ -150,6 +154,15 @@ class Helper {
             endpoint syncerAddress
             body "${bodyJson}"
             op "post"
+            check { code, body ->
+                if (!"${code}".toString().equals("200")) {
+                    throw new Exception("request failed, code: ${code}, body: ${body}")
+                }
+                def value = jsonSlurper.parseText "${body}"
+                if (!value.success) {
+                    throw new Exception("request failed, error msg: ${value.error_msg}")
+                }
+            }
         }
     }
 
@@ -160,6 +173,16 @@ class Helper {
             endpoint syncerAddress
             body "${bodyJson}"
             op "post"
+            check { code, body ->
+                if (!"${code}".toString().equals("200")) {
+                    throw new Exception("request failed, code: ${code}, body: ${body}")
+                }
+                def jsonSlurper = new groovy.json.JsonSlurper()
+                def object = jsonSlurper.parseText "${body}"
+                if (!object.success) {
+                    throw new Exception("request failed, error msg: ${object.error_msg}")
+                }
+            }
         }
     }
 
@@ -170,6 +193,16 @@ class Helper {
             endpoint syncerAddress
             body "${bodyJson}"
             op "post"
+            check { code, body ->
+                if (!"${code}".toString().equals("200")) {
+                    throw new Exception("request failed, code: ${code}, body: ${body}")
+                }
+                def jsonSlurper = new groovy.json.JsonSlurper()
+                def object = jsonSlurper.parseText "${body}"
+                if (!object.success) {
+                    throw new Exception("request failed, error msg: ${object.error_msg}")
+                }
+            }
         }
     }
 
@@ -180,7 +213,67 @@ class Helper {
             endpoint syncerAddress
             body "${bodyJson}"
             op "post"
+            check { code, body ->
+                if (!"${code}".toString().equals("200")) {
+                    throw new Exception("request failed, code: ${code}, body: ${body}")
+                }
+                def jsonSlurper = new groovy.json.JsonSlurper()
+                def object = jsonSlurper.parseText "${body}"
+                if (!object.success) {
+                    throw new Exception("request failed, error msg: ${object.error_msg}")
+                }
+            }
         }
+    }
+
+    void ccrJobSync(table = "") {
+        def bodyJson = get_ccr_body "${table}"
+        suite.httpTest {
+            uri "/sync"
+            endpoint syncerAddress
+            body "${bodyJson}"
+            op "post"
+            check { code, body ->
+                if (!"${code}".toString().equals("200")) {
+                    throw new Exception("request failed, code: ${code}, body: ${body}")
+                }
+                def jsonSlurper = new groovy.json.JsonSlurper()
+                def object = jsonSlurper.parseText "${body}"
+                if (!object.success) {
+                    throw new Exception("request failed, error msg: ${object.error_msg}")
+                }
+            }
+        }
+    }
+
+    // lag info
+    // "lag" "first_commit_seq" "last_commit_seq" "first_binlog_timestamp" "last_binlog_timestamp" "time_interval_secs"
+    Object get_job_lag(tableName = "") {
+        def request_body = get_ccr_body(tableName)
+        def get_job_lag_url = { check_func ->
+            suite.httpTest {
+                uri "/get_lag"
+                endpoint syncerAddress
+                body request_body
+                op "post"
+                check check_func
+            }
+        }
+
+        def result = null
+        get_job_lag_url.call() { code, body ->
+            if (!"${code}".toString().equals("200")) {
+                throw "request failed, code: ${code}, body: ${body}"
+            }
+            def jsonSlurper = new groovy.json.JsonSlurper()
+            def object = jsonSlurper.parseText "${body}"
+            if (!object.success) {
+                throw "request failed, error msg: ${object.error_msg}"
+            }
+            result = object
+            logger.info("job lag info: ${object}")
+        }
+        return result
     }
 
     void enableDbBinlog() {
@@ -208,7 +301,40 @@ class Helper {
                 if (myClosure.call(res)) {
                     ret = true
                 }
-            } catch (Exception e) {}
+            } catch (Exception e) {
+                logger.info("exception", e)
+            }
+
+            if (ret) {
+                break
+            } else if (--times > 0) {
+                sleep(sync_gap_time)
+            }
+        }
+
+        if (!ret) {
+            logger.info("last select result: ${res}")
+        }
+
+        return ret
+    }
+
+    Boolean checkShowMapArrayResult(sqlString, myClosure, times, func = "sql") {
+        Boolean ret = false
+        List<List<Object>> res
+        while (times > 0) {
+            try {
+                if (func == "sql") {
+                    res = suite.sql_return_maparray "${sqlString}"
+                } else {
+                    res = suite.target_sql_return_maparray "${sqlString}"
+                }
+                if (myClosure.call(res)) {
+                    ret = true
+                }
+            } catch (Exception e) {
+                logger.info("exception", e)
+            }
 
             if (ret) {
                 break
@@ -255,7 +381,9 @@ class Helper {
                 if (tmpRes.size() == rowSize) {
                     return true
                 }
-            } catch (Exception) {}
+            } catch (Exception e) {
+                logger.info("exception", e)
+            }
             sleep(sync_gap_time)
         }
 
@@ -420,13 +548,16 @@ class Helper {
         if (source == "sql") {
             res = suite.sql_return_maparray "DESC ${table} ALL"
         } else {
+            if (alias != null) {
+                table = alias
+            }
             res = suite.target_sql_return_maparray "DESC ${table} ALL"
         }
 
         def map = Maps.newHashMap()
         def index = ""
         for (def row : res) {
-            if (row.IndexName != "") {
+            if (row.IndexName != "" && row.IndexName != table) {
                 index = row.IndexName
             }
             if (row.Field == "") {
@@ -469,9 +600,13 @@ class Helper {
     }
 
     Boolean check_table_describe_times(String table, times = 30) {
+        return check_table_with_alias_describe_times(table, table, times)
+    }
+
+    Boolean check_table_with_alias_describe_times(String table, String alias, times = 30) {
         while (times > 0) {
             def upstream_describe = get_table_describe(table)
-            def downstream_describe = get_table_describe(table, "target")
+            def downstream_describe = get_table_describe(alias, "target")
             if (check_describes(upstream_describe, downstream_describe)) {
                 return true
             }
@@ -480,7 +615,7 @@ class Helper {
         }
 
         def upstream_describe = get_table_describe(table)
-        def downstream_describe = get_table_describe(table, "target")
+        def downstream_describe = get_table_describe(alias, "target")
         logger.info("upstream describe: ${upstream_describe}")
         logger.info("downstream describe: ${downstream_describe}")
         return false
@@ -533,12 +668,42 @@ class Helper {
         addFailpoint(failpoint, null, tableName)
     }
 
-    void forceSkipBinlogBy(String skipBy, Integer commitSeq = 0, String tableName = "") {
+    void forceSkipBinlogBy(String skipBy, Long commitSeq = 0, String tableName = "") {
         def gson = new com.google.gson.Gson()
         def request_body = [
             name: get_ccr_job_name(tableName),
             skip_commit_seq: commitSeq,
             skip_by: skipBy,
+        ]
+        def skip_binlog_uri = { check_func ->
+            suite.httpTest {
+                uri "/job_skip_binlog"
+                endpoint syncerAddress
+                body gson.toJson(request_body)
+                op "post"
+                check check_func
+            }
+        }
+
+        skip_binlog_uri.call() { code, body ->
+            if (!"${code}".toString().equals("200")) {
+                throw "request failed, code: ${code}, body: ${body}"
+            }
+            def jsonSlurper = new groovy.json.JsonSlurper()
+            def object = jsonSlurper.parseText "${body}"
+            if (!object.success) {
+                throw "request failed, error msg: ${object.error_msg}"
+            }
+        }
+    }
+
+    void forceSkipBinlogByPartialSync(String table, Long tableId, String tableName = "") {
+        def gson = new com.google.gson.Gson()
+        def request_body = [
+            name: get_ccr_job_name(tableName),
+            skip_by: "partialsync",
+            skip_table: table,
+            skip_table_id: tableId,
         ]
         def skip_binlog_uri = { check_func ->
             suite.httpTest {

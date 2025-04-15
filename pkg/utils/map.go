@@ -37,3 +37,11 @@ func MergeMap[K comparable, V any](m1, m2 map[K]V) map[K]V {
 	}
 	return m1
 }
+
+func Keys[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}

@@ -221,6 +221,53 @@ func (p *TTopicInfoType) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+type TWgSlotMemoryPolicy int64
+
+const (
+	TWgSlotMemoryPolicy_NONE    TWgSlotMemoryPolicy = 0
+	TWgSlotMemoryPolicy_FIXED   TWgSlotMemoryPolicy = 1
+	TWgSlotMemoryPolicy_DYNAMIC TWgSlotMemoryPolicy = 2
+)
+
+func (p TWgSlotMemoryPolicy) String() string {
+	switch p {
+	case TWgSlotMemoryPolicy_NONE:
+		return "NONE"
+	case TWgSlotMemoryPolicy_FIXED:
+		return "FIXED"
+	case TWgSlotMemoryPolicy_DYNAMIC:
+		return "DYNAMIC"
+	}
+	return "<UNSET>"
+}
+
+func TWgSlotMemoryPolicyFromString(s string) (TWgSlotMemoryPolicy, error) {
+	switch s {
+	case "NONE":
+		return TWgSlotMemoryPolicy_NONE, nil
+	case "FIXED":
+		return TWgSlotMemoryPolicy_FIXED, nil
+	case "DYNAMIC":
+		return TWgSlotMemoryPolicy_DYNAMIC, nil
+	}
+	return TWgSlotMemoryPolicy(0), fmt.Errorf("not a valid TWgSlotMemoryPolicy string")
+}
+
+func TWgSlotMemoryPolicyPtr(v TWgSlotMemoryPolicy) *TWgSlotMemoryPolicy { return &v }
+func (p *TWgSlotMemoryPolicy) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = TWgSlotMemoryPolicy(result.Int64)
+	return
+}
+
+func (p *TWgSlotMemoryPolicy) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
 type TWorkloadMetricType int64
 
 const (
@@ -366,43 +413,6 @@ func (p *TWorkloadActionType) Scan(value interface{}) (err error) {
 }
 
 func (p *TWorkloadActionType) Value() (driver.Value, error) {
-	if p == nil {
-		return nil, nil
-	}
-	return int64(*p), nil
-}
-
-type TWorkloadType int64
-
-const (
-	TWorkloadType_INTERNAL TWorkloadType = 2
-)
-
-func (p TWorkloadType) String() string {
-	switch p {
-	case TWorkloadType_INTERNAL:
-		return "INTERNAL"
-	}
-	return "<UNSET>"
-}
-
-func TWorkloadTypeFromString(s string) (TWorkloadType, error) {
-	switch s {
-	case "INTERNAL":
-		return TWorkloadType_INTERNAL, nil
-	}
-	return TWorkloadType(0), fmt.Errorf("not a valid TWorkloadType string")
-}
-
-func TWorkloadTypePtr(v TWorkloadType) *TWorkloadType { return &v }
-func (p *TWorkloadType) Scan(value interface{}) (err error) {
-	var result sql.NullInt64
-	err = result.Scan(value)
-	*p = TWorkloadType(result.Int64)
-	return
-}
-
-func (p *TWorkloadType) Value() (driver.Value, error) {
 	if p == nil {
 		return nil, nil
 	}
@@ -594,13 +604,27 @@ type TTabletStat struct {
 	RemoteDataSize      *int64 `thrift:"remote_data_size,5,optional" frugal:"5,optional,i64" json:"remote_data_size,omitempty"`
 	VisibleVersionCount *int64 `thrift:"visible_version_count,6,optional" frugal:"6,optional,i64" json:"visible_version_count,omitempty"`
 	VisibleVersion      *int64 `thrift:"visible_version,7,optional" frugal:"7,optional,i64" json:"visible_version,omitempty"`
+	LocalIndexSize      int64  `thrift:"local_index_size,8,optional" frugal:"8,optional,i64" json:"local_index_size,omitempty"`
+	LocalSegmentSize    int64  `thrift:"local_segment_size,9,optional" frugal:"9,optional,i64" json:"local_segment_size,omitempty"`
+	RemoteIndexSize     int64  `thrift:"remote_index_size,10,optional" frugal:"10,optional,i64" json:"remote_index_size,omitempty"`
+	RemoteSegmentSize   int64  `thrift:"remote_segment_size,11,optional" frugal:"11,optional,i64" json:"remote_segment_size,omitempty"`
 }
 
 func NewTTabletStat() *TTabletStat {
-	return &TTabletStat{}
+	return &TTabletStat{
+
+		LocalIndexSize:    0,
+		LocalSegmentSize:  0,
+		RemoteIndexSize:   0,
+		RemoteSegmentSize: 0,
+	}
 }
 
 func (p *TTabletStat) InitDefault() {
+	p.LocalIndexSize = 0
+	p.LocalSegmentSize = 0
+	p.RemoteIndexSize = 0
+	p.RemoteSegmentSize = 0
 }
 
 func (p *TTabletStat) GetTabletId() (v int64) {
@@ -660,6 +684,42 @@ func (p *TTabletStat) GetVisibleVersion() (v int64) {
 	}
 	return *p.VisibleVersion
 }
+
+var TTabletStat_LocalIndexSize_DEFAULT int64 = 0
+
+func (p *TTabletStat) GetLocalIndexSize() (v int64) {
+	if !p.IsSetLocalIndexSize() {
+		return TTabletStat_LocalIndexSize_DEFAULT
+	}
+	return p.LocalIndexSize
+}
+
+var TTabletStat_LocalSegmentSize_DEFAULT int64 = 0
+
+func (p *TTabletStat) GetLocalSegmentSize() (v int64) {
+	if !p.IsSetLocalSegmentSize() {
+		return TTabletStat_LocalSegmentSize_DEFAULT
+	}
+	return p.LocalSegmentSize
+}
+
+var TTabletStat_RemoteIndexSize_DEFAULT int64 = 0
+
+func (p *TTabletStat) GetRemoteIndexSize() (v int64) {
+	if !p.IsSetRemoteIndexSize() {
+		return TTabletStat_RemoteIndexSize_DEFAULT
+	}
+	return p.RemoteIndexSize
+}
+
+var TTabletStat_RemoteSegmentSize_DEFAULT int64 = 0
+
+func (p *TTabletStat) GetRemoteSegmentSize() (v int64) {
+	if !p.IsSetRemoteSegmentSize() {
+		return TTabletStat_RemoteSegmentSize_DEFAULT
+	}
+	return p.RemoteSegmentSize
+}
 func (p *TTabletStat) SetTabletId(val int64) {
 	p.TabletId = val
 }
@@ -681,15 +741,31 @@ func (p *TTabletStat) SetVisibleVersionCount(val *int64) {
 func (p *TTabletStat) SetVisibleVersion(val *int64) {
 	p.VisibleVersion = val
 }
+func (p *TTabletStat) SetLocalIndexSize(val int64) {
+	p.LocalIndexSize = val
+}
+func (p *TTabletStat) SetLocalSegmentSize(val int64) {
+	p.LocalSegmentSize = val
+}
+func (p *TTabletStat) SetRemoteIndexSize(val int64) {
+	p.RemoteIndexSize = val
+}
+func (p *TTabletStat) SetRemoteSegmentSize(val int64) {
+	p.RemoteSegmentSize = val
+}
 
 var fieldIDToName_TTabletStat = map[int16]string{
-	1: "tablet_id",
-	2: "data_size",
-	3: "row_count",
-	4: "total_version_count",
-	5: "remote_data_size",
-	6: "visible_version_count",
-	7: "visible_version",
+	1:  "tablet_id",
+	2:  "data_size",
+	3:  "row_count",
+	4:  "total_version_count",
+	5:  "remote_data_size",
+	6:  "visible_version_count",
+	7:  "visible_version",
+	8:  "local_index_size",
+	9:  "local_segment_size",
+	10: "remote_index_size",
+	11: "remote_segment_size",
 }
 
 func (p *TTabletStat) IsSetDataSize() bool {
@@ -714,6 +790,22 @@ func (p *TTabletStat) IsSetVisibleVersionCount() bool {
 
 func (p *TTabletStat) IsSetVisibleVersion() bool {
 	return p.VisibleVersion != nil
+}
+
+func (p *TTabletStat) IsSetLocalIndexSize() bool {
+	return p.LocalIndexSize != TTabletStat_LocalIndexSize_DEFAULT
+}
+
+func (p *TTabletStat) IsSetLocalSegmentSize() bool {
+	return p.LocalSegmentSize != TTabletStat_LocalSegmentSize_DEFAULT
+}
+
+func (p *TTabletStat) IsSetRemoteIndexSize() bool {
+	return p.RemoteIndexSize != TTabletStat_RemoteIndexSize_DEFAULT
+}
+
+func (p *TTabletStat) IsSetRemoteSegmentSize() bool {
+	return p.RemoteSegmentSize != TTabletStat_RemoteSegmentSize_DEFAULT
 }
 
 func (p *TTabletStat) Read(iprot thrift.TProtocol) (err error) {
@@ -788,6 +880,38 @@ func (p *TTabletStat) Read(iprot thrift.TProtocol) (err error) {
 		case 7:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -905,6 +1029,50 @@ func (p *TTabletStat) ReadField7(iprot thrift.TProtocol) error {
 	p.VisibleVersion = _field
 	return nil
 }
+func (p *TTabletStat) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.LocalIndexSize = _field
+	return nil
+}
+func (p *TTabletStat) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.LocalSegmentSize = _field
+	return nil
+}
+func (p *TTabletStat) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.RemoteIndexSize = _field
+	return nil
+}
+func (p *TTabletStat) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.RemoteSegmentSize = _field
+	return nil
+}
 
 func (p *TTabletStat) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -938,6 +1106,22 @@ func (p *TTabletStat) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 	}
@@ -1089,6 +1273,82 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
 
+func (p *TTabletStat) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLocalIndexSize() {
+		if err = oprot.WriteFieldBegin("local_index_size", thrift.I64, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.LocalIndexSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
+func (p *TTabletStat) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLocalSegmentSize() {
+		if err = oprot.WriteFieldBegin("local_segment_size", thrift.I64, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.LocalSegmentSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+
+func (p *TTabletStat) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRemoteIndexSize() {
+		if err = oprot.WriteFieldBegin("remote_index_size", thrift.I64, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.RemoteIndexSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
+func (p *TTabletStat) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRemoteSegmentSize() {
+		if err = oprot.WriteFieldBegin("remote_segment_size", thrift.I64, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.RemoteSegmentSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+
 func (p *TTabletStat) String() string {
 	if p == nil {
 		return "<nil>"
@@ -1122,6 +1382,18 @@ func (p *TTabletStat) DeepEqual(ano *TTabletStat) bool {
 		return false
 	}
 	if !p.Field7DeepEqual(ano.VisibleVersion) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.LocalIndexSize) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.LocalSegmentSize) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.RemoteIndexSize) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.RemoteSegmentSize) {
 		return false
 	}
 	return true
@@ -1202,6 +1474,34 @@ func (p *TTabletStat) Field7DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.VisibleVersion != *src {
+		return false
+	}
+	return true
+}
+func (p *TTabletStat) Field8DeepEqual(src int64) bool {
+
+	if p.LocalIndexSize != src {
+		return false
+	}
+	return true
+}
+func (p *TTabletStat) Field9DeepEqual(src int64) bool {
+
+	if p.LocalSegmentSize != src {
+		return false
+	}
+	return true
+}
+func (p *TTabletStat) Field10DeepEqual(src int64) bool {
+
+	if p.RemoteIndexSize != src {
+		return false
+	}
+	return true
+}
+func (p *TTabletStat) Field11DeepEqual(src int64) bool {
+
+	if p.RemoteSegmentSize != src {
 		return false
 	}
 	return true
@@ -11658,22 +11958,25 @@ func (p *TQueryIngestBinlogResult_) Field2DeepEqual(src *string) bool {
 }
 
 type TWorkloadGroupInfo struct {
-	Id                       *int64  `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id,omitempty"`
-	Name                     *string `thrift:"name,2,optional" frugal:"2,optional,string" json:"name,omitempty"`
-	Version                  *int64  `thrift:"version,3,optional" frugal:"3,optional,i64" json:"version,omitempty"`
-	CpuShare                 *int64  `thrift:"cpu_share,4,optional" frugal:"4,optional,i64" json:"cpu_share,omitempty"`
-	CpuHardLimit             *int32  `thrift:"cpu_hard_limit,5,optional" frugal:"5,optional,i32" json:"cpu_hard_limit,omitempty"`
-	MemLimit                 *string `thrift:"mem_limit,6,optional" frugal:"6,optional,string" json:"mem_limit,omitempty"`
-	EnableMemoryOvercommit   *bool   `thrift:"enable_memory_overcommit,7,optional" frugal:"7,optional,bool" json:"enable_memory_overcommit,omitempty"`
-	EnableCpuHardLimit       *bool   `thrift:"enable_cpu_hard_limit,8,optional" frugal:"8,optional,bool" json:"enable_cpu_hard_limit,omitempty"`
-	ScanThreadNum            *int32  `thrift:"scan_thread_num,9,optional" frugal:"9,optional,i32" json:"scan_thread_num,omitempty"`
-	MaxRemoteScanThreadNum   *int32  `thrift:"max_remote_scan_thread_num,10,optional" frugal:"10,optional,i32" json:"max_remote_scan_thread_num,omitempty"`
-	MinRemoteScanThreadNum   *int32  `thrift:"min_remote_scan_thread_num,11,optional" frugal:"11,optional,i32" json:"min_remote_scan_thread_num,omitempty"`
-	MemoryLowWatermark       *int32  `thrift:"memory_low_watermark,12,optional" frugal:"12,optional,i32" json:"memory_low_watermark,omitempty"`
-	MemoryHighWatermark      *int32  `thrift:"memory_high_watermark,13,optional" frugal:"13,optional,i32" json:"memory_high_watermark,omitempty"`
-	ReadBytesPerSecond       *int64  `thrift:"read_bytes_per_second,14,optional" frugal:"14,optional,i64" json:"read_bytes_per_second,omitempty"`
-	RemoteReadBytesPerSecond *int64  `thrift:"remote_read_bytes_per_second,15,optional" frugal:"15,optional,i64" json:"remote_read_bytes_per_second,omitempty"`
-	Tag                      *string `thrift:"tag,16,optional" frugal:"16,optional,string" json:"tag,omitempty"`
+	Id                       *int64               `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id,omitempty"`
+	Name                     *string              `thrift:"name,2,optional" frugal:"2,optional,string" json:"name,omitempty"`
+	Version                  *int64               `thrift:"version,3,optional" frugal:"3,optional,i64" json:"version,omitempty"`
+	CpuShare                 *int64               `thrift:"cpu_share,4,optional" frugal:"4,optional,i64" json:"cpu_share,omitempty"`
+	CpuHardLimit             *int32               `thrift:"cpu_hard_limit,5,optional" frugal:"5,optional,i32" json:"cpu_hard_limit,omitempty"`
+	MemLimit                 *string              `thrift:"mem_limit,6,optional" frugal:"6,optional,string" json:"mem_limit,omitempty"`
+	EnableMemoryOvercommit   *bool                `thrift:"enable_memory_overcommit,7,optional" frugal:"7,optional,bool" json:"enable_memory_overcommit,omitempty"`
+	EnableCpuHardLimit       *bool                `thrift:"enable_cpu_hard_limit,8,optional" frugal:"8,optional,bool" json:"enable_cpu_hard_limit,omitempty"`
+	ScanThreadNum            *int32               `thrift:"scan_thread_num,9,optional" frugal:"9,optional,i32" json:"scan_thread_num,omitempty"`
+	MaxRemoteScanThreadNum   *int32               `thrift:"max_remote_scan_thread_num,10,optional" frugal:"10,optional,i32" json:"max_remote_scan_thread_num,omitempty"`
+	MinRemoteScanThreadNum   *int32               `thrift:"min_remote_scan_thread_num,11,optional" frugal:"11,optional,i32" json:"min_remote_scan_thread_num,omitempty"`
+	MemoryLowWatermark       *int32               `thrift:"memory_low_watermark,12,optional" frugal:"12,optional,i32" json:"memory_low_watermark,omitempty"`
+	MemoryHighWatermark      *int32               `thrift:"memory_high_watermark,13,optional" frugal:"13,optional,i32" json:"memory_high_watermark,omitempty"`
+	ReadBytesPerSecond       *int64               `thrift:"read_bytes_per_second,14,optional" frugal:"14,optional,i64" json:"read_bytes_per_second,omitempty"`
+	RemoteReadBytesPerSecond *int64               `thrift:"remote_read_bytes_per_second,15,optional" frugal:"15,optional,i64" json:"remote_read_bytes_per_second,omitempty"`
+	Tag                      *string              `thrift:"tag,16,optional" frugal:"16,optional,string" json:"tag,omitempty"`
+	TotalQuerySlotCount      *int32               `thrift:"total_query_slot_count,17,optional" frugal:"17,optional,i32" json:"total_query_slot_count,omitempty"`
+	WriteBufferRatio         *int32               `thrift:"write_buffer_ratio,18,optional" frugal:"18,optional,i32" json:"write_buffer_ratio,omitempty"`
+	SlotMemoryPolicy         *TWgSlotMemoryPolicy `thrift:"slot_memory_policy,19,optional" frugal:"19,optional,TWgSlotMemoryPolicy" json:"slot_memory_policy,omitempty"`
 }
 
 func NewTWorkloadGroupInfo() *TWorkloadGroupInfo {
@@ -11826,6 +12129,33 @@ func (p *TWorkloadGroupInfo) GetTag() (v string) {
 	}
 	return *p.Tag
 }
+
+var TWorkloadGroupInfo_TotalQuerySlotCount_DEFAULT int32
+
+func (p *TWorkloadGroupInfo) GetTotalQuerySlotCount() (v int32) {
+	if !p.IsSetTotalQuerySlotCount() {
+		return TWorkloadGroupInfo_TotalQuerySlotCount_DEFAULT
+	}
+	return *p.TotalQuerySlotCount
+}
+
+var TWorkloadGroupInfo_WriteBufferRatio_DEFAULT int32
+
+func (p *TWorkloadGroupInfo) GetWriteBufferRatio() (v int32) {
+	if !p.IsSetWriteBufferRatio() {
+		return TWorkloadGroupInfo_WriteBufferRatio_DEFAULT
+	}
+	return *p.WriteBufferRatio
+}
+
+var TWorkloadGroupInfo_SlotMemoryPolicy_DEFAULT TWgSlotMemoryPolicy
+
+func (p *TWorkloadGroupInfo) GetSlotMemoryPolicy() (v TWgSlotMemoryPolicy) {
+	if !p.IsSetSlotMemoryPolicy() {
+		return TWorkloadGroupInfo_SlotMemoryPolicy_DEFAULT
+	}
+	return *p.SlotMemoryPolicy
+}
 func (p *TWorkloadGroupInfo) SetId(val *int64) {
 	p.Id = val
 }
@@ -11874,6 +12204,15 @@ func (p *TWorkloadGroupInfo) SetRemoteReadBytesPerSecond(val *int64) {
 func (p *TWorkloadGroupInfo) SetTag(val *string) {
 	p.Tag = val
 }
+func (p *TWorkloadGroupInfo) SetTotalQuerySlotCount(val *int32) {
+	p.TotalQuerySlotCount = val
+}
+func (p *TWorkloadGroupInfo) SetWriteBufferRatio(val *int32) {
+	p.WriteBufferRatio = val
+}
+func (p *TWorkloadGroupInfo) SetSlotMemoryPolicy(val *TWgSlotMemoryPolicy) {
+	p.SlotMemoryPolicy = val
+}
 
 var fieldIDToName_TWorkloadGroupInfo = map[int16]string{
 	1:  "id",
@@ -11892,6 +12231,9 @@ var fieldIDToName_TWorkloadGroupInfo = map[int16]string{
 	14: "read_bytes_per_second",
 	15: "remote_read_bytes_per_second",
 	16: "tag",
+	17: "total_query_slot_count",
+	18: "write_buffer_ratio",
+	19: "slot_memory_policy",
 }
 
 func (p *TWorkloadGroupInfo) IsSetId() bool {
@@ -11956,6 +12298,18 @@ func (p *TWorkloadGroupInfo) IsSetRemoteReadBytesPerSecond() bool {
 
 func (p *TWorkloadGroupInfo) IsSetTag() bool {
 	return p.Tag != nil
+}
+
+func (p *TWorkloadGroupInfo) IsSetTotalQuerySlotCount() bool {
+	return p.TotalQuerySlotCount != nil
+}
+
+func (p *TWorkloadGroupInfo) IsSetWriteBufferRatio() bool {
+	return p.WriteBufferRatio != nil
+}
+
+func (p *TWorkloadGroupInfo) IsSetSlotMemoryPolicy() bool {
+	return p.SlotMemoryPolicy != nil
 }
 
 func (p *TWorkloadGroupInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -12100,6 +12454,30 @@ func (p *TWorkloadGroupInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 16:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField16(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 17:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField17(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 18:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField18(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 19:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField19(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -12310,6 +12688,40 @@ func (p *TWorkloadGroupInfo) ReadField16(iprot thrift.TProtocol) error {
 	p.Tag = _field
 	return nil
 }
+func (p *TWorkloadGroupInfo) ReadField17(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TotalQuerySlotCount = _field
+	return nil
+}
+func (p *TWorkloadGroupInfo) ReadField18(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WriteBufferRatio = _field
+	return nil
+}
+func (p *TWorkloadGroupInfo) ReadField19(iprot thrift.TProtocol) error {
+
+	var _field *TWgSlotMemoryPolicy
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := TWgSlotMemoryPolicy(v)
+		_field = &tmp
+	}
+	p.SlotMemoryPolicy = _field
+	return nil
+}
 
 func (p *TWorkloadGroupInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -12379,6 +12791,18 @@ func (p *TWorkloadGroupInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField16(oprot); err != nil {
 			fieldId = 16
+			goto WriteFieldError
+		}
+		if err = p.writeField17(oprot); err != nil {
+			fieldId = 17
+			goto WriteFieldError
+		}
+		if err = p.writeField18(oprot); err != nil {
+			fieldId = 18
+			goto WriteFieldError
+		}
+		if err = p.writeField19(oprot); err != nil {
+			fieldId = 19
 			goto WriteFieldError
 		}
 	}
@@ -12703,6 +13127,63 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
 }
 
+func (p *TWorkloadGroupInfo) writeField17(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTotalQuerySlotCount() {
+		if err = oprot.WriteFieldBegin("total_query_slot_count", thrift.I32, 17); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.TotalQuerySlotCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
+}
+
+func (p *TWorkloadGroupInfo) writeField18(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWriteBufferRatio() {
+		if err = oprot.WriteFieldBegin("write_buffer_ratio", thrift.I32, 18); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.WriteBufferRatio); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 end error: ", p), err)
+}
+
+func (p *TWorkloadGroupInfo) writeField19(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSlotMemoryPolicy() {
+		if err = oprot.WriteFieldBegin("slot_memory_policy", thrift.I32, 19); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.SlotMemoryPolicy)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 end error: ", p), err)
+}
+
 func (p *TWorkloadGroupInfo) String() string {
 	if p == nil {
 		return "<nil>"
@@ -12763,6 +13244,15 @@ func (p *TWorkloadGroupInfo) DeepEqual(ano *TWorkloadGroupInfo) bool {
 		return false
 	}
 	if !p.Field16DeepEqual(ano.Tag) {
+		return false
+	}
+	if !p.Field17DeepEqual(ano.TotalQuerySlotCount) {
+		return false
+	}
+	if !p.Field18DeepEqual(ano.WriteBufferRatio) {
+		return false
+	}
+	if !p.Field19DeepEqual(ano.SlotMemoryPolicy) {
 		return false
 	}
 	return true
@@ -12956,6 +13446,42 @@ func (p *TWorkloadGroupInfo) Field16DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Tag, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TWorkloadGroupInfo) Field17DeepEqual(src *int32) bool {
+
+	if p.TotalQuerySlotCount == src {
+		return true
+	} else if p.TotalQuerySlotCount == nil || src == nil {
+		return false
+	}
+	if *p.TotalQuerySlotCount != *src {
+		return false
+	}
+	return true
+}
+func (p *TWorkloadGroupInfo) Field18DeepEqual(src *int32) bool {
+
+	if p.WriteBufferRatio == src {
+		return true
+	} else if p.WriteBufferRatio == nil || src == nil {
+		return false
+	}
+	if *p.WriteBufferRatio != *src {
+		return false
+	}
+	return true
+}
+func (p *TWorkloadGroupInfo) Field19DeepEqual(src *TWgSlotMemoryPolicy) bool {
+
+	if p.SlotMemoryPolicy == src {
+		return true
+	} else if p.SlotMemoryPolicy == nil || src == nil {
+		return false
+	}
+	if *p.SlotMemoryPolicy != *src {
 		return false
 	}
 	return true
@@ -15375,8 +15901,6 @@ type BackendService interface {
 
 	CancelPlanFragment(ctx context.Context, params *palointernalservice.TCancelPlanFragmentParams) (r *palointernalservice.TCancelPlanFragmentResult_, err error)
 
-	TransmitData(ctx context.Context, params *palointernalservice.TTransmitDataParams) (r *palointernalservice.TTransmitDataResult_, err error)
-
 	SubmitTasks(ctx context.Context, tasks []*agentservice.TAgentTaskRequest) (r *agentservice.TAgentResult_, err error)
 
 	MakeSnapshot(ctx context.Context, snapshotRequest *agentservice.TSnapshotRequest) (r *agentservice.TAgentResult_, err error)
@@ -15468,15 +15992,6 @@ func (p *BackendServiceClient) CancelPlanFragment(ctx context.Context, params *p
 	_args.Params = params
 	var _result BackendServiceCancelPlanFragmentResult
 	if err = p.Client_().Call(ctx, "cancel_plan_fragment", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-func (p *BackendServiceClient) TransmitData(ctx context.Context, params *palointernalservice.TTransmitDataParams) (r *palointernalservice.TTransmitDataResult_, err error) {
-	var _args BackendServiceTransmitDataArgs
-	_args.Params = params
-	var _result BackendServiceTransmitDataResult
-	if err = p.Client_().Call(ctx, "transmit_data", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
@@ -15725,7 +16240,6 @@ func NewBackendServiceProcessor(handler BackendService) *BackendServiceProcessor
 	self := &BackendServiceProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
 	self.AddToProcessorMap("exec_plan_fragment", &backendServiceProcessorExecPlanFragment{handler: handler})
 	self.AddToProcessorMap("cancel_plan_fragment", &backendServiceProcessorCancelPlanFragment{handler: handler})
-	self.AddToProcessorMap("transmit_data", &backendServiceProcessorTransmitData{handler: handler})
 	self.AddToProcessorMap("submit_tasks", &backendServiceProcessorSubmitTasks{handler: handler})
 	self.AddToProcessorMap("make_snapshot", &backendServiceProcessorMakeSnapshot{handler: handler})
 	self.AddToProcessorMap("release_snapshot", &backendServiceProcessorReleaseSnapshot{handler: handler})
@@ -15850,54 +16364,6 @@ func (p *backendServiceProcessorCancelPlanFragment) Process(ctx context.Context,
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("cancel_plan_fragment", thrift.REPLY, seqId); err2 != nil {
-		err = err2
-	}
-	if err2 = result.Write(oprot); err == nil && err2 != nil {
-		err = err2
-	}
-	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
-		err = err2
-	}
-	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
-		err = err2
-	}
-	if err != nil {
-		return
-	}
-	return true, err
-}
-
-type backendServiceProcessorTransmitData struct {
-	handler BackendService
-}
-
-func (p *backendServiceProcessorTransmitData) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := BackendServiceTransmitDataArgs{}
-	if err = args.Read(iprot); err != nil {
-		iprot.ReadMessageEnd()
-		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("transmit_data", thrift.EXCEPTION, seqId)
-		x.Write(oprot)
-		oprot.WriteMessageEnd()
-		oprot.Flush(ctx)
-		return false, err
-	}
-
-	iprot.ReadMessageEnd()
-	var err2 error
-	result := BackendServiceTransmitDataResult{}
-	var retval *palointernalservice.TTransmitDataResult_
-	if retval, err2 = p.handler.TransmitData(ctx, args.Params); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing transmit_data: "+err2.Error())
-		oprot.WriteMessageBegin("transmit_data", thrift.EXCEPTION, seqId)
-		x.Write(oprot)
-		oprot.WriteMessageEnd()
-		oprot.Flush(ctx)
-		return true, err2
-	} else {
-		result.Success = retval
-	}
-	if err2 = oprot.WriteMessageBegin("transmit_data", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -17788,346 +18254,6 @@ func (p *BackendServiceCancelPlanFragmentResult) DeepEqual(ano *BackendServiceCa
 }
 
 func (p *BackendServiceCancelPlanFragmentResult) Field0DeepEqual(src *palointernalservice.TCancelPlanFragmentResult_) bool {
-
-	if !p.Success.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-
-type BackendServiceTransmitDataArgs struct {
-	Params *palointernalservice.TTransmitDataParams `thrift:"params,1" frugal:"1,default,palointernalservice.TTransmitDataParams" json:"params"`
-}
-
-func NewBackendServiceTransmitDataArgs() *BackendServiceTransmitDataArgs {
-	return &BackendServiceTransmitDataArgs{}
-}
-
-func (p *BackendServiceTransmitDataArgs) InitDefault() {
-}
-
-var BackendServiceTransmitDataArgs_Params_DEFAULT *palointernalservice.TTransmitDataParams
-
-func (p *BackendServiceTransmitDataArgs) GetParams() (v *palointernalservice.TTransmitDataParams) {
-	if !p.IsSetParams() {
-		return BackendServiceTransmitDataArgs_Params_DEFAULT
-	}
-	return p.Params
-}
-func (p *BackendServiceTransmitDataArgs) SetParams(val *palointernalservice.TTransmitDataParams) {
-	p.Params = val
-}
-
-var fieldIDToName_BackendServiceTransmitDataArgs = map[int16]string{
-	1: "params",
-}
-
-func (p *BackendServiceTransmitDataArgs) IsSetParams() bool {
-	return p.Params != nil
-}
-
-func (p *BackendServiceTransmitDataArgs) Read(iprot thrift.TProtocol) (err error) {
-
-	var fieldTypeId thrift.TType
-	var fieldId int16
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField1(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		default:
-			if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		}
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BackendServiceTransmitDataArgs[fieldId]), err)
-SkipFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-}
-
-func (p *BackendServiceTransmitDataArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := palointernalservice.NewTTransmitDataParams()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.Params = _field
-	return nil
-}
-
-func (p *BackendServiceTransmitDataArgs) Write(oprot thrift.TProtocol) (err error) {
-	var fieldId int16
-	if err = oprot.WriteStructBegin("transmit_data_args"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-		if err = p.writeField1(oprot); err != nil {
-			fieldId = 1
-			goto WriteFieldError
-		}
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *BackendServiceTransmitDataArgs) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("params", thrift.STRUCT, 1); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := p.Params.Write(oprot); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
-}
-
-func (p *BackendServiceTransmitDataArgs) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("BackendServiceTransmitDataArgs(%+v)", *p)
-
-}
-
-func (p *BackendServiceTransmitDataArgs) DeepEqual(ano *BackendServiceTransmitDataArgs) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
-	}
-	if !p.Field1DeepEqual(ano.Params) {
-		return false
-	}
-	return true
-}
-
-func (p *BackendServiceTransmitDataArgs) Field1DeepEqual(src *palointernalservice.TTransmitDataParams) bool {
-
-	if !p.Params.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-
-type BackendServiceTransmitDataResult struct {
-	Success *palointernalservice.TTransmitDataResult_ `thrift:"success,0,optional" frugal:"0,optional,palointernalservice.TTransmitDataResult_" json:"success,omitempty"`
-}
-
-func NewBackendServiceTransmitDataResult() *BackendServiceTransmitDataResult {
-	return &BackendServiceTransmitDataResult{}
-}
-
-func (p *BackendServiceTransmitDataResult) InitDefault() {
-}
-
-var BackendServiceTransmitDataResult_Success_DEFAULT *palointernalservice.TTransmitDataResult_
-
-func (p *BackendServiceTransmitDataResult) GetSuccess() (v *palointernalservice.TTransmitDataResult_) {
-	if !p.IsSetSuccess() {
-		return BackendServiceTransmitDataResult_Success_DEFAULT
-	}
-	return p.Success
-}
-func (p *BackendServiceTransmitDataResult) SetSuccess(x interface{}) {
-	p.Success = x.(*palointernalservice.TTransmitDataResult_)
-}
-
-var fieldIDToName_BackendServiceTransmitDataResult = map[int16]string{
-	0: "success",
-}
-
-func (p *BackendServiceTransmitDataResult) IsSetSuccess() bool {
-	return p.Success != nil
-}
-
-func (p *BackendServiceTransmitDataResult) Read(iprot thrift.TProtocol) (err error) {
-
-	var fieldTypeId thrift.TType
-	var fieldId int16
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-
-		switch fieldId {
-		case 0:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField0(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		default:
-			if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		}
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BackendServiceTransmitDataResult[fieldId]), err)
-SkipFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-}
-
-func (p *BackendServiceTransmitDataResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := palointernalservice.NewTTransmitDataResult_()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.Success = _field
-	return nil
-}
-
-func (p *BackendServiceTransmitDataResult) Write(oprot thrift.TProtocol) (err error) {
-	var fieldId int16
-	if err = oprot.WriteStructBegin("transmit_data_result"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-		if err = p.writeField0(oprot); err != nil {
-			fieldId = 0
-			goto WriteFieldError
-		}
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *BackendServiceTransmitDataResult) writeField0(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSuccess() {
-		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := p.Success.Write(oprot); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
-}
-
-func (p *BackendServiceTransmitDataResult) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("BackendServiceTransmitDataResult(%+v)", *p)
-
-}
-
-func (p *BackendServiceTransmitDataResult) DeepEqual(ano *BackendServiceTransmitDataResult) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
-	}
-	if !p.Field0DeepEqual(ano.Success) {
-		return false
-	}
-	return true
-}
-
-func (p *BackendServiceTransmitDataResult) Field0DeepEqual(src *palointernalservice.TTransmitDataResult_) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

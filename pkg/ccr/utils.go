@@ -27,8 +27,14 @@ type BackupViewInfo struct {
 	Name string `json:"name"`
 }
 
+type BackupPartition struct {
+	Id      int64 `json:"id"`
+	Version int64 `json:"version"`
+}
+
 type BackupOlapTableInfo struct {
-	Id int64 `json:"id"`
+	Id         int64                      `json:"id"`
+	Partitions map[string]BackupPartition `json:"partitions"`
 }
 
 type NewBackupObject struct {
@@ -54,6 +60,11 @@ func (i *BackupJobInfo) TableNameMapping() map[int64]string {
 	for tableName, tableInfo := range i.BackupObjects {
 		tableMapping[tableInfo.Id] = tableName
 	}
+	if i.NewBackupObjects != nil {
+		for _, viewInfo := range i.NewBackupObjects.Views {
+			tableMapping[viewInfo.Id] = viewInfo.Name
+		}
+	}
 	return tableMapping
 }
 
@@ -76,4 +87,17 @@ func (i *BackupJobInfo) Views() []string {
 		views = append(views, viewInfo.Name)
 	}
 	return views
+}
+
+func (i *BackupJobInfo) GetView(name string) (*BackupViewInfo, bool) {
+	if i.NewBackupObjects == nil {
+		return nil, false
+	}
+
+	for _, viewInfo := range i.NewBackupObjects.Views {
+		if viewInfo.Name == name {
+			return &viewInfo, true
+		}
+	}
+	return nil, false
 }

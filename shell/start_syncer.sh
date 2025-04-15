@@ -24,18 +24,19 @@ Options:
     --host <arg>                the host of ccr progress, default is 127.0.0.1
     --port <arg>                the port of ccr progress, default is 9190
     --pid_dir <arg>             the path of ccr progress id, default is ./bin/
-    --pprof <arg>               use pprof or not, arg is one of [true|false], defalut value is false
+    --pprof <arg>               use pprof or not, arg is one of [true|false], default value is false
     --pprof_port <arg>          the port of pprof
     --connect_timeout <arg>     arg like 15s, default is 10s
     --rpc_timeout <arg>         arg like 10s, default is 3s
-    --config_file <arg>         the config file of ccr, which contains db_type,host,port,user and password, 
-                                defalut config file name is db.conf. If set config_file, the db_type, db_host,
+    --config_file <arg>         the config file of ccr, which contains db_type,host,port,user and password,
+                                default config file name is db.conf. If set config_file, the db_type, db_host,
                                 db_port, db_user, db_password should not be set.
-    --db_type <arg>             one of the [mysql|sqlite3|postgresql], defalut value is sqlite3
+    --db_type <arg>             one of the [mysql|sqlite3|postgresql], default value is sqlite3
     --db_host <arg>             the host of meta database
     --db_port <arg>             the port of meta database
     --db_user <arg>             the user name of meta database
     --db_password <arg>         the password of meta database
+    --db_name <arg>             the db_name of meta database default is ccr
 "
     exit 1
 }
@@ -54,6 +55,7 @@ OPTS="$(getopt \
     -l 'db_port:' \
     -l 'db_user:' \
     -l 'db_password:' \
+    -l 'db_name:' \
     -l 'host:' \
     -l 'port:' \
     -l 'pid_dir:' \
@@ -76,6 +78,7 @@ DB_HOST="127.0.0.1"
 DB_PORT="3306"
 DB_USER=""
 DB_PASSWORD=""
+DB_NAME="ccr"
 PPROF="false"
 PPROF_PORT="6060"
 CONNECT_TIMEOUT="10s"
@@ -125,6 +128,10 @@ while true; do
         DB_PASSWORD=$2
         shift 2
         ;;
+    --db_name)
+        DB_NAME=$2
+        shift 2
+        ;;
     --host)
         HOST=$2
         shift 2
@@ -165,7 +172,7 @@ while true; do
 done
 
 export PID_DIR
-PID_FILENAME="${HOST}_${PORT}" 
+PID_FILENAME="${HOST}_${PORT}"
 
 if [[ RUN_DAEMON -eq 0 ]]; then
     if [[ -z "${LOG_LEVEL}" ]]; then
@@ -209,6 +216,7 @@ if [[ "${RUN_DAEMON}" -eq 1 ]]; then
           "-db_port=${DB_PORT}" \
           "-db_user=${DB_USER}" \
           "-db_password=${DB_PASSWORD}" \
+          "-db_name=${DB_NAME}" \
           "-config_file=${CONFIG_FILE}" \
           "-host=${HOST}" \
           "-port=${PORT}" \

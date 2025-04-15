@@ -74,6 +74,7 @@ type Specer interface {
 	DropRollup(destTableName, rollupName string) error
 
 	DesyncTables(tables ...string) error
+	SyncTables(tables ...string) error
 
 	utils.Subject[SpecEvent]
 }

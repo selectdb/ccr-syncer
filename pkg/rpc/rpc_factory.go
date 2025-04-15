@@ -81,7 +81,10 @@ func (rf *RpcFactory) NewBeRpc(be *base.Backend) (IBeRpc, error) {
 
 	// create kitex BackendService client
 	addr := fmt.Sprintf("%s:%d", be.Host, be.BePort)
-	client, err := beservice.NewClient("BackendService", client.WithHostPorts(addr), client.WithConnectTimeout(connectTimeout), client.WithRPCTimeout(rpcTimeout))
+	client, err := beservice.NewClient("BackendService",
+		client.WithHostPorts(addr),
+		client.WithConnectTimeout(connectTimeout),
+		client.WithRPCTimeout(RpcTimeout))
 	if err != nil {
 		return nil, xerror.Wrapf(err, xerror.Normal, "NewBeClient error: %v", err)
 	}

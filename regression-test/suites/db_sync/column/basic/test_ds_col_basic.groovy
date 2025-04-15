@@ -198,10 +198,7 @@ suite("test_ds_col_basic") {
     assertTrue(helper.checkShowTimesOf("SHOW COLUMNS FROM `${tableName}`", has_column_last_value, 60, "target_sql"))
 
     // no full sync triggered.
-    if (helper.has_feature("feature_schema_change_partial_sync")) {
-        // no full sync triggered.
-        def last_job_progress = helper.get_job_progress()
-        assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
-    }
+    def last_job_progress = helper.get_job_progress()
+    assertTrue(last_job_progress.full_sync_start_at == first_job_progress.full_sync_start_at)
 }
 

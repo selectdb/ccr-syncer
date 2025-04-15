@@ -15,7 +15,6 @@ import (
 type Client interface {
 	GetDbNames(ctx context.Context, params *frontendservice.TGetDbsParams, callOptions ...callopt.Option) (r *frontendservice.TGetDbsResult_, err error)
 	GetTableNames(ctx context.Context, params *frontendservice.TGetTablesParams, callOptions ...callopt.Option) (r *frontendservice.TGetTablesResult_, err error)
-	DescribeTable(ctx context.Context, params *frontendservice.TDescribeTableParams, callOptions ...callopt.Option) (r *frontendservice.TDescribeTableResult_, err error)
 	DescribeTables(ctx context.Context, params *frontendservice.TDescribeTablesParams, callOptions ...callopt.Option) (r *frontendservice.TDescribeTablesResult_, err error)
 	ShowVariables(ctx context.Context, params *frontendservice.TShowVariableRequest, callOptions ...callopt.Option) (r *frontendservice.TShowVariableResult_, err error)
 	ReportExecStatus(ctx context.Context, params *frontendservice.TReportExecStatusParams, callOptions ...callopt.Option) (r *frontendservice.TReportExecStatusResult_, err error)
@@ -40,10 +39,12 @@ type Client interface {
 	GetBinlog(ctx context.Context, request *frontendservice.TGetBinlogRequest, callOptions ...callopt.Option) (r *frontendservice.TGetBinlogResult_, err error)
 	GetSnapshot(ctx context.Context, request *frontendservice.TGetSnapshotRequest, callOptions ...callopt.Option) (r *frontendservice.TGetSnapshotResult_, err error)
 	RestoreSnapshot(ctx context.Context, request *frontendservice.TRestoreSnapshotRequest, callOptions ...callopt.Option) (r *frontendservice.TRestoreSnapshotResult_, err error)
+	LockBinlog(ctx context.Context, request *frontendservice.TLockBinlogRequest, callOptions ...callopt.Option) (r *frontendservice.TLockBinlogResult_, err error)
 	WaitingTxnStatus(ctx context.Context, request *frontendservice.TWaitingTxnStatusRequest, callOptions ...callopt.Option) (r *frontendservice.TWaitingTxnStatusResult_, err error)
 	StreamLoadPut(ctx context.Context, request *frontendservice.TStreamLoadPutRequest, callOptions ...callopt.Option) (r *frontendservice.TStreamLoadPutResult_, err error)
 	StreamLoadMultiTablePut(ctx context.Context, request *frontendservice.TStreamLoadPutRequest, callOptions ...callopt.Option) (r *frontendservice.TStreamLoadMultiTablePutResult_, err error)
 	SnapshotLoaderReport(ctx context.Context, request *frontendservice.TSnapshotLoaderReportRequest, callOptions ...callopt.Option) (r *status.TStatus, err error)
+	GetAliveSessions(ctx context.Context, request *frontendservice.TFrontendReportAliveSessionRequest, callOptions ...callopt.Option) (r *frontendservice.TFrontendReportAliveSessionResult_, err error)
 	Ping(ctx context.Context, request *frontendservice.TFrontendPingFrontendRequest, callOptions ...callopt.Option) (r *frontendservice.TFrontendPingFrontendResult_, err error)
 	InitExternalCtlMeta(ctx context.Context, request *frontendservice.TInitExternalCtlMetaRequest, callOptions ...callopt.Option) (r *frontendservice.TInitExternalCtlMetaResult_, err error)
 	FetchSchemaTableData(ctx context.Context, request *frontendservice.TFetchSchemaTableDataRequest, callOptions ...callopt.Option) (r *frontendservice.TFetchSchemaTableDataResult_, err error)
@@ -113,11 +114,6 @@ func (p *kFrontendServiceClient) GetDbNames(ctx context.Context, params *fronten
 func (p *kFrontendServiceClient) GetTableNames(ctx context.Context, params *frontendservice.TGetTablesParams, callOptions ...callopt.Option) (r *frontendservice.TGetTablesResult_, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetTableNames(ctx, params)
-}
-
-func (p *kFrontendServiceClient) DescribeTable(ctx context.Context, params *frontendservice.TDescribeTableParams, callOptions ...callopt.Option) (r *frontendservice.TDescribeTableResult_, err error) {
-	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.DescribeTable(ctx, params)
 }
 
 func (p *kFrontendServiceClient) DescribeTables(ctx context.Context, params *frontendservice.TDescribeTablesParams, callOptions ...callopt.Option) (r *frontendservice.TDescribeTablesResult_, err error) {
@@ -240,6 +236,11 @@ func (p *kFrontendServiceClient) RestoreSnapshot(ctx context.Context, request *f
 	return p.kClient.RestoreSnapshot(ctx, request)
 }
 
+func (p *kFrontendServiceClient) LockBinlog(ctx context.Context, request *frontendservice.TLockBinlogRequest, callOptions ...callopt.Option) (r *frontendservice.TLockBinlogResult_, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.LockBinlog(ctx, request)
+}
+
 func (p *kFrontendServiceClient) WaitingTxnStatus(ctx context.Context, request *frontendservice.TWaitingTxnStatusRequest, callOptions ...callopt.Option) (r *frontendservice.TWaitingTxnStatusResult_, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.WaitingTxnStatus(ctx, request)
@@ -258,6 +259,11 @@ func (p *kFrontendServiceClient) StreamLoadMultiTablePut(ctx context.Context, re
 func (p *kFrontendServiceClient) SnapshotLoaderReport(ctx context.Context, request *frontendservice.TSnapshotLoaderReportRequest, callOptions ...callopt.Option) (r *status.TStatus, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.SnapshotLoaderReport(ctx, request)
+}
+
+func (p *kFrontendServiceClient) GetAliveSessions(ctx context.Context, request *frontendservice.TFrontendReportAliveSessionRequest, callOptions ...callopt.Option) (r *frontendservice.TFrontendReportAliveSessionResult_, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetAliveSessions(ctx, request)
 }
 
 func (p *kFrontendServiceClient) Ping(ctx context.Context, request *frontendservice.TFrontendPingFrontendRequest, callOptions ...callopt.Option) (r *frontendservice.TFrontendPingFrontendResult_, err error) {

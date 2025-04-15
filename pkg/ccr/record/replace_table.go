@@ -33,34 +33,44 @@ type ReplaceTableRecord struct {
 	IsForce         bool   `json:"isForce"`
 }
 
-func NewReplaceTableRecordFromJson(data string) (*ReplaceTableRecord, error) {
-	record := &ReplaceTableRecord{}
-	err := json.Unmarshal([]byte(data), record)
+func (record *ReplaceTableRecord) Deserialize(data string) error {
+	err := json.Unmarshal([]byte(data), &record)
 	if err != nil {
-		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal replace table record error")
+		return xerror.Wrap(err, xerror.Normal, "unmarshal replace table record error")
 	}
 
 	if record.OriginTableId == 0 {
-		return nil, xerror.Errorf(xerror.Normal, "table id of replace table record not found")
+		return xerror.Errorf(xerror.Normal, "table id of replace table record not found")
 	}
 
 	if record.OriginTableName == "" {
-		return nil, xerror.Errorf(xerror.Normal, "table name of replace table record not found")
+		return xerror.Errorf(xerror.Normal, "table name of replace table record not found")
 	}
 
 	if record.NewTableId == 0 {
-		return nil, xerror.Errorf(xerror.Normal, "new table id of replace table record not found")
+		return xerror.Errorf(xerror.Normal, "new table id of replace table record not found")
 	}
 
 	if record.NewTableName == "" {
-		return nil, xerror.Errorf(xerror.Normal, "new table name of replace table record not found")
+		return xerror.Errorf(xerror.Normal, "new table name of replace table record not found")
 	}
+	return nil
+}
 
-	return record, nil
+func NewReplaceTableRecordFromJson(data string) (*ReplaceTableRecord, error) {
+	var record ReplaceTableRecord
+	if err := record.Deserialize(data); err != nil {
+		return nil, err
+	}
+	return &record, nil
 }
 
 // Stringer
 func (r *ReplaceTableRecord) String() string {
 	return fmt.Sprintf("ReplaceTableRecord: DbId: %d, OriginTableId: %d, OriginTableName: %s, NewTableId: %d, NewTableName: %s, SwapTable: %v, IsForce: %v",
 		r.DbId, r.OriginTableId, r.OriginTableName, r.NewTableId, r.NewTableName, r.SwapTable, r.IsForce)
+}
+
+func (record *ReplaceTableRecord) GetTableId() int64 {
+	return record.OriginTableId
 }

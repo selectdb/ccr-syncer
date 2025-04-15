@@ -17,10 +17,8 @@
 
 suite("test_ts_table_modify_comment") {
 
-    def tableName = "tbl_comment" + UUID.randomUUID().toString().replace("-", "")
-    def syncerAddress = "127.0.0.1:9190"
-    def sync_gap_time = 5000
-    String response
+    def helper = new GroovyShell(new Binding(['suite': delegate]))
+            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
     if (!helper.is_version_supported([20108, 20017, 30004])) {
         def version = helper.upstream_version()
@@ -37,7 +35,7 @@ suite("test_ts_table_modify_comment") {
                 return true
             }
             if (--times > 0) {
-                sleep(sync_gap_time)
+                sleep(helper.sync_gap_time)
                 res = target_sql "SHOW CREATE TABLE ${checkTable}"
             }
         }

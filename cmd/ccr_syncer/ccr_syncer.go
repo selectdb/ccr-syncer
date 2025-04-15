@@ -28,17 +28,18 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/avast/retry-go"
+	"github.com/hashicorp/go-metrics"
+	"github.com/hashicorp/go-metrics/prometheus"
 	"github.com/selectdb/ccr_syncer/pkg/ccr"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
+	_ "github.com/selectdb/ccr_syncer/pkg/ccr/handle"
 	"github.com/selectdb/ccr_syncer/pkg/rpc"
 	"github.com/selectdb/ccr_syncer/pkg/service"
 	"github.com/selectdb/ccr_syncer/pkg/storage"
 	"github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/version"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
-
-	"github.com/hashicorp/go-metrics"
-	"github.com/hashicorp/go-metrics/prometheus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -62,6 +63,8 @@ var (
 	syncer       Syncer
 	printVersion bool
 )
+
+const maxRetries = 5
 
 func init() {
 	flag.BoolVar(&printVersion, "version", false, "The program's version")
@@ -108,13 +111,22 @@ func parseConfigFile() error {
 			continue
 		}
 
-		log.Infof("config %s=%s", key, value)
+		log.Infof("force set config %s=%s", key, value)
 		if err := flag.Set(key, value); err != nil {
 			return fmt.Errorf("set flag key value '%s': %v", line, err)
 		}
 	}
 
 	return nil
+}
+
+func retryWithAttempts(fn func() error, attempts uint, delay time.Duration) error {
+	return retry.Do(
+		fn,
+		retry.Delay(delay),
+		retry.Attempts(attempts),
+		retry.DelayType(retry.FixedDelay),
+	)
 }
 
 func main() {
@@ -174,9 +186,8 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-
-		if err := httpService.Start(); err != nil {
-			log.Fatalf("http service start error: %+v", err)
+		if err := retryWithAttempts(httpService.Start, maxRetries, time.Second); err != nil {
+			log.Fatalf("http service start error: %+v, try %v times", err, maxRetries)
 		}
 	}()
 	time.Sleep(1 * time.Second) // only for check http service start, if not, will log.Fatal
@@ -185,14 +196,20 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		jobManager.Start()
+
+		if err := retryWithAttempts(jobManager.Start, maxRetries, time.Second); err != nil {
+			log.Fatalf("job manager start error: %+v, try %v times", err, maxRetries)
+		}
 	}()
 
 	// Step 6: start checker
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		checker.Start()
+
+		if err := retryWithAttempts(checker.Start, maxRetries, time.Second); err != nil {
+			log.Fatalf("checker start error: %+v, try %v times", err, maxRetries)
+		}
 	}()
 
 	// Step 7: init metrics
@@ -210,7 +227,15 @@ func main() {
 		monitor.Start()
 	}()
 
-	// Step 9: start signal mux
+	// Step 9: start job collector
+	jobCollector := NewJobCollector(db)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		jobCollector.Collect()
+	}()
+
+	// Step 10: start signal mux
 	// use closure to capture httpService, checker, jobManager
 	signalHandler := func(signal os.Signal) bool {
 		switch signal {
@@ -221,6 +246,7 @@ func main() {
 			checker.Stop()
 			jobManager.Stop()
 			monitor.Stop()
+			jobCollector.Stop()
 			log.Info("all service stop")
 			return true
 		case syscall.SIGHUP:
@@ -238,8 +264,8 @@ func main() {
 		signalMux.Serve()
 	}()
 
-	// Step 10: start pprof
-	if syncer.Pprof == true {
+	// Step 11: start pprof
+	if syncer.Pprof {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -250,6 +276,7 @@ func main() {
 		}()
 	}
 
-	// Step 11: wait for all task done
+	// Step 12: wait for all task done
 	wg.Wait()
+	log.Infof("ccr-syncer exit, host: %v, port: %v, version: %v", syncer.Port, syncer.Host, version.GetVersion())
 }

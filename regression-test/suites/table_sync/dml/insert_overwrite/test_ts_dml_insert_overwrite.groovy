@@ -94,7 +94,7 @@ suite("test_ts_dml_insert_overwrite") {
 
     logger.info("=== Test 3: insert overwrite source table ===")
 
-    num_restore = helper.getRestoreRowSize(uniqueTable)
+    def num_restore = helper.getRestoreRowSize(uniqueTable)
     logger.info("current restore row size ${num_restore}")
 
     sql """

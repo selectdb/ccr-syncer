@@ -29,8 +29,8 @@ suite("test_ds_prop_storage_policy") {
     sql "DROP TABLE IF EXISTS ${dbName}.${tableName}"
     target_sql "DROP TABLE IF EXISTS TEST_${dbName}.${tableName}"
 
-    def resource_name = "test_ds_tbl_storage_policy_resource"
-    def policy_name= "test_ds_tbl_storage_policy"
+    def resource_name = "res_" + helper.randomSuffix()
+    def policy_name= "policy_" + helper.randomSuffix()
 
     def check_storage_policy_exist = { name->
         def polices = sql"""
@@ -50,11 +50,11 @@ suite("test_ds_prop_storage_policy") {
         """
     }
 
-    def has_resouce = sql """
+    def has_resource = sql """
         SHOW RESOURCES WHERE NAME = "${resource_name}";
     """
 
-    if (has_resouce.size() > 0) {
+    if (has_resource.size() > 0) {
         sql """
             DROP RESOURCE ${resource_name}
         """
@@ -97,6 +97,9 @@ suite("test_ds_prop_storage_policy") {
         AGGREGATE KEY(`test`, `id`)
         PARTITION BY RANGE(`id`)
         (
+            PARTITION p0 VALUES LESS THAN (100) ("storage_policy" = "${policy_name}"),
+            PARTITION p1 VALUES LESS THAN (200) ("storage_policy" = "${policy_name}"),
+            PARTITION p2 VALUES LESS THAN (300)
         )
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
@@ -119,6 +122,8 @@ suite("test_ds_prop_storage_policy") {
 
     def target_res = target_sql "SHOW CREATE TABLE ${tableName}"
 
+    logger.info("upstream SHOW CREATE TABLE: ${res[0][1]}")
+    logger.info("target SHOW CREATE TABLE: ${target_res[0][1]}")
     assertTrue(res[0][1].contains("\"storage_policy\" = \"${policy_name}\""))
 
     assertTrue(!target_res[0][1].contains("\"storage_policy\" = \"${policy_name}\""))

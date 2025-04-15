@@ -1763,6 +1763,27 @@ type TQueryOptions struct {
 	OrcOnceMaxReadBytes                         int64           `thrift:"orc_once_max_read_bytes,139,optional" frugal:"139,optional,i64" json:"orc_once_max_read_bytes,omitempty"`
 	OrcMaxMergeDistanceBytes                    int64           `thrift:"orc_max_merge_distance_bytes,140,optional" frugal:"140,optional,i64" json:"orc_max_merge_distance_bytes,omitempty"`
 	IgnoreRuntimeFilterError                    bool            `thrift:"ignore_runtime_filter_error,141,optional" frugal:"141,optional,bool" json:"ignore_runtime_filter_error,omitempty"`
+	EnableFixedLenToUint32V2                    bool            `thrift:"enable_fixed_len_to_uint32_v2,142,optional" frugal:"142,optional,bool" json:"enable_fixed_len_to_uint32_v2,omitempty"`
+	EnableSharedExchangeSinkBuffer              bool            `thrift:"enable_shared_exchange_sink_buffer,143,optional" frugal:"143,optional,bool" json:"enable_shared_exchange_sink_buffer,omitempty"`
+	EnableInvertedIndexSearcherCache            bool            `thrift:"enable_inverted_index_searcher_cache,144,optional" frugal:"144,optional,bool" json:"enable_inverted_index_searcher_cache,omitempty"`
+	EnableInvertedIndexQueryCache               bool            `thrift:"enable_inverted_index_query_cache,145,optional" frugal:"145,optional,bool" json:"enable_inverted_index_query_cache,omitempty"`
+	FuzzyDisableRuntimeFilterInBe               bool            `thrift:"fuzzy_disable_runtime_filter_in_be,146,optional" frugal:"146,optional,bool" json:"fuzzy_disable_runtime_filter_in_be,omitempty"`
+	ProfileLevel                                int32           `thrift:"profile_level,147,optional" frugal:"147,optional,i32" json:"profile_level,omitempty"`
+	MinScannerConcurrency                       int32           `thrift:"min_scanner_concurrency,148,optional" frugal:"148,optional,i32" json:"min_scanner_concurrency,omitempty"`
+	MinScanSchedulerConcurrency                 int32           `thrift:"min_scan_scheduler_concurrency,149,optional" frugal:"149,optional,i32" json:"min_scan_scheduler_concurrency,omitempty"`
+	EnableRuntimeFilterPartitionPrune           bool            `thrift:"enable_runtime_filter_partition_prune,150,optional" frugal:"150,optional,bool" json:"enable_runtime_filter_partition_prune,omitempty"`
+	MinimumOperatorMemoryRequiredKb             int32           `thrift:"minimum_operator_memory_required_kb,151,optional" frugal:"151,optional,i32" json:"minimum_operator_memory_required_kb,omitempty"`
+	EnableMemOvercommit                         bool            `thrift:"enable_mem_overcommit,152,optional" frugal:"152,optional,bool" json:"enable_mem_overcommit,omitempty"`
+	QuerySlotCount                              int32           `thrift:"query_slot_count,153,optional" frugal:"153,optional,i32" json:"query_slot_count,omitempty"`
+	EnableSpill                                 bool            `thrift:"enable_spill,154,optional" frugal:"154,optional,bool" json:"enable_spill,omitempty"`
+	EnableReserveMemory                         bool            `thrift:"enable_reserve_memory,155,optional" frugal:"155,optional,bool" json:"enable_reserve_memory,omitempty"`
+	RevocableMemoryHighWatermarkPercent         int32           `thrift:"revocable_memory_high_watermark_percent,156,optional" frugal:"156,optional,i32" json:"revocable_memory_high_watermark_percent,omitempty"`
+	SpillSortMemLimit                           int64           `thrift:"spill_sort_mem_limit,157,optional" frugal:"157,optional,i64" json:"spill_sort_mem_limit,omitempty"`
+	SpillSortBatchBytes                         int64           `thrift:"spill_sort_batch_bytes,158,optional" frugal:"158,optional,i64" json:"spill_sort_batch_bytes,omitempty"`
+	SpillAggregationPartitionCount              int32           `thrift:"spill_aggregation_partition_count,159,optional" frugal:"159,optional,i32" json:"spill_aggregation_partition_count,omitempty"`
+	SpillHashJoinPartitionCount                 int32           `thrift:"spill_hash_join_partition_count,160,optional" frugal:"160,optional,i32" json:"spill_hash_join_partition_count,omitempty"`
+	LowMemoryModeBufferLimit                    int64           `thrift:"low_memory_mode_buffer_limit,161,optional" frugal:"161,optional,i64" json:"low_memory_mode_buffer_limit,omitempty"`
+	DumpHeapProfileWhenMemLimitExceeded         bool            `thrift:"dump_heap_profile_when_mem_limit_exceeded,162,optional" frugal:"162,optional,bool" json:"dump_heap_profile_when_mem_limit_exceeded,omitempty"`
 	DisableFileCache                            bool            `thrift:"disable_file_cache,1000,optional" frugal:"1000,optional,bool" json:"disable_file_cache,omitempty"`
 }
 
@@ -1890,6 +1911,27 @@ func NewTQueryOptions() *TQueryOptions {
 		OrcOnceMaxReadBytes:                         8388608,
 		OrcMaxMergeDistanceBytes:                    1048576,
 		IgnoreRuntimeFilterError:                    false,
+		EnableFixedLenToUint32V2:                    false,
+		EnableSharedExchangeSinkBuffer:              true,
+		EnableInvertedIndexSearcherCache:            true,
+		EnableInvertedIndexQueryCache:               true,
+		FuzzyDisableRuntimeFilterInBe:               false,
+		ProfileLevel:                                1,
+		MinScannerConcurrency:                       1,
+		MinScanSchedulerConcurrency:                 0,
+		EnableRuntimeFilterPartitionPrune:           true,
+		MinimumOperatorMemoryRequiredKb:             1024,
+		EnableMemOvercommit:                         true,
+		QuerySlotCount:                              0,
+		EnableSpill:                                 false,
+		EnableReserveMemory:                         true,
+		RevocableMemoryHighWatermarkPercent:         -1,
+		SpillSortMemLimit:                           134217728,
+		SpillSortBatchBytes:                         8388608,
+		SpillAggregationPartitionCount:              32,
+		SpillHashJoinPartitionCount:                 32,
+		LowMemoryModeBufferLimit:                    33554432,
+		DumpHeapProfileWhenMemLimitExceeded:         false,
 		DisableFileCache:                            false,
 	}
 }
@@ -2016,6 +2058,27 @@ func (p *TQueryOptions) InitDefault() {
 	p.OrcOnceMaxReadBytes = 8388608
 	p.OrcMaxMergeDistanceBytes = 1048576
 	p.IgnoreRuntimeFilterError = false
+	p.EnableFixedLenToUint32V2 = false
+	p.EnableSharedExchangeSinkBuffer = true
+	p.EnableInvertedIndexSearcherCache = true
+	p.EnableInvertedIndexQueryCache = true
+	p.FuzzyDisableRuntimeFilterInBe = false
+	p.ProfileLevel = 1
+	p.MinScannerConcurrency = 1
+	p.MinScanSchedulerConcurrency = 0
+	p.EnableRuntimeFilterPartitionPrune = true
+	p.MinimumOperatorMemoryRequiredKb = 1024
+	p.EnableMemOvercommit = true
+	p.QuerySlotCount = 0
+	p.EnableSpill = false
+	p.EnableReserveMemory = true
+	p.RevocableMemoryHighWatermarkPercent = -1
+	p.SpillSortMemLimit = 134217728
+	p.SpillSortBatchBytes = 8388608
+	p.SpillAggregationPartitionCount = 32
+	p.SpillHashJoinPartitionCount = 32
+	p.LowMemoryModeBufferLimit = 33554432
+	p.DumpHeapProfileWhenMemLimitExceeded = false
 	p.DisableFileCache = false
 }
 
@@ -3207,6 +3270,195 @@ func (p *TQueryOptions) GetIgnoreRuntimeFilterError() (v bool) {
 	return p.IgnoreRuntimeFilterError
 }
 
+var TQueryOptions_EnableFixedLenToUint32V2_DEFAULT bool = false
+
+func (p *TQueryOptions) GetEnableFixedLenToUint32V2() (v bool) {
+	if !p.IsSetEnableFixedLenToUint32V2() {
+		return TQueryOptions_EnableFixedLenToUint32V2_DEFAULT
+	}
+	return p.EnableFixedLenToUint32V2
+}
+
+var TQueryOptions_EnableSharedExchangeSinkBuffer_DEFAULT bool = true
+
+func (p *TQueryOptions) GetEnableSharedExchangeSinkBuffer() (v bool) {
+	if !p.IsSetEnableSharedExchangeSinkBuffer() {
+		return TQueryOptions_EnableSharedExchangeSinkBuffer_DEFAULT
+	}
+	return p.EnableSharedExchangeSinkBuffer
+}
+
+var TQueryOptions_EnableInvertedIndexSearcherCache_DEFAULT bool = true
+
+func (p *TQueryOptions) GetEnableInvertedIndexSearcherCache() (v bool) {
+	if !p.IsSetEnableInvertedIndexSearcherCache() {
+		return TQueryOptions_EnableInvertedIndexSearcherCache_DEFAULT
+	}
+	return p.EnableInvertedIndexSearcherCache
+}
+
+var TQueryOptions_EnableInvertedIndexQueryCache_DEFAULT bool = true
+
+func (p *TQueryOptions) GetEnableInvertedIndexQueryCache() (v bool) {
+	if !p.IsSetEnableInvertedIndexQueryCache() {
+		return TQueryOptions_EnableInvertedIndexQueryCache_DEFAULT
+	}
+	return p.EnableInvertedIndexQueryCache
+}
+
+var TQueryOptions_FuzzyDisableRuntimeFilterInBe_DEFAULT bool = false
+
+func (p *TQueryOptions) GetFuzzyDisableRuntimeFilterInBe() (v bool) {
+	if !p.IsSetFuzzyDisableRuntimeFilterInBe() {
+		return TQueryOptions_FuzzyDisableRuntimeFilterInBe_DEFAULT
+	}
+	return p.FuzzyDisableRuntimeFilterInBe
+}
+
+var TQueryOptions_ProfileLevel_DEFAULT int32 = 1
+
+func (p *TQueryOptions) GetProfileLevel() (v int32) {
+	if !p.IsSetProfileLevel() {
+		return TQueryOptions_ProfileLevel_DEFAULT
+	}
+	return p.ProfileLevel
+}
+
+var TQueryOptions_MinScannerConcurrency_DEFAULT int32 = 1
+
+func (p *TQueryOptions) GetMinScannerConcurrency() (v int32) {
+	if !p.IsSetMinScannerConcurrency() {
+		return TQueryOptions_MinScannerConcurrency_DEFAULT
+	}
+	return p.MinScannerConcurrency
+}
+
+var TQueryOptions_MinScanSchedulerConcurrency_DEFAULT int32 = 0
+
+func (p *TQueryOptions) GetMinScanSchedulerConcurrency() (v int32) {
+	if !p.IsSetMinScanSchedulerConcurrency() {
+		return TQueryOptions_MinScanSchedulerConcurrency_DEFAULT
+	}
+	return p.MinScanSchedulerConcurrency
+}
+
+var TQueryOptions_EnableRuntimeFilterPartitionPrune_DEFAULT bool = true
+
+func (p *TQueryOptions) GetEnableRuntimeFilterPartitionPrune() (v bool) {
+	if !p.IsSetEnableRuntimeFilterPartitionPrune() {
+		return TQueryOptions_EnableRuntimeFilterPartitionPrune_DEFAULT
+	}
+	return p.EnableRuntimeFilterPartitionPrune
+}
+
+var TQueryOptions_MinimumOperatorMemoryRequiredKb_DEFAULT int32 = 1024
+
+func (p *TQueryOptions) GetMinimumOperatorMemoryRequiredKb() (v int32) {
+	if !p.IsSetMinimumOperatorMemoryRequiredKb() {
+		return TQueryOptions_MinimumOperatorMemoryRequiredKb_DEFAULT
+	}
+	return p.MinimumOperatorMemoryRequiredKb
+}
+
+var TQueryOptions_EnableMemOvercommit_DEFAULT bool = true
+
+func (p *TQueryOptions) GetEnableMemOvercommit() (v bool) {
+	if !p.IsSetEnableMemOvercommit() {
+		return TQueryOptions_EnableMemOvercommit_DEFAULT
+	}
+	return p.EnableMemOvercommit
+}
+
+var TQueryOptions_QuerySlotCount_DEFAULT int32 = 0
+
+func (p *TQueryOptions) GetQuerySlotCount() (v int32) {
+	if !p.IsSetQuerySlotCount() {
+		return TQueryOptions_QuerySlotCount_DEFAULT
+	}
+	return p.QuerySlotCount
+}
+
+var TQueryOptions_EnableSpill_DEFAULT bool = false
+
+func (p *TQueryOptions) GetEnableSpill() (v bool) {
+	if !p.IsSetEnableSpill() {
+		return TQueryOptions_EnableSpill_DEFAULT
+	}
+	return p.EnableSpill
+}
+
+var TQueryOptions_EnableReserveMemory_DEFAULT bool = true
+
+func (p *TQueryOptions) GetEnableReserveMemory() (v bool) {
+	if !p.IsSetEnableReserveMemory() {
+		return TQueryOptions_EnableReserveMemory_DEFAULT
+	}
+	return p.EnableReserveMemory
+}
+
+var TQueryOptions_RevocableMemoryHighWatermarkPercent_DEFAULT int32 = -1
+
+func (p *TQueryOptions) GetRevocableMemoryHighWatermarkPercent() (v int32) {
+	if !p.IsSetRevocableMemoryHighWatermarkPercent() {
+		return TQueryOptions_RevocableMemoryHighWatermarkPercent_DEFAULT
+	}
+	return p.RevocableMemoryHighWatermarkPercent
+}
+
+var TQueryOptions_SpillSortMemLimit_DEFAULT int64 = 134217728
+
+func (p *TQueryOptions) GetSpillSortMemLimit() (v int64) {
+	if !p.IsSetSpillSortMemLimit() {
+		return TQueryOptions_SpillSortMemLimit_DEFAULT
+	}
+	return p.SpillSortMemLimit
+}
+
+var TQueryOptions_SpillSortBatchBytes_DEFAULT int64 = 8388608
+
+func (p *TQueryOptions) GetSpillSortBatchBytes() (v int64) {
+	if !p.IsSetSpillSortBatchBytes() {
+		return TQueryOptions_SpillSortBatchBytes_DEFAULT
+	}
+	return p.SpillSortBatchBytes
+}
+
+var TQueryOptions_SpillAggregationPartitionCount_DEFAULT int32 = 32
+
+func (p *TQueryOptions) GetSpillAggregationPartitionCount() (v int32) {
+	if !p.IsSetSpillAggregationPartitionCount() {
+		return TQueryOptions_SpillAggregationPartitionCount_DEFAULT
+	}
+	return p.SpillAggregationPartitionCount
+}
+
+var TQueryOptions_SpillHashJoinPartitionCount_DEFAULT int32 = 32
+
+func (p *TQueryOptions) GetSpillHashJoinPartitionCount() (v int32) {
+	if !p.IsSetSpillHashJoinPartitionCount() {
+		return TQueryOptions_SpillHashJoinPartitionCount_DEFAULT
+	}
+	return p.SpillHashJoinPartitionCount
+}
+
+var TQueryOptions_LowMemoryModeBufferLimit_DEFAULT int64 = 33554432
+
+func (p *TQueryOptions) GetLowMemoryModeBufferLimit() (v int64) {
+	if !p.IsSetLowMemoryModeBufferLimit() {
+		return TQueryOptions_LowMemoryModeBufferLimit_DEFAULT
+	}
+	return p.LowMemoryModeBufferLimit
+}
+
+var TQueryOptions_DumpHeapProfileWhenMemLimitExceeded_DEFAULT bool = false
+
+func (p *TQueryOptions) GetDumpHeapProfileWhenMemLimitExceeded() (v bool) {
+	if !p.IsSetDumpHeapProfileWhenMemLimitExceeded() {
+		return TQueryOptions_DumpHeapProfileWhenMemLimitExceeded_DEFAULT
+	}
+	return p.DumpHeapProfileWhenMemLimitExceeded
+}
+
 var TQueryOptions_DisableFileCache_DEFAULT bool = false
 
 func (p *TQueryOptions) GetDisableFileCache() (v bool) {
@@ -3611,6 +3863,69 @@ func (p *TQueryOptions) SetOrcMaxMergeDistanceBytes(val int64) {
 func (p *TQueryOptions) SetIgnoreRuntimeFilterError(val bool) {
 	p.IgnoreRuntimeFilterError = val
 }
+func (p *TQueryOptions) SetEnableFixedLenToUint32V2(val bool) {
+	p.EnableFixedLenToUint32V2 = val
+}
+func (p *TQueryOptions) SetEnableSharedExchangeSinkBuffer(val bool) {
+	p.EnableSharedExchangeSinkBuffer = val
+}
+func (p *TQueryOptions) SetEnableInvertedIndexSearcherCache(val bool) {
+	p.EnableInvertedIndexSearcherCache = val
+}
+func (p *TQueryOptions) SetEnableInvertedIndexQueryCache(val bool) {
+	p.EnableInvertedIndexQueryCache = val
+}
+func (p *TQueryOptions) SetFuzzyDisableRuntimeFilterInBe(val bool) {
+	p.FuzzyDisableRuntimeFilterInBe = val
+}
+func (p *TQueryOptions) SetProfileLevel(val int32) {
+	p.ProfileLevel = val
+}
+func (p *TQueryOptions) SetMinScannerConcurrency(val int32) {
+	p.MinScannerConcurrency = val
+}
+func (p *TQueryOptions) SetMinScanSchedulerConcurrency(val int32) {
+	p.MinScanSchedulerConcurrency = val
+}
+func (p *TQueryOptions) SetEnableRuntimeFilterPartitionPrune(val bool) {
+	p.EnableRuntimeFilterPartitionPrune = val
+}
+func (p *TQueryOptions) SetMinimumOperatorMemoryRequiredKb(val int32) {
+	p.MinimumOperatorMemoryRequiredKb = val
+}
+func (p *TQueryOptions) SetEnableMemOvercommit(val bool) {
+	p.EnableMemOvercommit = val
+}
+func (p *TQueryOptions) SetQuerySlotCount(val int32) {
+	p.QuerySlotCount = val
+}
+func (p *TQueryOptions) SetEnableSpill(val bool) {
+	p.EnableSpill = val
+}
+func (p *TQueryOptions) SetEnableReserveMemory(val bool) {
+	p.EnableReserveMemory = val
+}
+func (p *TQueryOptions) SetRevocableMemoryHighWatermarkPercent(val int32) {
+	p.RevocableMemoryHighWatermarkPercent = val
+}
+func (p *TQueryOptions) SetSpillSortMemLimit(val int64) {
+	p.SpillSortMemLimit = val
+}
+func (p *TQueryOptions) SetSpillSortBatchBytes(val int64) {
+	p.SpillSortBatchBytes = val
+}
+func (p *TQueryOptions) SetSpillAggregationPartitionCount(val int32) {
+	p.SpillAggregationPartitionCount = val
+}
+func (p *TQueryOptions) SetSpillHashJoinPartitionCount(val int32) {
+	p.SpillHashJoinPartitionCount = val
+}
+func (p *TQueryOptions) SetLowMemoryModeBufferLimit(val int64) {
+	p.LowMemoryModeBufferLimit = val
+}
+func (p *TQueryOptions) SetDumpHeapProfileWhenMemLimitExceeded(val bool) {
+	p.DumpHeapProfileWhenMemLimitExceeded = val
+}
 func (p *TQueryOptions) SetDisableFileCache(val bool) {
 	p.DisableFileCache = val
 }
@@ -3748,6 +4063,27 @@ var fieldIDToName_TQueryOptions = map[int16]string{
 	139:  "orc_once_max_read_bytes",
 	140:  "orc_max_merge_distance_bytes",
 	141:  "ignore_runtime_filter_error",
+	142:  "enable_fixed_len_to_uint32_v2",
+	143:  "enable_shared_exchange_sink_buffer",
+	144:  "enable_inverted_index_searcher_cache",
+	145:  "enable_inverted_index_query_cache",
+	146:  "fuzzy_disable_runtime_filter_in_be",
+	147:  "profile_level",
+	148:  "min_scanner_concurrency",
+	149:  "min_scan_scheduler_concurrency",
+	150:  "enable_runtime_filter_partition_prune",
+	151:  "minimum_operator_memory_required_kb",
+	152:  "enable_mem_overcommit",
+	153:  "query_slot_count",
+	154:  "enable_spill",
+	155:  "enable_reserve_memory",
+	156:  "revocable_memory_high_watermark_percent",
+	157:  "spill_sort_mem_limit",
+	158:  "spill_sort_batch_bytes",
+	159:  "spill_aggregation_partition_count",
+	160:  "spill_hash_join_partition_count",
+	161:  "low_memory_mode_buffer_limit",
+	162:  "dump_heap_profile_when_mem_limit_exceeded",
 	1000: "disable_file_cache",
 }
 
@@ -4277,6 +4613,90 @@ func (p *TQueryOptions) IsSetOrcMaxMergeDistanceBytes() bool {
 
 func (p *TQueryOptions) IsSetIgnoreRuntimeFilterError() bool {
 	return p.IgnoreRuntimeFilterError != TQueryOptions_IgnoreRuntimeFilterError_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableFixedLenToUint32V2() bool {
+	return p.EnableFixedLenToUint32V2 != TQueryOptions_EnableFixedLenToUint32V2_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableSharedExchangeSinkBuffer() bool {
+	return p.EnableSharedExchangeSinkBuffer != TQueryOptions_EnableSharedExchangeSinkBuffer_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableInvertedIndexSearcherCache() bool {
+	return p.EnableInvertedIndexSearcherCache != TQueryOptions_EnableInvertedIndexSearcherCache_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableInvertedIndexQueryCache() bool {
+	return p.EnableInvertedIndexQueryCache != TQueryOptions_EnableInvertedIndexQueryCache_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetFuzzyDisableRuntimeFilterInBe() bool {
+	return p.FuzzyDisableRuntimeFilterInBe != TQueryOptions_FuzzyDisableRuntimeFilterInBe_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetProfileLevel() bool {
+	return p.ProfileLevel != TQueryOptions_ProfileLevel_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetMinScannerConcurrency() bool {
+	return p.MinScannerConcurrency != TQueryOptions_MinScannerConcurrency_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetMinScanSchedulerConcurrency() bool {
+	return p.MinScanSchedulerConcurrency != TQueryOptions_MinScanSchedulerConcurrency_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableRuntimeFilterPartitionPrune() bool {
+	return p.EnableRuntimeFilterPartitionPrune != TQueryOptions_EnableRuntimeFilterPartitionPrune_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetMinimumOperatorMemoryRequiredKb() bool {
+	return p.MinimumOperatorMemoryRequiredKb != TQueryOptions_MinimumOperatorMemoryRequiredKb_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableMemOvercommit() bool {
+	return p.EnableMemOvercommit != TQueryOptions_EnableMemOvercommit_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetQuerySlotCount() bool {
+	return p.QuerySlotCount != TQueryOptions_QuerySlotCount_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableSpill() bool {
+	return p.EnableSpill != TQueryOptions_EnableSpill_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetEnableReserveMemory() bool {
+	return p.EnableReserveMemory != TQueryOptions_EnableReserveMemory_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetRevocableMemoryHighWatermarkPercent() bool {
+	return p.RevocableMemoryHighWatermarkPercent != TQueryOptions_RevocableMemoryHighWatermarkPercent_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetSpillSortMemLimit() bool {
+	return p.SpillSortMemLimit != TQueryOptions_SpillSortMemLimit_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetSpillSortBatchBytes() bool {
+	return p.SpillSortBatchBytes != TQueryOptions_SpillSortBatchBytes_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetSpillAggregationPartitionCount() bool {
+	return p.SpillAggregationPartitionCount != TQueryOptions_SpillAggregationPartitionCount_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetSpillHashJoinPartitionCount() bool {
+	return p.SpillHashJoinPartitionCount != TQueryOptions_SpillHashJoinPartitionCount_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetLowMemoryModeBufferLimit() bool {
+	return p.LowMemoryModeBufferLimit != TQueryOptions_LowMemoryModeBufferLimit_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetDumpHeapProfileWhenMemLimitExceeded() bool {
+	return p.DumpHeapProfileWhenMemLimitExceeded != TQueryOptions_DumpHeapProfileWhenMemLimitExceeded_DEFAULT
 }
 
 func (p *TQueryOptions) IsSetDisableFileCache() bool {
@@ -5353,6 +5773,174 @@ func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
 		case 141:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField141(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 142:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField142(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 143:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField143(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 144:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField144(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 145:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField145(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 146:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField146(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 147:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField147(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 148:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField148(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 149:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField149(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 150:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField150(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 151:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField151(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 152:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField152(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 153:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField153(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 154:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField154(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 155:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField155(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 156:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField156(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 157:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField157(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 158:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField158(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 159:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField159(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 160:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField160(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 161:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField161(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 162:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField162(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6844,6 +7432,237 @@ func (p *TQueryOptions) ReadField141(iprot thrift.TProtocol) error {
 	p.IgnoreRuntimeFilterError = _field
 	return nil
 }
+func (p *TQueryOptions) ReadField142(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnableFixedLenToUint32V2 = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField143(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnableSharedExchangeSinkBuffer = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField144(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnableInvertedIndexSearcherCache = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField145(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnableInvertedIndexQueryCache = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField146(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.FuzzyDisableRuntimeFilterInBe = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField147(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.ProfileLevel = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField148(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.MinScannerConcurrency = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField149(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.MinScanSchedulerConcurrency = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField150(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnableRuntimeFilterPartitionPrune = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField151(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.MinimumOperatorMemoryRequiredKb = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField152(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnableMemOvercommit = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField153(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.QuerySlotCount = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField154(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnableSpill = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField155(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EnableReserveMemory = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField156(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.RevocableMemoryHighWatermarkPercent = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField157(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.SpillSortMemLimit = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField158(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.SpillSortBatchBytes = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField159(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.SpillAggregationPartitionCount = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField160(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.SpillHashJoinPartitionCount = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField161(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.LowMemoryModeBufferLimit = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField162(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.DumpHeapProfileWhenMemLimitExceeded = _field
+	return nil
+}
 func (p *TQueryOptions) ReadField1000(iprot thrift.TProtocol) error {
 
 	var _field bool
@@ -7388,6 +8207,90 @@ func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField141(oprot); err != nil {
 			fieldId = 141
+			goto WriteFieldError
+		}
+		if err = p.writeField142(oprot); err != nil {
+			fieldId = 142
+			goto WriteFieldError
+		}
+		if err = p.writeField143(oprot); err != nil {
+			fieldId = 143
+			goto WriteFieldError
+		}
+		if err = p.writeField144(oprot); err != nil {
+			fieldId = 144
+			goto WriteFieldError
+		}
+		if err = p.writeField145(oprot); err != nil {
+			fieldId = 145
+			goto WriteFieldError
+		}
+		if err = p.writeField146(oprot); err != nil {
+			fieldId = 146
+			goto WriteFieldError
+		}
+		if err = p.writeField147(oprot); err != nil {
+			fieldId = 147
+			goto WriteFieldError
+		}
+		if err = p.writeField148(oprot); err != nil {
+			fieldId = 148
+			goto WriteFieldError
+		}
+		if err = p.writeField149(oprot); err != nil {
+			fieldId = 149
+			goto WriteFieldError
+		}
+		if err = p.writeField150(oprot); err != nil {
+			fieldId = 150
+			goto WriteFieldError
+		}
+		if err = p.writeField151(oprot); err != nil {
+			fieldId = 151
+			goto WriteFieldError
+		}
+		if err = p.writeField152(oprot); err != nil {
+			fieldId = 152
+			goto WriteFieldError
+		}
+		if err = p.writeField153(oprot); err != nil {
+			fieldId = 153
+			goto WriteFieldError
+		}
+		if err = p.writeField154(oprot); err != nil {
+			fieldId = 154
+			goto WriteFieldError
+		}
+		if err = p.writeField155(oprot); err != nil {
+			fieldId = 155
+			goto WriteFieldError
+		}
+		if err = p.writeField156(oprot); err != nil {
+			fieldId = 156
+			goto WriteFieldError
+		}
+		if err = p.writeField157(oprot); err != nil {
+			fieldId = 157
+			goto WriteFieldError
+		}
+		if err = p.writeField158(oprot); err != nil {
+			fieldId = 158
+			goto WriteFieldError
+		}
+		if err = p.writeField159(oprot); err != nil {
+			fieldId = 159
+			goto WriteFieldError
+		}
+		if err = p.writeField160(oprot); err != nil {
+			fieldId = 160
+			goto WriteFieldError
+		}
+		if err = p.writeField161(oprot); err != nil {
+			fieldId = 161
+			goto WriteFieldError
+		}
+		if err = p.writeField162(oprot); err != nil {
+			fieldId = 162
 			goto WriteFieldError
 		}
 		if err = p.writeField1000(oprot); err != nil {
@@ -9920,6 +10823,405 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 141 end error: ", p), err)
 }
 
+func (p *TQueryOptions) writeField142(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableFixedLenToUint32V2() {
+		if err = oprot.WriteFieldBegin("enable_fixed_len_to_uint32_v2", thrift.BOOL, 142); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableFixedLenToUint32V2); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 142 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 142 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField143(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableSharedExchangeSinkBuffer() {
+		if err = oprot.WriteFieldBegin("enable_shared_exchange_sink_buffer", thrift.BOOL, 143); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableSharedExchangeSinkBuffer); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 143 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 143 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField144(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableInvertedIndexSearcherCache() {
+		if err = oprot.WriteFieldBegin("enable_inverted_index_searcher_cache", thrift.BOOL, 144); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableInvertedIndexSearcherCache); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 144 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 144 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField145(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableInvertedIndexQueryCache() {
+		if err = oprot.WriteFieldBegin("enable_inverted_index_query_cache", thrift.BOOL, 145); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableInvertedIndexQueryCache); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 145 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 145 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField146(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFuzzyDisableRuntimeFilterInBe() {
+		if err = oprot.WriteFieldBegin("fuzzy_disable_runtime_filter_in_be", thrift.BOOL, 146); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.FuzzyDisableRuntimeFilterInBe); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 146 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 146 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField147(oprot thrift.TProtocol) (err error) {
+	if p.IsSetProfileLevel() {
+		if err = oprot.WriteFieldBegin("profile_level", thrift.I32, 147); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.ProfileLevel); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 147 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 147 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField148(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMinScannerConcurrency() {
+		if err = oprot.WriteFieldBegin("min_scanner_concurrency", thrift.I32, 148); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.MinScannerConcurrency); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 148 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 148 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField149(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMinScanSchedulerConcurrency() {
+		if err = oprot.WriteFieldBegin("min_scan_scheduler_concurrency", thrift.I32, 149); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.MinScanSchedulerConcurrency); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 149 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 149 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField150(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableRuntimeFilterPartitionPrune() {
+		if err = oprot.WriteFieldBegin("enable_runtime_filter_partition_prune", thrift.BOOL, 150); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableRuntimeFilterPartitionPrune); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 150 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 150 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField151(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMinimumOperatorMemoryRequiredKb() {
+		if err = oprot.WriteFieldBegin("minimum_operator_memory_required_kb", thrift.I32, 151); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.MinimumOperatorMemoryRequiredKb); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 151 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 151 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField152(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableMemOvercommit() {
+		if err = oprot.WriteFieldBegin("enable_mem_overcommit", thrift.BOOL, 152); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableMemOvercommit); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 152 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 152 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField153(oprot thrift.TProtocol) (err error) {
+	if p.IsSetQuerySlotCount() {
+		if err = oprot.WriteFieldBegin("query_slot_count", thrift.I32, 153); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.QuerySlotCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 153 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 153 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField154(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableSpill() {
+		if err = oprot.WriteFieldBegin("enable_spill", thrift.BOOL, 154); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableSpill); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 154 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 154 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField155(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableReserveMemory() {
+		if err = oprot.WriteFieldBegin("enable_reserve_memory", thrift.BOOL, 155); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.EnableReserveMemory); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 155 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 155 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField156(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRevocableMemoryHighWatermarkPercent() {
+		if err = oprot.WriteFieldBegin("revocable_memory_high_watermark_percent", thrift.I32, 156); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.RevocableMemoryHighWatermarkPercent); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 156 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 156 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField157(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSpillSortMemLimit() {
+		if err = oprot.WriteFieldBegin("spill_sort_mem_limit", thrift.I64, 157); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.SpillSortMemLimit); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 157 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 157 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField158(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSpillSortBatchBytes() {
+		if err = oprot.WriteFieldBegin("spill_sort_batch_bytes", thrift.I64, 158); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.SpillSortBatchBytes); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 158 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 158 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField159(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSpillAggregationPartitionCount() {
+		if err = oprot.WriteFieldBegin("spill_aggregation_partition_count", thrift.I32, 159); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.SpillAggregationPartitionCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 159 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 159 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField160(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSpillHashJoinPartitionCount() {
+		if err = oprot.WriteFieldBegin("spill_hash_join_partition_count", thrift.I32, 160); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.SpillHashJoinPartitionCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 160 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 160 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField161(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLowMemoryModeBufferLimit() {
+		if err = oprot.WriteFieldBegin("low_memory_mode_buffer_limit", thrift.I64, 161); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(p.LowMemoryModeBufferLimit); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 161 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 161 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField162(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDumpHeapProfileWhenMemLimitExceeded() {
+		if err = oprot.WriteFieldBegin("dump_heap_profile_when_mem_limit_exceeded", thrift.BOOL, 162); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.DumpHeapProfileWhenMemLimitExceeded); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 162 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 162 end error: ", p), err)
+}
+
 func (p *TQueryOptions) writeField1000(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDisableFileCache() {
 		if err = oprot.WriteFieldBegin("disable_file_cache", thrift.BOOL, 1000); err != nil {
@@ -10347,6 +11649,69 @@ func (p *TQueryOptions) DeepEqual(ano *TQueryOptions) bool {
 		return false
 	}
 	if !p.Field141DeepEqual(ano.IgnoreRuntimeFilterError) {
+		return false
+	}
+	if !p.Field142DeepEqual(ano.EnableFixedLenToUint32V2) {
+		return false
+	}
+	if !p.Field143DeepEqual(ano.EnableSharedExchangeSinkBuffer) {
+		return false
+	}
+	if !p.Field144DeepEqual(ano.EnableInvertedIndexSearcherCache) {
+		return false
+	}
+	if !p.Field145DeepEqual(ano.EnableInvertedIndexQueryCache) {
+		return false
+	}
+	if !p.Field146DeepEqual(ano.FuzzyDisableRuntimeFilterInBe) {
+		return false
+	}
+	if !p.Field147DeepEqual(ano.ProfileLevel) {
+		return false
+	}
+	if !p.Field148DeepEqual(ano.MinScannerConcurrency) {
+		return false
+	}
+	if !p.Field149DeepEqual(ano.MinScanSchedulerConcurrency) {
+		return false
+	}
+	if !p.Field150DeepEqual(ano.EnableRuntimeFilterPartitionPrune) {
+		return false
+	}
+	if !p.Field151DeepEqual(ano.MinimumOperatorMemoryRequiredKb) {
+		return false
+	}
+	if !p.Field152DeepEqual(ano.EnableMemOvercommit) {
+		return false
+	}
+	if !p.Field153DeepEqual(ano.QuerySlotCount) {
+		return false
+	}
+	if !p.Field154DeepEqual(ano.EnableSpill) {
+		return false
+	}
+	if !p.Field155DeepEqual(ano.EnableReserveMemory) {
+		return false
+	}
+	if !p.Field156DeepEqual(ano.RevocableMemoryHighWatermarkPercent) {
+		return false
+	}
+	if !p.Field157DeepEqual(ano.SpillSortMemLimit) {
+		return false
+	}
+	if !p.Field158DeepEqual(ano.SpillSortBatchBytes) {
+		return false
+	}
+	if !p.Field159DeepEqual(ano.SpillAggregationPartitionCount) {
+		return false
+	}
+	if !p.Field160DeepEqual(ano.SpillHashJoinPartitionCount) {
+		return false
+	}
+	if !p.Field161DeepEqual(ano.LowMemoryModeBufferLimit) {
+		return false
+	}
+	if !p.Field162DeepEqual(ano.DumpHeapProfileWhenMemLimitExceeded) {
 		return false
 	}
 	if !p.Field1000DeepEqual(ano.DisableFileCache) {
@@ -11325,6 +12690,153 @@ func (p *TQueryOptions) Field140DeepEqual(src int64) bool {
 func (p *TQueryOptions) Field141DeepEqual(src bool) bool {
 
 	if p.IgnoreRuntimeFilterError != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field142DeepEqual(src bool) bool {
+
+	if p.EnableFixedLenToUint32V2 != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field143DeepEqual(src bool) bool {
+
+	if p.EnableSharedExchangeSinkBuffer != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field144DeepEqual(src bool) bool {
+
+	if p.EnableInvertedIndexSearcherCache != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field145DeepEqual(src bool) bool {
+
+	if p.EnableInvertedIndexQueryCache != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field146DeepEqual(src bool) bool {
+
+	if p.FuzzyDisableRuntimeFilterInBe != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field147DeepEqual(src int32) bool {
+
+	if p.ProfileLevel != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field148DeepEqual(src int32) bool {
+
+	if p.MinScannerConcurrency != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field149DeepEqual(src int32) bool {
+
+	if p.MinScanSchedulerConcurrency != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field150DeepEqual(src bool) bool {
+
+	if p.EnableRuntimeFilterPartitionPrune != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field151DeepEqual(src int32) bool {
+
+	if p.MinimumOperatorMemoryRequiredKb != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field152DeepEqual(src bool) bool {
+
+	if p.EnableMemOvercommit != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field153DeepEqual(src int32) bool {
+
+	if p.QuerySlotCount != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field154DeepEqual(src bool) bool {
+
+	if p.EnableSpill != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field155DeepEqual(src bool) bool {
+
+	if p.EnableReserveMemory != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field156DeepEqual(src int32) bool {
+
+	if p.RevocableMemoryHighWatermarkPercent != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field157DeepEqual(src int64) bool {
+
+	if p.SpillSortMemLimit != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field158DeepEqual(src int64) bool {
+
+	if p.SpillSortBatchBytes != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field159DeepEqual(src int32) bool {
+
+	if p.SpillAggregationPartitionCount != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field160DeepEqual(src int32) bool {
+
+	if p.SpillHashJoinPartitionCount != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field161DeepEqual(src int64) bool {
+
+	if p.LowMemoryModeBufferLimit != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field162DeepEqual(src bool) bool {
+
+	if p.DumpHeapProfileWhenMemLimitExceeded != src {
 		return false
 	}
 	return true
@@ -19598,212 +21110,6 @@ func (p *TCancelPlanFragmentResult_) Field1DeepEqual(src *status.TStatus) bool {
 	return true
 }
 
-type TExprMap struct {
-	ExprMap map[string]*exprs.TExpr `thrift:"expr_map,1,required" frugal:"1,required,map<string:exprs.TExpr>" json:"expr_map"`
-}
-
-func NewTExprMap() *TExprMap {
-	return &TExprMap{}
-}
-
-func (p *TExprMap) InitDefault() {
-}
-
-func (p *TExprMap) GetExprMap() (v map[string]*exprs.TExpr) {
-	return p.ExprMap
-}
-func (p *TExprMap) SetExprMap(val map[string]*exprs.TExpr) {
-	p.ExprMap = val
-}
-
-var fieldIDToName_TExprMap = map[int16]string{
-	1: "expr_map",
-}
-
-func (p *TExprMap) Read(iprot thrift.TProtocol) (err error) {
-
-	var fieldTypeId thrift.TType
-	var fieldId int16
-	var issetExprMap bool = false
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.MAP {
-				if err = p.ReadField1(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetExprMap = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		default:
-			if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		}
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	if !issetExprMap {
-		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TExprMap[fieldId]), err)
-SkipFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_TExprMap[fieldId]))
-}
-
-func (p *TExprMap) ReadField1(iprot thrift.TProtocol) error {
-	_, _, size, err := iprot.ReadMapBegin()
-	if err != nil {
-		return err
-	}
-	_field := make(map[string]*exprs.TExpr, size)
-	values := make([]exprs.TExpr, size)
-	for i := 0; i < size; i++ {
-		var _key string
-		if v, err := iprot.ReadString(); err != nil {
-			return err
-		} else {
-			_key = v
-		}
-
-		_val := &values[i]
-		_val.InitDefault()
-		if err := _val.Read(iprot); err != nil {
-			return err
-		}
-
-		_field[_key] = _val
-	}
-	if err := iprot.ReadMapEnd(); err != nil {
-		return err
-	}
-	p.ExprMap = _field
-	return nil
-}
-
-func (p *TExprMap) Write(oprot thrift.TProtocol) (err error) {
-	var fieldId int16
-	if err = oprot.WriteStructBegin("TExprMap"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-		if err = p.writeField1(oprot); err != nil {
-			fieldId = 1
-			goto WriteFieldError
-		}
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *TExprMap) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("expr_map", thrift.MAP, 1); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRUCT, len(p.ExprMap)); err != nil {
-		return err
-	}
-	for k, v := range p.ExprMap {
-		if err := oprot.WriteString(k); err != nil {
-			return err
-		}
-		if err := v.Write(oprot); err != nil {
-			return err
-		}
-	}
-	if err := oprot.WriteMapEnd(); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
-}
-
-func (p *TExprMap) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("TExprMap(%+v)", *p)
-
-}
-
-func (p *TExprMap) DeepEqual(ano *TExprMap) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
-	}
-	if !p.Field1DeepEqual(ano.ExprMap) {
-		return false
-	}
-	return true
-}
-
-func (p *TExprMap) Field1DeepEqual(src map[string]*exprs.TExpr) bool {
-
-	if len(p.ExprMap) != len(src) {
-		return false
-	}
-	for k, v := range p.ExprMap {
-		_src := src[k]
-		if !v.DeepEqual(_src) {
-			return false
-		}
-	}
-	return true
-}
-
 type TFoldConstantParams struct {
 	ExprMap      map[string]map[string]*exprs.TExpr `thrift:"expr_map,1,required" frugal:"1,required,map<string:map<string:exprs.TExpr>>" json:"expr_map"`
 	QueryGlobals *TQueryGlobals                     `thrift:"query_globals,2,required" frugal:"2,required,TQueryGlobals" json:"query_globals"`
@@ -20405,7 +21711,6 @@ type TTransmitDataParams struct {
 	ProtocolVersion        PaloInternalServiceVersion `thrift:"protocol_version,1,required" frugal:"1,required,PaloInternalServiceVersion" json:"protocol_version"`
 	DestFragmentInstanceId *types.TUniqueId           `thrift:"dest_fragment_instance_id,2,optional" frugal:"2,optional,types.TUniqueId" json:"dest_fragment_instance_id,omitempty"`
 	DestNodeId             *types.TPlanNodeId         `thrift:"dest_node_id,4,optional" frugal:"4,optional,i32" json:"dest_node_id,omitempty"`
-	RowBatch               *data.TRowBatch            `thrift:"row_batch,5,optional" frugal:"5,optional,data.TRowBatch" json:"row_batch,omitempty"`
 	Eos                    *bool                      `thrift:"eos,6,optional" frugal:"6,optional,bool" json:"eos,omitempty"`
 	BeNumber               *int32                     `thrift:"be_number,7,optional" frugal:"7,optional,i32" json:"be_number,omitempty"`
 	PacketSeq              *int64                     `thrift:"packet_seq,8,optional" frugal:"8,optional,i64" json:"packet_seq,omitempty"`
@@ -20439,15 +21744,6 @@ func (p *TTransmitDataParams) GetDestNodeId() (v types.TPlanNodeId) {
 		return TTransmitDataParams_DestNodeId_DEFAULT
 	}
 	return *p.DestNodeId
-}
-
-var TTransmitDataParams_RowBatch_DEFAULT *data.TRowBatch
-
-func (p *TTransmitDataParams) GetRowBatch() (v *data.TRowBatch) {
-	if !p.IsSetRowBatch() {
-		return TTransmitDataParams_RowBatch_DEFAULT
-	}
-	return p.RowBatch
 }
 
 var TTransmitDataParams_Eos_DEFAULT bool
@@ -20494,9 +21790,6 @@ func (p *TTransmitDataParams) SetDestFragmentInstanceId(val *types.TUniqueId) {
 func (p *TTransmitDataParams) SetDestNodeId(val *types.TPlanNodeId) {
 	p.DestNodeId = val
 }
-func (p *TTransmitDataParams) SetRowBatch(val *data.TRowBatch) {
-	p.RowBatch = val
-}
 func (p *TTransmitDataParams) SetEos(val *bool) {
 	p.Eos = val
 }
@@ -20514,7 +21807,6 @@ var fieldIDToName_TTransmitDataParams = map[int16]string{
 	1: "protocol_version",
 	2: "dest_fragment_instance_id",
 	4: "dest_node_id",
-	5: "row_batch",
 	6: "eos",
 	7: "be_number",
 	8: "packet_seq",
@@ -20527,10 +21819,6 @@ func (p *TTransmitDataParams) IsSetDestFragmentInstanceId() bool {
 
 func (p *TTransmitDataParams) IsSetDestNodeId() bool {
 	return p.DestNodeId != nil
-}
-
-func (p *TTransmitDataParams) IsSetRowBatch() bool {
-	return p.RowBatch != nil
 }
 
 func (p *TTransmitDataParams) IsSetEos() bool {
@@ -20589,14 +21877,6 @@ func (p *TTransmitDataParams) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField4(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 5:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -20699,14 +21979,6 @@ func (p *TTransmitDataParams) ReadField4(iprot thrift.TProtocol) error {
 	p.DestNodeId = _field
 	return nil
 }
-func (p *TTransmitDataParams) ReadField5(iprot thrift.TProtocol) error {
-	_field := data.NewTRowBatch()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.RowBatch = _field
-	return nil
-}
 func (p *TTransmitDataParams) ReadField6(iprot thrift.TProtocol) error {
 
 	var _field *bool
@@ -20768,10 +22040,6 @@ func (p *TTransmitDataParams) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
-			goto WriteFieldError
-		}
-		if err = p.writeField5(oprot); err != nil {
-			fieldId = 5
 			goto WriteFieldError
 		}
 		if err = p.writeField6(oprot); err != nil {
@@ -20861,25 +22129,6 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
-}
-
-func (p *TTransmitDataParams) writeField5(oprot thrift.TProtocol) (err error) {
-	if p.IsSetRowBatch() {
-		if err = oprot.WriteFieldBegin("row_batch", thrift.STRUCT, 5); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := p.RowBatch.Write(oprot); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 
 func (p *TTransmitDataParams) writeField6(oprot thrift.TProtocol) (err error) {
@@ -20981,9 +22230,6 @@ func (p *TTransmitDataParams) DeepEqual(ano *TTransmitDataParams) bool {
 	if !p.Field4DeepEqual(ano.DestNodeId) {
 		return false
 	}
-	if !p.Field5DeepEqual(ano.RowBatch) {
-		return false
-	}
 	if !p.Field6DeepEqual(ano.Eos) {
 		return false
 	}
@@ -21021,13 +22267,6 @@ func (p *TTransmitDataParams) Field4DeepEqual(src *types.TPlanNodeId) bool {
 		return false
 	}
 	if *p.DestNodeId != *src {
-		return false
-	}
-	return true
-}
-func (p *TTransmitDataParams) Field5DeepEqual(src *data.TRowBatch) bool {
-
-	if !p.RowBatch.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -21701,2568 +22940,6 @@ func (p *TTabletWithPartition) Field1DeepEqual(src int64) bool {
 func (p *TTabletWithPartition) Field2DeepEqual(src int64) bool {
 
 	if p.TabletId != src {
-		return false
-	}
-	return true
-}
-
-type TTabletWriterOpenParams struct {
-	Id         *types.TUniqueId                   `thrift:"id,1,required" frugal:"1,required,types.TUniqueId" json:"id"`
-	IndexId    int64                              `thrift:"index_id,2,required" frugal:"2,required,i64" json:"index_id"`
-	TxnId      int64                              `thrift:"txn_id,3,required" frugal:"3,required,i64" json:"txn_id"`
-	Schema     *descriptors.TOlapTableSchemaParam `thrift:"schema,4,required" frugal:"4,required,descriptors.TOlapTableSchemaParam" json:"schema"`
-	Tablets    []*TTabletWithPartition            `thrift:"tablets,5,required" frugal:"5,required,list<TTabletWithPartition>" json:"tablets"`
-	NumSenders int32                              `thrift:"num_senders,6,required" frugal:"6,required,i32" json:"num_senders"`
-}
-
-func NewTTabletWriterOpenParams() *TTabletWriterOpenParams {
-	return &TTabletWriterOpenParams{}
-}
-
-func (p *TTabletWriterOpenParams) InitDefault() {
-}
-
-var TTabletWriterOpenParams_Id_DEFAULT *types.TUniqueId
-
-func (p *TTabletWriterOpenParams) GetId() (v *types.TUniqueId) {
-	if !p.IsSetId() {
-		return TTabletWriterOpenParams_Id_DEFAULT
-	}
-	return p.Id
-}
-
-func (p *TTabletWriterOpenParams) GetIndexId() (v int64) {
-	return p.IndexId
-}
-
-func (p *TTabletWriterOpenParams) GetTxnId() (v int64) {
-	return p.TxnId
-}
-
-var TTabletWriterOpenParams_Schema_DEFAULT *descriptors.TOlapTableSchemaParam
-
-func (p *TTabletWriterOpenParams) GetSchema() (v *descriptors.TOlapTableSchemaParam) {
-	if !p.IsSetSchema() {
-		return TTabletWriterOpenParams_Schema_DEFAULT
-	}
-	return p.Schema
-}
-
-func (p *TTabletWriterOpenParams) GetTablets() (v []*TTabletWithPartition) {
-	return p.Tablets
-}
-
-func (p *TTabletWriterOpenParams) GetNumSenders() (v int32) {
-	return p.NumSenders
-}
-func (p *TTabletWriterOpenParams) SetId(val *types.TUniqueId) {
-	p.Id = val
-}
-func (p *TTabletWriterOpenParams) SetIndexId(val int64) {
-	p.IndexId = val
-}
-func (p *TTabletWriterOpenParams) SetTxnId(val int64) {
-	p.TxnId = val
-}
-func (p *TTabletWriterOpenParams) SetSchema(val *descriptors.TOlapTableSchemaParam) {
-	p.Schema = val
-}
-func (p *TTabletWriterOpenParams) SetTablets(val []*TTabletWithPartition) {
-	p.Tablets = val
-}
-func (p *TTabletWriterOpenParams) SetNumSenders(val int32) {
-	p.NumSenders = val
-}
-
-var fieldIDToName_TTabletWriterOpenParams = map[int16]string{
-	1: "id",
-	2: "index_id",
-	3: "txn_id",
-	4: "schema",
-	5: "tablets",
-	6: "num_senders",
-}
-
-func (p *TTabletWriterOpenParams) IsSetId() bool {
-	return p.Id != nil
-}
-
-func (p *TTabletWriterOpenParams) IsSetSchema() bool {
-	return p.Schema != nil
-}
-
-func (p *TTabletWriterOpenParams) Read(iprot thrift.TProtocol) (err error) {
-
-	var fieldTypeId thrift.TType
-	var fieldId int16
-	var issetId bool = false
-	var issetIndexId bool = false
-	var issetTxnId bool = false
-	var issetSchema bool = false
-	var issetTablets bool = false
-	var issetNumSenders bool = false
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField1(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetId = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 2:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField2(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetIndexId = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 3:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField3(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetTxnId = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 4:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField4(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetSchema = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 5:
-			if fieldTypeId == thrift.LIST {
-				if err = p.ReadField5(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetTablets = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 6:
-			if fieldTypeId == thrift.I32 {
-				if err = p.ReadField6(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetNumSenders = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		default:
-			if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		}
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	if !issetId {
-		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetIndexId {
-		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetTxnId {
-		fieldId = 3
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetSchema {
-		fieldId = 4
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetTablets {
-		fieldId = 5
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetNumSenders {
-		fieldId = 6
-		goto RequiredFieldNotSetError
-	}
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TTabletWriterOpenParams[fieldId]), err)
-SkipFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_TTabletWriterOpenParams[fieldId]))
-}
-
-func (p *TTabletWriterOpenParams) ReadField1(iprot thrift.TProtocol) error {
-	_field := types.NewTUniqueId()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.Id = _field
-	return nil
-}
-func (p *TTabletWriterOpenParams) ReadField2(iprot thrift.TProtocol) error {
-
-	var _field int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.IndexId = _field
-	return nil
-}
-func (p *TTabletWriterOpenParams) ReadField3(iprot thrift.TProtocol) error {
-
-	var _field int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.TxnId = _field
-	return nil
-}
-func (p *TTabletWriterOpenParams) ReadField4(iprot thrift.TProtocol) error {
-	_field := descriptors.NewTOlapTableSchemaParam()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.Schema = _field
-	return nil
-}
-func (p *TTabletWriterOpenParams) ReadField5(iprot thrift.TProtocol) error {
-	_, size, err := iprot.ReadListBegin()
-	if err != nil {
-		return err
-	}
-	_field := make([]*TTabletWithPartition, 0, size)
-	values := make([]TTabletWithPartition, size)
-	for i := 0; i < size; i++ {
-		_elem := &values[i]
-		_elem.InitDefault()
-
-		if err := _elem.Read(iprot); err != nil {
-			return err
-		}
-
-		_field = append(_field, _elem)
-	}
-	if err := iprot.ReadListEnd(); err != nil {
-		return err
-	}
-	p.Tablets = _field
-	return nil
-}
-func (p *TTabletWriterOpenParams) ReadField6(iprot thrift.TProtocol) error {
-
-	var _field int32
-	if v, err := iprot.ReadI32(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.NumSenders = _field
-	return nil
-}
-
-func (p *TTabletWriterOpenParams) Write(oprot thrift.TProtocol) (err error) {
-	var fieldId int16
-	if err = oprot.WriteStructBegin("TTabletWriterOpenParams"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-		if err = p.writeField1(oprot); err != nil {
-			fieldId = 1
-			goto WriteFieldError
-		}
-		if err = p.writeField2(oprot); err != nil {
-			fieldId = 2
-			goto WriteFieldError
-		}
-		if err = p.writeField3(oprot); err != nil {
-			fieldId = 3
-			goto WriteFieldError
-		}
-		if err = p.writeField4(oprot); err != nil {
-			fieldId = 4
-			goto WriteFieldError
-		}
-		if err = p.writeField5(oprot); err != nil {
-			fieldId = 5
-			goto WriteFieldError
-		}
-		if err = p.writeField6(oprot); err != nil {
-			fieldId = 6
-			goto WriteFieldError
-		}
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *TTabletWriterOpenParams) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("id", thrift.STRUCT, 1); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := p.Id.Write(oprot); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
-}
-
-func (p *TTabletWriterOpenParams) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("index_id", thrift.I64, 2); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.IndexId); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
-}
-
-func (p *TTabletWriterOpenParams) writeField3(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("txn_id", thrift.I64, 3); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.TxnId); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
-}
-
-func (p *TTabletWriterOpenParams) writeField4(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("schema", thrift.STRUCT, 4); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := p.Schema.Write(oprot); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
-}
-
-func (p *TTabletWriterOpenParams) writeField5(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("tablets", thrift.LIST, 5); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Tablets)); err != nil {
-		return err
-	}
-	for _, v := range p.Tablets {
-		if err := v.Write(oprot); err != nil {
-			return err
-		}
-	}
-	if err := oprot.WriteListEnd(); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
-}
-
-func (p *TTabletWriterOpenParams) writeField6(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("num_senders", thrift.I32, 6); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI32(p.NumSenders); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
-}
-
-func (p *TTabletWriterOpenParams) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("TTabletWriterOpenParams(%+v)", *p)
-
-}
-
-func (p *TTabletWriterOpenParams) DeepEqual(ano *TTabletWriterOpenParams) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
-	}
-	if !p.Field1DeepEqual(ano.Id) {
-		return false
-	}
-	if !p.Field2DeepEqual(ano.IndexId) {
-		return false
-	}
-	if !p.Field3DeepEqual(ano.TxnId) {
-		return false
-	}
-	if !p.Field4DeepEqual(ano.Schema) {
-		return false
-	}
-	if !p.Field5DeepEqual(ano.Tablets) {
-		return false
-	}
-	if !p.Field6DeepEqual(ano.NumSenders) {
-		return false
-	}
-	return true
-}
-
-func (p *TTabletWriterOpenParams) Field1DeepEqual(src *types.TUniqueId) bool {
-
-	if !p.Id.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-func (p *TTabletWriterOpenParams) Field2DeepEqual(src int64) bool {
-
-	if p.IndexId != src {
-		return false
-	}
-	return true
-}
-func (p *TTabletWriterOpenParams) Field3DeepEqual(src int64) bool {
-
-	if p.TxnId != src {
-		return false
-	}
-	return true
-}
-func (p *TTabletWriterOpenParams) Field4DeepEqual(src *descriptors.TOlapTableSchemaParam) bool {
-
-	if !p.Schema.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-func (p *TTabletWriterOpenParams) Field5DeepEqual(src []*TTabletWithPartition) bool {
-
-	if len(p.Tablets) != len(src) {
-		return false
-	}
-	for i, v := range p.Tablets {
-		_src := src[i]
-		if !v.DeepEqual(_src) {
-			return false
-		}
-	}
-	return true
-}
-func (p *TTabletWriterOpenParams) Field6DeepEqual(src int32) bool {
-
-	if p.NumSenders != src {
-		return false
-	}
-	return true
-}
-
-type TTabletWriterOpenResult_ struct {
-	Status *status.TStatus `thrift:"status,1,required" frugal:"1,required,status.TStatus" json:"status"`
-}
-
-func NewTTabletWriterOpenResult_() *TTabletWriterOpenResult_ {
-	return &TTabletWriterOpenResult_{}
-}
-
-func (p *TTabletWriterOpenResult_) InitDefault() {
-}
-
-var TTabletWriterOpenResult__Status_DEFAULT *status.TStatus
-
-func (p *TTabletWriterOpenResult_) GetStatus() (v *status.TStatus) {
-	if !p.IsSetStatus() {
-		return TTabletWriterOpenResult__Status_DEFAULT
-	}
-	return p.Status
-}
-func (p *TTabletWriterOpenResult_) SetStatus(val *status.TStatus) {
-	p.Status = val
-}
-
-var fieldIDToName_TTabletWriterOpenResult_ = map[int16]string{
-	1: "status",
-}
-
-func (p *TTabletWriterOpenResult_) IsSetStatus() bool {
-	return p.Status != nil
-}
-
-func (p *TTabletWriterOpenResult_) Read(iprot thrift.TProtocol) (err error) {
-
-	var fieldTypeId thrift.TType
-	var fieldId int16
-	var issetStatus bool = false
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField1(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetStatus = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		default:
-			if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		}
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	if !issetStatus {
-		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TTabletWriterOpenResult_[fieldId]), err)
-SkipFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_TTabletWriterOpenResult_[fieldId]))
-}
-
-func (p *TTabletWriterOpenResult_) ReadField1(iprot thrift.TProtocol) error {
-	_field := status.NewTStatus()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.Status = _field
-	return nil
-}
-
-func (p *TTabletWriterOpenResult_) Write(oprot thrift.TProtocol) (err error) {
-	var fieldId int16
-	if err = oprot.WriteStructBegin("TTabletWriterOpenResult"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-		if err = p.writeField1(oprot); err != nil {
-			fieldId = 1
-			goto WriteFieldError
-		}
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *TTabletWriterOpenResult_) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("status", thrift.STRUCT, 1); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := p.Status.Write(oprot); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
-}
-
-func (p *TTabletWriterOpenResult_) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("TTabletWriterOpenResult_(%+v)", *p)
-
-}
-
-func (p *TTabletWriterOpenResult_) DeepEqual(ano *TTabletWriterOpenResult_) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
-	}
-	if !p.Field1DeepEqual(ano.Status) {
-		return false
-	}
-	return true
-}
-
-func (p *TTabletWriterOpenResult_) Field1DeepEqual(src *status.TStatus) bool {
-
-	if !p.Status.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-
-type TTabletWriterAddBatchParams struct {
-	Id        *types.TUniqueId  `thrift:"id,1,required" frugal:"1,required,types.TUniqueId" json:"id"`
-	IndexId   int64             `thrift:"index_id,2,required" frugal:"2,required,i64" json:"index_id"`
-	PacketSeq int64             `thrift:"packet_seq,3,required" frugal:"3,required,i64" json:"packet_seq"`
-	TabletIds []types.TTabletId `thrift:"tablet_ids,4,required" frugal:"4,required,list<i64>" json:"tablet_ids"`
-	RowBatch  *data.TRowBatch   `thrift:"row_batch,5,required" frugal:"5,required,data.TRowBatch" json:"row_batch"`
-	SenderNo  int32             `thrift:"sender_no,6,required" frugal:"6,required,i32" json:"sender_no"`
-}
-
-func NewTTabletWriterAddBatchParams() *TTabletWriterAddBatchParams {
-	return &TTabletWriterAddBatchParams{}
-}
-
-func (p *TTabletWriterAddBatchParams) InitDefault() {
-}
-
-var TTabletWriterAddBatchParams_Id_DEFAULT *types.TUniqueId
-
-func (p *TTabletWriterAddBatchParams) GetId() (v *types.TUniqueId) {
-	if !p.IsSetId() {
-		return TTabletWriterAddBatchParams_Id_DEFAULT
-	}
-	return p.Id
-}
-
-func (p *TTabletWriterAddBatchParams) GetIndexId() (v int64) {
-	return p.IndexId
-}
-
-func (p *TTabletWriterAddBatchParams) GetPacketSeq() (v int64) {
-	return p.PacketSeq
-}
-
-func (p *TTabletWriterAddBatchParams) GetTabletIds() (v []types.TTabletId) {
-	return p.TabletIds
-}
-
-var TTabletWriterAddBatchParams_RowBatch_DEFAULT *data.TRowBatch
-
-func (p *TTabletWriterAddBatchParams) GetRowBatch() (v *data.TRowBatch) {
-	if !p.IsSetRowBatch() {
-		return TTabletWriterAddBatchParams_RowBatch_DEFAULT
-	}
-	return p.RowBatch
-}
-
-func (p *TTabletWriterAddBatchParams) GetSenderNo() (v int32) {
-	return p.SenderNo
-}
-func (p *TTabletWriterAddBatchParams) SetId(val *types.TUniqueId) {
-	p.Id = val
-}
-func (p *TTabletWriterAddBatchParams) SetIndexId(val int64) {
-	p.IndexId = val
-}
-func (p *TTabletWriterAddBatchParams) SetPacketSeq(val int64) {
-	p.PacketSeq = val
-}
-func (p *TTabletWriterAddBatchParams) SetTabletIds(val []types.TTabletId) {
-	p.TabletIds = val
-}
-func (p *TTabletWriterAddBatchParams) SetRowBatch(val *data.TRowBatch) {
-	p.RowBatch = val
-}
-func (p *TTabletWriterAddBatchParams) SetSenderNo(val int32) {
-	p.SenderNo = val
-}
-
-var fieldIDToName_TTabletWriterAddBatchParams = map[int16]string{
-	1: "id",
-	2: "index_id",
-	3: "packet_seq",
-	4: "tablet_ids",
-	5: "row_batch",
-	6: "sender_no",
-}
-
-func (p *TTabletWriterAddBatchParams) IsSetId() bool {
-	return p.Id != nil
-}
-
-func (p *TTabletWriterAddBatchParams) IsSetRowBatch() bool {
-	return p.RowBatch != nil
-}
-
-func (p *TTabletWriterAddBatchParams) Read(iprot thrift.TProtocol) (err error) {
-
-	var fieldTypeId thrift.TType
-	var fieldId int16
-	var issetId bool = false
-	var issetIndexId bool = false
-	var issetPacketSeq bool = false
-	var issetTabletIds bool = false
-	var issetRowBatch bool = false
-	var issetSenderNo bool = false
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField1(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetId = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 2:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField2(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetIndexId = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 3:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField3(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetPacketSeq = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 4:
-			if fieldTypeId == thrift.LIST {
-				if err = p.ReadField4(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetTabletIds = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 5:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField5(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetRowBatch = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 6:
-			if fieldTypeId == thrift.I32 {
-				if err = p.ReadField6(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetSenderNo = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		default:
-			if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		}
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	if !issetId {
-		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetIndexId {
-		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetPacketSeq {
-		fieldId = 3
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetTabletIds {
-		fieldId = 4
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetRowBatch {
-		fieldId = 5
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetSenderNo {
-		fieldId = 6
-		goto RequiredFieldNotSetError
-	}
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TTabletWriterAddBatchParams[fieldId]), err)
-SkipFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_TTabletWriterAddBatchParams[fieldId]))
-}
-
-func (p *TTabletWriterAddBatchParams) ReadField1(iprot thrift.TProtocol) error {
-	_field := types.NewTUniqueId()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.Id = _field
-	return nil
-}
-func (p *TTabletWriterAddBatchParams) ReadField2(iprot thrift.TProtocol) error {
-
-	var _field int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.IndexId = _field
-	return nil
-}
-func (p *TTabletWriterAddBatchParams) ReadField3(iprot thrift.TProtocol) error {
-
-	var _field int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.PacketSeq = _field
-	return nil
-}
-func (p *TTabletWriterAddBatchParams) ReadField4(iprot thrift.TProtocol) error {
-	_, size, err := iprot.ReadListBegin()
-	if err != nil {
-		return err
-	}
-	_field := make([]types.TTabletId, 0, size)
-	for i := 0; i < size; i++ {
-
-		var _elem types.TTabletId
-		if v, err := iprot.ReadI64(); err != nil {
-			return err
-		} else {
-			_elem = v
-		}
-
-		_field = append(_field, _elem)
-	}
-	if err := iprot.ReadListEnd(); err != nil {
-		return err
-	}
-	p.TabletIds = _field
-	return nil
-}
-func (p *TTabletWriterAddBatchParams) ReadField5(iprot thrift.TProtocol) error {
-	_field := data.NewTRowBatch()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.RowBatch = _field
-	return nil
-}
-func (p *TTabletWriterAddBatchParams) ReadField6(iprot thrift.TProtocol) error {
-
-	var _field int32
-	if v, err := iprot.ReadI32(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.SenderNo = _field
-	return nil
-}
-
-func (p *TTabletWriterAddBatchParams) Write(oprot thrift.TProtocol) (err error) {
-	var fieldId int16
-	if err = oprot.WriteStructBegin("TTabletWriterAddBatchParams"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-		if err = p.writeField1(oprot); err != nil {
-			fieldId = 1
-			goto WriteFieldError
-		}
-		if err = p.writeField2(oprot); err != nil {
-			fieldId = 2
-			goto WriteFieldError
-		}
-		if err = p.writeField3(oprot); err != nil {
-			fieldId = 3
-			goto WriteFieldError
-		}
-		if err = p.writeField4(oprot); err != nil {
-			fieldId = 4
-			goto WriteFieldError
-		}
-		if err = p.writeField5(oprot); err != nil {
-			fieldId = 5
-			goto WriteFieldError
-		}
-		if err = p.writeField6(oprot); err != nil {
-			fieldId = 6
-			goto WriteFieldError
-		}
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *TTabletWriterAddBatchParams) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("id", thrift.STRUCT, 1); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := p.Id.Write(oprot); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
-}
-
-func (p *TTabletWriterAddBatchParams) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("index_id", thrift.I64, 2); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.IndexId); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
-}
-
-func (p *TTabletWriterAddBatchParams) writeField3(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("packet_seq", thrift.I64, 3); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.PacketSeq); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
-}
-
-func (p *TTabletWriterAddBatchParams) writeField4(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("tablet_ids", thrift.LIST, 4); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteListBegin(thrift.I64, len(p.TabletIds)); err != nil {
-		return err
-	}
-	for _, v := range p.TabletIds {
-		if err := oprot.WriteI64(v); err != nil {
-			return err
-		}
-	}
-	if err := oprot.WriteListEnd(); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
-}
-
-func (p *TTabletWriterAddBatchParams) writeField5(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("row_batch", thrift.STRUCT, 5); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := p.RowBatch.Write(oprot); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
-}
-
-func (p *TTabletWriterAddBatchParams) writeField6(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("sender_no", thrift.I32, 6); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI32(p.SenderNo); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
-}
-
-func (p *TTabletWriterAddBatchParams) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("TTabletWriterAddBatchParams(%+v)", *p)
-
-}
-
-func (p *TTabletWriterAddBatchParams) DeepEqual(ano *TTabletWriterAddBatchParams) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
-	}
-	if !p.Field1DeepEqual(ano.Id) {
-		return false
-	}
-	if !p.Field2DeepEqual(ano.IndexId) {
-		return false
-	}
-	if !p.Field3DeepEqual(ano.PacketSeq) {
-		return false
-	}
-	if !p.Field4DeepEqual(ano.TabletIds) {
-		return false
-	}
-	if !p.Field5DeepEqual(ano.RowBatch) {
-		return false
-	}
-	if !p.Field6DeepEqual(ano.SenderNo) {
-		return false
-	}
-	return true
-}
-
-func (p *TTabletWriterAddBatchParams) Field1DeepEqual(src *types.TUniqueId) bool {
-
-	if !p.Id.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-func (p *TTabletWriterAddBatchParams) Field2DeepEqual(src int64) bool {
-
-	if p.IndexId != src {
-		return false
-	}
-	return true
-}
-func (p *TTabletWriterAddBatchParams) Field3DeepEqual(src int64) bool {
-
-	if p.PacketSeq != src {
-		return false
-	}
-	return true
-}
-func (p *TTabletWriterAddBatchParams) Field4DeepEqual(src []types.TTabletId) bool {
-
-	if len(p.TabletIds) != len(src) {
-		return false
-	}
-	for i, v := range p.TabletIds {
-		_src := src[i]
-		if v != _src {
-			return false
-		}
-	}
-	return true
-}
-func (p *TTabletWriterAddBatchParams) Field5DeepEqual(src *data.TRowBatch) bool {
-
-	if !p.RowBatch.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-func (p *TTabletWriterAddBatchParams) Field6DeepEqual(src int32) bool {
-
-	if p.SenderNo != src {
-		return false
-	}
-	return true
-}
-
-type TTabletWriterAddBatchResult_ struct {
-	Status *status.TStatus `thrift:"status,1,required" frugal:"1,required,status.TStatus" json:"status"`
-}
-
-func NewTTabletWriterAddBatchResult_() *TTabletWriterAddBatchResult_ {
-	return &TTabletWriterAddBatchResult_{}
-}
-
-func (p *TTabletWriterAddBatchResult_) InitDefault() {
-}
-
-var TTabletWriterAddBatchResult__Status_DEFAULT *status.TStatus
-
-func (p *TTabletWriterAddBatchResult_) GetStatus() (v *status.TStatus) {
-	if !p.IsSetStatus() {
-		return TTabletWriterAddBatchResult__Status_DEFAULT
-	}
-	return p.Status
-}
-func (p *TTabletWriterAddBatchResult_) SetStatus(val *status.TStatus) {
-	p.Status = val
-}
-
-var fieldIDToName_TTabletWriterAddBatchResult_ = map[int16]string{
-	1: "status",
-}
-
-func (p *TTabletWriterAddBatchResult_) IsSetStatus() bool {
-	return p.Status != nil
-}
-
-func (p *TTabletWriterAddBatchResult_) Read(iprot thrift.TProtocol) (err error) {
-
-	var fieldTypeId thrift.TType
-	var fieldId int16
-	var issetStatus bool = false
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField1(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetStatus = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		default:
-			if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		}
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	if !issetStatus {
-		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TTabletWriterAddBatchResult_[fieldId]), err)
-SkipFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_TTabletWriterAddBatchResult_[fieldId]))
-}
-
-func (p *TTabletWriterAddBatchResult_) ReadField1(iprot thrift.TProtocol) error {
-	_field := status.NewTStatus()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.Status = _field
-	return nil
-}
-
-func (p *TTabletWriterAddBatchResult_) Write(oprot thrift.TProtocol) (err error) {
-	var fieldId int16
-	if err = oprot.WriteStructBegin("TTabletWriterAddBatchResult"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-		if err = p.writeField1(oprot); err != nil {
-			fieldId = 1
-			goto WriteFieldError
-		}
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *TTabletWriterAddBatchResult_) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("status", thrift.STRUCT, 1); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := p.Status.Write(oprot); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
-}
-
-func (p *TTabletWriterAddBatchResult_) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("TTabletWriterAddBatchResult_(%+v)", *p)
-
-}
-
-func (p *TTabletWriterAddBatchResult_) DeepEqual(ano *TTabletWriterAddBatchResult_) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
-	}
-	if !p.Field1DeepEqual(ano.Status) {
-		return false
-	}
-	return true
-}
-
-func (p *TTabletWriterAddBatchResult_) Field1DeepEqual(src *status.TStatus) bool {
-
-	if !p.Status.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-
-type TTabletWriterCloseParams struct {
-	Id       *types.TUniqueId `thrift:"id,1,required" frugal:"1,required,types.TUniqueId" json:"id"`
-	IndexId  int64            `thrift:"index_id,2,required" frugal:"2,required,i64" json:"index_id"`
-	SenderNo int32            `thrift:"sender_no,3,required" frugal:"3,required,i32" json:"sender_no"`
-}
-
-func NewTTabletWriterCloseParams() *TTabletWriterCloseParams {
-	return &TTabletWriterCloseParams{}
-}
-
-func (p *TTabletWriterCloseParams) InitDefault() {
-}
-
-var TTabletWriterCloseParams_Id_DEFAULT *types.TUniqueId
-
-func (p *TTabletWriterCloseParams) GetId() (v *types.TUniqueId) {
-	if !p.IsSetId() {
-		return TTabletWriterCloseParams_Id_DEFAULT
-	}
-	return p.Id
-}
-
-func (p *TTabletWriterCloseParams) GetIndexId() (v int64) {
-	return p.IndexId
-}
-
-func (p *TTabletWriterCloseParams) GetSenderNo() (v int32) {
-	return p.SenderNo
-}
-func (p *TTabletWriterCloseParams) SetId(val *types.TUniqueId) {
-	p.Id = val
-}
-func (p *TTabletWriterCloseParams) SetIndexId(val int64) {
-	p.IndexId = val
-}
-func (p *TTabletWriterCloseParams) SetSenderNo(val int32) {
-	p.SenderNo = val
-}
-
-var fieldIDToName_TTabletWriterCloseParams = map[int16]string{
-	1: "id",
-	2: "index_id",
-	3: "sender_no",
-}
-
-func (p *TTabletWriterCloseParams) IsSetId() bool {
-	return p.Id != nil
-}
-
-func (p *TTabletWriterCloseParams) Read(iprot thrift.TProtocol) (err error) {
-
-	var fieldTypeId thrift.TType
-	var fieldId int16
-	var issetId bool = false
-	var issetIndexId bool = false
-	var issetSenderNo bool = false
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField1(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetId = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 2:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField2(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetIndexId = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 3:
-			if fieldTypeId == thrift.I32 {
-				if err = p.ReadField3(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetSenderNo = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		default:
-			if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		}
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	if !issetId {
-		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetIndexId {
-		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetSenderNo {
-		fieldId = 3
-		goto RequiredFieldNotSetError
-	}
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TTabletWriterCloseParams[fieldId]), err)
-SkipFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_TTabletWriterCloseParams[fieldId]))
-}
-
-func (p *TTabletWriterCloseParams) ReadField1(iprot thrift.TProtocol) error {
-	_field := types.NewTUniqueId()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.Id = _field
-	return nil
-}
-func (p *TTabletWriterCloseParams) ReadField2(iprot thrift.TProtocol) error {
-
-	var _field int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.IndexId = _field
-	return nil
-}
-func (p *TTabletWriterCloseParams) ReadField3(iprot thrift.TProtocol) error {
-
-	var _field int32
-	if v, err := iprot.ReadI32(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.SenderNo = _field
-	return nil
-}
-
-func (p *TTabletWriterCloseParams) Write(oprot thrift.TProtocol) (err error) {
-	var fieldId int16
-	if err = oprot.WriteStructBegin("TTabletWriterCloseParams"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-		if err = p.writeField1(oprot); err != nil {
-			fieldId = 1
-			goto WriteFieldError
-		}
-		if err = p.writeField2(oprot); err != nil {
-			fieldId = 2
-			goto WriteFieldError
-		}
-		if err = p.writeField3(oprot); err != nil {
-			fieldId = 3
-			goto WriteFieldError
-		}
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *TTabletWriterCloseParams) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("id", thrift.STRUCT, 1); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := p.Id.Write(oprot); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
-}
-
-func (p *TTabletWriterCloseParams) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("index_id", thrift.I64, 2); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.IndexId); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
-}
-
-func (p *TTabletWriterCloseParams) writeField3(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("sender_no", thrift.I32, 3); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI32(p.SenderNo); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
-}
-
-func (p *TTabletWriterCloseParams) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("TTabletWriterCloseParams(%+v)", *p)
-
-}
-
-func (p *TTabletWriterCloseParams) DeepEqual(ano *TTabletWriterCloseParams) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
-	}
-	if !p.Field1DeepEqual(ano.Id) {
-		return false
-	}
-	if !p.Field2DeepEqual(ano.IndexId) {
-		return false
-	}
-	if !p.Field3DeepEqual(ano.SenderNo) {
-		return false
-	}
-	return true
-}
-
-func (p *TTabletWriterCloseParams) Field1DeepEqual(src *types.TUniqueId) bool {
-
-	if !p.Id.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-func (p *TTabletWriterCloseParams) Field2DeepEqual(src int64) bool {
-
-	if p.IndexId != src {
-		return false
-	}
-	return true
-}
-func (p *TTabletWriterCloseParams) Field3DeepEqual(src int32) bool {
-
-	if p.SenderNo != src {
-		return false
-	}
-	return true
-}
-
-type TTabletWriterCloseResult_ struct {
-	Status *status.TStatus `thrift:"status,1,required" frugal:"1,required,status.TStatus" json:"status"`
-}
-
-func NewTTabletWriterCloseResult_() *TTabletWriterCloseResult_ {
-	return &TTabletWriterCloseResult_{}
-}
-
-func (p *TTabletWriterCloseResult_) InitDefault() {
-}
-
-var TTabletWriterCloseResult__Status_DEFAULT *status.TStatus
-
-func (p *TTabletWriterCloseResult_) GetStatus() (v *status.TStatus) {
-	if !p.IsSetStatus() {
-		return TTabletWriterCloseResult__Status_DEFAULT
-	}
-	return p.Status
-}
-func (p *TTabletWriterCloseResult_) SetStatus(val *status.TStatus) {
-	p.Status = val
-}
-
-var fieldIDToName_TTabletWriterCloseResult_ = map[int16]string{
-	1: "status",
-}
-
-func (p *TTabletWriterCloseResult_) IsSetStatus() bool {
-	return p.Status != nil
-}
-
-func (p *TTabletWriterCloseResult_) Read(iprot thrift.TProtocol) (err error) {
-
-	var fieldTypeId thrift.TType
-	var fieldId int16
-	var issetStatus bool = false
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField1(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetStatus = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		default:
-			if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		}
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	if !issetStatus {
-		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TTabletWriterCloseResult_[fieldId]), err)
-SkipFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_TTabletWriterCloseResult_[fieldId]))
-}
-
-func (p *TTabletWriterCloseResult_) ReadField1(iprot thrift.TProtocol) error {
-	_field := status.NewTStatus()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.Status = _field
-	return nil
-}
-
-func (p *TTabletWriterCloseResult_) Write(oprot thrift.TProtocol) (err error) {
-	var fieldId int16
-	if err = oprot.WriteStructBegin("TTabletWriterCloseResult"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-		if err = p.writeField1(oprot); err != nil {
-			fieldId = 1
-			goto WriteFieldError
-		}
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *TTabletWriterCloseResult_) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("status", thrift.STRUCT, 1); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := p.Status.Write(oprot); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
-}
-
-func (p *TTabletWriterCloseResult_) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("TTabletWriterCloseResult_(%+v)", *p)
-
-}
-
-func (p *TTabletWriterCloseResult_) DeepEqual(ano *TTabletWriterCloseResult_) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
-	}
-	if !p.Field1DeepEqual(ano.Status) {
-		return false
-	}
-	return true
-}
-
-func (p *TTabletWriterCloseResult_) Field1DeepEqual(src *status.TStatus) bool {
-
-	if !p.Status.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-
-type TTabletWriterCancelParams struct {
-	Id       *types.TUniqueId `thrift:"id,1,required" frugal:"1,required,types.TUniqueId" json:"id"`
-	IndexId  int64            `thrift:"index_id,2,required" frugal:"2,required,i64" json:"index_id"`
-	SenderNo int32            `thrift:"sender_no,3,required" frugal:"3,required,i32" json:"sender_no"`
-}
-
-func NewTTabletWriterCancelParams() *TTabletWriterCancelParams {
-	return &TTabletWriterCancelParams{}
-}
-
-func (p *TTabletWriterCancelParams) InitDefault() {
-}
-
-var TTabletWriterCancelParams_Id_DEFAULT *types.TUniqueId
-
-func (p *TTabletWriterCancelParams) GetId() (v *types.TUniqueId) {
-	if !p.IsSetId() {
-		return TTabletWriterCancelParams_Id_DEFAULT
-	}
-	return p.Id
-}
-
-func (p *TTabletWriterCancelParams) GetIndexId() (v int64) {
-	return p.IndexId
-}
-
-func (p *TTabletWriterCancelParams) GetSenderNo() (v int32) {
-	return p.SenderNo
-}
-func (p *TTabletWriterCancelParams) SetId(val *types.TUniqueId) {
-	p.Id = val
-}
-func (p *TTabletWriterCancelParams) SetIndexId(val int64) {
-	p.IndexId = val
-}
-func (p *TTabletWriterCancelParams) SetSenderNo(val int32) {
-	p.SenderNo = val
-}
-
-var fieldIDToName_TTabletWriterCancelParams = map[int16]string{
-	1: "id",
-	2: "index_id",
-	3: "sender_no",
-}
-
-func (p *TTabletWriterCancelParams) IsSetId() bool {
-	return p.Id != nil
-}
-
-func (p *TTabletWriterCancelParams) Read(iprot thrift.TProtocol) (err error) {
-
-	var fieldTypeId thrift.TType
-	var fieldId int16
-	var issetId bool = false
-	var issetIndexId bool = false
-	var issetSenderNo bool = false
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField1(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetId = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 2:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField2(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetIndexId = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 3:
-			if fieldTypeId == thrift.I32 {
-				if err = p.ReadField3(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetSenderNo = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		default:
-			if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		}
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	if !issetId {
-		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetIndexId {
-		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetSenderNo {
-		fieldId = 3
-		goto RequiredFieldNotSetError
-	}
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TTabletWriterCancelParams[fieldId]), err)
-SkipFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_TTabletWriterCancelParams[fieldId]))
-}
-
-func (p *TTabletWriterCancelParams) ReadField1(iprot thrift.TProtocol) error {
-	_field := types.NewTUniqueId()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.Id = _field
-	return nil
-}
-func (p *TTabletWriterCancelParams) ReadField2(iprot thrift.TProtocol) error {
-
-	var _field int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.IndexId = _field
-	return nil
-}
-func (p *TTabletWriterCancelParams) ReadField3(iprot thrift.TProtocol) error {
-
-	var _field int32
-	if v, err := iprot.ReadI32(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.SenderNo = _field
-	return nil
-}
-
-func (p *TTabletWriterCancelParams) Write(oprot thrift.TProtocol) (err error) {
-	var fieldId int16
-	if err = oprot.WriteStructBegin("TTabletWriterCancelParams"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-		if err = p.writeField1(oprot); err != nil {
-			fieldId = 1
-			goto WriteFieldError
-		}
-		if err = p.writeField2(oprot); err != nil {
-			fieldId = 2
-			goto WriteFieldError
-		}
-		if err = p.writeField3(oprot); err != nil {
-			fieldId = 3
-			goto WriteFieldError
-		}
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *TTabletWriterCancelParams) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("id", thrift.STRUCT, 1); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := p.Id.Write(oprot); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
-}
-
-func (p *TTabletWriterCancelParams) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("index_id", thrift.I64, 2); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.IndexId); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
-}
-
-func (p *TTabletWriterCancelParams) writeField3(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("sender_no", thrift.I32, 3); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI32(p.SenderNo); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
-}
-
-func (p *TTabletWriterCancelParams) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("TTabletWriterCancelParams(%+v)", *p)
-
-}
-
-func (p *TTabletWriterCancelParams) DeepEqual(ano *TTabletWriterCancelParams) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
-	}
-	if !p.Field1DeepEqual(ano.Id) {
-		return false
-	}
-	if !p.Field2DeepEqual(ano.IndexId) {
-		return false
-	}
-	if !p.Field3DeepEqual(ano.SenderNo) {
-		return false
-	}
-	return true
-}
-
-func (p *TTabletWriterCancelParams) Field1DeepEqual(src *types.TUniqueId) bool {
-
-	if !p.Id.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-func (p *TTabletWriterCancelParams) Field2DeepEqual(src int64) bool {
-
-	if p.IndexId != src {
-		return false
-	}
-	return true
-}
-func (p *TTabletWriterCancelParams) Field3DeepEqual(src int32) bool {
-
-	if p.SenderNo != src {
-		return false
-	}
-	return true
-}
-
-type TTabletWriterCancelResult_ struct {
-}
-
-func NewTTabletWriterCancelResult_() *TTabletWriterCancelResult_ {
-	return &TTabletWriterCancelResult_{}
-}
-
-func (p *TTabletWriterCancelResult_) InitDefault() {
-}
-
-var fieldIDToName_TTabletWriterCancelResult_ = map[int16]string{}
-
-func (p *TTabletWriterCancelResult_) Read(iprot thrift.TProtocol) (err error) {
-
-	var fieldTypeId thrift.TType
-	var fieldId int16
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-		if err = iprot.Skip(fieldTypeId); err != nil {
-			goto SkipFieldTypeError
-		}
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-SkipFieldTypeError:
-	return thrift.PrependError(fmt.Sprintf("%T skip field type %d error", p, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-}
-
-func (p *TTabletWriterCancelResult_) Write(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteStructBegin("TTabletWriterCancelResult"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *TTabletWriterCancelResult_) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("TTabletWriterCancelResult_(%+v)", *p)
-
-}
-
-func (p *TTabletWriterCancelResult_) DeepEqual(ano *TTabletWriterCancelResult_) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
-	}
-	return true
-}
-
-type TFetchDataParams struct {
-	ProtocolVersion    PaloInternalServiceVersion `thrift:"protocol_version,1,required" frugal:"1,required,PaloInternalServiceVersion" json:"protocol_version"`
-	FragmentInstanceId *types.TUniqueId           `thrift:"fragment_instance_id,2,required" frugal:"2,required,types.TUniqueId" json:"fragment_instance_id"`
-}
-
-func NewTFetchDataParams() *TFetchDataParams {
-	return &TFetchDataParams{}
-}
-
-func (p *TFetchDataParams) InitDefault() {
-}
-
-func (p *TFetchDataParams) GetProtocolVersion() (v PaloInternalServiceVersion) {
-	return p.ProtocolVersion
-}
-
-var TFetchDataParams_FragmentInstanceId_DEFAULT *types.TUniqueId
-
-func (p *TFetchDataParams) GetFragmentInstanceId() (v *types.TUniqueId) {
-	if !p.IsSetFragmentInstanceId() {
-		return TFetchDataParams_FragmentInstanceId_DEFAULT
-	}
-	return p.FragmentInstanceId
-}
-func (p *TFetchDataParams) SetProtocolVersion(val PaloInternalServiceVersion) {
-	p.ProtocolVersion = val
-}
-func (p *TFetchDataParams) SetFragmentInstanceId(val *types.TUniqueId) {
-	p.FragmentInstanceId = val
-}
-
-var fieldIDToName_TFetchDataParams = map[int16]string{
-	1: "protocol_version",
-	2: "fragment_instance_id",
-}
-
-func (p *TFetchDataParams) IsSetFragmentInstanceId() bool {
-	return p.FragmentInstanceId != nil
-}
-
-func (p *TFetchDataParams) Read(iprot thrift.TProtocol) (err error) {
-
-	var fieldTypeId thrift.TType
-	var fieldId int16
-	var issetProtocolVersion bool = false
-	var issetFragmentInstanceId bool = false
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.I32 {
-				if err = p.ReadField1(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetProtocolVersion = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 2:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField2(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetFragmentInstanceId = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		default:
-			if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		}
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	if !issetProtocolVersion {
-		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetFragmentInstanceId {
-		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TFetchDataParams[fieldId]), err)
-SkipFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_TFetchDataParams[fieldId]))
-}
-
-func (p *TFetchDataParams) ReadField1(iprot thrift.TProtocol) error {
-
-	var _field PaloInternalServiceVersion
-	if v, err := iprot.ReadI32(); err != nil {
-		return err
-	} else {
-		_field = PaloInternalServiceVersion(v)
-	}
-	p.ProtocolVersion = _field
-	return nil
-}
-func (p *TFetchDataParams) ReadField2(iprot thrift.TProtocol) error {
-	_field := types.NewTUniqueId()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.FragmentInstanceId = _field
-	return nil
-}
-
-func (p *TFetchDataParams) Write(oprot thrift.TProtocol) (err error) {
-	var fieldId int16
-	if err = oprot.WriteStructBegin("TFetchDataParams"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-		if err = p.writeField1(oprot); err != nil {
-			fieldId = 1
-			goto WriteFieldError
-		}
-		if err = p.writeField2(oprot); err != nil {
-			fieldId = 2
-			goto WriteFieldError
-		}
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *TFetchDataParams) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("protocol_version", thrift.I32, 1); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI32(int32(p.ProtocolVersion)); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
-}
-
-func (p *TFetchDataParams) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("fragment_instance_id", thrift.STRUCT, 2); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := p.FragmentInstanceId.Write(oprot); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
-}
-
-func (p *TFetchDataParams) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("TFetchDataParams(%+v)", *p)
-
-}
-
-func (p *TFetchDataParams) DeepEqual(ano *TFetchDataParams) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
-	}
-	if !p.Field1DeepEqual(ano.ProtocolVersion) {
-		return false
-	}
-	if !p.Field2DeepEqual(ano.FragmentInstanceId) {
-		return false
-	}
-	return true
-}
-
-func (p *TFetchDataParams) Field1DeepEqual(src PaloInternalServiceVersion) bool {
-
-	if p.ProtocolVersion != src {
-		return false
-	}
-	return true
-}
-func (p *TFetchDataParams) Field2DeepEqual(src *types.TUniqueId) bool {
-
-	if !p.FragmentInstanceId.DeepEqual(src) {
 		return false
 	}
 	return true

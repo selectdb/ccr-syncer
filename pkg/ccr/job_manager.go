@@ -23,11 +23,11 @@ import (
 
 	"github.com/selectdb/ccr_syncer/pkg/storage"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
-	"github.com/selectdb/ccr_syncer/pkg/xmetrics"
 	log "github.com/sirupsen/logrus"
 )
 
 var errJobExist = xerror.NewWithoutStack(xerror.Normal, "job exist")
+var errJobName = xerror.NewWithoutStack(xerror.Normal, "job name does not match the regex of doris")
 
 // job manager is thread safety
 type JobManager struct {
@@ -61,6 +61,11 @@ func (jm *JobManager) AddJob(job *Job) error {
 	jm.lock.Lock()
 	defer jm.lock.Unlock()
 
+	// Step 0: check job name
+	if !CheckLabelRegex(job.Name) {
+		return xerror.XWrapf(errJobName, "job: %s", job.Name)
+	}
+
 	// Step 1: check job exist
 	if _, ok := jm.jobs[job.Name]; ok {
 		return xerror.XWrapf(errJobExist, "job: %s", job.Name)
@@ -83,9 +88,6 @@ func (jm *JobManager) AddJob(job *Job) error {
 	// Step 4: run job
 	jm.jobs[job.Name] = job
 	jm.runJob(job)
-
-	// Step 5: add metrics
-	xmetrics.AddNewJob(job.Name)
 
 	return nil
 }
@@ -232,6 +234,17 @@ func (jm *JobManager) Desync(jobName string) error {
 	}
 }
 
+func (jm *JobManager) Sync(jobName string) error {
+	jm.lock.RLock()
+	defer jm.lock.RUnlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return job.Sync()
+	} else {
+		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
+	}
+}
+
 func (jm *JobManager) ListJobs() []*JobStatus {
 	jm.lock.RLock()
 	defer jm.lock.RUnlock()
@@ -254,12 +267,12 @@ func (jm *JobManager) UpdateHostMapping(jobName string, srcHostMapping, destHost
 	}
 }
 
-func (jm *JobManager) SkipBinlog(jobName string, skipCommitSeq int64, skipBy string) error {
+func (jm *JobManager) SkipBinlog(jobName string, params SkipBinlogParams) error {
 	jm.lock.Lock()
 	defer jm.lock.Unlock()
 
 	if job, ok := jm.jobs[jobName]; ok {
-		return job.SkipBinlog(skipCommitSeq, skipBy)
+		return job.SkipBinlog(params)
 	} else {
 		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
 	}

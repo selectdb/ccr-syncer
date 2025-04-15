@@ -33,24 +33,35 @@ type DropRollup struct {
 
 func NewDropRollupFromJson(data string) (*DropRollup, error) {
 	var dropRollup DropRollup
+	if err := dropRollup.Deserialize(data); err != nil {
+		return nil, err
+	}
+	return &dropRollup, nil
+}
+
+func (dropRollup *DropRollup) Deserialize(data string) error {
 	err := json.Unmarshal([]byte(data), &dropRollup)
 	if err != nil {
-		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal drop rollup error")
+		return xerror.Wrap(err, xerror.Normal, "unmarshal drop rollup error")
 	}
 
 	if dropRollup.TableId == 0 {
-		return nil, xerror.Errorf(xerror.Normal, "invalid drop rollup, table id not found")
+		return xerror.Errorf(xerror.Normal, "invalid drop rollup, table id not found")
 	}
 
 	if dropRollup.TableName == "" {
-		return nil, xerror.Errorf(xerror.Normal, "invalid drop rollup, tableName is empty")
+		return xerror.Errorf(xerror.Normal, "invalid drop rollup, tableName is empty")
 	}
 
 	if dropRollup.IndexName == "" {
-		return nil, xerror.Errorf(xerror.Normal, "invalid drop rollup, indexName is empty")
+		return xerror.Errorf(xerror.Normal, "invalid drop rollup, indexName is empty")
 	}
 
-	return &dropRollup, nil
+	return nil
+}
+
+func (dropRollup *DropRollup) GetTableId() int64 {
+	return dropRollup.TableId
 }
 
 func (d *DropRollup) String() string {

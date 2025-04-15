@@ -39,6 +39,10 @@ const (
 	showErrMsg = "show proc '/dbs/' failed"
 )
 
+var (
+	TrueValues = []string{"Yes", "yes", "YES", "OK", "ok", "True", "TRUE", "true"}
+)
+
 // All Update* functions force to update meta from fe
 // TODO: reduce code, need to each level contain up level reference to get id
 
@@ -140,7 +144,7 @@ func (m *Meta) GetFullTableName(tableName string) string {
 
 // Update table meta, return xerror.Meta category if no such table exists.
 func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) {
-	log.Infof("UpdateTable tableName: %s, tableId: %d", tableName, tableId)
+	log.Tracef("UpdateTable tableName: %s, tableId: %d", tableName, tableId)
 
 	dbId, err := m.GetDbId()
 	if err != nil {
@@ -161,7 +165,7 @@ func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) 
 	}
 
 	query := fmt.Sprintf("show proc '/dbs/%d/'", dbId)
-	log.Infof("UpdateTable Sql: %s", query)
+	log.Tracef("UpdateTable Sql: %s", query)
 	rows, err := db.Query(query)
 	if err != nil {
 		return nil, xerror.Wrap(err, xerror.Normal, query)
@@ -190,7 +194,7 @@ func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) 
 		// match parsedDbname == dbname, return dbId
 		if parsedTableName == tableName || parsedTableId == tableId {
 			fullTableName := m.GetFullTableName(parsedTableName)
-			log.Debugf("found table:%s, tableId:%d, type:%s", fullTableName, parsedTableId, parsedTableType)
+			log.Tracef("update table found table:%s, tableId:%d, type:%s", fullTableName, parsedTableId, parsedTableType)
 			m.TableName2IdMap[fullTableName] = parsedTableId
 			tableMeta := &TableMeta{
 				DatabaseMeta:   &m.DatabaseMeta,
@@ -802,6 +806,54 @@ func (m *Meta) GetIndexNameMap(tableId int64, partitionId int64) (map[string]*In
 	}
 }
 
+func (m *Meta) ShowIndexes(tableName string) ([]*IndexDesc, error) {
+	conn, err := m.Connect()
+	if err != nil {
+		return nil, err
+	}
+
+	dbName := utils.FormatKeywordName(m.Database)
+	tableName = utils.FormatKeywordName(tableName)
+	query := fmt.Sprintf("SHOW INDEXES FROM %s.%s", dbName, tableName)
+	log.Debugf("show indexes sql: %s", query)
+
+	rows, err := conn.Query(query)
+	if err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "show indexes sql: %s", query)
+	}
+
+	defer rows.Close()
+	indexes := make([]*IndexDesc, 0)
+	for rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "parse describe table %s rows", tableName)
+		}
+
+		name, err := rowParser.GetString("Key_name")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "parse indexes Key_name failed")
+		}
+
+		indexType, err := rowParser.GetString("Index_type")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "parse indexes Index_type failed")
+		}
+
+		desc := IndexDesc{
+			Name:      name,
+			IndexType: indexType,
+		}
+		indexes = append(indexes, &desc)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "show indexes sql: %s", query)
+	}
+
+	return indexes, nil
+}
+
 func (m *Meta) updateReplica(index *IndexMeta) error {
 	indexId := index.Id
 	partitionId := index.PartitionMeta.Id
@@ -1241,4 +1293,171 @@ func (m *Meta) IsTableDropped(partitionId int64) bool {
 
 func (m *Meta) IsIndexDropped(indexId int64) bool {
 	panic("IsIndexDropped is not supported, please use ThriftMeta instead")
+}
+
+func (m *Meta) GetDroppedIndexMap() map[int64]int64 {
+	panic("GetDroppedIndexMap is not supported, please use ThriftMeta instead")
+}
+
+// Describe table all by sql
+// DESC ${tableName} ALL
+func (m *Meta) DescribeTableAll(tableName string) (map[string]*MaterializedIndexDesc, error) {
+	db, err := m.Connect()
+	if err != nil {
+		return nil, err
+	}
+
+	dbName := utils.FormatKeywordName(m.Database)
+	tableName = utils.FormatKeywordName(tableName)
+	query := fmt.Sprintf("DESC %s.%s ALL", dbName, tableName)
+	log.Debugf("describe table sql: %s", query)
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "describe table %s", tableName)
+	}
+	defer rows.Close()
+
+	var indexName string
+	var indexKeysType string
+	columns := make(map[string]*MaterializedIndexDesc, 0)
+	for rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "parse describe table %s rows", tableName)
+		}
+
+		name, err := rowParser.GetString("Field")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Field failed, table: %s", tableName)
+		}
+
+		// mysql> desc t all;
+		// +-----------+---------------+-------+------+--------------+------+-------+---------+-------+---------+------------+-------------+
+		// | IndexName | IndexKeysType | Field | Type | InternalType | Null | Key   | Default | Extra | Visible | DefineExpr | WhereClause |
+		// +-----------+---------------+-------+------+--------------+------+-------+---------+-------+---------+------------+-------------+
+		// | t         | DUP_KEYS      | test  | int  | int          | Yes  | true  | NULL    |       | true    |            |             |
+		// |           |               | id    | int  | int          | Yes  | false | NULL    | NONE  | true    |            |             |
+		// |           |               |       |      |              |      |       |         |       |         |            |             |
+		// | ru1       | DUP_KEYS      | id    | int  | int          | Yes  | true  | NULL    |       | true    |            |             |
+		// +-----------+---------------+-------+------+--------------+------+-------+---------+-------+---------+------------+-------------+
+		// field is empty, skip scan
+		if name == "" {
+			indexName = ""
+			indexKeysType = ""
+			continue
+		} else if indexName == "" {
+			indexName, err = rowParser.GetString("IndexName")
+			if err != nil {
+				return nil, xerror.Wrapf(err, xerror.Normal, "describe table get IndexName failed, table: %s", tableName)
+			}
+
+			indexKeysType, err = rowParser.GetString("IndexKeysType")
+			if err != nil {
+				return nil, xerror.Wrapf(err, xerror.Normal, "describe table get IndexKeysType failed, table: %s", tableName)
+			}
+		}
+
+		// get Type, Null, Key, Default, Extra
+		typ, err := rowParser.GetString("Type")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Type failed, table: %s", tableName)
+		}
+
+		internalType, err := rowParser.GetString("InternalType")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get InternalType failed, table: %s", tableName)
+		}
+
+		null, err := rowParser.GetString("Null")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Null failed, table: %s", tableName)
+		}
+
+		key, err := rowParser.GetString("Key")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Key failed, table: %s", tableName)
+		}
+
+		defaultValue, err := rowParser.GetString("Default")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Default failed, table: %s", tableName)
+		}
+
+		extra, err := rowParser.GetString("Extra")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Extra failed, table: %s", tableName)
+		}
+
+		visible, err := rowParser.GetString("Visible")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Visible failed, table: %s", tableName)
+		}
+
+		isVisible := utils.Contains(TrueValues, visible)
+		isNull := utils.Contains(TrueValues, null)
+		isKey := utils.Contains(TrueValues, key)
+		if defaultValue == "NULL" {
+			defaultValue = ""
+		}
+
+		columnDesc := ColumnDesc{
+			Name:         name,
+			Type:         typ,
+			InternalType: internalType,
+			IsNull:       isNull,
+			IsKey:        isKey,
+			Default:      defaultValue,
+			Extra:        extra,
+			Visible:      isVisible,
+		}
+		if materializedIndex, ok := columns[indexName]; ok {
+			materializedIndex.ColumnDesc = append(materializedIndex.ColumnDesc, columnDesc)
+		} else {
+			columns[indexName] = &MaterializedIndexDesc{
+				IndexName:     indexName,
+				IndexKeysType: indexKeysType,
+				ColumnDesc:    []ColumnDesc{columnDesc},
+			}
+		}
+
+		if err := rows.Err(); err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table %s", tableName)
+		}
+	}
+	return columns, nil
+
+}
+
+func (m *Meta) ShowTables() ([]string, error) {
+	db, err := m.Connect()
+	if err != nil {
+		return nil, err
+	}
+
+	dbName := utils.FormatKeywordName(m.Database)
+	query := fmt.Sprintf("SHOW TABLES FROM %s", dbName)
+	log.Debugf("show tables from %s, sql: %s", m.Database, query)
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "show tables from %s", dbName)
+	}
+
+	tables := []string{}
+	defer rows.Close()
+	for rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "parse show tables from %s rows", dbName)
+		}
+
+		table, err := rowParser.GetString(fmt.Sprintf("Tables_in_%s", m.Database))
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "show tables from %s get table error", m.Database)
+		}
+
+		tables = append(tables, table)
+	}
+	return tables, nil
 }

@@ -39,7 +39,7 @@ suite("test_ts_col_basic") {
             if (allMatch) {
                 return true
             } else if (--times > 0) {
-                sleep(sync_gap_time)
+                sleep(helper.sync_gap_time)
                 res = target_sql "SHOW FULL COLUMNS FROM ${checkTable}"
             }
         }

@@ -31,26 +31,36 @@ type RenameRollup struct {
 	OldRollupName string `json:"oR"`
 }
 
-func NewRenameRollupFromJson(data string) (*RenameRollup, error) {
-	var record RenameRollup
-	err := json.Unmarshal([]byte(data), &record)
+func (renameRollup *RenameRollup) Deserialize(data string) error {
+	err := json.Unmarshal([]byte(data), &renameRollup)
 	if err != nil {
-		return nil, xerror.Wrap(err, xerror.Normal, "unmarshal rename rollup record error")
+		return xerror.Wrap(err, xerror.Normal, "unmarshal rename rollup record error")
 	}
 
-	if record.TableId == 0 {
-		return nil, xerror.Errorf(xerror.Normal, "rename rollup record table id not found")
+	if renameRollup.TableId == 0 {
+		return xerror.Errorf(xerror.Normal, "rename rollup record table id not found")
 	}
 
-	if record.NewRollupName == "" {
-		return nil, xerror.Errorf(xerror.Normal, "rename rollup record old rollup name not found")
+	if renameRollup.NewRollupName == "" {
+		return xerror.Errorf(xerror.Normal, "rename rollup record old rollup name not found")
 	}
+	return nil
+}
 
-	return &record, nil
+func NewRenameRollupFromJson(data string) (*RenameRollup, error) {
+	var renameRollup RenameRollup
+	if err := renameRollup.Deserialize(data); err != nil {
+		return nil, err
+	}
+	return &renameRollup, nil
 }
 
 // Stringer
 func (r *RenameRollup) String() string {
 	return fmt.Sprintf("RenameRollup: DbId: %d, TableId: %d, IndexId: %d, NewRollupName: %s, OldRollupName: %s",
 		r.DbId, r.TableId, r.IndexId, r.NewRollupName, r.OldRollupName)
+}
+
+func (renameRollup *RenameRollup) GetTableId() int64 {
+	return renameRollup.TableId
 }

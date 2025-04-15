@@ -397,7 +397,7 @@ type TRuntimeProfileNode struct {
 	InfoStringsDisplayOrder []string            `thrift:"info_strings_display_order,7,required" frugal:"7,required,list<string>" json:"info_strings_display_order"`
 	ChildCountersMap        map[string][]string `thrift:"child_counters_map,8,required" frugal:"8,required,map<string:set<string>>" json:"child_counters_map"`
 	Timestamp               int64               `thrift:"timestamp,9,required" frugal:"9,required,i64" json:"timestamp"`
-	IsSink                  *bool               `thrift:"is_sink,10,optional" frugal:"10,optional,bool" json:"is_sink,omitempty"`
+	DeprecatedIsSink        *bool               `thrift:"deprecated_is_sink,10,optional" frugal:"10,optional,bool" json:"deprecated_is_sink,omitempty"`
 }
 
 func NewTRuntimeProfileNode() *TRuntimeProfileNode {
@@ -443,13 +443,13 @@ func (p *TRuntimeProfileNode) GetTimestamp() (v int64) {
 	return p.Timestamp
 }
 
-var TRuntimeProfileNode_IsSink_DEFAULT bool
+var TRuntimeProfileNode_DeprecatedIsSink_DEFAULT bool
 
-func (p *TRuntimeProfileNode) GetIsSink() (v bool) {
-	if !p.IsSetIsSink() {
-		return TRuntimeProfileNode_IsSink_DEFAULT
+func (p *TRuntimeProfileNode) GetDeprecatedIsSink() (v bool) {
+	if !p.IsSetDeprecatedIsSink() {
+		return TRuntimeProfileNode_DeprecatedIsSink_DEFAULT
 	}
-	return *p.IsSink
+	return *p.DeprecatedIsSink
 }
 func (p *TRuntimeProfileNode) SetName(val string) {
 	p.Name = val
@@ -478,8 +478,8 @@ func (p *TRuntimeProfileNode) SetChildCountersMap(val map[string][]string) {
 func (p *TRuntimeProfileNode) SetTimestamp(val int64) {
 	p.Timestamp = val
 }
-func (p *TRuntimeProfileNode) SetIsSink(val *bool) {
-	p.IsSink = val
+func (p *TRuntimeProfileNode) SetDeprecatedIsSink(val *bool) {
+	p.DeprecatedIsSink = val
 }
 
 var fieldIDToName_TRuntimeProfileNode = map[int16]string{
@@ -492,11 +492,11 @@ var fieldIDToName_TRuntimeProfileNode = map[int16]string{
 	7:  "info_strings_display_order",
 	8:  "child_counters_map",
 	9:  "timestamp",
-	10: "is_sink",
+	10: "deprecated_is_sink",
 }
 
-func (p *TRuntimeProfileNode) IsSetIsSink() bool {
-	return p.IsSink != nil
+func (p *TRuntimeProfileNode) IsSetDeprecatedIsSink() bool {
+	return p.DeprecatedIsSink != nil
 }
 
 func (p *TRuntimeProfileNode) Read(iprot thrift.TProtocol) (err error) {
@@ -870,7 +870,7 @@ func (p *TRuntimeProfileNode) ReadField10(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.IsSink = _field
+	p.DeprecatedIsSink = _field
 	return nil
 }
 
@@ -1150,11 +1150,11 @@ WriteFieldEndError:
 }
 
 func (p *TRuntimeProfileNode) writeField10(oprot thrift.TProtocol) (err error) {
-	if p.IsSetIsSink() {
-		if err = oprot.WriteFieldBegin("is_sink", thrift.BOOL, 10); err != nil {
+	if p.IsSetDeprecatedIsSink() {
+		if err = oprot.WriteFieldBegin("deprecated_is_sink", thrift.BOOL, 10); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteBool(*p.IsSink); err != nil {
+		if err := oprot.WriteBool(*p.DeprecatedIsSink); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -1209,7 +1209,7 @@ func (p *TRuntimeProfileNode) DeepEqual(ano *TRuntimeProfileNode) bool {
 	if !p.Field9DeepEqual(ano.Timestamp) {
 		return false
 	}
-	if !p.Field10DeepEqual(ano.IsSink) {
+	if !p.Field10DeepEqual(ano.DeprecatedIsSink) {
 		return false
 	}
 	return true
@@ -1310,12 +1310,12 @@ func (p *TRuntimeProfileNode) Field9DeepEqual(src int64) bool {
 }
 func (p *TRuntimeProfileNode) Field10DeepEqual(src *bool) bool {
 
-	if p.IsSink == src {
+	if p.DeprecatedIsSink == src {
 		return true
-	} else if p.IsSink == nil || src == nil {
+	} else if p.DeprecatedIsSink == nil || src == nil {
 		return false
 	}
-	if *p.IsSink != *src {
+	if *p.DeprecatedIsSink != *src {
 		return false
 	}
 	return true

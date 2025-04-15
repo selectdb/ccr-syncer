@@ -121,7 +121,7 @@ suite("test_ds_tbl_replace") {
     assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${oldTableName}", 10, 60))
 
     // new table are dropped
-    v = target_sql """ SHOW TABLES LIKE "${newTableName}" """
+    def v = target_sql """ SHOW TABLES LIKE "${newTableName}" """
     assertTrue(v.size() == 0);
 
     // no fullsync are triggered
