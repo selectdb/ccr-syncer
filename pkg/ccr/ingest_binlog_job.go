@@ -533,6 +533,8 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64,
 		}
 		srcIndexMeta, ok := srcIndexIdMap[indexId]
 		if !ok {
+			log.Warnf("index id %d not found in src meta, dropped indexes %v, shadow indexes %v, src meta dropped indexes: %v",
+				indexId, j.ccrJob.Extra.DroppedIndexes, j.ccrJob.progress.ShadowIndexes, j.srcMeta.GetDroppedIndexMap())
 			j.setError(xerror.Errorf(xerror.Meta, "index id %v not found in src meta", indexId))
 			return
 		}
