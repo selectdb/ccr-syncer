@@ -246,16 +246,17 @@ func (r *retryWithMasterRedirectAndCachedClientsRpc) call0(masterClient IFeRpc) 
 
 	// Step 1: check error
 	if err != nil {
+		addr := masterClient.Address()
 		if !canUseNextAddr(err) {
 			return &call0Result{
 				canUseNextAddr: false,
-				err:            xerror.Wrap(err, xerror.FE, "thrift error"),
+				err:            xerror.Wrapf(err, xerror.FE, "addr [%s] thrift error", addr),
 			}
 		} else {
-			log.Warnf("call error: %+v, try next addr", err)
+			log.Warnf("call [%s] error: %s, try next addr", addr, err)
 			return &call0Result{
 				canUseNextAddr: true,
-				err:            xerror.Wrap(err, xerror.FE, "thrift error"),
+				err:            xerror.Wrapf(err, xerror.FE, "addr [%s] thrift error", addr),
 			}
 		}
 	}
@@ -304,20 +305,28 @@ func (r *retryWithMasterRedirectAndCachedClientsRpc) call0(masterClient IFeRpc) 
 	}
 }
 
-func (r *retryWithMasterRedirectAndCachedClientsRpc) call() (resultType, error) {
+type RetryCall int
+
+const (
+	RetryCallNone RetryCall = iota
+	RetryCallImmediate
+	RetryCallDelayed
+)
+
+func (r *retryWithMasterRedirectAndCachedClientsRpc) call() (RetryCall, resultType, error) {
 	rpc := r.rpc
 	masterClient := rpc.masterClient
 
 	// Step 1: try master
 	result := r.call0(masterClient)
 	if result.err == nil {
-		return result.resp, nil
+		return RetryCallNone, result.resp, nil
 	}
 
 	// Step 2: check error, if can't use next addr, return error
 	// canUseNextAddr means can try next addr, contains ErrNoConnection, ErrNoResolver, ErrNoDestAddress => (feredirect && use next cached addr)
 	if !result.canUseNextAddr {
-		return nil, result.err
+		return RetryCallNone, nil, result.err
 	}
 
 	// Step 3: if set master addr, redirect to master
@@ -333,11 +342,11 @@ func (r *retryWithMasterRedirectAndCachedClientsRpc) call() (resultType, error) 
 		} else {
 			masterClient, err = newSingleFeClient(masterAddr)
 			if err != nil {
-				return nil, xerror.Wrapf(err, xerror.RPC, "NewFeClient [%s] error: %v", masterAddr, err)
+				return RetryCallNone, nil, xerror.Wrapf(err, xerror.RPC, "NewFeClient [%s] error: %v", masterAddr, err)
 			}
 		}
 		rpc.updateMasterClient(masterClient)
-		return r.call()
+		return RetryCallImmediate, nil, nil
 	}
 
 	// Step 4: try all cached fe clients
@@ -346,7 +355,7 @@ func (r *retryWithMasterRedirectAndCachedClientsRpc) call() (resultType, error) 
 	}
 	delete(r.notriedClients, masterClient.Address())
 	if len(r.notriedClients) == 0 {
-		return nil, result.err
+		return RetryCallNone, nil, result.err
 	}
 	// get first notried client
 	var client IFeRpc
@@ -355,7 +364,7 @@ func (r *retryWithMasterRedirectAndCachedClientsRpc) call() (resultType, error) 
 	}
 	// because call0 failed, so original masterClient is not master now, set client as masterClient for retry
 	rpc.updateMasterClient(client)
-	return r.call()
+	return RetryCallDelayed, nil, nil
 }
 
 func (rpc *FeRpc) callWithMasterRedirect(caller callerType) (resultType, error) {
@@ -363,7 +372,23 @@ func (rpc *FeRpc) callWithMasterRedirect(caller callerType) (resultType, error) 
 		rpc:    rpc,
 		caller: caller,
 	}
-	return r.call()
+	for {
+		retryCall, resultType, err := r.call()
+		if err != nil {
+			return nil, err
+		}
+		switch retryCall {
+		case RetryCallNone:
+			return resultType, nil
+		case RetryCallImmediate:
+			continue
+		case RetryCallDelayed:
+			time.Sleep(100 * time.Millisecond) // TODO: support exponential backoff
+			continue
+		default:
+			panic("unknown retry call")
+		}
+	}
 }
 
 func convertResult[T any](result any, err error) (*T, error) {
