@@ -633,14 +633,14 @@ func (s *HttpService) listJobsHandler(w http.ResponseWriter, r *http.Request) {
 func (s *HttpService) showJobStateHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("show job state")
 
-	var result *defaultResult
+	var result string
 
-	defer func() { writeJson(w, result) }()
+	defer func() { w.Write([]byte(result)) }()
 
 	allJobs, err := s.getAllJobs()
 	if err != nil {
 		log.Warnf("when show jobs state, get all data failed: %+v", err)
-		result = newErrorResult(err.Error())
+		result = err.Error()
 		return
 	}
 	data := [][]string{}
@@ -654,14 +654,14 @@ func (s *HttpService) showJobStateHandler(w http.ResponseWriter, r *http.Request
 		jobInfo, err := s.db.GetJobInfo(jobName)
 		if err != nil {
 			log.Warnf("db get job info failed: %+v", err)
-			result = newErrorResult(err.Error())
+			result = err.Error()
 			return
 		}
 
 		err = json.Unmarshal([]byte(jobInfo), &job)
 		if err != nil {
 			log.Warnf("unmarshal get job info failed: %+v", err)
-			result = newErrorResult(err.Error())
+			result = err.Error()
 			return
 		}
 
@@ -675,13 +675,13 @@ func (s *HttpService) showJobStateHandler(w http.ResponseWriter, r *http.Request
 		var jobProgress ccr.JobProgress
 		if jobProgressData, err := s.db.GetProgress(jobName); err != nil {
 			log.Warnf("get job progress failed: %+v", err)
-			result = newErrorResult(err.Error())
+			result = err.Error()
 			return
 		} else {
 			err := json.Unmarshal([]byte(jobProgressData), &jobProgress)
 			if err != nil {
 				log.Warnf("unmarshal get job progress error")
-				result = newErrorResult(err.Error())
+				result = err.Error()
 				return
 			}
 			jobProgress.PersistData = ""
@@ -690,7 +690,7 @@ func (s *HttpService) showJobStateHandler(w http.ResponseWriter, r *http.Request
 		feRpc, err := rpc.NewFeRpc(srcSpec)
 		if err != nil {
 			log.Warnf("new fe rpc failed: %+v", err)
-			result = newErrorResult(err.Error())
+			result = err.Error()
 			return
 		}
 
@@ -698,7 +698,7 @@ func (s *HttpService) showJobStateHandler(w http.ResponseWriter, r *http.Request
 		resp, err := feRpc.GetBinlogLag(srcSpec, commitSeq)
 		if err != nil {
 			log.Warnf("rpc get binlog failed: %+v", err)
-			result = newErrorResult(err.Error())
+			result = err.Error()
 			return
 		}
 
@@ -770,11 +770,10 @@ func (s *HttpService) showJobStateHandler(w http.ResponseWriter, r *http.Request
 		}
 	default:
 		log.Warnf("show job state with unknow type: %+v", r.URL.RawQuery)
-		result = newErrorResult(fmt.Sprintf("show job state with unknow type: %+v", r.URL.RawQuery))
+		result = fmt.Sprintf("show job state with unknow type: %+v", r.URL.RawQuery)
 		return
 	}
-	result = newSuccessResult()
-	w.Write([]byte(sb.String()))
+	result = sb.String()
 }
 
 // get job progress
