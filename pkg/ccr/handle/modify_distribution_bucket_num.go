@@ -16,15 +16,9 @@ type ModifyDistributionBucketNumHandle struct {
 }
 
 func (h *ModifyDistributionBucketNumHandle) Handle(j *ccr.Job, commitSeq int64, modifyDistributionBucketNum *record.ModifyDistributionBucketNum) error {
-	var destTableName string
-	if j.SyncType == ccr.TableSync {
-		destTableName = j.Dest.Table
-	} else {
-		table, err := j.GetDestMeta().GetTable(modifyDistributionBucketNum.TableId)
-		if err != nil {
-			return err
-		}
-		destTableName = table.Name
+	destTableName, err := j.GetDestNameBySrcId(modifyDistributionBucketNum.TableId)
+	if err != nil {
+		return err
 	}
 	bucketType := modifyDistributionBucketNum.Type
 	autoBucket := modifyDistributionBucketNum.AutoBucket

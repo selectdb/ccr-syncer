@@ -83,5 +83,5 @@ suite("test_ds_alt_prop_distr_type") {
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", existBucketNew, 60, "sql"))
 
     // don't sync
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", notExistBucketNew, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", existBucketNew, 60, "target"))
 }

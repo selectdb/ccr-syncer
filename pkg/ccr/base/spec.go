@@ -1466,6 +1466,14 @@ func (s *Spec) DropRollup(destTableName, rollup string) error {
 	return s.Exec(dropRollupSql)
 }
 
+func (s *Spec) ModifyDistributionType(destTableName string) error {
+	dbName := utils.FormatKeywordName(s.Database)
+	destTableName = utils.FormatKeywordName(destTableName)
+	modifyDistributionTypeSql := "ALTER TABLE " + dbName + "." + destTableName + " SET (\"distribution_type\" = \"random\") "
+	log.Infof("modify distribution type sql: %s", modifyDistributionTypeSql)
+	return s.Exec(modifyDistributionTypeSql)
+}
+
 func (s *Spec) ModifyDistributionBucketNum(destTableName string, bucketType string, autoBucket bool, bucketNum int, columnsName string) error {
 	dbName := utils.FormatKeywordName(s.Database)
 	destTableName = utils.FormatKeywordName(destTableName)
