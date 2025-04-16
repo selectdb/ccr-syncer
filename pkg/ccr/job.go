@@ -3277,6 +3277,7 @@ func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
 		case festruct.TBinlogType_MODIFY_TABLE_PROPERTY:
 		case festruct.TBinlogType_MODIFY_PARTITIONS:
 		case festruct.TBinlogType_INDEX_CHANGE_JOB:
+		case festruct.TBinlogType_MODIFY_DISTRIBUTION_BUCKET_NUM:
 
 		default:
 			return false

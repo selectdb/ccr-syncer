@@ -76,5 +76,7 @@ type Specer interface {
 	DesyncTables(tables ...string) error
 	SyncTables(tables ...string) error
 
+	ModifyDistributionBucketNum(destTableName string, bucketType string, autoBucket bool, bucketNum int, columnsName string) error
+
 	utils.Subject[SpecEvent]
 }

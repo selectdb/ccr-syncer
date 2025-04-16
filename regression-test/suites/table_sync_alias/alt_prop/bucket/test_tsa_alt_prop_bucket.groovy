@@ -85,5 +85,5 @@ suite("test_tsa_alt_prop_bucket") {
 
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", existNewBucket, 60, "sql"))
 
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${aliasTableName}", existOldBucket, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${aliasTableName}", existNewBucket, 60, "target"))
 }
