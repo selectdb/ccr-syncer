@@ -24,16 +24,17 @@ import (
 )
 
 type PartitionRecord struct {
-	Id      int64  `json:"partitionId"`
-	Range   string `json:"range"`
-	Version int64  `json:"version"`
-	IsTemp  bool   `json:"isTempPartition"`
-	Stid    int64  `json:"stid"`
+	Id                 int64  `json:"partitionId"`
+	Range              string `json:"range"`
+	RangeNotDefaultKey string `json:"rangeNotDefault"`
+	Version            int64  `json:"version"`
+	IsTemp             bool   `json:"isTempPartition"`
+	Stid               int64  `json:"stid"`
 }
 
 func (p PartitionRecord) String() string {
-	return fmt.Sprintf("PartitionRecord{Id: %d, Range: '%s', Version: %d, IsTemp: %v, Stid: %d}",
-		p.Id, p.Range, p.Version, p.IsTemp, p.Stid)
+	return fmt.Sprintf("PartitionRecord{Id: %d, Range: '%s', RangeNotDefaultKey: '%s', Version: %d, IsTemp: %v, Stid: %d}",
+		p.Id, p.Range, p.RangeNotDefaultKey, p.Version, p.IsTemp, p.Stid)
 }
 
 type TableRecord struct {

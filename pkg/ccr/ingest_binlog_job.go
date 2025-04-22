@@ -490,7 +490,12 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64,
 	job := j.ccrJob
 
 	srcPartitionId := partitionRecord.Id
-	srcPartitionRange := partitionRecord.Range
+	srcPartitionRange := func() string {
+		if strings.Contains(partitionRecord.Range, "default key") {
+			return partitionRecord.RangeNotDefaultKey
+		}
+		return partitionRecord.Range
+	}()
 	sourceStid := partitionRecord.Stid
 	stidMap := j.stidMap
 	destPartitionId, err := j.destMeta.GetPartitionIdByRange(destTableId, srcPartitionRange)
@@ -650,6 +655,10 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 			err = xerror.Errorf(xerror.Meta, "partition range: %s not in src cluster", rangeKey)
 			j.setError(err)
 			return
+		}
+		// the rangeKey maybe is default key not mapping in destPartitionMap
+		if strings.Contains(rangeKey, "default key") {
+			rangeKey = partitionRecord.RangeNotDefaultKey
 		}
 		if _, ok := destPartitionMap[rangeKey]; !ok {
 			log.Debugf("the expected partition range: '%s', the dest partition map: %v", rangeKey, destPartitionMap)
