@@ -1366,6 +1366,12 @@ func (j *Job) fullSync() error {
 				tableMapping[srcTableId] = destTableId
 			}
 
+			// srcMeta may cache tables that have been dropped (created with the same name after being dropped after the fullsync 1.2 step)
+			// and these tables, if there is an upsert binlog processed after fullsync
+			// will result in a mapping between these dropped tables and the new table with the same name in the downstream mapping table
+			// i.e., the TableMapping generates an error log, so that if there is a drop table binlog after the upsert
+			// then the new table with the same name will be dropped by the error
+			j.srcMeta.ClearTablesCache()
 			j.progress.TableMapping = tableMapping
 			j.progress.ShadowIndexes = nil
 			j.progress.PartitionCommitSeqMap = nil
