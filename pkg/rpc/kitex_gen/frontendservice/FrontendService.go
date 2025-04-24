@@ -478,8 +478,8 @@ const (
 	TBinlogType_DROP_ROLLUP                               TBinlogType = 23
 	TBinlogType_RECOVER_INFO                              TBinlogType = 24
 	TBinlogType_MODIFY_DISTRIBUTION_BUCKET_NUM            TBinlogType = 25
-	TBinlogType_MIN_UNKNOWN                               TBinlogType = 26
-	TBinlogType_UNKNOWN_11                                TBinlogType = 27
+	TBinlogType_MODIFY_DISTRIBUTION_TYPE                  TBinlogType = 26
+	TBinlogType_MIN_UNKNOWN                               TBinlogType = 27
 	TBinlogType_UNKNOWN_12                                TBinlogType = 28
 	TBinlogType_UNKNOWN_13                                TBinlogType = 29
 	TBinlogType_UNKNOWN_14                                TBinlogType = 30
@@ -625,10 +625,10 @@ func (p TBinlogType) String() string {
 		return "RECOVER_INFO"
 	case TBinlogType_MODIFY_DISTRIBUTION_BUCKET_NUM:
 		return "MODIFY_DISTRIBUTION_BUCKET_NUM"
+	case TBinlogType_MODIFY_DISTRIBUTION_TYPE:
+		return "MODIFY_DISTRIBUTION_TYPE"
 	case TBinlogType_MIN_UNKNOWN:
 		return "MIN_UNKNOWN"
-	case TBinlogType_UNKNOWN_11:
-		return "UNKNOWN_11"
 	case TBinlogType_UNKNOWN_12:
 		return "UNKNOWN_12"
 	case TBinlogType_UNKNOWN_13:
@@ -865,10 +865,10 @@ func TBinlogTypeFromString(s string) (TBinlogType, error) {
 		return TBinlogType_RECOVER_INFO, nil
 	case "MODIFY_DISTRIBUTION_BUCKET_NUM":
 		return TBinlogType_MODIFY_DISTRIBUTION_BUCKET_NUM, nil
+	case "MODIFY_DISTRIBUTION_TYPE":
+		return TBinlogType_MODIFY_DISTRIBUTION_TYPE, nil
 	case "MIN_UNKNOWN":
 		return TBinlogType_MIN_UNKNOWN, nil
-	case "UNKNOWN_11":
-		return TBinlogType_UNKNOWN_11, nil
 	case "UNKNOWN_12":
 		return TBinlogType_UNKNOWN_12, nil
 	case "UNKNOWN_13":

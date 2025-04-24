@@ -3249,6 +3249,15 @@ func (j *Job) isRenamePartitionCommitted(record *record.RenamePartition) (bool, 
 	return true, nil
 }
 
+func (j *Job) isModifyDistributionTypeCommitted(r *record.ModifyDistributionType) (bool, error) {
+	j.GetDestMeta().GetTable(r.GetTableId())
+	destTableName, err := j.GetDestNameBySrcId(r.GetTableId())
+	if err != nil {
+		return false, err
+	}
+	return j.CheckCreateTable(destTableName, "DISTRIBUTED BY RANDOM")
+}
+
 // determineBinlogState determines whether the unknown binlog is committed or not.
 // The result is true if the binlog is committed, otherwise false.
 func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
@@ -3356,6 +3365,12 @@ func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
 			return false, nil
 		}
 		return j.isRenameColumnCommitted(renameColumnRecord)
+	case festruct.TBinlogType_MODIFY_DISTRIBUTION_TYPE:
+		modifyDistributionType, err := record.NewModifyDistributionTypeFromJson(binlog.GetData())
+		if err != nil {
+			return false, nil
+		}
+		return j.isModifyDistributionTypeCommitted(modifyDistributionType)
 
 	default:
 		return false, xerror.Errorf(xerror.Normal, "unknown binlog type: %v, commit seq %d, data %s",
@@ -3979,6 +3994,33 @@ func (j *Job) Desync() error {
 	} else {
 		return j.desyncTable()
 	}
+}
+
+// check show create table contain some string
+func (j *Job) CheckCreateTable(tableName, expectedStr string) (bool, error) {
+	db, err := j.Dest.Connect()
+	if err != nil {
+		return false, err
+	}
+
+	dbName := utils.FormatKeywordName(j.Dest.Database)
+	tableName = utils.FormatKeywordName(tableName)
+	query := fmt.Sprintf("SHOW CREATE TABLE %s.%s", dbName, tableName)
+	log.Infof("show create table sql: %s", query)
+	rows, err := db.Query(query)
+	if err != nil {
+		return false, xerror.Wrapf(err, xerror.Normal, "show create table %s", tableName)
+	}
+	defer rows.Close()
+	rowParser := utils.NewRowParser()
+	if err := rowParser.Parse(rows); err != nil {
+		return false, xerror.Wrapf(err, xerror.Normal, "parse show create table %s rows", tableName)
+	}
+	createSql, err := rowParser.GetString("Create Table")
+	if err != nil {
+		return false, xerror.Wrapf(err, xerror.Normal, query)
+	}
+	return strings.Contains(createSql, expectedStr), nil
 }
 
 // stop job
