@@ -933,6 +933,7 @@ func (j *Job) fullSync() error {
 		if err := j.ISrc.CreateSnapshot(snapshotName, backupTableList); err != nil {
 			return err
 		}
+		utils.SetDebugPoint("fullsync create snapshot")
 		j.progress.NextSubVolatile(WaitBackupDone, snapshotName)
 		return nil
 
@@ -1366,11 +1367,6 @@ func (j *Job) fullSync() error {
 				tableMapping[srcTableId] = destTableId
 			}
 
-			// srcMeta may cache tables that have been dropped (created with the same name after being dropped after the fullsync 1.2 step)
-			// and these tables, if there is an upsert binlog processed after fullsync
-			// will result in a mapping between these dropped tables and the new table with the same name in the downstream mapping table
-			// i.e., the TableMapping generates an error log, so that if there is a drop table binlog after the upsert
-			// then the new table with the same name will be dropped by the error
 			j.srcMeta.ClearTablesCache()
 			j.progress.TableMapping = tableMapping
 			j.progress.ShadowIndexes = nil
@@ -1546,6 +1542,14 @@ func (j *Job) getDbSyncTableRecords(upsert *record.Upsert) []*record.TableRecord
 	tableRecords := make([]*record.TableRecord, 0, len(upsert.TableRecords))
 
 	for tableId, tableRecord := range upsert.TableRecords {
+		// filter dropped table on upstream
+		if ok, err := j.isTableDropped(tableId); err != nil {
+			log.Warn(err)
+			return nil
+		} else if ok {
+			log.Warn("table dropped on upstream")
+			continue
+		}
 		if tableCommitSeq, ok := tableCommitSeqMap[tableId]; ok && commitSeq <= tableCommitSeq {
 			// All the partition records of the table have been committed
 			continue
@@ -1567,7 +1571,7 @@ func (j *Job) getDbSyncTableRecords(upsert *record.Upsert) []*record.TableRecord
 			tableRecords = append(tableRecords, tableRecord)
 		}
 	}
-
+	log.Debug(tableRecords)
 	return tableRecords
 }
 
