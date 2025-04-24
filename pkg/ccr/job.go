@@ -1571,7 +1571,6 @@ func (j *Job) getDbSyncTableRecords(upsert *record.Upsert) []*record.TableRecord
 			tableRecords = append(tableRecords, tableRecord)
 		}
 	}
-	log.Debug(tableRecords)
 	return tableRecords
 }
 
