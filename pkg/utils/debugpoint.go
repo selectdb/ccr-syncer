@@ -49,12 +49,8 @@ func SetDebugPoint(name string) {
 	if !IsDebugpointEnabled() || !Debugpointexists(name) {
 		return
 	}
-	for {
-		if v, _ := debugpoints.Load(name); v == true {
-			time.Sleep(time.Microsecond)
-		} else {
-			return
-		}
+	for v, _ := debugpoints.Load(name); v == true; {
+		time.Sleep(time.Microsecond)
 	}
 }
 
