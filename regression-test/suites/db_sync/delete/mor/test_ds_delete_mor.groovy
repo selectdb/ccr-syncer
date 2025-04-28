@@ -15,24 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_ds_tbl_unique") {
+suite('test_ds_delete_mor') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
-            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
+            .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
-    def dbName = context.dbName
-    def tableName = "tbl_" + helper.randomSuffix()
-    def test_num = 0
-    def insert_num = 5
-
-    def exist = { res -> Boolean
-        return res.size() != 0
-    }
-
-    sql "DROP TABLE IF EXISTS ${dbName}.${tableName}"
-    target_sql "DROP TABLE IF EXISTS TEST_${dbName}.${tableName}"
-
+    def suffix = helper.randomSuffix()
+    def tableName = 'tbl_' + suffix
     helper.enableDbBinlog()
-
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (
@@ -41,28 +30,33 @@ suite("test_ds_tbl_unique") {
         )
         ENGINE=OLAP
         UNIQUE KEY(`test`, `id`)
-        PARTITION BY RANGE(`id`)
+        PARTITION BY RANGE(id)
         (
+            PARTITION `p1` VALUES LESS THAN ("100"),
+            PARTITION `p2` VALUES LESS THAN ("200")
         )
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
-            "binlog.enable" = "true"
+            "binlog.enable" = "true",
+            "binlog.ttl_seconds" = "180"
         )
     """
-
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 
-    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 60))
+    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${tableName}\"", { res -> res.size() == 1 }, 60, 'target'))
 
-    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${tableName}\"", exist, 60, "sql"))
+    for (int i = 0; i < 10; i++) {
+        sql """ INSERT INTO ${tableName} VALUES (${i}, ${i}) """
+    }
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", 10, 60))
 
-    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${tableName}\"", exist, 60, "target"))
+    sql """ DELETE FROM ${tableName} 
+            PARTITION `p1`
+            WHERE test < 5    
+    """
 
-    def sql_res = sql "SHOW CREATE TABLE ${tableName}"
-
-    def target_res = target_sql "SHOW CREATE TABLE ${tableName}"
-
-    assertTrue(target_res[0][1].contains("UNIQUE KEY(`test`, `id`)"))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", 5, 60))
 }

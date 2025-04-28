@@ -600,9 +600,13 @@ class Helper {
     }
 
     Boolean check_table_describe_times(String table, times = 30) {
+        return check_table_with_alias_describe_times(table, table, times)
+    }
+
+    Boolean check_table_with_alias_describe_times(String table, String alias, times = 30) {
         while (times > 0) {
             def upstream_describe = get_table_describe(table)
-            def downstream_describe = get_table_describe(table, "target")
+            def downstream_describe = get_table_describe(alias, "target")
             if (check_describes(upstream_describe, downstream_describe)) {
                 return true
             }
@@ -611,7 +615,7 @@ class Helper {
         }
 
         def upstream_describe = get_table_describe(table)
-        def downstream_describe = get_table_describe(table, "target")
+        def downstream_describe = get_table_describe(alias, "target")
         logger.info("upstream describe: ${upstream_describe}")
         logger.info("downstream describe: ${downstream_describe}")
         return false
@@ -649,6 +653,118 @@ class Helper {
         }
 
         add_failpoint_uri.call() { code, body ->
+            if (!"${code}".toString().equals("200")) {
+                throw "request failed, code: ${code}, body: ${body}"
+            }
+            def jsonSlurper = new groovy.json.JsonSlurper()
+            def object = jsonSlurper.parseText "${body}"
+            if (!object.success) {
+                throw "request failed, error msg: ${object.error_msg}"
+            }
+        }
+    }
+
+    void enableDebugpoint() {
+        def gson = new com.google.gson.Gson()
+        def request_body = [
+            name: "",
+            op: "enable",
+        ]
+        def enable_debugpoint_uri = { check_func ->
+            suite.httpTest {
+                uri "/debugpoint"
+                endpoint syncerAddress
+                body gson.toJson(request_body)
+                op "post"
+                check check_func
+            }
+        }
+
+        enable_debugpoint_uri.call() { code, body ->
+            if (!"${code}".toString().equals("200")) {
+                throw "request failed, code: ${code}, body: ${body}"
+            }
+            def jsonSlurper = new groovy.json.JsonSlurper()
+            def object = jsonSlurper.parseText "${body}"
+            if (!object.success) {
+                throw "request failed, error msg: ${object.error_msg}"
+            }
+        }
+    }
+
+    void disableDebugpoint() {
+        def gson = new com.google.gson.Gson()
+        def request_body = [
+            name: "",
+            op: "disable",
+        ]
+        def disable_debugpoint_uri = { check_func ->
+            suite.httpTest {
+                uri "/debugpoint"
+                endpoint syncerAddress
+                body gson.toJson(request_body)
+                op "post"
+                check check_func
+            }
+        }
+
+        disable_debugpoint_uri.call() { code, body ->
+            if (!"${code}".toString().equals("200")) {
+                throw "request failed, code: ${code}, body: ${body}"
+            }
+            def jsonSlurper = new groovy.json.JsonSlurper()
+            def object = jsonSlurper.parseText "${body}"
+            if (!object.success) {
+                throw "request failed, error msg: ${object.error_msg}"
+            }
+        }
+    }
+
+    void openDebugpoint(String name) {
+        def gson = new com.google.gson.Gson()
+        def request_body = [
+            name: name,
+            op: "open",
+        ]
+        def open_debugpoint_uri = { check_func ->
+            suite.httpTest {
+                uri "/debugpoint"
+                endpoint syncerAddress
+                body gson.toJson(request_body)
+                op "post"
+                check check_func
+            }
+        }
+
+        open_debugpoint_uri.call() { code, body ->
+            if (!"${code}".toString().equals("200")) {
+                throw "request failed, code: ${code}, body: ${body}"
+            }
+            def jsonSlurper = new groovy.json.JsonSlurper()
+            def object = jsonSlurper.parseText "${body}"
+            if (!object.success) {
+                throw "request failed, error msg: ${object.error_msg}"
+            }
+        }
+    }
+
+    void closeDebugpoint(String name) {
+        def gson = new com.google.gson.Gson()
+        def request_body = [
+            name: name,
+            op: "close",
+        ]
+        def close_debugpoint_uri = { check_func ->
+            suite.httpTest {
+                uri "/debugpoint"
+                endpoint syncerAddress
+                body gson.toJson(request_body)
+                op "post"
+                check check_func
+            }
+        }
+
+        close_debugpoint_uri.call() { code, body ->
             if (!"${code}".toString().equals("200")) {
                 throw "request failed, code: ${code}, body: ${body}"
             }

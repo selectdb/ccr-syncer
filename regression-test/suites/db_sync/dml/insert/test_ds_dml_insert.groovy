@@ -14,11 +14,11 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_ds_dml_insert") {
+suite('test_ds_dml_insert') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
-            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
+            .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
-    def tableName = "tbl_" + helper.randomSuffix()
+    def tableName = 'tbl_' + helper.randomSuffix()
 
     def exist = { res -> Boolean
         return res.size() != 0
@@ -28,20 +28,26 @@ suite("test_ds_dml_insert") {
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 
+    // Create a aggregate key table
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (
-            `test` INT,
-            `id` INT,
+            `user_id` INT,
+            `value` INT SUM,
         )
         ENGINE=OLAP
-        DUPLICATE KEY(`test`)
-        PARTITION BY RANGE(id)
+        AGGREGATE KEY(`user_id`)
+        PARTITION BY RANGE(user_id)
         (
             PARTITION `p1` VALUES LESS THAN ("100"),
-            PARTITION `p2` VALUES LESS THAN ("200")
+            PARTITION `p2` VALUES LESS THAN ("200"),
+            PARTITION `p3` VALUES LESS THAN ("300"),
+            PARTITION `p4` VALUES LESS THAN ("400"),
+            PARTITION `p5` VALUES LESS THAN ("500"),
+            PARTITION `p6` VALUES LESS THAN ("600"),
+            PARTITION `p7` VALUES LESS THAN MAXVALUE
         )
-        DISTRIBUTED BY HASH(id) BUCKETS 1
+        DISTRIBUTED BY HASH(user_id) BUCKETS 2
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true",
@@ -49,12 +55,46 @@ suite("test_ds_dml_insert") {
         )
     """
 
-    for (int i = 0; i < 200; i++) {
+    Integer total = 1000
+    for (int i = 0; i < total; i++) {
         sql """ INSERT INTO ${tableName} VALUES (${i}, ${i}) """
     }
-    sql "sync"
+    sql 'sync'
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 60))
-    assertTrue(helper.checkShowTimesOf("SELECT * FROM ${tableName}", exist, 60, "sql"))
-    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", 200, 60))
+    assertTrue(helper.checkShowTimesOf("SELECT * FROM ${tableName}", exist, 60, 'sql'))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", total, 60))
+
+    def checkDataConsistency = { ->
+        def up = sql_return_maparray """ SELECT * FROM ${tableName} ORDER BY user_id """
+        def down = target_sql_return_maparray """ SELECT * FROM ${tableName} ORDER BY user_id """
+        assertTrue(up.size() == down.size())
+        for (int i = 0; i < up.size(); i++) {
+            assertTrue(up[i].user_id == down[i].user_id)
+            assertTrue(up[i].value == down[i].value)
+        }
+    }
+    checkDataConsistency()
+
+    // Insert again
+    for (int i = 0; i < total; i++) {
+        sql """ INSERT INTO ${tableName} VALUES (${i}, ${i}) """
+    }
+    sql """ INSERT INTO ${tableName} VALUES (1000, 1000) """
+    sql 'sync'
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", total + 1, 60))
+
+    checkDataConsistency()
+
+    // Insert again when the job is paused
+    helper.ccrJobPause()
+    for (int i = 0; i < total; i++) {
+        sql """ INSERT INTO ${tableName} VALUES (${i}, ${i}) """
+    }
+    sql """ INSERT INTO ${tableName} VALUES (1001, 1001) """
+    sql 'sync'
+    helper.ccrJobResume()
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${tableName}", total + 2, 60))
+
+    checkDataConsistency()
 }

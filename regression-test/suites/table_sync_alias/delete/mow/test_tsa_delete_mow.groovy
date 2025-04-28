@@ -15,24 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_ts_tbl_aggregate") {
+suite('test_tsa_delete_mow') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
-            .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
+            .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
-    def dbName = context.dbName
-    def tableName = "tbl_" + helper.randomSuffix()
-    def test_num = 0
-    def insert_num = 5
-
-    def exist = { res -> Boolean
-        return res.size() != 0
-    }
-
-    sql "DROP TABLE IF EXISTS ${dbName}.${tableName}"
-    target_sql "DROP TABLE IF EXISTS TEST_${dbName}.${tableName}"
-
+    def tableName = 'tbl_' + helper.randomSuffix()
+    def aliasTableName = 'alias_' + helper.randomSuffix()
+    helper.set_alias(aliasTableName)
     helper.enableDbBinlog()
-
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (
@@ -40,29 +30,35 @@ suite("test_ts_tbl_aggregate") {
             `id` INT
         )
         ENGINE=OLAP
-        AGGREGATE KEY(`test`, `id`)
-        PARTITION BY RANGE(`id`)
+        UNIQUE KEY(`test`, `id`)
+        PARTITION BY RANGE(id)
         (
+            PARTITION `p1` VALUES LESS THAN ("100"),
+            PARTITION `p2` VALUES LESS THAN ("200")
         )
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
-            "binlog.enable" = "true"
+            "binlog.enable" = "true",
+            "binlog.ttl_seconds" = "180",
+            "enable_unique_key_merge_on_write" = "true"
         )
     """
-
     helper.ccrJobDelete(tableName)
     helper.ccrJobCreate(tableName)
 
-    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
+    assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 60))
+    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${aliasTableName}\"", { res -> res.size() == 1 }, 60, 'target'))
 
-    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${tableName}\"", exist, 60, "sql"))
+    for (int i = 0; i < 10; i++) {
+        sql """ INSERT INTO ${tableName} VALUES (${i}, ${i}) """
+    }
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${aliasTableName}", 10, 60))
 
-    assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${tableName}\"", exist, 60, "target"))
+    sql """ DELETE FROM ${tableName} 
+            PARTITION `p1`
+            WHERE test < 5    
+    """
 
-    def sql_res = sql "SHOW CREATE TABLE ${tableName}"
-
-    def target_res = target_sql "SHOW CREATE TABLE ${tableName}"
-
-    assertTrue(target_res[0][1].contains("AGGREGATE KEY(`test`, `id`)"))
+    assertTrue(helper.checkSelectTimesOf("SELECT * FROM ${aliasTableName}", 5, 60))
 }

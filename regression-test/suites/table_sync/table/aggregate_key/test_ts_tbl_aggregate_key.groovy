@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_ds_tbl_aggregate") {
+suite("test_ts_tbl_aggregate_key") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -34,25 +34,20 @@ suite("test_ds_tbl_aggregate") {
     helper.enableDbBinlog()
 
     sql """
-        CREATE TABLE if NOT EXISTS ${tableName}
-        (
-            `test` INT,
-            `id` INT
+        CREATE TABLE ${tableName}(
+            `id` int,
+            `age` int REPLACE_IF_NOT_NULL NULL
         )
-        ENGINE=OLAP
-        AGGREGATE KEY(`test`, `id`)
-        PARTITION BY RANGE(`id`)
-        (
-        )
-        DISTRIBUTED BY HASH(id) BUCKETS 1
-        PROPERTIES (
+        AGGREGATE KEY(`id`)
+        DISTRIBUTED BY HASH(id) BUCKETS 3 
+        PROPERTIES ( 
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true"
-        )
+        );
     """
 
-    helper.ccrJobDelete()
-    helper.ccrJobCreate()
+    helper.ccrJobDelete(tableName)
+    helper.ccrJobCreate(tableName)
 
     assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 30))
 
@@ -60,9 +55,19 @@ suite("test_ds_tbl_aggregate") {
 
     assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${tableName}\"", exist, 60, "target"))
 
-    def sql_res = sql "SHOW CREATE TABLE ${tableName}"
+    sql "INSERT INTO ${tableName} VALUES (1, 1), (2, 2), (3, 3), (4, 4), (5, 5)"
 
-    def target_res = target_sql "SHOW CREATE TABLE ${tableName}"
+    assertTrue(helper.checkSelectTimesOf(""" select * from ${tableName} """, 5, 30))
 
-    assertTrue(target_res[0][1].contains("AGGREGATE KEY(`test`, `id`)"))
+    assertTrue(helper.checkShowTimesOf(" select age from ${tableName} where id = 3 ", { r -> r[0][0] == 3}, 60, "target"))
+
+    sql "INSERT INTO ${tableName} VALUES (3, 5) "
+
+    assertTrue(helper.checkShowTimesOf(" select age from ${tableName} where id = 3 ", { r -> r[0][0] == 5}, 60, "target"))
+
+    sql "INSERT INTO ${tableName} VALUES (2, 4), (5, 7) "
+
+    assertTrue(helper.checkShowTimesOf(" select age from ${tableName} where id = 2 ", { r -> r[0][0] == 4}, 60, "target"))
+
+    assertTrue(helper.checkShowTimesOf(" select age from ${tableName} where id = 5 ", { r -> r[0][0] == 7}, 60, "target"))
 }
