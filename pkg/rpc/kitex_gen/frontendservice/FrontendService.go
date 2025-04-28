@@ -21540,19 +21540,20 @@ func (p *TLoadTxnBeginResult_) Field4DeepEqual(src *int64) bool {
 }
 
 type TBeginTxnRequest struct {
-	Cluster   *string          `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
-	User      *string          `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
-	Passwd    *string          `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
-	Db        *string          `thrift:"db,4,optional" frugal:"4,optional,string" json:"db,omitempty"`
-	TableIds  []int64          `thrift:"table_ids,5,optional" frugal:"5,optional,list<i64>" json:"table_ids,omitempty"`
-	UserIp    *string          `thrift:"user_ip,6,optional" frugal:"6,optional,string" json:"user_ip,omitempty"`
-	Label     *string          `thrift:"label,7,optional" frugal:"7,optional,string" json:"label,omitempty"`
-	AuthCode  *int64           `thrift:"auth_code,8,optional" frugal:"8,optional,i64" json:"auth_code,omitempty"`
-	Timeout   *int64           `thrift:"timeout,9,optional" frugal:"9,optional,i64" json:"timeout,omitempty"`
-	RequestId *types.TUniqueId `thrift:"request_id,10,optional" frugal:"10,optional,types.TUniqueId" json:"request_id,omitempty"`
-	Token     *string          `thrift:"token,11,optional" frugal:"11,optional,string" json:"token,omitempty"`
-	BackendId *int64           `thrift:"backend_id,12,optional" frugal:"12,optional,i64" json:"backend_id,omitempty"`
-	SubTxnNum int64            `thrift:"sub_txn_num,13,optional" frugal:"13,optional,i64" json:"sub_txn_num,omitempty"`
+	Cluster          *string          `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
+	User             *string          `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
+	Passwd           *string          `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
+	Db               *string          `thrift:"db,4,optional" frugal:"4,optional,string" json:"db,omitempty"`
+	TableIds         []int64          `thrift:"table_ids,5,optional" frugal:"5,optional,list<i64>" json:"table_ids,omitempty"`
+	UserIp           *string          `thrift:"user_ip,6,optional" frugal:"6,optional,string" json:"user_ip,omitempty"`
+	Label            *string          `thrift:"label,7,optional" frugal:"7,optional,string" json:"label,omitempty"`
+	AuthCode         *int64           `thrift:"auth_code,8,optional" frugal:"8,optional,i64" json:"auth_code,omitempty"`
+	Timeout          *int64           `thrift:"timeout,9,optional" frugal:"9,optional,i64" json:"timeout,omitempty"`
+	RequestId        *types.TUniqueId `thrift:"request_id,10,optional" frugal:"10,optional,types.TUniqueId" json:"request_id,omitempty"`
+	Token            *string          `thrift:"token,11,optional" frugal:"11,optional,string" json:"token,omitempty"`
+	BackendId        *int64           `thrift:"backend_id,12,optional" frugal:"12,optional,i64" json:"backend_id,omitempty"`
+	SubTxnNum        int64            `thrift:"sub_txn_num,13,optional" frugal:"13,optional,i64" json:"sub_txn_num,omitempty"`
+	AutoSelectMaster *bool            `thrift:"auto_select_master,14,optional" frugal:"14,optional,bool" json:"auto_select_master,omitempty"`
 }
 
 func NewTBeginTxnRequest() *TBeginTxnRequest {
@@ -21682,6 +21683,15 @@ func (p *TBeginTxnRequest) GetSubTxnNum() (v int64) {
 	}
 	return p.SubTxnNum
 }
+
+var TBeginTxnRequest_AutoSelectMaster_DEFAULT bool
+
+func (p *TBeginTxnRequest) GetAutoSelectMaster() (v bool) {
+	if !p.IsSetAutoSelectMaster() {
+		return TBeginTxnRequest_AutoSelectMaster_DEFAULT
+	}
+	return *p.AutoSelectMaster
+}
 func (p *TBeginTxnRequest) SetCluster(val *string) {
 	p.Cluster = val
 }
@@ -21721,6 +21731,9 @@ func (p *TBeginTxnRequest) SetBackendId(val *int64) {
 func (p *TBeginTxnRequest) SetSubTxnNum(val int64) {
 	p.SubTxnNum = val
 }
+func (p *TBeginTxnRequest) SetAutoSelectMaster(val *bool) {
+	p.AutoSelectMaster = val
+}
 
 var fieldIDToName_TBeginTxnRequest = map[int16]string{
 	1:  "cluster",
@@ -21736,6 +21749,7 @@ var fieldIDToName_TBeginTxnRequest = map[int16]string{
 	11: "token",
 	12: "backend_id",
 	13: "sub_txn_num",
+	14: "auto_select_master",
 }
 
 func (p *TBeginTxnRequest) IsSetCluster() bool {
@@ -21788,6 +21802,10 @@ func (p *TBeginTxnRequest) IsSetBackendId() bool {
 
 func (p *TBeginTxnRequest) IsSetSubTxnNum() bool {
 	return p.SubTxnNum != TBeginTxnRequest_SubTxnNum_DEFAULT
+}
+
+func (p *TBeginTxnRequest) IsSetAutoSelectMaster() bool {
+	return p.AutoSelectMaster != nil
 }
 
 func (p *TBeginTxnRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -21908,6 +21926,14 @@ func (p *TBeginTxnRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 13:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField14(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -22094,6 +22120,17 @@ func (p *TBeginTxnRequest) ReadField13(iprot thrift.TProtocol) error {
 	p.SubTxnNum = _field
 	return nil
 }
+func (p *TBeginTxnRequest) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AutoSelectMaster = _field
+	return nil
+}
 
 func (p *TBeginTxnRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -22151,6 +22188,10 @@ func (p *TBeginTxnRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField13(oprot); err != nil {
 			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
 			goto WriteFieldError
 		}
 	}
@@ -22426,6 +22467,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
 
+func (p *TBeginTxnRequest) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAutoSelectMaster() {
+		if err = oprot.WriteFieldBegin("auto_select_master", thrift.BOOL, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.AutoSelectMaster); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
+
 func (p *TBeginTxnRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -22477,6 +22537,9 @@ func (p *TBeginTxnRequest) DeepEqual(ano *TBeginTxnRequest) bool {
 		return false
 	}
 	if !p.Field13DeepEqual(ano.SubTxnNum) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.AutoSelectMaster) {
 		return false
 	}
 	return true
@@ -22625,6 +22688,18 @@ func (p *TBeginTxnRequest) Field12DeepEqual(src *int64) bool {
 func (p *TBeginTxnRequest) Field13DeepEqual(src int64) bool {
 
 	if p.SubTxnNum != src {
+		return false
+	}
+	return true
+}
+func (p *TBeginTxnRequest) Field14DeepEqual(src *bool) bool {
+
+	if p.AutoSelectMaster == src {
+		return true
+	} else if p.AutoSelectMaster == nil || src == nil {
+		return false
+	}
+	if *p.AutoSelectMaster != *src {
 		return false
 	}
 	return true
@@ -32475,6 +32550,7 @@ type TCommitTxnRequest struct {
 	TxnInsert           *bool                      `thrift:"txn_insert,13,optional" frugal:"13,optional,bool" json:"txn_insert,omitempty"`
 	SubTxnInfos         []*TSubTxnInfo             `thrift:"sub_txn_infos,14,optional" frugal:"14,optional,list<TSubTxnInfo>" json:"sub_txn_infos,omitempty"`
 	OnlyCommit          *bool                      `thrift:"only_commit,15,optional" frugal:"15,optional,bool" json:"only_commit,omitempty"`
+	AutoSelectMaster    *bool                      `thrift:"auto_select_master,16,optional" frugal:"16,optional,bool" json:"auto_select_master,omitempty"`
 }
 
 func NewTCommitTxnRequest() *TCommitTxnRequest {
@@ -32618,6 +32694,15 @@ func (p *TCommitTxnRequest) GetOnlyCommit() (v bool) {
 	}
 	return *p.OnlyCommit
 }
+
+var TCommitTxnRequest_AutoSelectMaster_DEFAULT bool
+
+func (p *TCommitTxnRequest) GetAutoSelectMaster() (v bool) {
+	if !p.IsSetAutoSelectMaster() {
+		return TCommitTxnRequest_AutoSelectMaster_DEFAULT
+	}
+	return *p.AutoSelectMaster
+}
 func (p *TCommitTxnRequest) SetCluster(val *string) {
 	p.Cluster = val
 }
@@ -32663,6 +32748,9 @@ func (p *TCommitTxnRequest) SetSubTxnInfos(val []*TSubTxnInfo) {
 func (p *TCommitTxnRequest) SetOnlyCommit(val *bool) {
 	p.OnlyCommit = val
 }
+func (p *TCommitTxnRequest) SetAutoSelectMaster(val *bool) {
+	p.AutoSelectMaster = val
+}
 
 var fieldIDToName_TCommitTxnRequest = map[int16]string{
 	1:  "cluster",
@@ -32680,6 +32768,7 @@ var fieldIDToName_TCommitTxnRequest = map[int16]string{
 	13: "txn_insert",
 	14: "sub_txn_infos",
 	15: "only_commit",
+	16: "auto_select_master",
 }
 
 func (p *TCommitTxnRequest) IsSetCluster() bool {
@@ -32740,6 +32829,10 @@ func (p *TCommitTxnRequest) IsSetSubTxnInfos() bool {
 
 func (p *TCommitTxnRequest) IsSetOnlyCommit() bool {
 	return p.OnlyCommit != nil
+}
+
+func (p *TCommitTxnRequest) IsSetAutoSelectMaster() bool {
+	return p.AutoSelectMaster != nil
 }
 
 func (p *TCommitTxnRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -32876,6 +32969,14 @@ func (p *TCommitTxnRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 15:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField15(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 16:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField16(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -33096,6 +33197,17 @@ func (p *TCommitTxnRequest) ReadField15(iprot thrift.TProtocol) error {
 	p.OnlyCommit = _field
 	return nil
 }
+func (p *TCommitTxnRequest) ReadField16(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AutoSelectMaster = _field
+	return nil
+}
 
 func (p *TCommitTxnRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -33161,6 +33273,10 @@ func (p *TCommitTxnRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField15(oprot); err != nil {
 			fieldId = 15
+			goto WriteFieldError
+		}
+		if err = p.writeField16(oprot); err != nil {
+			fieldId = 16
 			goto WriteFieldError
 		}
 	}
@@ -33482,6 +33598,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
 }
 
+func (p *TCommitTxnRequest) writeField16(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAutoSelectMaster() {
+		if err = oprot.WriteFieldBegin("auto_select_master", thrift.BOOL, 16); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.AutoSelectMaster); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
+}
+
 func (p *TCommitTxnRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -33539,6 +33674,9 @@ func (p *TCommitTxnRequest) DeepEqual(ano *TCommitTxnRequest) bool {
 		return false
 	}
 	if !p.Field15DeepEqual(ano.OnlyCommit) {
+		return false
+	}
+	if !p.Field16DeepEqual(ano.AutoSelectMaster) {
 		return false
 	}
 	return true
@@ -33717,6 +33855,18 @@ func (p *TCommitTxnRequest) Field15DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.OnlyCommit != *src {
+		return false
+	}
+	return true
+}
+func (p *TCommitTxnRequest) Field16DeepEqual(src *bool) bool {
+
+	if p.AutoSelectMaster == src {
+		return true
+	} else if p.AutoSelectMaster == nil || src == nil {
+		return false
+	}
+	if *p.AutoSelectMaster != *src {
 		return false
 	}
 	return true
@@ -48397,15 +48547,16 @@ func (p *TQueryStatsResult_) Field5DeepEqual(src map[int64]int64) bool {
 }
 
 type TLockBinlogRequest struct {
-	Cluster       *string `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
-	User          *string `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
-	Passwd        *string `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
-	Db            *string `thrift:"db,4,optional" frugal:"4,optional,string" json:"db,omitempty"`
-	Table         *string `thrift:"table,5,optional" frugal:"5,optional,string" json:"table,omitempty"`
-	TableId       *int64  `thrift:"table_id,6,optional" frugal:"6,optional,i64" json:"table_id,omitempty"`
-	Token         *string `thrift:"token,7,optional" frugal:"7,optional,string" json:"token,omitempty"`
-	JobUniqueId   *string `thrift:"job_unique_id,8,optional" frugal:"8,optional,string" json:"job_unique_id,omitempty"`
-	LockCommitSeq *int64  `thrift:"lock_commit_seq,9,optional" frugal:"9,optional,i64" json:"lock_commit_seq,omitempty"`
+	Cluster          *string `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
+	User             *string `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
+	Passwd           *string `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
+	Db               *string `thrift:"db,4,optional" frugal:"4,optional,string" json:"db,omitempty"`
+	Table            *string `thrift:"table,5,optional" frugal:"5,optional,string" json:"table,omitempty"`
+	TableId          *int64  `thrift:"table_id,6,optional" frugal:"6,optional,i64" json:"table_id,omitempty"`
+	Token            *string `thrift:"token,7,optional" frugal:"7,optional,string" json:"token,omitempty"`
+	JobUniqueId      *string `thrift:"job_unique_id,8,optional" frugal:"8,optional,string" json:"job_unique_id,omitempty"`
+	LockCommitSeq    *int64  `thrift:"lock_commit_seq,9,optional" frugal:"9,optional,i64" json:"lock_commit_seq,omitempty"`
+	AutoSelectMaster *bool   `thrift:"auto_select_master,10,optional" frugal:"10,optional,bool" json:"auto_select_master,omitempty"`
 }
 
 func NewTLockBinlogRequest() *TLockBinlogRequest {
@@ -48495,6 +48646,15 @@ func (p *TLockBinlogRequest) GetLockCommitSeq() (v int64) {
 	}
 	return *p.LockCommitSeq
 }
+
+var TLockBinlogRequest_AutoSelectMaster_DEFAULT bool
+
+func (p *TLockBinlogRequest) GetAutoSelectMaster() (v bool) {
+	if !p.IsSetAutoSelectMaster() {
+		return TLockBinlogRequest_AutoSelectMaster_DEFAULT
+	}
+	return *p.AutoSelectMaster
+}
 func (p *TLockBinlogRequest) SetCluster(val *string) {
 	p.Cluster = val
 }
@@ -48522,17 +48682,21 @@ func (p *TLockBinlogRequest) SetJobUniqueId(val *string) {
 func (p *TLockBinlogRequest) SetLockCommitSeq(val *int64) {
 	p.LockCommitSeq = val
 }
+func (p *TLockBinlogRequest) SetAutoSelectMaster(val *bool) {
+	p.AutoSelectMaster = val
+}
 
 var fieldIDToName_TLockBinlogRequest = map[int16]string{
-	1: "cluster",
-	2: "user",
-	3: "passwd",
-	4: "db",
-	5: "table",
-	6: "table_id",
-	7: "token",
-	8: "job_unique_id",
-	9: "lock_commit_seq",
+	1:  "cluster",
+	2:  "user",
+	3:  "passwd",
+	4:  "db",
+	5:  "table",
+	6:  "table_id",
+	7:  "token",
+	8:  "job_unique_id",
+	9:  "lock_commit_seq",
+	10: "auto_select_master",
 }
 
 func (p *TLockBinlogRequest) IsSetCluster() bool {
@@ -48569,6 +48733,10 @@ func (p *TLockBinlogRequest) IsSetJobUniqueId() bool {
 
 func (p *TLockBinlogRequest) IsSetLockCommitSeq() bool {
 	return p.LockCommitSeq != nil
+}
+
+func (p *TLockBinlogRequest) IsSetAutoSelectMaster() bool {
+	return p.AutoSelectMaster != nil
 }
 
 func (p *TLockBinlogRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -48657,6 +48825,14 @@ func (p *TLockBinlogRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 9:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -48790,6 +48966,17 @@ func (p *TLockBinlogRequest) ReadField9(iprot thrift.TProtocol) error {
 	p.LockCommitSeq = _field
 	return nil
 }
+func (p *TLockBinlogRequest) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AutoSelectMaster = _field
+	return nil
+}
 
 func (p *TLockBinlogRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -48831,6 +49018,10 @@ func (p *TLockBinlogRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField9(oprot); err != nil {
 			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 	}
@@ -49022,6 +49213,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
 
+func (p *TLockBinlogRequest) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAutoSelectMaster() {
+		if err = oprot.WriteFieldBegin("auto_select_master", thrift.BOOL, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.AutoSelectMaster); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
 func (p *TLockBinlogRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -49061,6 +49271,9 @@ func (p *TLockBinlogRequest) DeepEqual(ano *TLockBinlogRequest) bool {
 		return false
 	}
 	if !p.Field9DeepEqual(ano.LockCommitSeq) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.AutoSelectMaster) {
 		return false
 	}
 	return true
@@ -49170,6 +49383,18 @@ func (p *TLockBinlogRequest) Field9DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.LockCommitSeq != *src {
+		return false
+	}
+	return true
+}
+func (p *TLockBinlogRequest) Field10DeepEqual(src *bool) bool {
+
+	if p.AutoSelectMaster == src {
+		return true
+	} else if p.AutoSelectMaster == nil || src == nil {
+		return false
+	}
+	if *p.AutoSelectMaster != *src {
 		return false
 	}
 	return true
@@ -49489,16 +49714,17 @@ func (p *TLockBinlogResult_) Field3DeepEqual(src *types.TNetworkAddress) bool {
 }
 
 type TGetBinlogRequest struct {
-	Cluster       *string `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
-	User          *string `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
-	Passwd        *string `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
-	Db            *string `thrift:"db,4,optional" frugal:"4,optional,string" json:"db,omitempty"`
-	Table         *string `thrift:"table,5,optional" frugal:"5,optional,string" json:"table,omitempty"`
-	TableId       *int64  `thrift:"table_id,6,optional" frugal:"6,optional,i64" json:"table_id,omitempty"`
-	UserIp        *string `thrift:"user_ip,7,optional" frugal:"7,optional,string" json:"user_ip,omitempty"`
-	Token         *string `thrift:"token,8,optional" frugal:"8,optional,string" json:"token,omitempty"`
-	PrevCommitSeq *int64  `thrift:"prev_commit_seq,9,optional" frugal:"9,optional,i64" json:"prev_commit_seq,omitempty"`
-	NumAcquired   *int64  `thrift:"num_acquired,10,optional" frugal:"10,optional,i64" json:"num_acquired,omitempty"`
+	Cluster          *string `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
+	User             *string `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
+	Passwd           *string `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
+	Db               *string `thrift:"db,4,optional" frugal:"4,optional,string" json:"db,omitempty"`
+	Table            *string `thrift:"table,5,optional" frugal:"5,optional,string" json:"table,omitempty"`
+	TableId          *int64  `thrift:"table_id,6,optional" frugal:"6,optional,i64" json:"table_id,omitempty"`
+	UserIp           *string `thrift:"user_ip,7,optional" frugal:"7,optional,string" json:"user_ip,omitempty"`
+	Token            *string `thrift:"token,8,optional" frugal:"8,optional,string" json:"token,omitempty"`
+	PrevCommitSeq    *int64  `thrift:"prev_commit_seq,9,optional" frugal:"9,optional,i64" json:"prev_commit_seq,omitempty"`
+	NumAcquired      *int64  `thrift:"num_acquired,10,optional" frugal:"10,optional,i64" json:"num_acquired,omitempty"`
+	AutoSelectMaster *bool   `thrift:"auto_select_master,11,optional" frugal:"11,optional,bool" json:"auto_select_master,omitempty"`
 }
 
 func NewTGetBinlogRequest() *TGetBinlogRequest {
@@ -49597,6 +49823,15 @@ func (p *TGetBinlogRequest) GetNumAcquired() (v int64) {
 	}
 	return *p.NumAcquired
 }
+
+var TGetBinlogRequest_AutoSelectMaster_DEFAULT bool
+
+func (p *TGetBinlogRequest) GetAutoSelectMaster() (v bool) {
+	if !p.IsSetAutoSelectMaster() {
+		return TGetBinlogRequest_AutoSelectMaster_DEFAULT
+	}
+	return *p.AutoSelectMaster
+}
 func (p *TGetBinlogRequest) SetCluster(val *string) {
 	p.Cluster = val
 }
@@ -49627,6 +49862,9 @@ func (p *TGetBinlogRequest) SetPrevCommitSeq(val *int64) {
 func (p *TGetBinlogRequest) SetNumAcquired(val *int64) {
 	p.NumAcquired = val
 }
+func (p *TGetBinlogRequest) SetAutoSelectMaster(val *bool) {
+	p.AutoSelectMaster = val
+}
 
 var fieldIDToName_TGetBinlogRequest = map[int16]string{
 	1:  "cluster",
@@ -49639,6 +49877,7 @@ var fieldIDToName_TGetBinlogRequest = map[int16]string{
 	8:  "token",
 	9:  "prev_commit_seq",
 	10: "num_acquired",
+	11: "auto_select_master",
 }
 
 func (p *TGetBinlogRequest) IsSetCluster() bool {
@@ -49679,6 +49918,10 @@ func (p *TGetBinlogRequest) IsSetPrevCommitSeq() bool {
 
 func (p *TGetBinlogRequest) IsSetNumAcquired() bool {
 	return p.NumAcquired != nil
+}
+
+func (p *TGetBinlogRequest) IsSetAutoSelectMaster() bool {
+	return p.AutoSelectMaster != nil
 }
 
 func (p *TGetBinlogRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -49775,6 +50018,14 @@ func (p *TGetBinlogRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 10:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -49919,6 +50170,17 @@ func (p *TGetBinlogRequest) ReadField10(iprot thrift.TProtocol) error {
 	p.NumAcquired = _field
 	return nil
 }
+func (p *TGetBinlogRequest) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AutoSelectMaster = _field
+	return nil
+}
 
 func (p *TGetBinlogRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -49964,6 +50226,10 @@ func (p *TGetBinlogRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 	}
@@ -50174,6 +50440,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
 
+func (p *TGetBinlogRequest) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAutoSelectMaster() {
+		if err = oprot.WriteFieldBegin("auto_select_master", thrift.BOOL, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.AutoSelectMaster); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+
 func (p *TGetBinlogRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -50216,6 +50501,9 @@ func (p *TGetBinlogRequest) DeepEqual(ano *TGetBinlogRequest) bool {
 		return false
 	}
 	if !p.Field10DeepEqual(ano.NumAcquired) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.AutoSelectMaster) {
 		return false
 	}
 	return true
@@ -50337,6 +50625,18 @@ func (p *TGetBinlogRequest) Field10DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.NumAcquired != *src {
+		return false
+	}
+	return true
+}
+func (p *TGetBinlogRequest) Field11DeepEqual(src *bool) bool {
+
+	if p.AutoSelectMaster == src {
+		return true
+	} else if p.AutoSelectMaster == nil || src == nil {
+		return false
+	}
+	if *p.AutoSelectMaster != *src {
 		return false
 	}
 	return true
@@ -52277,16 +52577,17 @@ func (p *TGetTabletReplicaInfosResult_) Field3DeepEqual(src *string) bool {
 }
 
 type TGetSnapshotRequest struct {
-	Cluster        *string        `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
-	User           *string        `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
-	Passwd         *string        `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
-	Db             *string        `thrift:"db,4,optional" frugal:"4,optional,string" json:"db,omitempty"`
-	Table          *string        `thrift:"table,5,optional" frugal:"5,optional,string" json:"table,omitempty"`
-	Token          *string        `thrift:"token,6,optional" frugal:"6,optional,string" json:"token,omitempty"`
-	LabelName      *string        `thrift:"label_name,7,optional" frugal:"7,optional,string" json:"label_name,omitempty"`
-	SnapshotName   *string        `thrift:"snapshot_name,8,optional" frugal:"8,optional,string" json:"snapshot_name,omitempty"`
-	SnapshotType   *TSnapshotType `thrift:"snapshot_type,9,optional" frugal:"9,optional,TSnapshotType" json:"snapshot_type,omitempty"`
-	EnableCompress *bool          `thrift:"enable_compress,10,optional" frugal:"10,optional,bool" json:"enable_compress,omitempty"`
+	Cluster          *string        `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
+	User             *string        `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
+	Passwd           *string        `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
+	Db               *string        `thrift:"db,4,optional" frugal:"4,optional,string" json:"db,omitempty"`
+	Table            *string        `thrift:"table,5,optional" frugal:"5,optional,string" json:"table,omitempty"`
+	Token            *string        `thrift:"token,6,optional" frugal:"6,optional,string" json:"token,omitempty"`
+	LabelName        *string        `thrift:"label_name,7,optional" frugal:"7,optional,string" json:"label_name,omitempty"`
+	SnapshotName     *string        `thrift:"snapshot_name,8,optional" frugal:"8,optional,string" json:"snapshot_name,omitempty"`
+	SnapshotType     *TSnapshotType `thrift:"snapshot_type,9,optional" frugal:"9,optional,TSnapshotType" json:"snapshot_type,omitempty"`
+	EnableCompress   *bool          `thrift:"enable_compress,10,optional" frugal:"10,optional,bool" json:"enable_compress,omitempty"`
+	AutoSelectMaster *bool          `thrift:"auto_select_master,11,optional" frugal:"11,optional,bool" json:"auto_select_master,omitempty"`
 }
 
 func NewTGetSnapshotRequest() *TGetSnapshotRequest {
@@ -52385,6 +52686,15 @@ func (p *TGetSnapshotRequest) GetEnableCompress() (v bool) {
 	}
 	return *p.EnableCompress
 }
+
+var TGetSnapshotRequest_AutoSelectMaster_DEFAULT bool
+
+func (p *TGetSnapshotRequest) GetAutoSelectMaster() (v bool) {
+	if !p.IsSetAutoSelectMaster() {
+		return TGetSnapshotRequest_AutoSelectMaster_DEFAULT
+	}
+	return *p.AutoSelectMaster
+}
 func (p *TGetSnapshotRequest) SetCluster(val *string) {
 	p.Cluster = val
 }
@@ -52415,6 +52725,9 @@ func (p *TGetSnapshotRequest) SetSnapshotType(val *TSnapshotType) {
 func (p *TGetSnapshotRequest) SetEnableCompress(val *bool) {
 	p.EnableCompress = val
 }
+func (p *TGetSnapshotRequest) SetAutoSelectMaster(val *bool) {
+	p.AutoSelectMaster = val
+}
 
 var fieldIDToName_TGetSnapshotRequest = map[int16]string{
 	1:  "cluster",
@@ -52427,6 +52740,7 @@ var fieldIDToName_TGetSnapshotRequest = map[int16]string{
 	8:  "snapshot_name",
 	9:  "snapshot_type",
 	10: "enable_compress",
+	11: "auto_select_master",
 }
 
 func (p *TGetSnapshotRequest) IsSetCluster() bool {
@@ -52467,6 +52781,10 @@ func (p *TGetSnapshotRequest) IsSetSnapshotType() bool {
 
 func (p *TGetSnapshotRequest) IsSetEnableCompress() bool {
 	return p.EnableCompress != nil
+}
+
+func (p *TGetSnapshotRequest) IsSetAutoSelectMaster() bool {
+	return p.AutoSelectMaster != nil
 }
 
 func (p *TGetSnapshotRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -52563,6 +52881,14 @@ func (p *TGetSnapshotRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 10:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -52708,6 +53034,17 @@ func (p *TGetSnapshotRequest) ReadField10(iprot thrift.TProtocol) error {
 	p.EnableCompress = _field
 	return nil
 }
+func (p *TGetSnapshotRequest) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AutoSelectMaster = _field
+	return nil
+}
 
 func (p *TGetSnapshotRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -52753,6 +53090,10 @@ func (p *TGetSnapshotRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 	}
@@ -52963,6 +53304,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
 
+func (p *TGetSnapshotRequest) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAutoSelectMaster() {
+		if err = oprot.WriteFieldBegin("auto_select_master", thrift.BOOL, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.AutoSelectMaster); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
+
 func (p *TGetSnapshotRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -53005,6 +53365,9 @@ func (p *TGetSnapshotRequest) DeepEqual(ano *TGetSnapshotRequest) bool {
 		return false
 	}
 	if !p.Field10DeepEqual(ano.EnableCompress) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.AutoSelectMaster) {
 		return false
 	}
 	return true
@@ -53126,6 +53489,18 @@ func (p *TGetSnapshotRequest) Field10DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.EnableCompress != *src {
+		return false
+	}
+	return true
+}
+func (p *TGetSnapshotRequest) Field11DeepEqual(src *bool) bool {
+
+	if p.AutoSelectMaster == src {
+		return true
+	} else if p.AutoSelectMaster == nil || src == nil {
+		return false
+	}
+	if *p.AutoSelectMaster != *src {
 		return false
 	}
 	return true
@@ -53989,23 +54364,24 @@ func (p *TTableRef) Field3DeepEqual(src *string) bool {
 }
 
 type TRestoreSnapshotRequest struct {
-	Cluster         *string           `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
-	User            *string           `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
-	Passwd          *string           `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
-	Db              *string           `thrift:"db,4,optional" frugal:"4,optional,string" json:"db,omitempty"`
-	Table           *string           `thrift:"table,5,optional" frugal:"5,optional,string" json:"table,omitempty"`
-	Token           *string           `thrift:"token,6,optional" frugal:"6,optional,string" json:"token,omitempty"`
-	LabelName       *string           `thrift:"label_name,7,optional" frugal:"7,optional,string" json:"label_name,omitempty"`
-	RepoName        *string           `thrift:"repo_name,8,optional" frugal:"8,optional,string" json:"repo_name,omitempty"`
-	TableRefs       []*TTableRef      `thrift:"table_refs,9,optional" frugal:"9,optional,list<TTableRef>" json:"table_refs,omitempty"`
-	Properties      map[string]string `thrift:"properties,10,optional" frugal:"10,optional,map<string:string>" json:"properties,omitempty"`
-	Meta            []byte            `thrift:"meta,11,optional" frugal:"11,optional,binary" json:"meta,omitempty"`
-	JobInfo         []byte            `thrift:"job_info,12,optional" frugal:"12,optional,binary" json:"job_info,omitempty"`
-	CleanTables     *bool             `thrift:"clean_tables,13,optional" frugal:"13,optional,bool" json:"clean_tables,omitempty"`
-	CleanPartitions *bool             `thrift:"clean_partitions,14,optional" frugal:"14,optional,bool" json:"clean_partitions,omitempty"`
-	AtomicRestore   *bool             `thrift:"atomic_restore,15,optional" frugal:"15,optional,bool" json:"atomic_restore,omitempty"`
-	Compressed      *bool             `thrift:"compressed,16,optional" frugal:"16,optional,bool" json:"compressed,omitempty"`
-	ForceReplace    *bool             `thrift:"force_replace,17,optional" frugal:"17,optional,bool" json:"force_replace,omitempty"`
+	Cluster          *string           `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
+	User             *string           `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
+	Passwd           *string           `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
+	Db               *string           `thrift:"db,4,optional" frugal:"4,optional,string" json:"db,omitempty"`
+	Table            *string           `thrift:"table,5,optional" frugal:"5,optional,string" json:"table,omitempty"`
+	Token            *string           `thrift:"token,6,optional" frugal:"6,optional,string" json:"token,omitempty"`
+	LabelName        *string           `thrift:"label_name,7,optional" frugal:"7,optional,string" json:"label_name,omitempty"`
+	RepoName         *string           `thrift:"repo_name,8,optional" frugal:"8,optional,string" json:"repo_name,omitempty"`
+	TableRefs        []*TTableRef      `thrift:"table_refs,9,optional" frugal:"9,optional,list<TTableRef>" json:"table_refs,omitempty"`
+	Properties       map[string]string `thrift:"properties,10,optional" frugal:"10,optional,map<string:string>" json:"properties,omitempty"`
+	Meta             []byte            `thrift:"meta,11,optional" frugal:"11,optional,binary" json:"meta,omitempty"`
+	JobInfo          []byte            `thrift:"job_info,12,optional" frugal:"12,optional,binary" json:"job_info,omitempty"`
+	CleanTables      *bool             `thrift:"clean_tables,13,optional" frugal:"13,optional,bool" json:"clean_tables,omitempty"`
+	CleanPartitions  *bool             `thrift:"clean_partitions,14,optional" frugal:"14,optional,bool" json:"clean_partitions,omitempty"`
+	AtomicRestore    *bool             `thrift:"atomic_restore,15,optional" frugal:"15,optional,bool" json:"atomic_restore,omitempty"`
+	Compressed       *bool             `thrift:"compressed,16,optional" frugal:"16,optional,bool" json:"compressed,omitempty"`
+	ForceReplace     *bool             `thrift:"force_replace,17,optional" frugal:"17,optional,bool" json:"force_replace,omitempty"`
+	AutoSelectMaster *bool             `thrift:"auto_select_master,18,optional" frugal:"18,optional,bool" json:"auto_select_master,omitempty"`
 }
 
 func NewTRestoreSnapshotRequest() *TRestoreSnapshotRequest {
@@ -54167,6 +54543,15 @@ func (p *TRestoreSnapshotRequest) GetForceReplace() (v bool) {
 	}
 	return *p.ForceReplace
 }
+
+var TRestoreSnapshotRequest_AutoSelectMaster_DEFAULT bool
+
+func (p *TRestoreSnapshotRequest) GetAutoSelectMaster() (v bool) {
+	if !p.IsSetAutoSelectMaster() {
+		return TRestoreSnapshotRequest_AutoSelectMaster_DEFAULT
+	}
+	return *p.AutoSelectMaster
+}
 func (p *TRestoreSnapshotRequest) SetCluster(val *string) {
 	p.Cluster = val
 }
@@ -54218,6 +54603,9 @@ func (p *TRestoreSnapshotRequest) SetCompressed(val *bool) {
 func (p *TRestoreSnapshotRequest) SetForceReplace(val *bool) {
 	p.ForceReplace = val
 }
+func (p *TRestoreSnapshotRequest) SetAutoSelectMaster(val *bool) {
+	p.AutoSelectMaster = val
+}
 
 var fieldIDToName_TRestoreSnapshotRequest = map[int16]string{
 	1:  "cluster",
@@ -54237,6 +54625,7 @@ var fieldIDToName_TRestoreSnapshotRequest = map[int16]string{
 	15: "atomic_restore",
 	16: "compressed",
 	17: "force_replace",
+	18: "auto_select_master",
 }
 
 func (p *TRestoreSnapshotRequest) IsSetCluster() bool {
@@ -54305,6 +54694,10 @@ func (p *TRestoreSnapshotRequest) IsSetCompressed() bool {
 
 func (p *TRestoreSnapshotRequest) IsSetForceReplace() bool {
 	return p.ForceReplace != nil
+}
+
+func (p *TRestoreSnapshotRequest) IsSetAutoSelectMaster() bool {
+	return p.AutoSelectMaster != nil
 }
 
 func (p *TRestoreSnapshotRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -54457,6 +54850,14 @@ func (p *TRestoreSnapshotRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 17:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField17(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 18:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField18(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -54708,6 +55109,17 @@ func (p *TRestoreSnapshotRequest) ReadField17(iprot thrift.TProtocol) error {
 	p.ForceReplace = _field
 	return nil
 }
+func (p *TRestoreSnapshotRequest) ReadField18(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AutoSelectMaster = _field
+	return nil
+}
 
 func (p *TRestoreSnapshotRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -54781,6 +55193,10 @@ func (p *TRestoreSnapshotRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField17(oprot); err != nil {
 			fieldId = 17
+			goto WriteFieldError
+		}
+		if err = p.writeField18(oprot); err != nil {
+			fieldId = 18
 			goto WriteFieldError
 		}
 	}
@@ -55143,6 +55559,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
 }
 
+func (p *TRestoreSnapshotRequest) writeField18(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAutoSelectMaster() {
+		if err = oprot.WriteFieldBegin("auto_select_master", thrift.BOOL, 18); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.AutoSelectMaster); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 end error: ", p), err)
+}
+
 func (p *TRestoreSnapshotRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -55206,6 +55641,9 @@ func (p *TRestoreSnapshotRequest) DeepEqual(ano *TRestoreSnapshotRequest) bool {
 		return false
 	}
 	if !p.Field17DeepEqual(ano.ForceReplace) {
+		return false
+	}
+	if !p.Field18DeepEqual(ano.AutoSelectMaster) {
 		return false
 	}
 	return true
@@ -55403,6 +55841,18 @@ func (p *TRestoreSnapshotRequest) Field17DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.ForceReplace != *src {
+		return false
+	}
+	return true
+}
+func (p *TRestoreSnapshotRequest) Field18DeepEqual(src *bool) bool {
+
+	if p.AutoSelectMaster == src {
+		return true
+	} else if p.AutoSelectMaster == nil || src == nil {
+		return false
+	}
+	if *p.AutoSelectMaster != *src {
 		return false
 	}
 	return true
@@ -58410,9 +58860,10 @@ func (p *TPlsqlPackageResult_) Field1DeepEqual(src *status.TStatus) bool {
 }
 
 type TGetMasterTokenRequest struct {
-	Cluster  *string `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
-	User     *string `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
-	Password *string `thrift:"password,3,optional" frugal:"3,optional,string" json:"password,omitempty"`
+	Cluster          *string `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
+	User             *string `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
+	Password         *string `thrift:"password,3,optional" frugal:"3,optional,string" json:"password,omitempty"`
+	AutoSelectMaster *bool   `thrift:"auto_select_master,4,optional" frugal:"4,optional,bool" json:"auto_select_master,omitempty"`
 }
 
 func NewTGetMasterTokenRequest() *TGetMasterTokenRequest {
@@ -58448,6 +58899,15 @@ func (p *TGetMasterTokenRequest) GetPassword() (v string) {
 	}
 	return *p.Password
 }
+
+var TGetMasterTokenRequest_AutoSelectMaster_DEFAULT bool
+
+func (p *TGetMasterTokenRequest) GetAutoSelectMaster() (v bool) {
+	if !p.IsSetAutoSelectMaster() {
+		return TGetMasterTokenRequest_AutoSelectMaster_DEFAULT
+	}
+	return *p.AutoSelectMaster
+}
 func (p *TGetMasterTokenRequest) SetCluster(val *string) {
 	p.Cluster = val
 }
@@ -58457,11 +58917,15 @@ func (p *TGetMasterTokenRequest) SetUser(val *string) {
 func (p *TGetMasterTokenRequest) SetPassword(val *string) {
 	p.Password = val
 }
+func (p *TGetMasterTokenRequest) SetAutoSelectMaster(val *bool) {
+	p.AutoSelectMaster = val
+}
 
 var fieldIDToName_TGetMasterTokenRequest = map[int16]string{
 	1: "cluster",
 	2: "user",
 	3: "password",
+	4: "auto_select_master",
 }
 
 func (p *TGetMasterTokenRequest) IsSetCluster() bool {
@@ -58474,6 +58938,10 @@ func (p *TGetMasterTokenRequest) IsSetUser() bool {
 
 func (p *TGetMasterTokenRequest) IsSetPassword() bool {
 	return p.Password != nil
+}
+
+func (p *TGetMasterTokenRequest) IsSetAutoSelectMaster() bool {
+	return p.AutoSelectMaster != nil
 }
 
 func (p *TGetMasterTokenRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -58514,6 +58982,14 @@ func (p *TGetMasterTokenRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -58581,6 +59057,17 @@ func (p *TGetMasterTokenRequest) ReadField3(iprot thrift.TProtocol) error {
 	p.Password = _field
 	return nil
 }
+func (p *TGetMasterTokenRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AutoSelectMaster = _field
+	return nil
+}
 
 func (p *TGetMasterTokenRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -58598,6 +59085,10 @@ func (p *TGetMasterTokenRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -58675,6 +59166,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 
+func (p *TGetMasterTokenRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAutoSelectMaster() {
+		if err = oprot.WriteFieldBegin("auto_select_master", thrift.BOOL, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.AutoSelectMaster); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
 func (p *TGetMasterTokenRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -58696,6 +59206,9 @@ func (p *TGetMasterTokenRequest) DeepEqual(ano *TGetMasterTokenRequest) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.Password) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.AutoSelectMaster) {
 		return false
 	}
 	return true
@@ -58733,6 +59246,18 @@ func (p *TGetMasterTokenRequest) Field3DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Password, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TGetMasterTokenRequest) Field4DeepEqual(src *bool) bool {
+
+	if p.AutoSelectMaster == src {
+		return true
+	} else if p.AutoSelectMaster == nil || src == nil {
+		return false
+	}
+	if *p.AutoSelectMaster != *src {
 		return false
 	}
 	return true
@@ -65903,12 +66428,13 @@ func (p *TGetMetaDB) Field4DeepEqual(src []*TGetMetaTable) bool {
 }
 
 type TGetMetaRequest struct {
-	Cluster *string     `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
-	User    *string     `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
-	Passwd  *string     `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
-	UserIp  *string     `thrift:"user_ip,4,optional" frugal:"4,optional,string" json:"user_ip,omitempty"`
-	Token   *string     `thrift:"token,5,optional" frugal:"5,optional,string" json:"token,omitempty"`
-	Db      *TGetMetaDB `thrift:"db,6,optional" frugal:"6,optional,TGetMetaDB" json:"db,omitempty"`
+	Cluster          *string     `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
+	User             *string     `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
+	Passwd           *string     `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
+	UserIp           *string     `thrift:"user_ip,4,optional" frugal:"4,optional,string" json:"user_ip,omitempty"`
+	Token            *string     `thrift:"token,5,optional" frugal:"5,optional,string" json:"token,omitempty"`
+	Db               *TGetMetaDB `thrift:"db,6,optional" frugal:"6,optional,TGetMetaDB" json:"db,omitempty"`
+	AutoSelectMaster *bool       `thrift:"auto_select_master,7,optional" frugal:"7,optional,bool" json:"auto_select_master,omitempty"`
 }
 
 func NewTGetMetaRequest() *TGetMetaRequest {
@@ -65971,6 +66497,15 @@ func (p *TGetMetaRequest) GetDb() (v *TGetMetaDB) {
 	}
 	return p.Db
 }
+
+var TGetMetaRequest_AutoSelectMaster_DEFAULT bool
+
+func (p *TGetMetaRequest) GetAutoSelectMaster() (v bool) {
+	if !p.IsSetAutoSelectMaster() {
+		return TGetMetaRequest_AutoSelectMaster_DEFAULT
+	}
+	return *p.AutoSelectMaster
+}
 func (p *TGetMetaRequest) SetCluster(val *string) {
 	p.Cluster = val
 }
@@ -65989,6 +66524,9 @@ func (p *TGetMetaRequest) SetToken(val *string) {
 func (p *TGetMetaRequest) SetDb(val *TGetMetaDB) {
 	p.Db = val
 }
+func (p *TGetMetaRequest) SetAutoSelectMaster(val *bool) {
+	p.AutoSelectMaster = val
+}
 
 var fieldIDToName_TGetMetaRequest = map[int16]string{
 	1: "cluster",
@@ -65997,6 +66535,7 @@ var fieldIDToName_TGetMetaRequest = map[int16]string{
 	4: "user_ip",
 	5: "token",
 	6: "db",
+	7: "auto_select_master",
 }
 
 func (p *TGetMetaRequest) IsSetCluster() bool {
@@ -66021,6 +66560,10 @@ func (p *TGetMetaRequest) IsSetToken() bool {
 
 func (p *TGetMetaRequest) IsSetDb() bool {
 	return p.Db != nil
+}
+
+func (p *TGetMetaRequest) IsSetAutoSelectMaster() bool {
+	return p.AutoSelectMaster != nil
 }
 
 func (p *TGetMetaRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -66085,6 +66628,14 @@ func (p *TGetMetaRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -66182,6 +66733,17 @@ func (p *TGetMetaRequest) ReadField6(iprot thrift.TProtocol) error {
 	p.Db = _field
 	return nil
 }
+func (p *TGetMetaRequest) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AutoSelectMaster = _field
+	return nil
+}
 
 func (p *TGetMetaRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -66211,6 +66773,10 @@ func (p *TGetMetaRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 	}
@@ -66345,6 +66911,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 
+func (p *TGetMetaRequest) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAutoSelectMaster() {
+		if err = oprot.WriteFieldBegin("auto_select_master", thrift.BOOL, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.AutoSelectMaster); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
 func (p *TGetMetaRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -66375,6 +66960,9 @@ func (p *TGetMetaRequest) DeepEqual(ano *TGetMetaRequest) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.Db) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.AutoSelectMaster) {
 		return false
 	}
 	return true
@@ -66443,6 +67031,18 @@ func (p *TGetMetaRequest) Field5DeepEqual(src *string) bool {
 func (p *TGetMetaRequest) Field6DeepEqual(src *TGetMetaDB) bool {
 
 	if !p.Db.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TGetMetaRequest) Field7DeepEqual(src *bool) bool {
+
+	if p.AutoSelectMaster == src {
+		return true
+	} else if p.AutoSelectMaster == nil || src == nil {
+		return false
+	}
+	if *p.AutoSelectMaster != *src {
 		return false
 	}
 	return true
@@ -69817,12 +70417,13 @@ func (p *TGetMetaResult_) Field3DeepEqual(src *types.TNetworkAddress) bool {
 }
 
 type TGetBackendMetaRequest struct {
-	Cluster   *string `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
-	User      *string `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
-	Passwd    *string `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
-	UserIp    *string `thrift:"user_ip,4,optional" frugal:"4,optional,string" json:"user_ip,omitempty"`
-	Token     *string `thrift:"token,5,optional" frugal:"5,optional,string" json:"token,omitempty"`
-	BackendId *int64  `thrift:"backend_id,6,optional" frugal:"6,optional,i64" json:"backend_id,omitempty"`
+	Cluster          *string `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
+	User             *string `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
+	Passwd           *string `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
+	UserIp           *string `thrift:"user_ip,4,optional" frugal:"4,optional,string" json:"user_ip,omitempty"`
+	Token            *string `thrift:"token,5,optional" frugal:"5,optional,string" json:"token,omitempty"`
+	BackendId        *int64  `thrift:"backend_id,6,optional" frugal:"6,optional,i64" json:"backend_id,omitempty"`
+	AutoSelectMaster *bool   `thrift:"auto_select_master,7,optional" frugal:"7,optional,bool" json:"auto_select_master,omitempty"`
 }
 
 func NewTGetBackendMetaRequest() *TGetBackendMetaRequest {
@@ -69885,6 +70486,15 @@ func (p *TGetBackendMetaRequest) GetBackendId() (v int64) {
 	}
 	return *p.BackendId
 }
+
+var TGetBackendMetaRequest_AutoSelectMaster_DEFAULT bool
+
+func (p *TGetBackendMetaRequest) GetAutoSelectMaster() (v bool) {
+	if !p.IsSetAutoSelectMaster() {
+		return TGetBackendMetaRequest_AutoSelectMaster_DEFAULT
+	}
+	return *p.AutoSelectMaster
+}
 func (p *TGetBackendMetaRequest) SetCluster(val *string) {
 	p.Cluster = val
 }
@@ -69903,6 +70513,9 @@ func (p *TGetBackendMetaRequest) SetToken(val *string) {
 func (p *TGetBackendMetaRequest) SetBackendId(val *int64) {
 	p.BackendId = val
 }
+func (p *TGetBackendMetaRequest) SetAutoSelectMaster(val *bool) {
+	p.AutoSelectMaster = val
+}
 
 var fieldIDToName_TGetBackendMetaRequest = map[int16]string{
 	1: "cluster",
@@ -69911,6 +70524,7 @@ var fieldIDToName_TGetBackendMetaRequest = map[int16]string{
 	4: "user_ip",
 	5: "token",
 	6: "backend_id",
+	7: "auto_select_master",
 }
 
 func (p *TGetBackendMetaRequest) IsSetCluster() bool {
@@ -69935,6 +70549,10 @@ func (p *TGetBackendMetaRequest) IsSetToken() bool {
 
 func (p *TGetBackendMetaRequest) IsSetBackendId() bool {
 	return p.BackendId != nil
+}
+
+func (p *TGetBackendMetaRequest) IsSetAutoSelectMaster() bool {
+	return p.AutoSelectMaster != nil
 }
 
 func (p *TGetBackendMetaRequest) Read(iprot thrift.TProtocol) (err error) {
@@ -69999,6 +70617,14 @@ func (p *TGetBackendMetaRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -70099,6 +70725,17 @@ func (p *TGetBackendMetaRequest) ReadField6(iprot thrift.TProtocol) error {
 	p.BackendId = _field
 	return nil
 }
+func (p *TGetBackendMetaRequest) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AutoSelectMaster = _field
+	return nil
+}
 
 func (p *TGetBackendMetaRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -70128,6 +70765,10 @@ func (p *TGetBackendMetaRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 	}
@@ -70262,6 +70903,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 
+func (p *TGetBackendMetaRequest) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAutoSelectMaster() {
+		if err = oprot.WriteFieldBegin("auto_select_master", thrift.BOOL, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.AutoSelectMaster); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
 func (p *TGetBackendMetaRequest) String() string {
 	if p == nil {
 		return "<nil>"
@@ -70292,6 +70952,9 @@ func (p *TGetBackendMetaRequest) DeepEqual(ano *TGetBackendMetaRequest) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.BackendId) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.AutoSelectMaster) {
 		return false
 	}
 	return true
@@ -70365,6 +71028,18 @@ func (p *TGetBackendMetaRequest) Field6DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.BackendId != *src {
+		return false
+	}
+	return true
+}
+func (p *TGetBackendMetaRequest) Field7DeepEqual(src *bool) bool {
+
+	if p.AutoSelectMaster == src {
+		return true
+	} else if p.AutoSelectMaster == nil || src == nil {
+		return false
+	}
+	if *p.AutoSelectMaster != *src {
 		return false
 	}
 	return true

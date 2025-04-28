@@ -15439,6 +15439,20 @@ func (p *TBeginTxnRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 14:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField14(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -15661,6 +15675,19 @@ func (p *TBeginTxnRequest) FastReadField13(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TBeginTxnRequest) FastReadField14(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.AutoSelectMaster = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TBeginTxnRequest) FastWrite(buf []byte) int {
 	return 0
@@ -15674,6 +15701,7 @@ func (p *TBeginTxnRequest) FastWriteNocopy(buf []byte, binaryWriter bthrift.Bina
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
 		offset += p.fastWriteField12(buf[offset:], binaryWriter)
 		offset += p.fastWriteField13(buf[offset:], binaryWriter)
+		offset += p.fastWriteField14(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -15706,6 +15734,7 @@ func (p *TBeginTxnRequest) BLength() int {
 		l += p.field11Length()
 		l += p.field12Length()
 		l += p.field13Length()
+		l += p.field14Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -15862,6 +15891,17 @@ func (p *TBeginTxnRequest) fastWriteField13(buf []byte, binaryWriter bthrift.Bin
 	return offset
 }
 
+func (p *TBeginTxnRequest) fastWriteField14(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetAutoSelectMaster() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "auto_select_master", thrift.BOOL, 14)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.AutoSelectMaster)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TBeginTxnRequest) field1Length() int {
 	l := 0
 	if p.IsSetCluster() {
@@ -16000,6 +16040,17 @@ func (p *TBeginTxnRequest) field13Length() int {
 	if p.IsSetSubTxnNum() {
 		l += bthrift.Binary.FieldBeginLength("sub_txn_num", thrift.I64, 13)
 		l += bthrift.Binary.I64Length(p.SubTxnNum)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TBeginTxnRequest) field14Length() int {
+	l := 0
+	if p.IsSetAutoSelectMaster() {
+		l += bthrift.Binary.FieldBeginLength("auto_select_master", thrift.BOOL, 14)
+		l += bthrift.Binary.BoolLength(*p.AutoSelectMaster)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -23345,6 +23396,20 @@ func (p *TCommitTxnRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 16:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField16(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -23603,6 +23668,19 @@ func (p *TCommitTxnRequest) FastReadField15(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TCommitTxnRequest) FastReadField16(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.AutoSelectMaster = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TCommitTxnRequest) FastWrite(buf []byte) int {
 	return 0
@@ -23618,6 +23696,7 @@ func (p *TCommitTxnRequest) FastWriteNocopy(buf []byte, binaryWriter bthrift.Bin
 		offset += p.fastWriteField12(buf[offset:], binaryWriter)
 		offset += p.fastWriteField13(buf[offset:], binaryWriter)
 		offset += p.fastWriteField15(buf[offset:], binaryWriter)
+		offset += p.fastWriteField16(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -23652,6 +23731,7 @@ func (p *TCommitTxnRequest) BLength() int {
 		l += p.field13Length()
 		l += p.field14Length()
 		l += p.field15Length()
+		l += p.field16Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -23836,6 +23916,17 @@ func (p *TCommitTxnRequest) fastWriteField15(buf []byte, binaryWriter bthrift.Bi
 	return offset
 }
 
+func (p *TCommitTxnRequest) fastWriteField16(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetAutoSelectMaster() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "auto_select_master", thrift.BOOL, 16)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.AutoSelectMaster)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TCommitTxnRequest) field1Length() int {
 	l := 0
 	if p.IsSetCluster() {
@@ -24000,6 +24091,17 @@ func (p *TCommitTxnRequest) field15Length() int {
 	if p.IsSetOnlyCommit() {
 		l += bthrift.Binary.FieldBeginLength("only_commit", thrift.BOOL, 15)
 		l += bthrift.Binary.BoolLength(*p.OnlyCommit)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TCommitTxnRequest) field16Length() int {
+	l := 0
+	if p.IsSetAutoSelectMaster() {
+		l += bthrift.Binary.FieldBeginLength("auto_select_master", thrift.BOOL, 16)
+		l += bthrift.Binary.BoolLength(*p.AutoSelectMaster)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -35176,6 +35278,20 @@ func (p *TLockBinlogRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 10:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -35328,6 +35444,19 @@ func (p *TLockBinlogRequest) FastReadField9(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TLockBinlogRequest) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.AutoSelectMaster = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TLockBinlogRequest) FastWrite(buf []byte) int {
 	return 0
@@ -35339,6 +35468,7 @@ func (p *TLockBinlogRequest) FastWriteNocopy(buf []byte, binaryWriter bthrift.Bi
 	if p != nil {
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
+		offset += p.fastWriteField10(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -35365,6 +35495,7 @@ func (p *TLockBinlogRequest) BLength() int {
 		l += p.field7Length()
 		l += p.field8Length()
 		l += p.field9Length()
+		l += p.field10Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -35470,6 +35601,17 @@ func (p *TLockBinlogRequest) fastWriteField9(buf []byte, binaryWriter bthrift.Bi
 	return offset
 }
 
+func (p *TLockBinlogRequest) fastWriteField10(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetAutoSelectMaster() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "auto_select_master", thrift.BOOL, 10)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.AutoSelectMaster)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TLockBinlogRequest) field1Length() int {
 	l := 0
 	if p.IsSetCluster() {
@@ -35563,6 +35705,17 @@ func (p *TLockBinlogRequest) field9Length() int {
 	if p.IsSetLockCommitSeq() {
 		l += bthrift.Binary.FieldBeginLength("lock_commit_seq", thrift.I64, 9)
 		l += bthrift.Binary.I64Length(*p.LockCommitSeq)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TLockBinlogRequest) field10Length() int {
+	l := 0
+	if p.IsSetAutoSelectMaster() {
+		l += bthrift.Binary.FieldBeginLength("auto_select_master", thrift.BOOL, 10)
+		l += bthrift.Binary.BoolLength(*p.AutoSelectMaster)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -35962,6 +36115,20 @@ func (p *TGetBinlogRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 11:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField11(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -36127,6 +36294,19 @@ func (p *TGetBinlogRequest) FastReadField10(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TGetBinlogRequest) FastReadField11(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.AutoSelectMaster = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TGetBinlogRequest) FastWrite(buf []byte) int {
 	return 0
@@ -36139,6 +36319,7 @@ func (p *TGetBinlogRequest) FastWriteNocopy(buf []byte, binaryWriter bthrift.Bin
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
 		offset += p.fastWriteField10(buf[offset:], binaryWriter)
+		offset += p.fastWriteField11(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -36166,6 +36347,7 @@ func (p *TGetBinlogRequest) BLength() int {
 		l += p.field8Length()
 		l += p.field9Length()
 		l += p.field10Length()
+		l += p.field11Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -36282,6 +36464,17 @@ func (p *TGetBinlogRequest) fastWriteField10(buf []byte, binaryWriter bthrift.Bi
 	return offset
 }
 
+func (p *TGetBinlogRequest) fastWriteField11(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetAutoSelectMaster() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "auto_select_master", thrift.BOOL, 11)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.AutoSelectMaster)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TGetBinlogRequest) field1Length() int {
 	l := 0
 	if p.IsSetCluster() {
@@ -36386,6 +36579,17 @@ func (p *TGetBinlogRequest) field10Length() int {
 	if p.IsSetNumAcquired() {
 		l += bthrift.Binary.FieldBeginLength("num_acquired", thrift.I64, 10)
 		l += bthrift.Binary.I64Length(*p.NumAcquired)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TGetBinlogRequest) field11Length() int {
+	l := 0
+	if p.IsSetAutoSelectMaster() {
+		l += bthrift.Binary.FieldBeginLength("auto_select_master", thrift.BOOL, 11)
+		l += bthrift.Binary.BoolLength(*p.AutoSelectMaster)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -37996,6 +38200,20 @@ func (p *TGetSnapshotRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 11:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField11(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -38163,6 +38381,19 @@ func (p *TGetSnapshotRequest) FastReadField10(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TGetSnapshotRequest) FastReadField11(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.AutoSelectMaster = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TGetSnapshotRequest) FastWrite(buf []byte) int {
 	return 0
@@ -38173,6 +38404,7 @@ func (p *TGetSnapshotRequest) FastWriteNocopy(buf []byte, binaryWriter bthrift.B
 	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "TGetSnapshotRequest")
 	if p != nil {
 		offset += p.fastWriteField10(buf[offset:], binaryWriter)
+		offset += p.fastWriteField11(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -38202,6 +38434,7 @@ func (p *TGetSnapshotRequest) BLength() int {
 		l += p.field8Length()
 		l += p.field9Length()
 		l += p.field10Length()
+		l += p.field11Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -38318,6 +38551,17 @@ func (p *TGetSnapshotRequest) fastWriteField10(buf []byte, binaryWriter bthrift.
 	return offset
 }
 
+func (p *TGetSnapshotRequest) fastWriteField11(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetAutoSelectMaster() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "auto_select_master", thrift.BOOL, 11)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.AutoSelectMaster)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TGetSnapshotRequest) field1Length() int {
 	l := 0
 	if p.IsSetCluster() {
@@ -38422,6 +38666,17 @@ func (p *TGetSnapshotRequest) field10Length() int {
 	if p.IsSetEnableCompress() {
 		l += bthrift.Binary.FieldBeginLength("enable_compress", thrift.BOOL, 10)
 		l += bthrift.Binary.BoolLength(*p.EnableCompress)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TGetSnapshotRequest) field11Length() int {
+	l := 0
+	if p.IsSetAutoSelectMaster() {
+		l += bthrift.Binary.FieldBeginLength("auto_select_master", thrift.BOOL, 11)
+		l += bthrift.Binary.BoolLength(*p.AutoSelectMaster)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -39309,6 +39564,20 @@ func (p *TRestoreSnapshotRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 18:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField18(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -39608,6 +39877,19 @@ func (p *TRestoreSnapshotRequest) FastReadField17(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TRestoreSnapshotRequest) FastReadField18(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.AutoSelectMaster = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TRestoreSnapshotRequest) FastWrite(buf []byte) int {
 	return 0
@@ -39622,6 +39904,7 @@ func (p *TRestoreSnapshotRequest) FastWriteNocopy(buf []byte, binaryWriter bthri
 		offset += p.fastWriteField15(buf[offset:], binaryWriter)
 		offset += p.fastWriteField16(buf[offset:], binaryWriter)
 		offset += p.fastWriteField17(buf[offset:], binaryWriter)
+		offset += p.fastWriteField18(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -39661,6 +39944,7 @@ func (p *TRestoreSnapshotRequest) BLength() int {
 		l += p.field15Length()
 		l += p.field16Length()
 		l += p.field17Length()
+		l += p.field18Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -39872,6 +40156,17 @@ func (p *TRestoreSnapshotRequest) fastWriteField17(buf []byte, binaryWriter bthr
 	return offset
 }
 
+func (p *TRestoreSnapshotRequest) fastWriteField18(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetAutoSelectMaster() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "auto_select_master", thrift.BOOL, 18)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.AutoSelectMaster)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TRestoreSnapshotRequest) field1Length() int {
 	l := 0
 	if p.IsSetCluster() {
@@ -40063,6 +40358,17 @@ func (p *TRestoreSnapshotRequest) field17Length() int {
 	if p.IsSetForceReplace() {
 		l += bthrift.Binary.FieldBeginLength("force_replace", thrift.BOOL, 17)
 		l += bthrift.Binary.BoolLength(*p.ForceReplace)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TRestoreSnapshotRequest) field18Length() int {
+	l := 0
+	if p.IsSetAutoSelectMaster() {
+		l += bthrift.Binary.FieldBeginLength("auto_select_master", thrift.BOOL, 18)
+		l += bthrift.Binary.BoolLength(*p.AutoSelectMaster)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -42314,6 +42620,20 @@ func (p *TGetMasterTokenRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -42388,6 +42708,19 @@ func (p *TGetMasterTokenRequest) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TGetMasterTokenRequest) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.AutoSelectMaster = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TGetMasterTokenRequest) FastWrite(buf []byte) int {
 	return 0
@@ -42397,6 +42730,7 @@ func (p *TGetMasterTokenRequest) FastWriteNocopy(buf []byte, binaryWriter bthrif
 	offset := 0
 	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "TGetMasterTokenRequest")
 	if p != nil {
+		offset += p.fastWriteField4(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -42413,6 +42747,7 @@ func (p *TGetMasterTokenRequest) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -42452,6 +42787,17 @@ func (p *TGetMasterTokenRequest) fastWriteField3(buf []byte, binaryWriter bthrif
 	return offset
 }
 
+func (p *TGetMasterTokenRequest) fastWriteField4(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetAutoSelectMaster() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "auto_select_master", thrift.BOOL, 4)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.AutoSelectMaster)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TGetMasterTokenRequest) field1Length() int {
 	l := 0
 	if p.IsSetCluster() {
@@ -42479,6 +42825,17 @@ func (p *TGetMasterTokenRequest) field3Length() int {
 	if p.IsSetPassword() {
 		l += bthrift.Binary.FieldBeginLength("password", thrift.STRING, 3)
 		l += bthrift.Binary.StringLengthNocopy(*p.Password)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TGetMasterTokenRequest) field4Length() int {
+	l := 0
+	if p.IsSetAutoSelectMaster() {
+		l += bthrift.Binary.FieldBeginLength("auto_select_master", thrift.BOOL, 4)
+		l += bthrift.Binary.BoolLength(*p.AutoSelectMaster)
 
 		l += bthrift.Binary.FieldEndLength()
 	}
@@ -47858,6 +48215,20 @@ func (p *TGetMetaRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -47971,6 +48342,19 @@ func (p *TGetMetaRequest) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TGetMetaRequest) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.AutoSelectMaster = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TGetMetaRequest) FastWrite(buf []byte) int {
 	return 0
@@ -47980,6 +48364,7 @@ func (p *TGetMetaRequest) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binar
 	offset := 0
 	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "TGetMetaRequest")
 	if p != nil {
+		offset += p.fastWriteField7(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -48002,6 +48387,7 @@ func (p *TGetMetaRequest) BLength() int {
 		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
+		l += p.field7Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -48073,6 +48459,17 @@ func (p *TGetMetaRequest) fastWriteField6(buf []byte, binaryWriter bthrift.Binar
 	return offset
 }
 
+func (p *TGetMetaRequest) fastWriteField7(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetAutoSelectMaster() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "auto_select_master", thrift.BOOL, 7)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.AutoSelectMaster)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TGetMetaRequest) field1Length() int {
 	l := 0
 	if p.IsSetCluster() {
@@ -48133,6 +48530,17 @@ func (p *TGetMetaRequest) field6Length() int {
 	if p.IsSetDb() {
 		l += bthrift.Binary.FieldBeginLength("db", thrift.STRUCT, 6)
 		l += p.Db.BLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TGetMetaRequest) field7Length() int {
+	l := 0
+	if p.IsSetAutoSelectMaster() {
+		l += bthrift.Binary.FieldBeginLength("auto_select_master", thrift.BOOL, 7)
+		l += bthrift.Binary.BoolLength(*p.AutoSelectMaster)
+
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l
@@ -50772,6 +51180,20 @@ func (p *TGetBackendMetaRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -50885,6 +51307,19 @@ func (p *TGetBackendMetaRequest) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TGetBackendMetaRequest) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.AutoSelectMaster = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TGetBackendMetaRequest) FastWrite(buf []byte) int {
 	return 0
@@ -50895,6 +51330,7 @@ func (p *TGetBackendMetaRequest) FastWriteNocopy(buf []byte, binaryWriter bthrif
 	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "TGetBackendMetaRequest")
 	if p != nil {
 		offset += p.fastWriteField6(buf[offset:], binaryWriter)
+		offset += p.fastWriteField7(buf[offset:], binaryWriter)
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 		offset += p.fastWriteField2(buf[offset:], binaryWriter)
 		offset += p.fastWriteField3(buf[offset:], binaryWriter)
@@ -50916,6 +51352,7 @@ func (p *TGetBackendMetaRequest) BLength() int {
 		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
+		l += p.field7Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -50988,6 +51425,17 @@ func (p *TGetBackendMetaRequest) fastWriteField6(buf []byte, binaryWriter bthrif
 	return offset
 }
 
+func (p *TGetBackendMetaRequest) fastWriteField7(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetAutoSelectMaster() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "auto_select_master", thrift.BOOL, 7)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.AutoSelectMaster)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TGetBackendMetaRequest) field1Length() int {
 	l := 0
 	if p.IsSetCluster() {
@@ -51048,6 +51496,17 @@ func (p *TGetBackendMetaRequest) field6Length() int {
 	if p.IsSetBackendId() {
 		l += bthrift.Binary.FieldBeginLength("backend_id", thrift.I64, 6)
 		l += bthrift.Binary.I64Length(*p.BackendId)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TGetBackendMetaRequest) field7Length() int {
+	l := 0
+	if p.IsSetAutoSelectMaster() {
+		l += bthrift.Binary.FieldBeginLength("auto_select_master", thrift.BOOL, 7)
+		l += bthrift.Binary.BoolLength(*p.AutoSelectMaster)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

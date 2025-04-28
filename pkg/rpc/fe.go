@@ -45,6 +45,7 @@ var (
 	commitTxnTimeout time.Duration
 	connectTimeout   time.Duration
 	RpcTimeout       time.Duration
+	AutoSelectMaster bool
 )
 
 var ErrFeNotMasterCompatible = xerror.NewWithoutStack(xerror.FE, "not master compatible")
@@ -54,6 +55,7 @@ func init() {
 	flag.DurationVar(&commitTxnTimeout, "commit_txn_timeout", 33*time.Second, "commmit_txn_timeout")
 	flag.DurationVar(&connectTimeout, "connect_timeout", 10*time.Second, "connect timeout")
 	flag.DurationVar(&RpcTimeout, "rpc_timeout", 30*time.Second, "rpc timeout")
+	flag.BoolVar(&AutoSelectMaster, "auto_select_master", true, "rpc auto select master or select follower")
 }
 
 // canUseNextAddr means can try next addr, err is a connection error, not a method not found or other error
@@ -119,11 +121,12 @@ type IFeRpc interface {
 }
 
 type FeRpc struct {
-	spec          *base.Spec
-	masterClient  IFeRpc
-	clients       map[string]IFeRpc
-	cachedFeAddrs map[string]bool
-	lock          sync.RWMutex // for get client
+	spec           *base.Spec
+	masterClient   IFeRpc
+	followerClient IFeRpc
+	clients        map[string]IFeRpc
+	cachedFeAddrs  map[string]bool
+	lock           sync.RWMutex // for get client
 }
 
 func NewFeRpc(spec *base.Spec) (*FeRpc, error) {
@@ -153,10 +156,11 @@ func NewFeRpc(spec *base.Spec) (*FeRpc, error) {
 	}
 
 	return &FeRpc{
-		spec:          spec,
-		masterClient:  client,
-		clients:       clients,
-		cachedFeAddrs: cachedFeAddrs,
+		spec:           spec,
+		masterClient:   client,
+		followerClient: client,
+		clients:        clients,
+		cachedFeAddrs:  cachedFeAddrs,
 	}, nil
 }
 
@@ -188,6 +192,13 @@ func (rpc *FeRpc) getMasterClient() IFeRpc {
 	defer rpc.lock.RUnlock()
 
 	return rpc.masterClient
+}
+
+func (rpc *FeRpc) getFollowerClient() IFeRpc {
+	rpc.lock.RLock()
+	defer rpc.lock.RUnlock()
+
+	return rpc.followerClient
 }
 
 func (rpc *FeRpc) updateMasterClient(masterClient IFeRpc) {
@@ -262,7 +273,7 @@ func (r *retryWithMasterRedirectAndCachedClientsRpc) call0(masterClient IFeRpc) 
 	}
 
 	// Step 2: check need redirect
-	if resp.GetStatus().GetStatusCode() != tstatus.TStatusCode_NOT_MASTER {
+	if resp.GetStatus().GetStatusCode() != tstatus.TStatusCode_NOT_MASTER && AutoSelectMaster {
 		return &call0Result{
 			canUseNextAddr: false,
 			resp:           resp,
@@ -271,17 +282,27 @@ func (r *retryWithMasterRedirectAndCachedClientsRpc) call0(masterClient IFeRpc) 
 	}
 
 	// no compatible for master
-	if !resp.IsSetMasterAddress() {
+	if !resp.IsSetMasterAddress() && AutoSelectMaster {
 		err = xerror.XPanicWrapf(ErrFeNotMasterCompatible, "fe addr [%s]", masterClient.Address())
 		return &call0Result{
 			canUseNextAddr: true,
 			err:            err, // not nil
 		}
+	} else if !AutoSelectMaster {
+		return &call0Result{
+			canUseNextAddr: true,
+			resp:           resp,
+			masterAddr:     "",
+			err:            nil,
+		}
 	}
 
 	// switch to master
 	masterAddr := resp.GetMasterAddress()
-	err = xerror.Errorf(xerror.FE, "addr [%s] is not master", masterAddr)
+
+	if AutoSelectMaster {
+		err = xerror.Errorf(xerror.FE, "addr [%s] is not master", masterAddr)
+	}
 
 	// convert private ip to public ip, if need
 	hostname := masterAddr.Hostname
@@ -317,8 +338,13 @@ func (r *retryWithMasterRedirectAndCachedClientsRpc) call() (RetryCall, resultTy
 	rpc := r.rpc
 	masterClient := rpc.masterClient
 
+	if !AutoSelectMaster {
+		masterClient = rpc.getFollowerClient()
+	}
+
 	// Step 1: try master
 	result := r.call0(masterClient)
+
 	if result.err == nil {
 		return RetryCallNone, result.resp, nil
 	}
@@ -331,9 +357,25 @@ func (r *retryWithMasterRedirectAndCachedClientsRpc) call() (RetryCall, resultTy
 
 	// Step 3: if set master addr, redirect to master
 	// redirect to master
-	if result.masterAddr != "" {
+	if result.masterAddr != "" && AutoSelectMaster {
 		masterAddr := result.masterAddr
 		log.Infof("switch to master %s", masterAddr)
+
+		var err error
+		client, ok := rpc.getClient(masterAddr)
+		if ok {
+			masterClient = client
+		} else {
+			masterClient, err = newSingleFeClient(masterAddr)
+			if err != nil {
+				return RetryCallNone, nil, xerror.Wrapf(err, xerror.RPC, "NewFeClient [%s] error: %v", masterAddr, err)
+			}
+		}
+		rpc.updateMasterClient(masterClient)
+		return RetryCallImmediate, nil, nil
+	} else if !AutoSelectMaster {
+		masterAddr := rpc.getFollowerClient().Address()
+		log.Infof("switch to follower %s", masterAddr)
 
 		var err error
 		client, ok := rpc.getClient(masterAddr)
@@ -375,6 +417,7 @@ func (rpc *FeRpc) callWithMasterRedirect(caller callerType) (resultType, error) 
 	for {
 		retryCall, resultType, err := r.call()
 		if err != nil {
+			log.Infof("r.call() error, err: %v", err)
 			return nil, err
 		}
 		switch retryCall {
@@ -578,7 +621,8 @@ func (rpc *singleFeClient) BeginTransaction(spec *base.Spec, label string, table
 
 	client := rpc.client
 	req := &festruct.TBeginTxnRequest{
-		Label: &label,
+		Label:            &label,
+		AutoSelectMaster: &AutoSelectMaster,
 	}
 	setAuthInfo(req, spec)
 	req.TableIds = tableIds
@@ -635,7 +679,9 @@ func (rpc *singleFeClient) CommitTransaction(spec *base.Spec, txnId int64, commi
 	defer xmetrics.RecordFeRpc("CommitTransaction", rpc.addr)()
 
 	client := rpc.client
-	req := &festruct.TCommitTxnRequest{}
+	req := &festruct.TCommitTxnRequest{
+		AutoSelectMaster: &AutoSelectMaster,
+	}
 	setAuthInfo(req, spec)
 	req.TxnId = &txnId
 	req.CommitInfos = commitInfos
@@ -654,7 +700,9 @@ func (rpc *singleFeClient) CommitTransactionForTxnInsert(spec *base.Spec, txnId 
 	defer xmetrics.RecordFeRpc("CommitTransaction", rpc.addr)()
 
 	client := rpc.client
-	req := &festruct.TCommitTxnRequest{}
+	req := &festruct.TCommitTxnRequest{
+		AutoSelectMaster: &AutoSelectMaster,
+	}
 	setAuthInfo(req, spec)
 	req.TxnId = &txnId
 	req.TxnInsert = &isTxnInsert
@@ -714,8 +762,9 @@ func (rpc *singleFeClient) GetBinlog(spec *base.Spec, commitSeq, numAcquired int
 
 	client := rpc.client
 	req := &festruct.TGetBinlogRequest{
-		PrevCommitSeq: &commitSeq,
-		NumAcquired:   &numAcquired,
+		PrevCommitSeq:    &commitSeq,
+		NumAcquired:      &numAcquired,
+		AutoSelectMaster: &AutoSelectMaster,
 	}
 	setAuthInfo(req, spec)
 
@@ -742,7 +791,8 @@ func (rpc *singleFeClient) GetBinlogLag(spec *base.Spec, commitSeq int64) (*fest
 
 	client := rpc.client
 	req := &festruct.TGetBinlogRequest{
-		PrevCommitSeq: &commitSeq,
+		PrevCommitSeq:    &commitSeq,
+		AutoSelectMaster: &AutoSelectMaster,
 	}
 	setAuthInfo(req, spec)
 
@@ -784,11 +834,12 @@ func (rpc *singleFeClient) GetSnapshot(spec *base.Spec, labelName string, compre
 	snapshotType := festruct.TSnapshotType_LOCAL
 	snapshotName := ""
 	req := &festruct.TGetSnapshotRequest{
-		Table:          &spec.Table,
-		LabelName:      &labelName,
-		SnapshotType:   &snapshotType,
-		SnapshotName:   &snapshotName,
-		EnableCompress: &compress,
+		Table:            &spec.Table,
+		LabelName:        &labelName,
+		SnapshotType:     &snapshotType,
+		SnapshotName:     &snapshotName,
+		EnableCompress:   &compress,
+		AutoSelectMaster: &AutoSelectMaster,
 	}
 	setAuthInfo(req, spec)
 
@@ -848,18 +899,19 @@ func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, restoreReq *RestoreS
 	}
 
 	req := &festruct.TRestoreSnapshotRequest{
-		Table:           &spec.Table,
-		LabelName:       &restoreReq.SnapshotName,
-		RepoName:        &repoName,
-		TableRefs:       restoreReq.TableRefs,
-		Properties:      properties,
-		Meta:            meta,
-		JobInfo:         jobInfo,
-		CleanTables:     &restoreReq.CleanTables,
-		CleanPartitions: &restoreReq.CleanPartitions,
-		AtomicRestore:   &restoreReq.AtomicRestore,
-		Compressed:      utils.ThriftValueWrapper(restoreReq.Compress),
-		ForceReplace:    &restoreReq.ForceReplace,
+		Table:            &spec.Table,
+		LabelName:        &restoreReq.SnapshotName,
+		RepoName:         &repoName,
+		TableRefs:        restoreReq.TableRefs,
+		Properties:       properties,
+		Meta:             meta,
+		JobInfo:          jobInfo,
+		CleanTables:      &restoreReq.CleanTables,
+		CleanPartitions:  &restoreReq.CleanPartitions,
+		AtomicRestore:    &restoreReq.AtomicRestore,
+		Compressed:       utils.ThriftValueWrapper(restoreReq.Compress),
+		ForceReplace:     &restoreReq.ForceReplace,
+		AutoSelectMaster: &AutoSelectMaster,
 	}
 	setAuthInfo(req, spec)
 
@@ -882,9 +934,10 @@ func (rpc *singleFeClient) GetMasterToken(spec *base.Spec) (*festruct.TGetMaster
 	defer xmetrics.RecordFeRpc("GetMasterToken", rpc.addr)()
 	client := rpc.client
 	req := &festruct.TGetMasterTokenRequest{
-		Cluster:  &spec.Cluster,
-		User:     &spec.User,
-		Password: &spec.Password,
+		Cluster:          &spec.Cluster,
+		User:             &spec.User,
+		Password:         &spec.Password,
+		AutoSelectMaster: &AutoSelectMaster,
 	}
 
 	log.Tracef("GetMasterToken user: %s", *req.User)
@@ -903,9 +956,10 @@ func (rpc *singleFeClient) getMeta(spec *base.Spec, reqTables []*festruct.TGetMe
 	reqDb.SetTables(reqTables)
 
 	req := &festruct.TGetMetaRequest{
-		User:   &spec.User,
-		Passwd: &spec.Password,
-		Db:     reqDb,
+		User:             &spec.User,
+		Passwd:           &spec.Password,
+		Db:               reqDb,
+		AutoSelectMaster: &AutoSelectMaster,
 	}
 
 	if resp, err := client.GetMeta(context.Background(), req); err != nil {
@@ -943,9 +997,10 @@ func (rpc *singleFeClient) GetBackends(spec *base.Spec) (*festruct.TGetBackendMe
 	defer xmetrics.RecordFeRpc("GetBackends", rpc.addr)()
 	client := rpc.client
 	req := &festruct.TGetBackendMetaRequest{
-		Cluster: &spec.Cluster,
-		User:    &spec.User,
-		Passwd:  &spec.Password,
+		Cluster:          &spec.Cluster,
+		User:             &spec.User,
+		Passwd:           &spec.Password,
+		AutoSelectMaster: &AutoSelectMaster,
 	}
 
 	if resp, err := client.GetBackendMeta(context.Background(), req); err != nil {
@@ -973,9 +1028,10 @@ func (rpc *singleFeClient) LockBinlog(spec *base.Spec, jobUniqueId string, table
 
 	client := rpc.client
 	req := &festruct.TLockBinlogRequest{
-		TableId:       &tableId,
-		JobUniqueId:   &jobUniqueId,
-		LockCommitSeq: &lockCommitSeq,
+		TableId:          &tableId,
+		JobUniqueId:      &jobUniqueId,
+		LockCommitSeq:    &lockCommitSeq,
+		AutoSelectMaster: &AutoSelectMaster,
 	}
 	setAuthInfo(req, spec)
 
