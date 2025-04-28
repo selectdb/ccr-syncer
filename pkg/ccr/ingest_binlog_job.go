@@ -666,7 +666,10 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 				partitionRecord.Id, partitionRecord.Range, partitionRecord.Version)
 			continue
 		}
-		if j.srcMeta.IsPartitionDropped(partitionRecord.Id) {
+		if dropped, err := j.ccrJob.IsPartitionDropped(srcTableId, partitionRecord.Id); err != nil {
+			j.setError(err)
+			return
+		} else if dropped {
 			log.Infof("txn %d skip the dropped partition %d, range: %s, version: %d",
 				j.txnId, partitionRecord.Id, partitionRecord.Range, partitionRecord.Version)
 			continue

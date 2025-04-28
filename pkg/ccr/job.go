@@ -429,6 +429,21 @@ func (j *Job) addExtraInfo(jobInfo []byte) ([]byte, error) {
 	return jobInfoBytes, nil
 }
 
+func (j *Job) IsPartitionDropped(tableId, partitionId int64) (bool, error) {
+	// Keep compatible with the old version, which doesn't have the table id in partial sync data.
+	if tableId == 0 {
+		return false, nil
+	}
+
+	var tableIds = []int64{tableId}
+	srcMeta, err := j.factory.NewThriftMeta(&j.Src, j.factory, tableIds)
+	if err != nil {
+		return false, err
+	}
+
+	return srcMeta.IsPartitionDropped(partitionId), nil
+}
+
 func (j *Job) handlePartialSyncTableNotFound() error {
 	tableId := j.progress.PartialSyncData.TableId
 	table := j.progress.PartialSyncData.Table
