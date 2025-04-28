@@ -67,7 +67,6 @@ suite("test_ds_absorb_tbl_create_alt_compaction") {
             `id` INT
         )
         ENGINE=OLAP
-        UNIQUE KEY(`test`, `id`)
         PARTITION BY RANGE(`id`)
         (
             PARTITION p10 values less than (10),
@@ -118,7 +117,6 @@ suite("test_ds_absorb_tbl_create_alt_compaction") {
             `id` INT
         )
         ENGINE=OLAP
-        UNIQUE KEY(`test`, `id`)
         PARTITION BY RANGE(`id`)
         (
             PARTITION p10 values less than (10),
