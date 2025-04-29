@@ -93,7 +93,7 @@ suite('test_dsd_rollup_drop_2') {
         return true
     }
 
-    assertTrue(helper.checkShowTimesOf("DESC ${context.dbName}.${tableName} ALL",
+    assertTrue(helper.checkShowTimesOf("DESC TEST_${context.dbName}.${tableName} ALL",
                                 hasRollupDropped, 30, 'target'))
 
     assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${tableName}_0\"", exist, 60, "sql"))

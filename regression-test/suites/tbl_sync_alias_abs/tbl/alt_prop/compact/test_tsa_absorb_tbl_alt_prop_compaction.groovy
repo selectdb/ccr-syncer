@@ -67,7 +67,6 @@ suite("test_tsa_absorb_tbl_alt_prop_compaction") {
             `id` INT
         )
         ENGINE=OLAP
-        UNIQUE KEY(`test`, `id`)
         PARTITION BY RANGE(`id`)
         (
             PARTITION p10 values less than (10),
