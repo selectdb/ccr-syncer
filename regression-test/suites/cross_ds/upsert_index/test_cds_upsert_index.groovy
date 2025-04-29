@@ -39,7 +39,8 @@ suite("test_cds_upsert_index") {
         ENGINE=OLAP
         DISTRIBUTED BY HASH(id) BUCKETS 1 
         PROPERTIES ( 
-            "replication_allocation" = "tag.location.default: 1"
+            "replication_allocation" = "tag.location.default: 1",
+            "binlog.enable" = "true"
         )
     """
 
