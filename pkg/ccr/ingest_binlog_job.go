@@ -307,6 +307,7 @@ func NewIngestContext(commitSeq, txnId int64, tableRecords []*record.TableRecord
 		txnId:        txnId,
 		tableRecords: tableRecords,
 		tableMapping: tableMapping,
+		stidMapping:  stidMapping,
 	}
 }
 
