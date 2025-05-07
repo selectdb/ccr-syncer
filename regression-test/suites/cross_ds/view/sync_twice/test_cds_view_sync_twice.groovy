@@ -80,7 +80,6 @@ suite("test_cds_view_sync_twice") {
 
     // the view will be restored again.
     logger.info("=== Test 2: delete job and create it again ===")
-    test_num = 5
     helper.ccrJobDelete()
 
     sql """
