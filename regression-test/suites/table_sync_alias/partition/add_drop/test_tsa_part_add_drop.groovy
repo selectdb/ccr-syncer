@@ -75,7 +75,7 @@ suite("test_tsa_part_add_drop") {
     """
 
     // add partition use bucket number 
-    opBucketNumberPartitonName = "bucket_number_partition"
+    def opBucketNumberPartitonName = "bucket_number_partition"
     sql """
         ALTER TABLE ${tableName}
         ADD PARTITION ${opBucketNumberPartitonName}

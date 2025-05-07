@@ -71,7 +71,7 @@ suite("test_tsa_col_rename") {
         INSERT INTO ${tableName} VALUES ${values.join(",")}
         """
 
-    result = sql "select * from ${tableName}"
+    def result = sql "select * from ${tableName}"
 
     assertEquals(result.size(), insert_num)
 
