@@ -588,6 +588,10 @@ func (j *Job) buildTxnContext(binlog *festruct.TBinlog) (*TxnContext, error) {
 				continue
 			} else if destTableId, err := j.GetDestTableIdBySrc(tableRecord.Id); err != nil {
 				return nil, err
+			} else if destTableId == 0 {
+				// ignore the upsert of the table which is not in the dest.
+				log.Warnf("table %d is not in the dest, ignore the upsert table record", tableRecord.Id)
+				continue
 			} else {
 				savedRecords = append(savedRecords, tableRecord)
 				destTableIds = append(destTableIds, destTableId)
