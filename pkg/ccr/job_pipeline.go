@@ -369,6 +369,11 @@ func (j *Job) drainStaledBinlogs() {
 func (j *Job) mayLoadPipelineInMemoryData() error {
 	if j.progress.InMemoryData == nil {
 		var data PipelineInMemoryData
+		// Set to empty data if the persist data is not set
+		if j.progress.PersistData == "" {
+			j.progress.InMemoryData = &data
+			return nil
+		}
 		if err := json.Unmarshal([]byte(j.progress.PersistData), &data); err != nil {
 			return xerror.Errorf(xerror.Normal, "unmarshal pipeline memory data failed, err: %v", err)
 		}
