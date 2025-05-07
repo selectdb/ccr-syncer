@@ -933,7 +933,6 @@ func (j *Job) fullSync() error {
 		if err := j.ISrc.CreateSnapshot(snapshotName, backupTableList); err != nil {
 			return err
 		}
-		utils.SetDebugPoint("fullsync create snapshot")
 		j.progress.NextSubVolatile(WaitBackupDone, snapshotName)
 		return nil
 
@@ -1367,7 +1366,6 @@ func (j *Job) fullSync() error {
 				tableMapping[srcTableId] = destTableId
 			}
 
-			j.srcMeta.ClearTablesCache()
 			j.progress.TableMapping = tableMapping
 			j.progress.ShadowIndexes = nil
 			j.progress.PartitionCommitSeqMap = nil
@@ -1542,14 +1540,6 @@ func (j *Job) getDbSyncTableRecords(upsert *record.Upsert) []*record.TableRecord
 	tableRecords := make([]*record.TableRecord, 0, len(upsert.TableRecords))
 
 	for tableId, tableRecord := range upsert.TableRecords {
-		// filter dropped table on upstream
-		if ok, err := j.isTableDropped(tableId); err != nil {
-			log.Warn(err)
-			return nil
-		} else if ok {
-			log.Warn("table dropped on upstream")
-			continue
-		}
 		if tableCommitSeq, ok := tableCommitSeqMap[tableId]; ok && commitSeq <= tableCommitSeq {
 			// All the partition records of the table have been committed
 			continue
@@ -1571,6 +1561,7 @@ func (j *Job) getDbSyncTableRecords(upsert *record.Upsert) []*record.TableRecord
 			tableRecords = append(tableRecords, tableRecord)
 		}
 	}
+
 	return tableRecords
 }
 
