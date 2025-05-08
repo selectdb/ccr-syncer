@@ -578,6 +578,9 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64,
 		prepareIndexArg.srcIndexMeta = srcIndexMeta
 		prepareIndexArg.destIndexMeta = destIndexMeta
 		j.prepareIndex(&prepareIndexArg)
+		if j.Error() != nil {
+			return
+		}
 	}
 
 	if len(droppedIndexes) > 0 && len(droppedIndexes) != len(indexIds) {
@@ -673,6 +676,9 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 			continue
 		}
 		j.preparePartition(srcTableId, destTableId, partitionRecord, tableRecord.IndexIds, tableRecord.DeltaRows)
+		if j.Error() != nil {
+			return
+		}
 	}
 }
 
@@ -699,7 +705,12 @@ func (j *IngestBinlogJob) prepareTabletIngestJobs() {
 	j.tabletIngestJobs = make([]*tabletIngestBinlogHandler, 0)
 	for _, tableRecord := range j.tableRecords {
 		j.prepareTable(tableRecord)
-		if j.Error() != nil {
+		err := j.Error()
+		if err != nil {
+			if xerror.IsCategory(err, xerror.Meta) {
+				log.Warnf("txn %d ingest binlog: prepare table %d failed, err: %v, dropped tables %v, dropped partitions %v, dropped indexes %v",
+					j.txnId, tableRecord.Id, err, j.srcMeta.GetDroppedTableMap(), j.srcMeta.GetDroppedPartitionMap(), j.srcMeta.GetDroppedIndexMap())
+			}
 			return
 		}
 	}
