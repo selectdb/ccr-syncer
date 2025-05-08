@@ -307,3 +307,14 @@ func (tm *ThriftMeta) IsIndexDropped(indexId int64) bool {
 func (tm *ThriftMeta) GetDroppedIndexMap() map[int64]int64 {
 	return tm.droppedIndexMap
 }
+
+func (tm *ThriftMeta) GetTable(tableId int64) (*TableMeta, error) {
+	dbId := tm.meta.Id
+
+	tableMeta, ok := tm.meta.Tables[tableId]
+	if !ok {
+		return nil, xerror.Errorf(xerror.Meta, "dbId: %d, tableId: %d not found", dbId, tableId)
+	}
+
+	return tableMeta, nil
+}

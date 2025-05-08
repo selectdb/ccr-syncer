@@ -398,13 +398,15 @@ func (j *Job) isTableDropped(tableId int64) (bool, error) {
 		return false, nil
 	}
 
-	var tableIds = []int64{tableId}
-	srcMeta, err := j.factory.NewThriftMeta(&j.Src, j.factory, tableIds)
+	srcMeta, err := j.getSourceThriftMeta(tableId)
 	if err != nil {
 		return false, err
 	}
-
 	return srcMeta.IsTableDropped(tableId), nil
+}
+
+func (j *Job) getSourceThriftMeta(tableId int64) (*ThriftMeta, error) {
+	return j.factory.NewThriftMeta(&j.Src, j.factory, []int64{tableId})
 }
 
 func (j *Job) addExtraInfo(jobInfo []byte) ([]byte, error) {
@@ -933,7 +935,6 @@ func (j *Job) fullSync() error {
 		if err := j.ISrc.CreateSnapshot(snapshotName, backupTableList); err != nil {
 			return err
 		}
-		utils.SetDebugPoint("fullsync create snapshot")
 		j.progress.NextSubVolatile(WaitBackupDone, snapshotName)
 		return nil
 
@@ -1367,7 +1368,6 @@ func (j *Job) fullSync() error {
 				tableMapping[srcTableId] = destTableId
 			}
 
-			j.srcMeta.ClearTablesCache()
 			j.progress.TableMapping = tableMapping
 			j.progress.ShadowIndexes = nil
 			j.progress.PartitionCommitSeqMap = nil
@@ -1464,6 +1464,9 @@ func (j *Job) IsMaterializedViewTable(srcTableId int64) (bool, error) {
 	return false, nil
 }
 
+// GetDestTableIdBySrc returns the dest table id by src table id.
+// If the src table is dropped, return 0.
+// If the src table is a materialized view, return ErrMaterializedViewTable.
 func (j *Job) GetDestTableIdBySrc(srcTableId int64) (int64, error) {
 	if j.SyncType == TableSync {
 		return j.Dest.TableId, nil
@@ -1481,12 +1484,16 @@ func (j *Job) GetDestTableIdBySrc(srcTableId int64) (int64, error) {
 
 	// WARNING: the table name might be changed, and the TableMapping has been updated in time,
 	// only keep this for compatible.
-	srcTable, err := j.srcMeta.GetTable(srcTableId)
-	if err != nil {
+	if srcMeta, err := j.getSourceThriftMeta(srcTableId); err != nil {
 		return 0, err
-	} else if srcTable.Type == record.TableTypeMaterializedView {
+	} else if srcMeta.IsTableDropped(srcTableId) {
+		log.Warnf("table %d is dropped, no need to map it to dest table", srcTableId)
+		return 0, nil
+	} else if tableMeta, err := j.srcMeta.GetTable(srcTableId); err != nil {
+		return 0, err
+	} else if tableMeta.Type == record.TableTypeMaterializedView {
 		return 0, ErrMaterializedViewTable
-	} else if destTableId, err := j.destMeta.GetTableId(srcTable.Name); err != nil {
+	} else if destTableId, err := j.destMeta.GetTableId(tableMeta.Name); err != nil {
 		return 0, err
 	} else {
 		j.progress.TableMapping[srcTableId] = destTableId
@@ -1502,6 +1509,8 @@ func (j *Job) GetDestNameBySrcId(srcTableId int64) (string, error) {
 	destTableId, err := j.GetDestTableIdBySrc(srcTableId)
 	if err != nil {
 		return "", err
+	} else if destTableId == 0 {
+		return "", xerror.Errorf(xerror.Normal, "source table %d is dropped", srcTableId)
 	}
 
 	name, err := j.destMeta.GetTableNameById(destTableId)
@@ -1542,14 +1551,6 @@ func (j *Job) getDbSyncTableRecords(upsert *record.Upsert) []*record.TableRecord
 	tableRecords := make([]*record.TableRecord, 0, len(upsert.TableRecords))
 
 	for tableId, tableRecord := range upsert.TableRecords {
-		// filter dropped table on upstream
-		if ok, err := j.isTableDropped(tableId); err != nil {
-			log.Warn(err)
-			return nil
-		} else if ok {
-			log.Warn("table dropped on upstream")
-			continue
-		}
 		if tableCommitSeq, ok := tableCommitSeqMap[tableId]; ok && commitSeq <= tableCommitSeq {
 			// All the partition records of the table have been committed
 			continue
@@ -1571,6 +1572,7 @@ func (j *Job) getDbSyncTableRecords(upsert *record.Upsert) []*record.TableRecord
 			tableRecords = append(tableRecords, tableRecord)
 		}
 	}
+
 	return tableRecords
 }
 
@@ -1766,6 +1768,10 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 					continue
 				} else if destTableId, err := j.GetDestTableIdBySrc(tableRecord.Id); err != nil {
 					return err
+				} else if destTableId == 0 {
+					// Skip the table which is not in the table mapping
+					log.Warnf("table %d is not in the table mapping, skip it", tableRecord.Id)
+					continue
 				} else {
 					savedRecords = append(savedRecords, tableRecord)
 					destTableIds = append(destTableIds, destTableId)
@@ -3234,6 +3240,8 @@ func (j *Job) isRenamePartitionCommitted(record *record.RenamePartition) (bool, 
 	destTableId, err := j.GetDestTableIdBySrc(record.TableId)
 	if err != nil {
 		return false, err
+	} else if destTableId == 0 {
+		return false, nil
 	}
 
 	if err := j.destMeta.UpdatePartitions(destTableId); err != nil {

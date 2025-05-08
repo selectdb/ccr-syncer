@@ -31,7 +31,6 @@ suite("test_cds_upsert_drop_create", "nonConcurrent") {
 
     try {
         GetDebugPoint().enableDebugPointForAllFEs("BackupHandler.backup.block")
-        helper.enableDebugpoint()
         helper.enableDbBinlog()
 
         sql """
@@ -51,8 +50,7 @@ suite("test_cds_upsert_drop_create", "nonConcurrent") {
 
         helper.ccrJobDelete()
         assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "sql"))
-        helper.openDebugpoint("fullsync create snapshot")
-        helper.ccrJobCreate()    
+        helper.ccrJobCreate()
 
         sleep(5000)
 
@@ -78,7 +76,6 @@ suite("test_cds_upsert_drop_create", "nonConcurrent") {
         """
 
         GetDebugPoint().clearDebugPointsForAllFEs()
-        helper.closeDebugpoint("fullsync create snapshot")
 
         assertTrue(helper.checkRestoreFinishTimesOf("${tableName}", 180))
         assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "target"))
@@ -88,12 +85,7 @@ suite("test_cds_upsert_drop_create", "nonConcurrent") {
             """
 
         assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == 1}, 60, "target"))
-    } catch(Exception e) {
-        logger.info(e.getMessage())
-        throw e
     } finally {
         GetDebugPoint().clearDebugPointsForAllFEs()
-        helper.closeDebugpoint("fullsync create snapshot")
-        helper.disableDebugpoint()
     }
 }

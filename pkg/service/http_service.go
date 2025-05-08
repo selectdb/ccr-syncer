@@ -1084,64 +1084,6 @@ func (s *HttpService) failpointHandler(w http.ResponseWriter, r *http.Request) {
 	result = newSuccessResult()
 }
 
-func (s *HttpService) debugpointHandler(w http.ResponseWriter, r *http.Request) {
-	log.Infof("debugpoint")
-
-	var result *defaultResult
-	defer func() { writeJson(w, result) }()
-
-	// Parse the JSON request body
-	var request struct {
-		Name     string `json:"name"` // the debug point name
-		Operator string `json:"op"`
-	}
-	err := json.NewDecoder(r.Body).Decode(&request)
-	if err != nil {
-		log.Warnf("parse debug failed: %+v", err)
-		result = newErrorResult(err.Error())
-		return
-	}
-
-	if request.Operator == "enable" {
-		utils.EnableDebugpoint()
-		result = newSuccessResult()
-		return
-	} else if request.Operator == "disable" {
-		utils.DisableDebugpoint()
-		result = newSuccessResult()
-		return
-	}
-
-	if ok := utils.IsDebugpointEnabled(); !ok {
-		log.Warnf("debug point not enable")
-		result = newErrorResult("debug point not enable")
-		return
-	}
-
-	if request.Name == "" {
-		log.Warnf("debug point name is empty")
-		result = newErrorResult("debug point name is empty")
-		return
-	} else if request.Operator != "" {
-		switch request.Operator {
-		case "open":
-			utils.OpenDebugPoint(request.Name)
-		case "close":
-			utils.CloseDebugPoint(request.Name)
-		default:
-			log.Info("unknow operator")
-			result = newErrorResult("unknow operator")
-			return
-		}
-	} else {
-		log.Info("dont have any operator")
-		result = newErrorResult("dont have any operator")
-		return
-	}
-
-	result = newSuccessResult()
-}
-
 func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/version", s.versionHandler)
 	s.mux.HandleFunc("/create_ccr", s.createHandler)
@@ -1159,7 +1101,6 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/update_host_mapping", s.updateHostMappingHandler)
 	s.mux.HandleFunc("/job_skip_binlog", s.skipBinlogHandler)
 	s.mux.HandleFunc("/failpoint", s.failpointHandler)
-	s.mux.HandleFunc("/debugpoint", s.debugpointHandler)
 	s.mux.Handle("/metrics", xmetrics.GetHttpHandler())
 	s.mux.HandleFunc("/sync", s.syncHandler)
 	s.mux.HandleFunc("/view", s.showJobStateHandler)
