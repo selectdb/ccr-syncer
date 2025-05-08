@@ -61,6 +61,7 @@ type Client interface {
 	GetMasterToken(ctx context.Context, request *frontendservice.TGetMasterTokenRequest, callOptions ...callopt.Option) (r *frontendservice.TGetMasterTokenResult_, err error)
 	GetBinlogLag(ctx context.Context, request *frontendservice.TGetBinlogLagRequest, callOptions ...callopt.Option) (r *frontendservice.TGetBinlogLagResult_, err error)
 	UpdateStatsCache(ctx context.Context, request *frontendservice.TUpdateFollowerStatsCacheRequest, callOptions ...callopt.Option) (r *status.TStatus, err error)
+	UpdatePlanStatsCache(ctx context.Context, request *frontendservice.TUpdatePlanStatsCacheRequest, callOptions ...callopt.Option) (r *status.TStatus, err error)
 	GetAutoIncrementRange(ctx context.Context, request *frontendservice.TAutoIncrementRangeRequest, callOptions ...callopt.Option) (r *frontendservice.TAutoIncrementRangeResult_, err error)
 	CreatePartition(ctx context.Context, request *frontendservice.TCreatePartitionRequest, callOptions ...callopt.Option) (r *frontendservice.TCreatePartitionResult_, err error)
 	ReplacePartition(ctx context.Context, request *frontendservice.TReplacePartitionRequest, callOptions ...callopt.Option) (r *frontendservice.TReplacePartitionResult_, err error)
@@ -75,6 +76,7 @@ type Client interface {
 	FetchSplitBatch(ctx context.Context, request *frontendservice.TFetchSplitBatchRequest, callOptions ...callopt.Option) (r *frontendservice.TFetchSplitBatchResult_, err error)
 	UpdatePartitionStatsCache(ctx context.Context, request *frontendservice.TUpdateFollowerPartitionStatsCacheRequest, callOptions ...callopt.Option) (r *status.TStatus, err error)
 	FetchRunningQueries(ctx context.Context, request *frontendservice.TFetchRunningQueriesRequest, callOptions ...callopt.Option) (r *frontendservice.TFetchRunningQueriesResult_, err error)
+	FetchRoutineLoadJob(ctx context.Context, request *frontendservice.TFetchRoutineLoadJobRequest, callOptions ...callopt.Option) (r *frontendservice.TFetchRoutineLoadJobResult_, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -346,6 +348,11 @@ func (p *kFrontendServiceClient) UpdateStatsCache(ctx context.Context, request *
 	return p.kClient.UpdateStatsCache(ctx, request)
 }
 
+func (p *kFrontendServiceClient) UpdatePlanStatsCache(ctx context.Context, request *frontendservice.TUpdatePlanStatsCacheRequest, callOptions ...callopt.Option) (r *status.TStatus, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdatePlanStatsCache(ctx, request)
+}
+
 func (p *kFrontendServiceClient) GetAutoIncrementRange(ctx context.Context, request *frontendservice.TAutoIncrementRangeRequest, callOptions ...callopt.Option) (r *frontendservice.TAutoIncrementRangeResult_, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetAutoIncrementRange(ctx, request)
@@ -414,4 +421,9 @@ func (p *kFrontendServiceClient) UpdatePartitionStatsCache(ctx context.Context, 
 func (p *kFrontendServiceClient) FetchRunningQueries(ctx context.Context, request *frontendservice.TFetchRunningQueriesRequest, callOptions ...callopt.Option) (r *frontendservice.TFetchRunningQueriesResult_, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.FetchRunningQueries(ctx, request)
+}
+
+func (p *kFrontendServiceClient) FetchRoutineLoadJob(ctx context.Context, request *frontendservice.TFetchRoutineLoadJobRequest, callOptions ...callopt.Option) (r *frontendservice.TFetchRoutineLoadJobResult_, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.FetchRoutineLoadJob(ctx, request)
 }

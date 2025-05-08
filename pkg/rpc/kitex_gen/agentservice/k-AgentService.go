@@ -1615,6 +1615,48 @@ func (p *TS3StorageParam) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 13:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField13(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 14:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField14(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 15:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField15(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1812,6 +1854,47 @@ func (p *TS3StorageParam) FastReadField12(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TS3StorageParam) FastReadField13(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := TCredProviderType(v)
+		p.CredProviderType = &tmp
+
+	}
+	return offset, nil
+}
+
+func (p *TS3StorageParam) FastReadField14(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.RoleArn = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TS3StorageParam) FastReadField15(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.ExternalId = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TS3StorageParam) FastWrite(buf []byte) int {
 	return 0
@@ -1833,6 +1916,9 @@ func (p *TS3StorageParam) FastWriteNocopy(buf []byte, binaryWriter bthrift.Binar
 		offset += p.fastWriteField9(buf[offset:], binaryWriter)
 		offset += p.fastWriteField11(buf[offset:], binaryWriter)
 		offset += p.fastWriteField12(buf[offset:], binaryWriter)
+		offset += p.fastWriteField13(buf[offset:], binaryWriter)
+		offset += p.fastWriteField14(buf[offset:], binaryWriter)
+		offset += p.fastWriteField15(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -1855,6 +1941,9 @@ func (p *TS3StorageParam) BLength() int {
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field12Length()
+		l += p.field13Length()
+		l += p.field14Length()
+		l += p.field15Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -1993,6 +2082,39 @@ func (p *TS3StorageParam) fastWriteField12(buf []byte, binaryWriter bthrift.Bina
 	return offset
 }
 
+func (p *TS3StorageParam) fastWriteField13(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetCredProviderType() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "cred_provider_type", thrift.I32, 13)
+		offset += bthrift.Binary.WriteI32(buf[offset:], int32(*p.CredProviderType))
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TS3StorageParam) fastWriteField14(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetRoleArn() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "role_arn", thrift.STRING, 14)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.RoleArn)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TS3StorageParam) fastWriteField15(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetExternalId() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "external_id", thrift.STRING, 15)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.ExternalId)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TS3StorageParam) field1Length() int {
 	l := 0
 	if p.IsSetEndpoint() {
@@ -2119,6 +2241,39 @@ func (p *TS3StorageParam) field12Length() int {
 	if p.IsSetProvider() {
 		l += bthrift.Binary.FieldBeginLength("provider", thrift.I32, 12)
 		l += bthrift.Binary.I32Length(int32(*p.Provider))
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TS3StorageParam) field13Length() int {
+	l := 0
+	if p.IsSetCredProviderType() {
+		l += bthrift.Binary.FieldBeginLength("cred_provider_type", thrift.I32, 13)
+		l += bthrift.Binary.I32Length(int32(*p.CredProviderType))
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TS3StorageParam) field14Length() int {
+	l := 0
+	if p.IsSetRoleArn() {
+		l += bthrift.Binary.FieldBeginLength("role_arn", thrift.STRING, 14)
+		l += bthrift.Binary.StringLengthNocopy(*p.RoleArn)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TS3StorageParam) field15Length() int {
+	l := 0
+	if p.IsSetExternalId() {
+		l += bthrift.Binary.FieldBeginLength("external_id", thrift.STRING, 15)
+		l += bthrift.Binary.StringLengthNocopy(*p.ExternalId)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

@@ -43,6 +43,7 @@ type Client interface {
 	QueryIngestBinlog(ctx context.Context, queryIngestBinlogRequest *backendservice.TQueryIngestBinlogRequest, callOptions ...callopt.Option) (r *backendservice.TQueryIngestBinlogResult_, err error)
 	PublishTopicInfo(ctx context.Context, topicRequest *backendservice.TPublishTopicRequest, callOptions ...callopt.Option) (r *backendservice.TPublishTopicResult_, err error)
 	GetRealtimeExecStatus(ctx context.Context, request *backendservice.TGetRealtimeExecStatusRequest, callOptions ...callopt.Option) (r *backendservice.TGetRealtimeExecStatusResponse, err error)
+	GetDictionaryStatus(ctx context.Context, dictionaryIds []int64, callOptions ...callopt.Option) (r *backendservice.TDictionaryStatusList, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -207,4 +208,9 @@ func (p *kBackendServiceClient) PublishTopicInfo(ctx context.Context, topicReque
 func (p *kBackendServiceClient) GetRealtimeExecStatus(ctx context.Context, request *backendservice.TGetRealtimeExecStatusRequest, callOptions ...callopt.Option) (r *backendservice.TGetRealtimeExecStatusResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetRealtimeExecStatus(ctx, request)
+}
+
+func (p *kBackendServiceClient) GetDictionaryStatus(ctx context.Context, dictionaryIds []int64, callOptions ...callopt.Option) (r *backendservice.TDictionaryStatusList, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetDictionaryStatus(ctx, dictionaryIds)
 }

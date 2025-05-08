@@ -169,6 +169,7 @@ type TSerdeDialect int64
 const (
 	TSerdeDialect_DORIS  TSerdeDialect = 0
 	TSerdeDialect_PRESTO TSerdeDialect = 1
+	TSerdeDialect_HIVE   TSerdeDialect = 2
 )
 
 func (p TSerdeDialect) String() string {
@@ -177,6 +178,8 @@ func (p TSerdeDialect) String() string {
 		return "DORIS"
 	case TSerdeDialect_PRESTO:
 		return "PRESTO"
+	case TSerdeDialect_HIVE:
+		return "HIVE"
 	}
 	return "<UNSET>"
 }
@@ -187,6 +190,8 @@ func TSerdeDialectFromString(s string) (TSerdeDialect, error) {
 		return TSerdeDialect_DORIS, nil
 	case "PRESTO":
 		return TSerdeDialect_PRESTO, nil
+	case "HIVE":
+		return TSerdeDialect_HIVE, nil
 	}
 	return TSerdeDialect(0), fmt.Errorf("not a valid TSerdeDialect string")
 }
@@ -1784,6 +1789,9 @@ type TQueryOptions struct {
 	SpillHashJoinPartitionCount                 int32           `thrift:"spill_hash_join_partition_count,160,optional" frugal:"160,optional,i32" json:"spill_hash_join_partition_count,omitempty"`
 	LowMemoryModeBufferLimit                    int64           `thrift:"low_memory_mode_buffer_limit,161,optional" frugal:"161,optional,i64" json:"low_memory_mode_buffer_limit,omitempty"`
 	DumpHeapProfileWhenMemLimitExceeded         bool            `thrift:"dump_heap_profile_when_mem_limit_exceeded,162,optional" frugal:"162,optional,bool" json:"dump_heap_profile_when_mem_limit_exceeded,omitempty"`
+	InvertedIndexCompatibleRead                 bool            `thrift:"inverted_index_compatible_read,163,optional" frugal:"163,optional,bool" json:"inverted_index_compatible_read,omitempty"`
+	CheckOrcInitSargsSuccess                    bool            `thrift:"check_orc_init_sargs_success,164,optional" frugal:"164,optional,bool" json:"check_orc_init_sargs_success,omitempty"`
+	ExchangeMultiBlocksByteSize                 int32           `thrift:"exchange_multi_blocks_byte_size,165,optional" frugal:"165,optional,i32" json:"exchange_multi_blocks_byte_size,omitempty"`
 	DisableFileCache                            bool            `thrift:"disable_file_cache,1000,optional" frugal:"1000,optional,bool" json:"disable_file_cache,omitempty"`
 }
 
@@ -1932,6 +1940,9 @@ func NewTQueryOptions() *TQueryOptions {
 		SpillHashJoinPartitionCount:                 32,
 		LowMemoryModeBufferLimit:                    33554432,
 		DumpHeapProfileWhenMemLimitExceeded:         false,
+		InvertedIndexCompatibleRead:                 false,
+		CheckOrcInitSargsSuccess:                    false,
+		ExchangeMultiBlocksByteSize:                 262144,
 		DisableFileCache:                            false,
 	}
 }
@@ -2079,6 +2090,9 @@ func (p *TQueryOptions) InitDefault() {
 	p.SpillHashJoinPartitionCount = 32
 	p.LowMemoryModeBufferLimit = 33554432
 	p.DumpHeapProfileWhenMemLimitExceeded = false
+	p.InvertedIndexCompatibleRead = false
+	p.CheckOrcInitSargsSuccess = false
+	p.ExchangeMultiBlocksByteSize = 262144
 	p.DisableFileCache = false
 }
 
@@ -3459,6 +3473,33 @@ func (p *TQueryOptions) GetDumpHeapProfileWhenMemLimitExceeded() (v bool) {
 	return p.DumpHeapProfileWhenMemLimitExceeded
 }
 
+var TQueryOptions_InvertedIndexCompatibleRead_DEFAULT bool = false
+
+func (p *TQueryOptions) GetInvertedIndexCompatibleRead() (v bool) {
+	if !p.IsSetInvertedIndexCompatibleRead() {
+		return TQueryOptions_InvertedIndexCompatibleRead_DEFAULT
+	}
+	return p.InvertedIndexCompatibleRead
+}
+
+var TQueryOptions_CheckOrcInitSargsSuccess_DEFAULT bool = false
+
+func (p *TQueryOptions) GetCheckOrcInitSargsSuccess() (v bool) {
+	if !p.IsSetCheckOrcInitSargsSuccess() {
+		return TQueryOptions_CheckOrcInitSargsSuccess_DEFAULT
+	}
+	return p.CheckOrcInitSargsSuccess
+}
+
+var TQueryOptions_ExchangeMultiBlocksByteSize_DEFAULT int32 = 262144
+
+func (p *TQueryOptions) GetExchangeMultiBlocksByteSize() (v int32) {
+	if !p.IsSetExchangeMultiBlocksByteSize() {
+		return TQueryOptions_ExchangeMultiBlocksByteSize_DEFAULT
+	}
+	return p.ExchangeMultiBlocksByteSize
+}
+
 var TQueryOptions_DisableFileCache_DEFAULT bool = false
 
 func (p *TQueryOptions) GetDisableFileCache() (v bool) {
@@ -3926,6 +3967,15 @@ func (p *TQueryOptions) SetLowMemoryModeBufferLimit(val int64) {
 func (p *TQueryOptions) SetDumpHeapProfileWhenMemLimitExceeded(val bool) {
 	p.DumpHeapProfileWhenMemLimitExceeded = val
 }
+func (p *TQueryOptions) SetInvertedIndexCompatibleRead(val bool) {
+	p.InvertedIndexCompatibleRead = val
+}
+func (p *TQueryOptions) SetCheckOrcInitSargsSuccess(val bool) {
+	p.CheckOrcInitSargsSuccess = val
+}
+func (p *TQueryOptions) SetExchangeMultiBlocksByteSize(val int32) {
+	p.ExchangeMultiBlocksByteSize = val
+}
 func (p *TQueryOptions) SetDisableFileCache(val bool) {
 	p.DisableFileCache = val
 }
@@ -4084,6 +4134,9 @@ var fieldIDToName_TQueryOptions = map[int16]string{
 	160:  "spill_hash_join_partition_count",
 	161:  "low_memory_mode_buffer_limit",
 	162:  "dump_heap_profile_when_mem_limit_exceeded",
+	163:  "inverted_index_compatible_read",
+	164:  "check_orc_init_sargs_success",
+	165:  "exchange_multi_blocks_byte_size",
 	1000: "disable_file_cache",
 }
 
@@ -4697,6 +4750,18 @@ func (p *TQueryOptions) IsSetLowMemoryModeBufferLimit() bool {
 
 func (p *TQueryOptions) IsSetDumpHeapProfileWhenMemLimitExceeded() bool {
 	return p.DumpHeapProfileWhenMemLimitExceeded != TQueryOptions_DumpHeapProfileWhenMemLimitExceeded_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetInvertedIndexCompatibleRead() bool {
+	return p.InvertedIndexCompatibleRead != TQueryOptions_InvertedIndexCompatibleRead_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetCheckOrcInitSargsSuccess() bool {
+	return p.CheckOrcInitSargsSuccess != TQueryOptions_CheckOrcInitSargsSuccess_DEFAULT
+}
+
+func (p *TQueryOptions) IsSetExchangeMultiBlocksByteSize() bool {
+	return p.ExchangeMultiBlocksByteSize != TQueryOptions_ExchangeMultiBlocksByteSize_DEFAULT
 }
 
 func (p *TQueryOptions) IsSetDisableFileCache() bool {
@@ -5941,6 +6006,30 @@ func (p *TQueryOptions) Read(iprot thrift.TProtocol) (err error) {
 		case 162:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField162(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 163:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField163(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 164:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField164(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 165:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField165(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7663,6 +7752,39 @@ func (p *TQueryOptions) ReadField162(iprot thrift.TProtocol) error {
 	p.DumpHeapProfileWhenMemLimitExceeded = _field
 	return nil
 }
+func (p *TQueryOptions) ReadField163(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.InvertedIndexCompatibleRead = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField164(iprot thrift.TProtocol) error {
+
+	var _field bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.CheckOrcInitSargsSuccess = _field
+	return nil
+}
+func (p *TQueryOptions) ReadField165(iprot thrift.TProtocol) error {
+
+	var _field int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.ExchangeMultiBlocksByteSize = _field
+	return nil
+}
 func (p *TQueryOptions) ReadField1000(iprot thrift.TProtocol) error {
 
 	var _field bool
@@ -8291,6 +8413,18 @@ func (p *TQueryOptions) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField162(oprot); err != nil {
 			fieldId = 162
+			goto WriteFieldError
+		}
+		if err = p.writeField163(oprot); err != nil {
+			fieldId = 163
+			goto WriteFieldError
+		}
+		if err = p.writeField164(oprot); err != nil {
+			fieldId = 164
+			goto WriteFieldError
+		}
+		if err = p.writeField165(oprot); err != nil {
+			fieldId = 165
 			goto WriteFieldError
 		}
 		if err = p.writeField1000(oprot); err != nil {
@@ -11222,6 +11356,63 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 162 end error: ", p), err)
 }
 
+func (p *TQueryOptions) writeField163(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInvertedIndexCompatibleRead() {
+		if err = oprot.WriteFieldBegin("inverted_index_compatible_read", thrift.BOOL, 163); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.InvertedIndexCompatibleRead); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 163 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 163 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField164(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCheckOrcInitSargsSuccess() {
+		if err = oprot.WriteFieldBegin("check_orc_init_sargs_success", thrift.BOOL, 164); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(p.CheckOrcInitSargsSuccess); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 164 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 164 end error: ", p), err)
+}
+
+func (p *TQueryOptions) writeField165(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExchangeMultiBlocksByteSize() {
+		if err = oprot.WriteFieldBegin("exchange_multi_blocks_byte_size", thrift.I32, 165); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(p.ExchangeMultiBlocksByteSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 165 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 165 end error: ", p), err)
+}
+
 func (p *TQueryOptions) writeField1000(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDisableFileCache() {
 		if err = oprot.WriteFieldBegin("disable_file_cache", thrift.BOOL, 1000); err != nil {
@@ -11712,6 +11903,15 @@ func (p *TQueryOptions) DeepEqual(ano *TQueryOptions) bool {
 		return false
 	}
 	if !p.Field162DeepEqual(ano.DumpHeapProfileWhenMemLimitExceeded) {
+		return false
+	}
+	if !p.Field163DeepEqual(ano.InvertedIndexCompatibleRead) {
+		return false
+	}
+	if !p.Field164DeepEqual(ano.CheckOrcInitSargsSuccess) {
+		return false
+	}
+	if !p.Field165DeepEqual(ano.ExchangeMultiBlocksByteSize) {
 		return false
 	}
 	if !p.Field1000DeepEqual(ano.DisableFileCache) {
@@ -12837,6 +13037,27 @@ func (p *TQueryOptions) Field161DeepEqual(src int64) bool {
 func (p *TQueryOptions) Field162DeepEqual(src bool) bool {
 
 	if p.DumpHeapProfileWhenMemLimitExceeded != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field163DeepEqual(src bool) bool {
+
+	if p.InvertedIndexCompatibleRead != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field164DeepEqual(src bool) bool {
+
+	if p.CheckOrcInitSargsSuccess != src {
+		return false
+	}
+	return true
+}
+func (p *TQueryOptions) Field165DeepEqual(src int32) bool {
+
+	if p.ExchangeMultiBlocksByteSize != src {
 		return false
 	}
 	return true
@@ -28634,6 +28855,273 @@ func (p *TPipelineFragmentParams) Field1000DeepEqual(src *bool) bool {
 	return true
 }
 
+type TRuntimeFilterInfo struct {
+	RuntimeFilterParams *TRuntimeFilterParams        `thrift:"runtime_filter_params,1,optional" frugal:"1,optional,TRuntimeFilterParams" json:"runtime_filter_params,omitempty"`
+	TopnFilterDescs     []*plannodes.TTopnFilterDesc `thrift:"topn_filter_descs,2,optional" frugal:"2,optional,list<plannodes.TTopnFilterDesc>" json:"topn_filter_descs,omitempty"`
+}
+
+func NewTRuntimeFilterInfo() *TRuntimeFilterInfo {
+	return &TRuntimeFilterInfo{}
+}
+
+func (p *TRuntimeFilterInfo) InitDefault() {
+}
+
+var TRuntimeFilterInfo_RuntimeFilterParams_DEFAULT *TRuntimeFilterParams
+
+func (p *TRuntimeFilterInfo) GetRuntimeFilterParams() (v *TRuntimeFilterParams) {
+	if !p.IsSetRuntimeFilterParams() {
+		return TRuntimeFilterInfo_RuntimeFilterParams_DEFAULT
+	}
+	return p.RuntimeFilterParams
+}
+
+var TRuntimeFilterInfo_TopnFilterDescs_DEFAULT []*plannodes.TTopnFilterDesc
+
+func (p *TRuntimeFilterInfo) GetTopnFilterDescs() (v []*plannodes.TTopnFilterDesc) {
+	if !p.IsSetTopnFilterDescs() {
+		return TRuntimeFilterInfo_TopnFilterDescs_DEFAULT
+	}
+	return p.TopnFilterDescs
+}
+func (p *TRuntimeFilterInfo) SetRuntimeFilterParams(val *TRuntimeFilterParams) {
+	p.RuntimeFilterParams = val
+}
+func (p *TRuntimeFilterInfo) SetTopnFilterDescs(val []*plannodes.TTopnFilterDesc) {
+	p.TopnFilterDescs = val
+}
+
+var fieldIDToName_TRuntimeFilterInfo = map[int16]string{
+	1: "runtime_filter_params",
+	2: "topn_filter_descs",
+}
+
+func (p *TRuntimeFilterInfo) IsSetRuntimeFilterParams() bool {
+	return p.RuntimeFilterParams != nil
+}
+
+func (p *TRuntimeFilterInfo) IsSetTopnFilterDescs() bool {
+	return p.TopnFilterDescs != nil
+}
+
+func (p *TRuntimeFilterInfo) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TRuntimeFilterInfo[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TRuntimeFilterInfo) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewTRuntimeFilterParams()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.RuntimeFilterParams = _field
+	return nil
+}
+func (p *TRuntimeFilterInfo) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*plannodes.TTopnFilterDesc, 0, size)
+	values := make([]plannodes.TTopnFilterDesc, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.TopnFilterDescs = _field
+	return nil
+}
+
+func (p *TRuntimeFilterInfo) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TRuntimeFilterInfo"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TRuntimeFilterInfo) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRuntimeFilterParams() {
+		if err = oprot.WriteFieldBegin("runtime_filter_params", thrift.STRUCT, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.RuntimeFilterParams.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TRuntimeFilterInfo) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTopnFilterDescs() {
+		if err = oprot.WriteFieldBegin("topn_filter_descs", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.TopnFilterDescs)); err != nil {
+			return err
+		}
+		for _, v := range p.TopnFilterDescs {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TRuntimeFilterInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TRuntimeFilterInfo(%+v)", *p)
+
+}
+
+func (p *TRuntimeFilterInfo) DeepEqual(ano *TRuntimeFilterInfo) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.RuntimeFilterParams) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.TopnFilterDescs) {
+		return false
+	}
+	return true
+}
+
+func (p *TRuntimeFilterInfo) Field1DeepEqual(src *TRuntimeFilterParams) bool {
+
+	if !p.RuntimeFilterParams.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TRuntimeFilterInfo) Field2DeepEqual(src []*plannodes.TTopnFilterDesc) bool {
+
+	if len(p.TopnFilterDescs) != len(src) {
+		return false
+	}
+	for i, v := range p.TopnFilterDescs {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+
 type TPipelineFragmentParamsList struct {
 	ParamsList              []*TPipelineFragmentParams                            `thrift:"params_list,1,optional" frugal:"1,optional,list<TPipelineFragmentParams>" json:"params_list,omitempty"`
 	DescTbl                 *descriptors.TDescriptorTable                         `thrift:"desc_tbl,2,optional" frugal:"2,optional,descriptors.TDescriptorTable" json:"desc_tbl,omitempty"`
@@ -28648,6 +29136,7 @@ type TPipelineFragmentParamsList struct {
 	QueryId                 *types.TUniqueId                                      `thrift:"query_id,11,optional" frugal:"11,optional,types.TUniqueId" json:"query_id,omitempty"`
 	TopnFilterSourceNodeIds []int32                                               `thrift:"topn_filter_source_node_ids,12,optional" frugal:"12,optional,list<i32>" json:"topn_filter_source_node_ids,omitempty"`
 	RuntimeFilterMergeAddr  *types.TNetworkAddress                                `thrift:"runtime_filter_merge_addr,13,optional" frugal:"13,optional,types.TNetworkAddress" json:"runtime_filter_merge_addr,omitempty"`
+	RuntimeFilterInfo       *TRuntimeFilterInfo                                   `thrift:"runtime_filter_info,14,optional" frugal:"14,optional,TRuntimeFilterInfo" json:"runtime_filter_info,omitempty"`
 }
 
 func NewTPipelineFragmentParamsList() *TPipelineFragmentParamsList {
@@ -28777,6 +29266,15 @@ func (p *TPipelineFragmentParamsList) GetRuntimeFilterMergeAddr() (v *types.TNet
 	}
 	return p.RuntimeFilterMergeAddr
 }
+
+var TPipelineFragmentParamsList_RuntimeFilterInfo_DEFAULT *TRuntimeFilterInfo
+
+func (p *TPipelineFragmentParamsList) GetRuntimeFilterInfo() (v *TRuntimeFilterInfo) {
+	if !p.IsSetRuntimeFilterInfo() {
+		return TPipelineFragmentParamsList_RuntimeFilterInfo_DEFAULT
+	}
+	return p.RuntimeFilterInfo
+}
 func (p *TPipelineFragmentParamsList) SetParamsList(val []*TPipelineFragmentParams) {
 	p.ParamsList = val
 }
@@ -28816,6 +29314,9 @@ func (p *TPipelineFragmentParamsList) SetTopnFilterSourceNodeIds(val []int32) {
 func (p *TPipelineFragmentParamsList) SetRuntimeFilterMergeAddr(val *types.TNetworkAddress) {
 	p.RuntimeFilterMergeAddr = val
 }
+func (p *TPipelineFragmentParamsList) SetRuntimeFilterInfo(val *TRuntimeFilterInfo) {
+	p.RuntimeFilterInfo = val
+}
 
 var fieldIDToName_TPipelineFragmentParamsList = map[int16]string{
 	1:  "params_list",
@@ -28831,6 +29332,7 @@ var fieldIDToName_TPipelineFragmentParamsList = map[int16]string{
 	11: "query_id",
 	12: "topn_filter_source_node_ids",
 	13: "runtime_filter_merge_addr",
+	14: "runtime_filter_info",
 }
 
 func (p *TPipelineFragmentParamsList) IsSetParamsList() bool {
@@ -28883,6 +29385,10 @@ func (p *TPipelineFragmentParamsList) IsSetTopnFilterSourceNodeIds() bool {
 
 func (p *TPipelineFragmentParamsList) IsSetRuntimeFilterMergeAddr() bool {
 	return p.RuntimeFilterMergeAddr != nil
+}
+
+func (p *TPipelineFragmentParamsList) IsSetRuntimeFilterInfo() bool {
+	return p.RuntimeFilterInfo != nil
 }
 
 func (p *TPipelineFragmentParamsList) Read(iprot thrift.TProtocol) (err error) {
@@ -29003,6 +29509,14 @@ func (p *TPipelineFragmentParamsList) Read(iprot thrift.TProtocol) (err error) {
 		case 13:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField14(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -29213,6 +29727,14 @@ func (p *TPipelineFragmentParamsList) ReadField13(iprot thrift.TProtocol) error 
 	p.RuntimeFilterMergeAddr = _field
 	return nil
 }
+func (p *TPipelineFragmentParamsList) ReadField14(iprot thrift.TProtocol) error {
+	_field := NewTRuntimeFilterInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.RuntimeFilterInfo = _field
+	return nil
+}
 
 func (p *TPipelineFragmentParamsList) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -29270,6 +29792,10 @@ func (p *TPipelineFragmentParamsList) Write(oprot thrift.TProtocol) (err error) 
 		}
 		if err = p.writeField13(oprot); err != nil {
 			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
 			goto WriteFieldError
 		}
 	}
@@ -29572,6 +30098,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
 
+func (p *TPipelineFragmentParamsList) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRuntimeFilterInfo() {
+		if err = oprot.WriteFieldBegin("runtime_filter_info", thrift.STRUCT, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.RuntimeFilterInfo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
+
 func (p *TPipelineFragmentParamsList) String() string {
 	if p == nil {
 		return "<nil>"
@@ -29623,6 +30168,9 @@ func (p *TPipelineFragmentParamsList) DeepEqual(ano *TPipelineFragmentParamsList
 		return false
 	}
 	if !p.Field13DeepEqual(ano.RuntimeFilterMergeAddr) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.RuntimeFilterInfo) {
 		return false
 	}
 	return true
@@ -29744,6 +30292,13 @@ func (p *TPipelineFragmentParamsList) Field12DeepEqual(src []int32) bool {
 func (p *TPipelineFragmentParamsList) Field13DeepEqual(src *types.TNetworkAddress) bool {
 
 	if !p.RuntimeFilterMergeAddr.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TPipelineFragmentParamsList) Field14DeepEqual(src *TRuntimeFilterInfo) bool {
+
+	if !p.RuntimeFilterInfo.DeepEqual(src) {
 		return false
 	}
 	return true
