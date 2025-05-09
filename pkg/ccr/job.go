@@ -600,13 +600,16 @@ func (j *Job) partialSync() error {
 		} else if backupObject, ok := backupJobInfo.BackupObjects[table]; !ok {
 			return xerror.Errorf(xerror.Normal, "table %s not found in backup objects", table)
 		} else if backupObject.Id != tableId {
-			info := fmt.Sprintf("partial sync table %s id not match, force full sync. table id %d, backup object id %d",
-				table, tableId, backupObject.Id)
-			log.Warnf("%s", info)
+			var info string
 			if j.SyncType == TableSync {
-				info = fmt.Sprintf("partial sync table %s id not match, reset src table id from %d to %d, table %s, force full sync", table, j.Src.TableId, backupObject.Id, table)
-				log.Infof("%s", info)
+				info = fmt.Sprintf("partial sync table `%s` id not match, reset src table id from %d to %d",
+					table, j.Src.TableId, backupObject.Id)
+				log.Infof("force full sync, because %s", info)
 				j.Src.TableId = backupObject.Id
+			} else {
+				info = fmt.Sprintf("partial sync table `%s` id not match, table id %d, backup object id %d",
+					table, tableId, backupObject.Id)
+				log.Warnf("force full sync, because %s", info)
 			}
 			return j.NewSnapshot(j.progress.CommitSeq, info)
 		} else if commitSeq, ok := tableCommitSeqMap[backupObject.Id]; !ok {
