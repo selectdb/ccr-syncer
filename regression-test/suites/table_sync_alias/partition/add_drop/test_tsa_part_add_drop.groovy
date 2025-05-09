@@ -81,7 +81,7 @@ suite("test_tsa_part_add_drop") {
         ADD PARTITION ${opBucketNumberPartitonName}
         VALUES [(5), (6)) DISTRIBUTED BY HASH(id) BUCKETS 2;
     """
-    opDifferentBucketNumberPartitonName = "different_bucket_number_partition"
+    def opDifferentBucketNumberPartitonName = "different_bucket_number_partition"
     sql """
         ALTER TABLE ${tableName}
         ADD PARTITION ${opDifferentBucketNumberPartitonName}
