@@ -301,6 +301,8 @@ func (j *Job) pipelineSync() error {
 				j.progress.NextSubVolatile(LaunchTransaction, data)
 			} else if !hasMoreBinlogs && !hasRunningTxn {
 				// No more binlogs, no running txns, yield the pipeline.
+				// update the progress, event if the binlog is skipped by the launchTxn.
+				j.progress.DoneSubCheckpoint(CommitPipeline, data)
 				return nil
 			} else {
 				// Wait for the txns to be committed.
