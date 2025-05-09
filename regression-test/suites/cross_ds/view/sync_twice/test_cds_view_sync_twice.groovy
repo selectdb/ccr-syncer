@@ -87,7 +87,7 @@ suite("test_cds_view_sync_twice") {
         """
     sql "sync"
 
-    num_restore = helper.getRestoreRowSize(tableDuplicate0)
+    def num_restore = helper.getRestoreRowSize(tableDuplicate0)
     helper.ccrJobCreate()
     assertTrue(helper.checkRestoreNumAndFinishedTimesOf("${tableDuplicate0}", num_restore + 1, 30))
 
