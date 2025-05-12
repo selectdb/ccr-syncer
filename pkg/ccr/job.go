@@ -398,13 +398,15 @@ func (j *Job) isTableDropped(tableId int64) (bool, error) {
 		return false, nil
 	}
 
-	var tableIds = []int64{tableId}
-	srcMeta, err := j.factory.NewThriftMeta(&j.Src, j.factory, tableIds)
+	srcMeta, err := j.getSourceThriftMeta(tableId)
 	if err != nil {
 		return false, err
 	}
-
 	return srcMeta.IsTableDropped(tableId), nil
+}
+
+func (j *Job) getSourceThriftMeta(tableId int64) (*ThriftMeta, error) {
+	return j.factory.NewThriftMeta(&j.Src, j.factory, []int64{tableId})
 }
 
 func (j *Job) addExtraInfo(jobInfo []byte) ([]byte, error) {
@@ -598,13 +600,16 @@ func (j *Job) partialSync() error {
 		} else if backupObject, ok := backupJobInfo.BackupObjects[table]; !ok {
 			return xerror.Errorf(xerror.Normal, "table %s not found in backup objects", table)
 		} else if backupObject.Id != tableId {
-			info := fmt.Sprintf("partial sync table %s id not match, force full sync. table id %d, backup object id %d",
-				table, tableId, backupObject.Id)
-			log.Warnf("%s", info)
+			var info string
 			if j.SyncType == TableSync {
-				info = fmt.Sprintf("partial sync table %s id not match, reset src table id from %d to %d, table %s, force full sync", table, j.Src.TableId, backupObject.Id, table)
-				log.Infof("%s", info)
+				info = fmt.Sprintf("partial sync table `%s` id not match, reset src table id from %d to %d",
+					table, j.Src.TableId, backupObject.Id)
+				log.Infof("force full sync, because %s", info)
 				j.Src.TableId = backupObject.Id
+			} else {
+				info = fmt.Sprintf("partial sync table `%s` id not match, table id %d, backup object id %d",
+					table, tableId, backupObject.Id)
+				log.Warnf("force full sync, because %s", info)
 			}
 			return j.NewSnapshot(j.progress.CommitSeq, info)
 		} else if commitSeq, ok := tableCommitSeqMap[backupObject.Id]; !ok {
@@ -1462,6 +1467,9 @@ func (j *Job) IsMaterializedViewTable(srcTableId int64) (bool, error) {
 	return false, nil
 }
 
+// GetDestTableIdBySrc returns the dest table id by src table id.
+// If the src table is dropped, return 0.
+// If the src table is a materialized view, return ErrMaterializedViewTable.
 func (j *Job) GetDestTableIdBySrc(srcTableId int64) (int64, error) {
 	if j.SyncType == TableSync {
 		return j.Dest.TableId, nil
@@ -1479,12 +1487,16 @@ func (j *Job) GetDestTableIdBySrc(srcTableId int64) (int64, error) {
 
 	// WARNING: the table name might be changed, and the TableMapping has been updated in time,
 	// only keep this for compatible.
-	srcTable, err := j.srcMeta.GetTable(srcTableId)
-	if err != nil {
+	if srcMeta, err := j.getSourceThriftMeta(srcTableId); err != nil {
 		return 0, err
-	} else if srcTable.Type == record.TableTypeMaterializedView {
+	} else if srcMeta.IsTableDropped(srcTableId) {
+		log.Warnf("table %d is dropped, no need to map it to dest table", srcTableId)
+		return 0, nil
+	} else if tableMeta, err := j.srcMeta.GetTable(srcTableId); err != nil {
+		return 0, err
+	} else if tableMeta.Type == record.TableTypeMaterializedView {
 		return 0, ErrMaterializedViewTable
-	} else if destTableId, err := j.destMeta.GetTableId(srcTable.Name); err != nil {
+	} else if destTableId, err := j.destMeta.GetTableId(tableMeta.Name); err != nil {
 		return 0, err
 	} else {
 		j.progress.TableMapping[srcTableId] = destTableId
@@ -1500,6 +1512,8 @@ func (j *Job) GetDestNameBySrcId(srcTableId int64) (string, error) {
 	destTableId, err := j.GetDestTableIdBySrc(srcTableId)
 	if err != nil {
 		return "", err
+	} else if destTableId == 0 {
+		return "", xerror.Errorf(xerror.Normal, "source table %d is dropped", srcTableId)
 	}
 
 	name, err := j.destMeta.GetTableNameById(destTableId)
@@ -1757,6 +1771,10 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 					continue
 				} else if destTableId, err := j.GetDestTableIdBySrc(tableRecord.Id); err != nil {
 					return err
+				} else if destTableId == 0 {
+					// Skip the table which is not in the table mapping
+					log.Warnf("table %d is not in the table mapping, skip it", tableRecord.Id)
+					continue
 				} else {
 					savedRecords = append(savedRecords, tableRecord)
 					destTableIds = append(destTableIds, destTableId)
@@ -3225,6 +3243,8 @@ func (j *Job) isRenamePartitionCommitted(record *record.RenamePartition) (bool, 
 	destTableId, err := j.GetDestTableIdBySrc(record.TableId)
 	if err != nil {
 		return false, err
+	} else if destTableId == 0 {
+		return false, nil
 	}
 
 	if err := j.destMeta.UpdatePartitions(destTableId); err != nil {
@@ -3247,6 +3267,15 @@ func (j *Job) isRenamePartitionCommitted(record *record.RenamePartition) (bool, 
 	log.Infof("partition %s is renamed to %s in dest table %d, this binlog is not committed",
 		record.OldPartitionName, record.NewPartitionName, destTableId)
 	return true, nil
+}
+
+func (j *Job) isModifyDistributionTypeCommitted(r *record.ModifyDistributionType) (bool, error) {
+	j.GetDestMeta().GetTable(r.GetTableId())
+	destTableName, err := j.GetDestNameBySrcId(r.GetTableId())
+	if err != nil {
+		return false, err
+	}
+	return j.CheckCreateTable(destTableName, "DISTRIBUTED BY RANDOM")
 }
 
 // determineBinlogState determines whether the unknown binlog is committed or not.
@@ -3277,6 +3306,7 @@ func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
 		case festruct.TBinlogType_MODIFY_TABLE_PROPERTY:
 		case festruct.TBinlogType_MODIFY_PARTITIONS:
 		case festruct.TBinlogType_INDEX_CHANGE_JOB:
+		case festruct.TBinlogType_MODIFY_DISTRIBUTION_BUCKET_NUM:
 
 		default:
 			return false
@@ -3355,6 +3385,12 @@ func (j *Job) determineBinlogState(binlog *festruct.TBinlog) (bool, error) {
 			return false, nil
 		}
 		return j.isRenameColumnCommitted(renameColumnRecord)
+	case festruct.TBinlogType_MODIFY_DISTRIBUTION_TYPE:
+		modifyDistributionType, err := record.NewModifyDistributionTypeFromJson(binlog.GetData())
+		if err != nil {
+			return false, nil
+		}
+		return j.isModifyDistributionTypeCommitted(modifyDistributionType)
 
 	default:
 		return false, xerror.Errorf(xerror.Normal, "unknown binlog type: %v, commit seq %d, data %s",
@@ -3978,6 +4014,33 @@ func (j *Job) Desync() error {
 	} else {
 		return j.desyncTable()
 	}
+}
+
+// check show create table contain some string
+func (j *Job) CheckCreateTable(tableName, expectedStr string) (bool, error) {
+	db, err := j.Dest.Connect()
+	if err != nil {
+		return false, err
+	}
+
+	dbName := utils.FormatKeywordName(j.Dest.Database)
+	tableName = utils.FormatKeywordName(tableName)
+	query := fmt.Sprintf("SHOW CREATE TABLE %s.%s", dbName, tableName)
+	log.Infof("show create table sql: %s", query)
+	rows, err := db.Query(query)
+	if err != nil {
+		return false, xerror.Wrapf(err, xerror.Normal, "show create table %s", tableName)
+	}
+	defer rows.Close()
+	rowParser := utils.NewRowParser()
+	if err := rowParser.Parse(rows); err != nil {
+		return false, xerror.Wrapf(err, xerror.Normal, "parse show create table %s rows", tableName)
+	}
+	createSql, err := rowParser.GetString("Create Table")
+	if err != nil {
+		return false, xerror.Wrapf(err, xerror.Normal, query)
+	}
+	return strings.Contains(createSql, expectedStr), nil
 }
 
 // stop job

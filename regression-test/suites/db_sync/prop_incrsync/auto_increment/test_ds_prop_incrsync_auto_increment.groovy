@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-suite("test_ds_prop_incrsync_incsync_auto_increment") {
+suite("test_ds_prop_incrsync_auto_increment") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
@@ -51,7 +51,8 @@ suite("test_ds_prop_incrsync_incsync_auto_increment") {
             ) ENGINE=OLAP
             DUPLICATE KEY(`id`)
             PROPERTIES (
-            "replication_allocation" = "tag.location.default: 1"
+            "replication_allocation" = "tag.location.default: 1",
+            "binlog.enable" = "true"
             )
     """
 
@@ -62,7 +63,8 @@ suite("test_ds_prop_incrsync_incsync_auto_increment") {
             ) ENGINE=OLAP
             DUPLICATE KEY(`id`)
             PROPERTIES (
-            "replication_allocation" = "tag.location.default: 1"
+            "replication_allocation" = "tag.location.default: 1",
+            "binlog.enable" = "true"
             )
     """
 

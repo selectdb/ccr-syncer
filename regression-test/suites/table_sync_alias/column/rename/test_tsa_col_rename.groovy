@@ -71,10 +71,11 @@ suite("test_tsa_col_rename") {
         INSERT INTO ${tableName} VALUES ${values.join(",")}
         """
 
-    result = sql "select * from ${tableName}"
+    def result = sql "select * from ${tableName}"
 
     assertEquals(result.size(), insert_num)
 
+    helper.set_alias(aliasTableName)
     helper.ccrJobDelete(tableName)
     helper.ccrJobCreate(tableName)
 
@@ -117,7 +118,7 @@ suite("test_tsa_col_rename") {
 
     result = sql " select * from ${tableName} "
 
-    result_target = target_sql " select * from ${aliasTableName} "
+    def result_target = target_sql " select * from ${aliasTableName} "
 
     assertEquals(result, result_target)
 

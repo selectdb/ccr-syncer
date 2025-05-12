@@ -148,7 +148,7 @@ suite("test_tsa_part_rename") {
 
     logger.info("=== Test 5: Check new partitions key and range ===")
 
-    show_result = target_sql_return_maparray """SHOW PARTITIONS FROM TEST_${context.dbName}.${aliasTableName} WHERE PartitionName = \"${opPartitonNameNew}\" """
+    def show_result = target_sql_return_maparray """SHOW PARTITIONS FROM TEST_${context.dbName}.${aliasTableName} WHERE PartitionName = \"${opPartitonNameNew}\" """
 
     assertEquals(show_result[0].Range, "[types: [INT]; keys: [0]; ..types: [INT]; keys: [5]; )")
 }
