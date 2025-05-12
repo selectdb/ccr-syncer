@@ -339,7 +339,6 @@ func (j *JobProgress) DoneSubCheckpoint(subSyncState SubSyncState, persistData a
 	log.Debugf("job %s step next, sync state: %s, commitSeq: %d, prevCommitSeq: %d",
 		j.JobName, j.SyncState, j.CommitSeq, j.PrevCommitSeq)
 
-	j.SubSyncState = Done
 	j.PrevCommitSeq = j.CommitSeq
 	j.SubSyncState = subSyncState
 	j.PersistData = _convertToPersistData(persistData)

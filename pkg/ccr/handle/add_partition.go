@@ -1,10 +1,10 @@
 package handle
 
 import (
-	"github.com/cloudwego/kitex/tool/internal_pkg/log"
 	"github.com/selectdb/ccr_syncer/pkg/ccr"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/record"
 	festruct "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/frontendservice"
+	log "github.com/sirupsen/logrus"
 )
 
 func init() {

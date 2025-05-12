@@ -301,6 +301,8 @@ func (j *Job) pipelineSync() error {
 				j.progress.NextSubVolatile(LaunchTransaction, data)
 			} else if !hasMoreBinlogs && !hasRunningTxn {
 				// No more binlogs, no running txns, yield the pipeline.
+				// update the progress, event if the binlog is skipped by the launchTxn.
+				j.progress.DoneSubCheckpoint(CommitPipeline, data)
 				return nil
 			} else {
 				// Wait for the txns to be committed.
@@ -369,6 +371,11 @@ func (j *Job) drainStaledBinlogs() {
 func (j *Job) mayLoadPipelineInMemoryData() error {
 	if j.progress.InMemoryData == nil {
 		var data PipelineInMemoryData
+		// Set to empty data if the persist data is not set
+		if j.progress.PersistData == "" {
+			j.progress.InMemoryData = &data
+			return nil
+		}
 		if err := json.Unmarshal([]byte(j.progress.PersistData), &data); err != nil {
 			return xerror.Errorf(xerror.Normal, "unmarshal pipeline memory data failed, err: %v", err)
 		}
@@ -583,6 +590,10 @@ func (j *Job) buildTxnContext(binlog *festruct.TBinlog) (*TxnContext, error) {
 				continue
 			} else if destTableId, err := j.GetDestTableIdBySrc(tableRecord.Id); err != nil {
 				return nil, err
+			} else if destTableId == 0 {
+				// ignore the upsert of the table which is not in the dest.
+				log.Warnf("table %d is not in the dest, ignore the upsert table record", tableRecord.Id)
+				continue
 			} else {
 				savedRecords = append(savedRecords, tableRecord)
 				destTableIds = append(destTableIds, destTableId)
