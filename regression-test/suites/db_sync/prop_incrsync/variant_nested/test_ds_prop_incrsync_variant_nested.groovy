@@ -19,6 +19,12 @@ suite("test_ds_prop_incrsync_incsync_variant_nested") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    if (!helper.is_version_supported([30099, 20199, 20099])) {
+        def version = helper.upstream_version()
+        logger.info("skip this suite because version is not supported, upstream version ${version}")
+        return
+    }
+
     def dbName = context.dbName
     def tableNameFull = "tbl_full"
     def tableNameIncrement = "tbl_incr"

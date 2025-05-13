@@ -19,6 +19,12 @@ suite("test_txn_insert_table") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    if (!helper.is_version_supported([30006, 20199, 20099])) {
+        def version = helper.upstream_version()
+        logger.info("skip this suite because version is not supported, upstream version ${version}")
+        return
+    }
+
     if (!helper.has_feature("feature_txn_insert")) {
         logger.info("Skip the test because the feature is not supported.")
         return

@@ -19,6 +19,12 @@ suite("test_cds_view_alter_view") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    if (!helper.is_version_supported([30006, 20199, 20099])) {
+        def version = helper.upstream_version()
+        logger.info("skip this suite because version is not supported, upstream version ${version}")
+        return
+    }
+
     def suffix = helper.randomSuffix()
     def tableName = 'tbl_' + suffix
 
@@ -51,6 +57,7 @@ suite("test_cds_view_alter_view") {
         DISTRIBUTED BY HASH(id) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
+            "light_schema_change" = "true",
             "binlog.enable" = "true",
             "binlog.ttl_seconds" = "180"
         )
