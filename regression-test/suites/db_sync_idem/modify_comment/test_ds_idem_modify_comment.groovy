@@ -19,7 +19,7 @@ suite("test_ds_idem_modify_comment") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
-    if (!helper.is_version_supported([20108, 20017, 30004])) {
+    if (!helper.is_version_supported([20199, 20099, 30099])) {
         def version = helper.upstream_version()
         logger.info("Skip the test case because the version is not supported. current version ${version}")
     }
