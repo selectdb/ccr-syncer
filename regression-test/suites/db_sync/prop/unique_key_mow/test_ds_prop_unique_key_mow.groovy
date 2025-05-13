@@ -19,8 +19,12 @@ suite("test_ds_prop_unique_key_mow") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
-    log.info("branch-3.0: not support unique key merge on write for property 'enable_unique_key_skip_bitmap_column'")
-    return
+    if (!helper.is_version_supported([30099, 20199, 20099])) {
+        def version = helper.upstream_version()
+        log.info("branch-3.0: not support unique key merge on write for property 'enable_unique_key_skip_bitmap_column'")
+        logger.info("skip this suite because version is not supported, upstream version ${version}")
+        return
+    }
 
     def dbName = context.dbName
     def tableName = "tbl_" + helper.randomSuffix()
