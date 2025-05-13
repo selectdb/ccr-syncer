@@ -806,6 +806,27 @@ func (j *IngestBinlogJob) applyDroppedBinlogs() {
 			return
 		}
 
+		if binlog.GetType() == festruct.TBinlogType_BARRIER {
+			barrierLog, err := record.NewBarrierLogFromJson(binlog.GetData())
+			if err != nil {
+				j.setError(err)
+				return
+			}
+
+			if barrierLog.Binlog != "" {
+				// keep compatible with old version
+				binlogType := festruct.TBinlogType(barrierLog.BinlogType)
+				newBinlog := festruct.NewTBinlog()
+				newBinlog.SetCommitSeq(utils.ThriftValueWrapper(binlog.GetCommitSeq()))
+				newBinlog.SetTimestamp(utils.ThriftValueWrapper(binlog.GetTimestamp()))
+				newBinlog.SetType(&binlogType)
+				newBinlog.SetDbId(utils.ThriftValueWrapper(binlog.GetDbId()))
+				newBinlog.SetData(&barrierLog.Binlog)
+				newBinlog.SetTableIds(binlog.GetTableIds())
+				binlog = newBinlog
+			}
+		}
+
 		if binlog.GetType() == festruct.TBinlogType_ALTER_JOB {
 			log.Infof("txn %d ingest binlog: trigger new partial snapshot by alter job binlog, commitSeq: %d", j.txnId, commitSeq)
 			alterJobRecord, err := record.NewAlterJobV2FromJson(binlog.GetData())
