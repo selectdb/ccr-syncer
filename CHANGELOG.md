@@ -1,6 +1,6 @@
 # 更新日志
 
-# 3.0.5/2.1.10
+# 3.0.6/2.1.10
 
 ### Fix
 
@@ -11,10 +11,12 @@
 - 修复 DROP INDEX 导致 UPSERT 找不到 index 的问题 (selectdb/ccr-syncer#490)
 - 修复 unknown column 导致的 VIEW 无法创建的问题 (selectdb/ccr-syncer#510)
 - 修复 gls 未释放导致的内存泄漏问题 (selectdb/ccr-syncer#576)
+- 使用 `force_replace` 修复 VIEW schema 不一致无法同步的问题 (selectdb/ccr-syncer#579)
+- 构建 table mapping 前检查 table 是否已经被删除 (selectdb/ccr-syncer#612)
 
 ### Feature
 
-- 支持 txn insert (selectdb/ccr-syncer#290)
+- 支持 txn insert (selectdb/ccr-syncer#290,selectdb/ccr-syncer#592)
 - 支持 lock binlog，提前释放不需要的 binlog，避免占用上游资源 (selectdb/ccr-syncer#399, selectdb/ccr-syncer#406, selectdb/ccr-syncer#407)
 - 支持一批获取多个 binlog (selectdb/ccr-syncer#400)
 - 增加 `metrics` 接口用于获取 ccr metrics (selectdb/ccr-syncer#402, selectdb/ccr-syncer#461)
@@ -22,6 +24,7 @@
 - 支持幂等性 (selectdb/ccr-syncer#409, selectdb/ccr-syncer#416, selectdb/ccr-syncer#415, selectdb/ccr-syncer#424, ...)
 - 增加 `desync.sh` 脚本 (selectdb/ccr-syncer#452)
 - 支持 pipline txn（并行 ingest，串行提交）(selectdb/ccr-syncer#585)
+- 增加 `/view` 接口，用于获取 JOB 状态（支持 terminal, table, html）(selectdb/ccr-syncer#588)
 
 ### Improve
 
