@@ -41,10 +41,11 @@ import (
 )
 
 var (
-	localRepoName    string
-	commitTxnTimeout time.Duration
-	connectTimeout   time.Duration
-	RpcTimeout       time.Duration
+	localRepoName              string
+	commitTxnTimeout           time.Duration
+	connectTimeout             time.Duration
+	RpcTimeout                 time.Duration
+	fuzzyGetBinlogFromFollower bool
 )
 
 var ErrFeNotMasterCompatible = xerror.NewWithoutStack(xerror.FE, "not master compatible")
@@ -54,6 +55,7 @@ func init() {
 	flag.DurationVar(&commitTxnTimeout, "commit_txn_timeout", 33*time.Second, "commmit_txn_timeout")
 	flag.DurationVar(&connectTimeout, "connect_timeout", 10*time.Second, "connect timeout")
 	flag.DurationVar(&RpcTimeout, "rpc_timeout", 30*time.Second, "rpc timeout")
+	flag.BoolVar(&fuzzyGetBinlogFromFollower, "fuzzy_get_binlog_from_follower", false, "fuzzy option, get binlog from follower")
 }
 
 // canUseNextAddr means can try next addr, err is a connection error, not a method not found or other error
@@ -445,6 +447,18 @@ func (rpc *FeRpc) RollbackTransaction(spec *base.Spec, txnId int64) (*festruct.T
 }
 
 func (rpc *FeRpc) GetBinlog(spec *base.Spec, commitSeq, numAcquired int64) (*festruct.TGetBinlogResult_, error) {
+	if fuzzyGetBinlogFromFollower {
+		// Get a client from the cached clients randomly
+		var client IFeRpc
+		for _, client = range rpc.getClients() {
+			break
+		}
+		if client == nil {
+			return nil, xerror.Errorf(xerror.FE, "no available fe client")
+		}
+		return client.GetBinlog(spec, commitSeq, numAcquired)
+	}
+
 	// return rpc.masterClient.GetBinlog(spec, commitSeq)
 	caller := func(client IFeRpc) (resultType, error) {
 		return client.GetBinlog(spec, commitSeq, numAcquired)
@@ -724,6 +738,10 @@ func (rpc *singleFeClient) GetBinlog(spec *base.Spec, commitSeq, numAcquired int
 		if spec.TableId != 0 {
 			req.TableId = &spec.TableId
 		}
+	}
+
+	if fuzzyGetBinlogFromFollower {
+		req.AllowFollowerRead = utils.ThriftValueWrapper(true)
 	}
 
 	log.Tracef("GetBinlog user %s, db %s, tableId %d, prev seq: %d", req.GetUser(), req.GetDb(),

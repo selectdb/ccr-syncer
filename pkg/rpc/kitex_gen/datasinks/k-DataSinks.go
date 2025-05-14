@@ -11765,6 +11765,632 @@ func (p *TIcebergTableSink) field13Length() int {
 	return l
 }
 
+func (p *TDictionarySink) FastRead(buf []byte) (int, error) {
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	_, l, err = bthrift.Binary.ReadStructBegin(buf)
+	offset += l
+	if err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, l, err = bthrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 8:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField8(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 9:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField9(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		l, err = bthrift.Binary.ReadFieldEnd(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	l, err = bthrift.Binary.ReadStructEnd(buf[offset:])
+	offset += l
+	if err != nil {
+		goto ReadStructEndError
+	}
+
+	return offset, nil
+ReadStructBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TDictionarySink[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+ReadFieldEndError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TDictionarySink) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.DictionaryId = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TDictionarySink) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.VersionId = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TDictionarySink) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.DictionaryName = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TDictionarySink) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := TDictLayoutType(v)
+		p.LayoutType = &tmp
+
+	}
+	return offset, nil
+}
+
+func (p *TDictionarySink) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := bthrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.KeyOutputExprSlots = make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem int64
+		if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_elem = v
+
+		}
+
+		p.KeyOutputExprSlots = append(p.KeyOutputExprSlots, _elem)
+	}
+	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
+func (p *TDictionarySink) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := bthrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.ValueOutputExprSlots = make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem int64
+		if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_elem = v
+
+		}
+
+		p.ValueOutputExprSlots = append(p.ValueOutputExprSlots, _elem)
+	}
+	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
+func (p *TDictionarySink) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := bthrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	p.ValueNames = make([]string, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem string
+		if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_elem = v
+
+		}
+
+		p.ValueNames = append(p.ValueNames, _elem)
+	}
+	if l, err := bthrift.Binary.ReadListEnd(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	return offset, nil
+}
+
+func (p *TDictionarySink) FastReadField8(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.SkipNullKey = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TDictionarySink) FastReadField9(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.MemoryLimit = &v
+
+	}
+	return offset, nil
+}
+
+// for compatibility
+func (p *TDictionarySink) FastWrite(buf []byte) int {
+	return 0
+}
+
+func (p *TDictionarySink) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "TDictionarySink")
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], binaryWriter)
+		offset += p.fastWriteField2(buf[offset:], binaryWriter)
+		offset += p.fastWriteField8(buf[offset:], binaryWriter)
+		offset += p.fastWriteField9(buf[offset:], binaryWriter)
+		offset += p.fastWriteField3(buf[offset:], binaryWriter)
+		offset += p.fastWriteField4(buf[offset:], binaryWriter)
+		offset += p.fastWriteField5(buf[offset:], binaryWriter)
+		offset += p.fastWriteField6(buf[offset:], binaryWriter)
+		offset += p.fastWriteField7(buf[offset:], binaryWriter)
+	}
+	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
+	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
+	return offset
+}
+
+func (p *TDictionarySink) BLength() int {
+	l := 0
+	l += bthrift.Binary.StructBeginLength("TDictionarySink")
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field4Length()
+		l += p.field5Length()
+		l += p.field6Length()
+		l += p.field7Length()
+		l += p.field8Length()
+		l += p.field9Length()
+	}
+	l += bthrift.Binary.FieldStopLength()
+	l += bthrift.Binary.StructEndLength()
+	return l
+}
+
+func (p *TDictionarySink) fastWriteField1(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetDictionaryId() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "dictionary_id", thrift.I64, 1)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.DictionaryId)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TDictionarySink) fastWriteField2(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetVersionId() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "version_id", thrift.I64, 2)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.VersionId)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TDictionarySink) fastWriteField3(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetDictionaryName() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "dictionary_name", thrift.STRING, 3)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.DictionaryName)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TDictionarySink) fastWriteField4(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetLayoutType() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "layout_type", thrift.I32, 4)
+		offset += bthrift.Binary.WriteI32(buf[offset:], int32(*p.LayoutType))
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TDictionarySink) fastWriteField5(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetKeyOutputExprSlots() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "key_output_expr_slots", thrift.LIST, 5)
+		listBeginOffset := offset
+		offset += bthrift.Binary.ListBeginLength(thrift.I64, 0)
+		var length int
+		for _, v := range p.KeyOutputExprSlots {
+			length++
+			offset += bthrift.Binary.WriteI64(buf[offset:], v)
+
+		}
+		bthrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I64, length)
+		offset += bthrift.Binary.WriteListEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TDictionarySink) fastWriteField6(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetValueOutputExprSlots() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "value_output_expr_slots", thrift.LIST, 6)
+		listBeginOffset := offset
+		offset += bthrift.Binary.ListBeginLength(thrift.I64, 0)
+		var length int
+		for _, v := range p.ValueOutputExprSlots {
+			length++
+			offset += bthrift.Binary.WriteI64(buf[offset:], v)
+
+		}
+		bthrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I64, length)
+		offset += bthrift.Binary.WriteListEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TDictionarySink) fastWriteField7(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetValueNames() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "value_names", thrift.LIST, 7)
+		listBeginOffset := offset
+		offset += bthrift.Binary.ListBeginLength(thrift.STRING, 0)
+		var length int
+		for _, v := range p.ValueNames {
+			length++
+			offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, v)
+
+		}
+		bthrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
+		offset += bthrift.Binary.WriteListEnd(buf[offset:])
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TDictionarySink) fastWriteField8(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetSkipNullKey() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "skip_null_key", thrift.BOOL, 8)
+		offset += bthrift.Binary.WriteBool(buf[offset:], *p.SkipNullKey)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TDictionarySink) fastWriteField9(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetMemoryLimit() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "memory_limit", thrift.I64, 9)
+		offset += bthrift.Binary.WriteI64(buf[offset:], *p.MemoryLimit)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TDictionarySink) field1Length() int {
+	l := 0
+	if p.IsSetDictionaryId() {
+		l += bthrift.Binary.FieldBeginLength("dictionary_id", thrift.I64, 1)
+		l += bthrift.Binary.I64Length(*p.DictionaryId)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TDictionarySink) field2Length() int {
+	l := 0
+	if p.IsSetVersionId() {
+		l += bthrift.Binary.FieldBeginLength("version_id", thrift.I64, 2)
+		l += bthrift.Binary.I64Length(*p.VersionId)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TDictionarySink) field3Length() int {
+	l := 0
+	if p.IsSetDictionaryName() {
+		l += bthrift.Binary.FieldBeginLength("dictionary_name", thrift.STRING, 3)
+		l += bthrift.Binary.StringLengthNocopy(*p.DictionaryName)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TDictionarySink) field4Length() int {
+	l := 0
+	if p.IsSetLayoutType() {
+		l += bthrift.Binary.FieldBeginLength("layout_type", thrift.I32, 4)
+		l += bthrift.Binary.I32Length(int32(*p.LayoutType))
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TDictionarySink) field5Length() int {
+	l := 0
+	if p.IsSetKeyOutputExprSlots() {
+		l += bthrift.Binary.FieldBeginLength("key_output_expr_slots", thrift.LIST, 5)
+		l += bthrift.Binary.ListBeginLength(thrift.I64, len(p.KeyOutputExprSlots))
+		var tmpV int64
+		l += bthrift.Binary.I64Length(int64(tmpV)) * len(p.KeyOutputExprSlots)
+		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TDictionarySink) field6Length() int {
+	l := 0
+	if p.IsSetValueOutputExprSlots() {
+		l += bthrift.Binary.FieldBeginLength("value_output_expr_slots", thrift.LIST, 6)
+		l += bthrift.Binary.ListBeginLength(thrift.I64, len(p.ValueOutputExprSlots))
+		var tmpV int64
+		l += bthrift.Binary.I64Length(int64(tmpV)) * len(p.ValueOutputExprSlots)
+		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TDictionarySink) field7Length() int {
+	l := 0
+	if p.IsSetValueNames() {
+		l += bthrift.Binary.FieldBeginLength("value_names", thrift.LIST, 7)
+		l += bthrift.Binary.ListBeginLength(thrift.STRING, len(p.ValueNames))
+		for _, v := range p.ValueNames {
+			l += bthrift.Binary.StringLengthNocopy(v)
+
+		}
+		l += bthrift.Binary.ListEndLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TDictionarySink) field8Length() int {
+	l := 0
+	if p.IsSetSkipNullKey() {
+		l += bthrift.Binary.FieldBeginLength("skip_null_key", thrift.BOOL, 8)
+		l += bthrift.Binary.BoolLength(*p.SkipNullKey)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TDictionarySink) field9Length() int {
+	l := 0
+	if p.IsSetMemoryLimit() {
+		l += bthrift.Binary.FieldBeginLength("memory_limit", thrift.I64, 9)
+		l += bthrift.Binary.I64Length(*p.MemoryLimit)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
 func (p *TDataSink) FastRead(buf []byte) (int, error) {
 	var err error
 	var offset int
@@ -11960,6 +12586,20 @@ func (p *TDataSink) FastRead(buf []byte) (int, error) {
 		case 14:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField14(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 15:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField15(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -12182,6 +12822,19 @@ func (p *TDataSink) FastReadField14(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TDataSink) FastReadField15(buf []byte) (int, error) {
+	offset := 0
+
+	tmp := NewTDictionarySink()
+	if l, err := tmp.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.DictionarySink = tmp
+	return offset, nil
+}
+
 // for compatibility
 func (p *TDataSink) FastWrite(buf []byte) int {
 	return 0
@@ -12204,6 +12857,7 @@ func (p *TDataSink) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWrite
 		offset += p.fastWriteField12(buf[offset:], binaryWriter)
 		offset += p.fastWriteField13(buf[offset:], binaryWriter)
 		offset += p.fastWriteField14(buf[offset:], binaryWriter)
+		offset += p.fastWriteField15(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -12227,6 +12881,7 @@ func (p *TDataSink) BLength() int {
 		l += p.field12Length()
 		l += p.field13Length()
 		l += p.field14Length()
+		l += p.field15Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -12362,6 +13017,16 @@ func (p *TDataSink) fastWriteField14(buf []byte, binaryWriter bthrift.BinaryWrit
 	return offset
 }
 
+func (p *TDataSink) fastWriteField15(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetDictionarySink() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "dictionary_sink", thrift.STRUCT, 15)
+		offset += p.DictionarySink.FastWriteNocopy(buf[offset:], binaryWriter)
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TDataSink) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("type", thrift.I32, 1)
@@ -12486,6 +13151,16 @@ func (p *TDataSink) field14Length() int {
 	if p.IsSetIcebergTableSink() {
 		l += bthrift.Binary.FieldBeginLength("iceberg_table_sink", thrift.STRUCT, 14)
 		l += p.IcebergTableSink.BLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TDataSink) field15Length() int {
+	l := 0
+	if p.IsSetDictionarySink() {
+		l += bthrift.Binary.FieldBeginLength("dictionary_sink", thrift.STRUCT, 15)
+		l += p.DictionarySink.BLength()
 		l += bthrift.Binary.FieldEndLength()
 	}
 	return l

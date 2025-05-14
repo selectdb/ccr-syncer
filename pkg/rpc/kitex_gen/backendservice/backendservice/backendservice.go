@@ -51,6 +51,7 @@ func NewServiceInfo() *kitex.ServiceInfo {
 		"query_ingest_binlog":          kitex.NewMethodInfo(queryIngestBinlogHandler, newBackendServiceQueryIngestBinlogArgs, newBackendServiceQueryIngestBinlogResult, false),
 		"publish_topic_info":           kitex.NewMethodInfo(publishTopicInfoHandler, newBackendServicePublishTopicInfoArgs, newBackendServicePublishTopicInfoResult, false),
 		"get_realtime_exec_status":     kitex.NewMethodInfo(getRealtimeExecStatusHandler, newBackendServiceGetRealtimeExecStatusArgs, newBackendServiceGetRealtimeExecStatusResult, false),
+		"get_dictionary_status":        kitex.NewMethodInfo(getDictionaryStatusHandler, newBackendServiceGetDictionaryStatusArgs, newBackendServiceGetDictionaryStatusResult, false),
 	}
 	extra := map[string]interface{}{
 		"PackageName":     "backendservice",
@@ -553,6 +554,24 @@ func newBackendServiceGetRealtimeExecStatusResult() interface{} {
 	return backendservice.NewBackendServiceGetRealtimeExecStatusResult()
 }
 
+func getDictionaryStatusHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*backendservice.BackendServiceGetDictionaryStatusArgs)
+	realResult := result.(*backendservice.BackendServiceGetDictionaryStatusResult)
+	success, err := handler.(backendservice.BackendService).GetDictionaryStatus(ctx, realArg.DictionaryIds)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBackendServiceGetDictionaryStatusArgs() interface{} {
+	return backendservice.NewBackendServiceGetDictionaryStatusArgs()
+}
+
+func newBackendServiceGetDictionaryStatusResult() interface{} {
+	return backendservice.NewBackendServiceGetDictionaryStatusResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -824,6 +843,16 @@ func (p *kClient) GetRealtimeExecStatus(ctx context.Context, request *backendser
 	_args.Request = request
 	var _result backendservice.BackendServiceGetRealtimeExecStatusResult
 	if err = p.c.Call(ctx, "get_realtime_exec_status", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetDictionaryStatus(ctx context.Context, dictionaryIds []int64) (r *backendservice.TDictionaryStatusList, err error) {
+	var _args backendservice.BackendServiceGetDictionaryStatusArgs
+	_args.DictionaryIds = dictionaryIds
+	var _result backendservice.BackendServiceGetDictionaryStatusResult
+	if err = p.c.Call(ctx, "get_dictionary_status", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

@@ -1451,6 +1451,7 @@ const (
 	TTableType_MAX_COMPUTE_TABLE     TTableType = 12
 	TTableType_LAKESOUL_TABLE        TTableType = 13
 	TTableType_TRINO_CONNECTOR_TABLE TTableType = 14
+	TTableType_DICTIONARY_TABLE      TTableType = 15
 )
 
 func (p TTableType) String() string {
@@ -1485,6 +1486,8 @@ func (p TTableType) String() string {
 		return "LAKESOUL_TABLE"
 	case TTableType_TRINO_CONNECTOR_TABLE:
 		return "TRINO_CONNECTOR_TABLE"
+	case TTableType_DICTIONARY_TABLE:
+		return "DICTIONARY_TABLE"
 	}
 	return "<UNSET>"
 }
@@ -1521,6 +1524,8 @@ func TTableTypeFromString(s string) (TTableType, error) {
 		return TTableType_LAKESOUL_TABLE, nil
 	case "TRINO_CONNECTOR_TABLE":
 		return TTableType_TRINO_CONNECTOR_TABLE, nil
+	case "DICTIONARY_TABLE":
+		return TTableType_DICTIONARY_TABLE, nil
 	}
 	return TTableType(0), fmt.Errorf("not a valid TTableType string")
 }
@@ -6423,6 +6428,260 @@ func (p *TAggregateFunction) Field11DeepEqual(src *string) bool {
 	return true
 }
 
+type TDictFunction struct {
+	DictionaryId *int64 `thrift:"dictionary_id,1,optional" frugal:"1,optional,i64" json:"dictionary_id,omitempty"`
+	VersionId    *int64 `thrift:"version_id,2,optional" frugal:"2,optional,i64" json:"version_id,omitempty"`
+}
+
+func NewTDictFunction() *TDictFunction {
+	return &TDictFunction{}
+}
+
+func (p *TDictFunction) InitDefault() {
+}
+
+var TDictFunction_DictionaryId_DEFAULT int64
+
+func (p *TDictFunction) GetDictionaryId() (v int64) {
+	if !p.IsSetDictionaryId() {
+		return TDictFunction_DictionaryId_DEFAULT
+	}
+	return *p.DictionaryId
+}
+
+var TDictFunction_VersionId_DEFAULT int64
+
+func (p *TDictFunction) GetVersionId() (v int64) {
+	if !p.IsSetVersionId() {
+		return TDictFunction_VersionId_DEFAULT
+	}
+	return *p.VersionId
+}
+func (p *TDictFunction) SetDictionaryId(val *int64) {
+	p.DictionaryId = val
+}
+func (p *TDictFunction) SetVersionId(val *int64) {
+	p.VersionId = val
+}
+
+var fieldIDToName_TDictFunction = map[int16]string{
+	1: "dictionary_id",
+	2: "version_id",
+}
+
+func (p *TDictFunction) IsSetDictionaryId() bool {
+	return p.DictionaryId != nil
+}
+
+func (p *TDictFunction) IsSetVersionId() bool {
+	return p.VersionId != nil
+}
+
+func (p *TDictFunction) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TDictFunction[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TDictFunction) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DictionaryId = _field
+	return nil
+}
+func (p *TDictFunction) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.VersionId = _field
+	return nil
+}
+
+func (p *TDictFunction) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TDictFunction"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TDictFunction) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDictionaryId() {
+		if err = oprot.WriteFieldBegin("dictionary_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.DictionaryId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TDictFunction) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVersionId() {
+		if err = oprot.WriteFieldBegin("version_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.VersionId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TDictFunction) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TDictFunction(%+v)", *p)
+
+}
+
+func (p *TDictFunction) DeepEqual(ano *TDictFunction) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.DictionaryId) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.VersionId) {
+		return false
+	}
+	return true
+}
+
+func (p *TDictFunction) Field1DeepEqual(src *int64) bool {
+
+	if p.DictionaryId == src {
+		return true
+	} else if p.DictionaryId == nil || src == nil {
+		return false
+	}
+	if *p.DictionaryId != *src {
+		return false
+	}
+	return true
+}
+func (p *TDictFunction) Field2DeepEqual(src *int64) bool {
+
+	if p.VersionId == src {
+		return true
+	} else if p.VersionId == nil || src == nil {
+		return false
+	}
+	if *p.VersionId != *src {
+		return false
+	}
+	return true
+}
+
 type TFunction struct {
 	Name           *TFunctionName      `thrift:"name,1,required" frugal:"1,required,TFunctionName" json:"name"`
 	BinaryType     TFunctionBinaryType `thrift:"binary_type,2,required" frugal:"2,required,TFunctionBinaryType" json:"binary_type"`
@@ -6440,6 +6699,7 @@ type TFunction struct {
 	IsUdtfFunction bool                `thrift:"is_udtf_function,14,optional" frugal:"14,optional,bool" json:"is_udtf_function,omitempty"`
 	IsStaticLoad   bool                `thrift:"is_static_load,15,optional" frugal:"15,optional,bool" json:"is_static_load,omitempty"`
 	ExpirationTime *int64              `thrift:"expiration_time,16,optional" frugal:"16,optional,i64" json:"expiration_time,omitempty"`
+	DictFunction   *TDictFunction      `thrift:"dict_function,17,optional" frugal:"17,optional,TDictFunction" json:"dict_function,omitempty"`
 }
 
 func NewTFunction() *TFunction {
@@ -6585,6 +6845,15 @@ func (p *TFunction) GetExpirationTime() (v int64) {
 	}
 	return *p.ExpirationTime
 }
+
+var TFunction_DictFunction_DEFAULT *TDictFunction
+
+func (p *TFunction) GetDictFunction() (v *TDictFunction) {
+	if !p.IsSetDictFunction() {
+		return TFunction_DictFunction_DEFAULT
+	}
+	return p.DictFunction
+}
 func (p *TFunction) SetName(val *TFunctionName) {
 	p.Name = val
 }
@@ -6633,6 +6902,9 @@ func (p *TFunction) SetIsStaticLoad(val bool) {
 func (p *TFunction) SetExpirationTime(val *int64) {
 	p.ExpirationTime = val
 }
+func (p *TFunction) SetDictFunction(val *TDictFunction) {
+	p.DictFunction = val
+}
 
 var fieldIDToName_TFunction = map[int16]string{
 	1:  "name",
@@ -6651,6 +6923,7 @@ var fieldIDToName_TFunction = map[int16]string{
 	14: "is_udtf_function",
 	15: "is_static_load",
 	16: "expiration_time",
+	17: "dict_function",
 }
 
 func (p *TFunction) IsSetName() bool {
@@ -6703,6 +6976,10 @@ func (p *TFunction) IsSetIsStaticLoad() bool {
 
 func (p *TFunction) IsSetExpirationTime() bool {
 	return p.ExpirationTime != nil
+}
+
+func (p *TFunction) IsSetDictFunction() bool {
+	return p.DictFunction != nil
 }
 
 func (p *TFunction) Read(iprot thrift.TProtocol) (err error) {
@@ -6857,6 +7134,14 @@ func (p *TFunction) Read(iprot thrift.TProtocol) (err error) {
 		case 16:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField16(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 17:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField17(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7093,6 +7378,14 @@ func (p *TFunction) ReadField16(iprot thrift.TProtocol) error {
 	p.ExpirationTime = _field
 	return nil
 }
+func (p *TFunction) ReadField17(iprot thrift.TProtocol) error {
+	_field := NewTDictFunction()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.DictFunction = _field
+	return nil
+}
 
 func (p *TFunction) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -7162,6 +7455,10 @@ func (p *TFunction) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField16(oprot); err != nil {
 			fieldId = 16
+			goto WriteFieldError
+		}
+		if err = p.writeField17(oprot); err != nil {
+			fieldId = 17
 			goto WriteFieldError
 		}
 	}
@@ -7484,6 +7781,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
 }
 
+func (p *TFunction) writeField17(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDictFunction() {
+		if err = oprot.WriteFieldBegin("dict_function", thrift.STRUCT, 17); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.DictFunction.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
+}
+
 func (p *TFunction) String() string {
 	if p == nil {
 		return "<nil>"
@@ -7544,6 +7860,9 @@ func (p *TFunction) DeepEqual(ano *TFunction) bool {
 		return false
 	}
 	if !p.Field16DeepEqual(ano.ExpirationTime) {
+		return false
+	}
+	if !p.Field17DeepEqual(ano.DictFunction) {
 		return false
 	}
 	return true
@@ -7693,6 +8012,13 @@ func (p *TFunction) Field16DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.ExpirationTime != *src {
+		return false
+	}
+	return true
+}
+func (p *TFunction) Field17DeepEqual(src *TDictFunction) bool {
+
+	if !p.DictFunction.DeepEqual(src) {
 		return false
 	}
 	return true
