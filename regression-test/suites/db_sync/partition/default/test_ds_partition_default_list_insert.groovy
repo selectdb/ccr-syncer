@@ -19,6 +19,12 @@ suite("test_ds_partition_default_list_insert") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    if (!helper.is_version_supported([30007])) {
+        def version = helper.upstream_version()
+        logger.info("skip this suite because version is not supported, upstream version ${version}")
+        return
+    }
+
     def dbName = context.dbName
     def tableName = "tbl_" + helper.randomSuffix()
     sql "DROP TABLE IF EXISTS ${dbName}.${tableName}"
