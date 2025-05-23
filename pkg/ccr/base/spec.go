@@ -616,15 +616,7 @@ func (s *Spec) CreateTableOrView(createTable *record.CreateTable, srcDatabase st
 	//	When create view, the db name of sql is source db name, we should use dest db name to create view
 	createSql := createTable.Sql
 	if createTable.IsCreateView() {
-		log.Tracef("create view, use dest db name to replace source db name")
-
-		// replace `internal`.`source_db_name`. or `default_cluster:source_db_name`. to `internal`.`dest_db_name`.
-		originalNameNewStyle := "`internal`.`" + strings.TrimSpace(srcDatabase) + "`."
-		originalNameOldStyle := "`default_cluster:" + strings.TrimSpace(srcDatabase) + "`." // for Doris 2.0.x
-		replaceName := "`internal`.`" + strings.TrimSpace(s.Database) + "`."
-		createSql = strings.ReplaceAll(
-			strings.ReplaceAll(createSql, originalNameNewStyle, replaceName), originalNameOldStyle, replaceName)
-		log.Debugf("original create view sql is %s, after replace, now sql is %s", createTable.Sql, createSql)
+		createSql = NormalizeCreateViewSql(s.Database, srcDatabase, createSql)
 	}
 
 	createSql = AddDBPrefixToCreateTableOrViewSql(s.Database, createSql)
@@ -1474,6 +1466,31 @@ func (s *Spec) DropRollup(destTableName, rollup string) error {
 	return s.Exec(dropRollupSql)
 }
 
+func (s *Spec) ModifyDistributionType(destTableName string) error {
+	dbName := utils.FormatKeywordName(s.Database)
+	destTableName = utils.FormatKeywordName(destTableName)
+	modifyDistributionTypeSql := "ALTER TABLE " + dbName + "." + destTableName + " SET (\"distribution_type\" = \"random\") "
+	log.Infof("modify distribution type sql: %s", modifyDistributionTypeSql)
+	return s.Exec(modifyDistributionTypeSql)
+}
+
+func (s *Spec) ModifyDistributionBucketNum(destTableName string, bucketType string, autoBucket bool, bucketNum int, columnsName string) error {
+	dbName := utils.FormatKeywordName(s.Database)
+	destTableName = utils.FormatKeywordName(destTableName)
+	modifyDistributionBucketNumSql := "ALTER TABLE " + dbName + "." + destTableName + " MODIFY DISTRIBUTION DISTRIBUTED BY " + bucketType
+	if bucketType == "HASH" {
+		modifyDistributionBucketNumSql += fmt.Sprintf("(%s)", columnsName)
+	}
+	modifyDistributionBucketNumSql += " BUCKETS "
+	if autoBucket {
+		modifyDistributionBucketNumSql += "AUTO"
+	} else {
+		modifyDistributionBucketNumSql += fmt.Sprintf("%d", bucketNum)
+	}
+	log.Infof("modify distribution bucket num sql: %s", modifyDistributionBucketNumSql)
+	return s.Exec(modifyDistributionBucketNumSql)
+}
+
 func (s *Spec) SyncTables(tables ...string) error {
 	var err error
 
@@ -1648,4 +1665,21 @@ func HandleSchemaChangeDefaultValue(sql string, lightningSchemaChange *record.Mo
 		}
 	}
 	return sql
+}
+
+func NormalizeCreateViewSql(destDatabase string, srcDatabase string, createSql string) string {
+	log.Tracef("create view, use dest db name to replace source db name")
+	originSql := createSql
+	srcDatabase = strings.TrimSpace(srcDatabase)
+	// the createSql may not contain `internal`. prefix
+	createSql = strings.ReplaceAll(createSql, " `"+srcDatabase+"`.", " `internal`.`"+srcDatabase+"`.")
+
+	// replace `internal`.`source_db_name`. or `default_cluster:source_db_name`. to `internal`.`dest_db_name`.
+	originalNameNewStyle := "`internal`.`" + srcDatabase + "`."
+	originalNameOldStyle := "`default_cluster:" + srcDatabase + "`." // for Doris 2.0.x
+	replaceName := "`internal`.`" + strings.TrimSpace(destDatabase) + "`."
+	createSql = strings.ReplaceAll(
+		strings.ReplaceAll(createSql, originalNameNewStyle, replaceName), originalNameOldStyle, replaceName)
+	log.Debugf("original create view sql is %s, after replace, now sql is %s", originSql, createSql)
+	return createSql
 }

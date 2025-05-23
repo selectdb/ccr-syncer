@@ -19,6 +19,12 @@ suite("test_ds_alt_prop_distr_type") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
+    if (!helper.is_version_supported([30099, 20199, 20099])) {
+        def version = helper.upstream_version()
+        logger.info("skip this suite because version is not supported, upstream version ${version}")
+        return
+    }
+
     def dbName = context.dbName
     def tableName = "tbl_" + helper.randomSuffix()
 
@@ -26,11 +32,11 @@ suite("test_ds_alt_prop_distr_type") {
         return res.size() != 0
     }
     def existBucketNew = { res -> Boolean
-        return res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
+        return res[0][1].contains("DISTRIBUTED BY RANDOM BUCKETS 20")
     }
 
     def notExistBucketNew = { res -> Boolean
-        return !res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
+        return res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
     }
 
     sql "DROP TABLE IF EXISTS ${dbName}.${tableName}"
@@ -45,11 +51,11 @@ suite("test_ds_alt_prop_distr_type") {
             `id` INT
         )
         ENGINE=OLAP
-        AGGREGATE KEY(`test`, `id`)
+        DUPLICATE KEY(`test`, `id`)
         PARTITION BY RANGE(`id`)
         (
         )
-        DISTRIBUTED BY HASH(id) BUCKETS 1
+        DISTRIBUTED BY HASH(id) BUCKETS 20
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true"
@@ -74,7 +80,7 @@ suite("test_ds_alt_prop_distr_type") {
     logger.info("=== Test 2: alter table set property distribution ===")
 
     sql """
-        ALTER TABLE ${tableName} MODIFY DISTRIBUTION DISTRIBUTED BY HASH(id) BUCKETS 20;
+        ALTER TABLE ${tableName} SET ("distribution_type" = "random")
         """
         
 
@@ -83,5 +89,5 @@ suite("test_ds_alt_prop_distr_type") {
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", existBucketNew, 60, "sql"))
 
     // don't sync
-    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", notExistBucketNew, 60, "target"))
+    assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${tableName}", existBucketNew, 60, "target"))
 }

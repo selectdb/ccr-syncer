@@ -80,7 +80,6 @@ suite("test_cds_view_sync_twice") {
 
     // the view will be restored again.
     logger.info("=== Test 2: delete job and create it again ===")
-    test_num = 5
     helper.ccrJobDelete()
 
     sql """
@@ -88,7 +87,7 @@ suite("test_cds_view_sync_twice") {
         """
     sql "sync"
 
-    num_restore = helper.getRestoreRowSize(tableDuplicate0)
+    def num_restore = helper.getRestoreRowSize(tableDuplicate0)
     helper.ccrJobCreate()
     assertTrue(helper.checkRestoreNumAndFinishedTimesOf("${tableDuplicate0}", num_restore + 1, 30))
 

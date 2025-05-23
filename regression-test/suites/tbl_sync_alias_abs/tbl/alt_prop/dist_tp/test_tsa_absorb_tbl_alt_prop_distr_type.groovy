@@ -44,11 +44,11 @@ suite("test_tsa_absorb_tbl_alt_prop_distr_type") {
     }
 
     def existBucketNew = { res -> Boolean
-        return res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
+        return res[0][1].contains("DISTRIBUTED BY RANDOM BUCKETS 20")
     }
 
     def notExistBucketNew = { res -> Boolean
-        return !res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
+        return res[0][1].contains("DISTRIBUTED BY HASH(`id`) BUCKETS 20")
     }
 
     sql """
@@ -58,13 +58,13 @@ suite("test_tsa_absorb_tbl_alt_prop_distr_type") {
             `id` INT
         )
         ENGINE=OLAP
-        UNIQUE KEY(`test`, `id`)
+        DUPLICATE KEY(`test`, `id`)
         PARTITION BY RANGE(`id`)
         (
             PARTITION p10 values less than (10),
             PARTITION p100 values less than (100)
         )
-        DISTRIBUTED BY HASH(id) BUCKETS 1
+        DISTRIBUTED BY HASH(id) BUCKETS 20
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
             "binlog.enable" = "true"
@@ -102,7 +102,7 @@ suite("test_tsa_absorb_tbl_alt_prop_distr_type") {
     assertTrue(helper.checkShowTimesOf("SHOW CREATE TABLE ${aliasTableName}", notExistBucketNew, 60, "target"))
 
     sql """
-        ALTER TABLE ${tableName} MODIFY DISTRIBUTION DISTRIBUTED BY HASH(id) BUCKETS 20;
+        ALTER TABLE ${tableName}  SET ("distribution_type" = "random");
         """
 
     // 4. Insert N data

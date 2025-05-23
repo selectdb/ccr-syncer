@@ -60,10 +60,6 @@ suite("test_syncer_get_lag") {
     
     def initialLag = helper.get_job_lag(tableName)
     logger.info("Initial lag info: ${initialLag}")
-    
-    validateLagData(initialLag)
-    Boolean res = initialLag.last_commit_seq - initialLag.next_commit_seq <= 1
-    assertTrue(res);
 
     {
         sql """

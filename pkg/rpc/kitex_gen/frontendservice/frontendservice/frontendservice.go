@@ -69,6 +69,7 @@ func NewServiceInfo() *kitex.ServiceInfo {
 		"getMasterToken":            kitex.NewMethodInfo(getMasterTokenHandler, newFrontendServiceGetMasterTokenArgs, newFrontendServiceGetMasterTokenResult, false),
 		"getBinlogLag":              kitex.NewMethodInfo(getBinlogLagHandler, newFrontendServiceGetBinlogLagArgs, newFrontendServiceGetBinlogLagResult, false),
 		"updateStatsCache":          kitex.NewMethodInfo(updateStatsCacheHandler, newFrontendServiceUpdateStatsCacheArgs, newFrontendServiceUpdateStatsCacheResult, false),
+		"updatePlanStatsCache":      kitex.NewMethodInfo(updatePlanStatsCacheHandler, newFrontendServiceUpdatePlanStatsCacheArgs, newFrontendServiceUpdatePlanStatsCacheResult, false),
 		"getAutoIncrementRange":     kitex.NewMethodInfo(getAutoIncrementRangeHandler, newFrontendServiceGetAutoIncrementRangeArgs, newFrontendServiceGetAutoIncrementRangeResult, false),
 		"createPartition":           kitex.NewMethodInfo(createPartitionHandler, newFrontendServiceCreatePartitionArgs, newFrontendServiceCreatePartitionResult, false),
 		"replacePartition":          kitex.NewMethodInfo(replacePartitionHandler, newFrontendServiceReplacePartitionArgs, newFrontendServiceReplacePartitionResult, false),
@@ -83,6 +84,7 @@ func NewServiceInfo() *kitex.ServiceInfo {
 		"fetchSplitBatch":           kitex.NewMethodInfo(fetchSplitBatchHandler, newFrontendServiceFetchSplitBatchArgs, newFrontendServiceFetchSplitBatchResult, false),
 		"updatePartitionStatsCache": kitex.NewMethodInfo(updatePartitionStatsCacheHandler, newFrontendServiceUpdatePartitionStatsCacheArgs, newFrontendServiceUpdatePartitionStatsCacheResult, false),
 		"fetchRunningQueries":       kitex.NewMethodInfo(fetchRunningQueriesHandler, newFrontendServiceFetchRunningQueriesArgs, newFrontendServiceFetchRunningQueriesResult, false),
+		"fetchRoutineLoadJob":       kitex.NewMethodInfo(fetchRoutineLoadJobHandler, newFrontendServiceFetchRoutineLoadJobArgs, newFrontendServiceFetchRoutineLoadJobResult, false),
 	}
 	extra := map[string]interface{}{
 		"PackageName":     "frontendservice",
@@ -963,6 +965,24 @@ func newFrontendServiceUpdateStatsCacheResult() interface{} {
 	return frontendservice.NewFrontendServiceUpdateStatsCacheResult()
 }
 
+func updatePlanStatsCacheHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*frontendservice.FrontendServiceUpdatePlanStatsCacheArgs)
+	realResult := result.(*frontendservice.FrontendServiceUpdatePlanStatsCacheResult)
+	success, err := handler.(frontendservice.FrontendService).UpdatePlanStatsCache(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newFrontendServiceUpdatePlanStatsCacheArgs() interface{} {
+	return frontendservice.NewFrontendServiceUpdatePlanStatsCacheArgs()
+}
+
+func newFrontendServiceUpdatePlanStatsCacheResult() interface{} {
+	return frontendservice.NewFrontendServiceUpdatePlanStatsCacheResult()
+}
+
 func getAutoIncrementRangeHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*frontendservice.FrontendServiceGetAutoIncrementRangeArgs)
 	realResult := result.(*frontendservice.FrontendServiceGetAutoIncrementRangeResult)
@@ -1213,6 +1233,24 @@ func newFrontendServiceFetchRunningQueriesArgs() interface{} {
 
 func newFrontendServiceFetchRunningQueriesResult() interface{} {
 	return frontendservice.NewFrontendServiceFetchRunningQueriesResult()
+}
+
+func fetchRoutineLoadJobHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*frontendservice.FrontendServiceFetchRoutineLoadJobArgs)
+	realResult := result.(*frontendservice.FrontendServiceFetchRoutineLoadJobResult)
+	success, err := handler.(frontendservice.FrontendService).FetchRoutineLoadJob(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newFrontendServiceFetchRoutineLoadJobArgs() interface{} {
+	return frontendservice.NewFrontendServiceFetchRoutineLoadJobArgs()
+}
+
+func newFrontendServiceFetchRoutineLoadJobResult() interface{} {
+	return frontendservice.NewFrontendServiceFetchRoutineLoadJobResult()
 }
 
 type kClient struct {
@@ -1703,6 +1741,16 @@ func (p *kClient) UpdateStatsCache(ctx context.Context, request *frontendservice
 	return _result.GetSuccess(), nil
 }
 
+func (p *kClient) UpdatePlanStatsCache(ctx context.Context, request *frontendservice.TUpdatePlanStatsCacheRequest) (r *status.TStatus, err error) {
+	var _args frontendservice.FrontendServiceUpdatePlanStatsCacheArgs
+	_args.Request = request
+	var _result frontendservice.FrontendServiceUpdatePlanStatsCacheResult
+	if err = p.c.Call(ctx, "updatePlanStatsCache", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
 func (p *kClient) GetAutoIncrementRange(ctx context.Context, request *frontendservice.TAutoIncrementRangeRequest) (r *frontendservice.TAutoIncrementRangeResult_, err error) {
 	var _args frontendservice.FrontendServiceGetAutoIncrementRangeArgs
 	_args.Request = request
@@ -1838,6 +1886,16 @@ func (p *kClient) FetchRunningQueries(ctx context.Context, request *frontendserv
 	_args.Request = request
 	var _result frontendservice.FrontendServiceFetchRunningQueriesResult
 	if err = p.c.Call(ctx, "fetchRunningQueries", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) FetchRoutineLoadJob(ctx context.Context, request *frontendservice.TFetchRoutineLoadJobRequest) (r *frontendservice.TFetchRoutineLoadJobResult_, err error) {
+	var _args frontendservice.FrontendServiceFetchRoutineLoadJobArgs
+	_args.Request = request
+	var _result frontendservice.FrontendServiceFetchRoutineLoadJobResult
+	if err = p.c.Call(ctx, "fetchRoutineLoadJob", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

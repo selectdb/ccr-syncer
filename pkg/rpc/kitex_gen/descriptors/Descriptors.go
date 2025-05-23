@@ -143,6 +143,7 @@ const (
 	TSchemaTableType_SCH_FILE_CACHE_STATISTICS                 TSchemaTableType = 51
 	TSchemaTableType_SCH_CATALOG_META_CACHE_STATISTICS         TSchemaTableType = 52
 	TSchemaTableType_SCH_BACKEND_KERBEROS_TICKET_CACHE         TSchemaTableType = 53
+	TSchemaTableType_SCH_ROUTINE_LOAD_JOBS                     TSchemaTableType = 54
 )
 
 func (p TSchemaTableType) String() string {
@@ -255,6 +256,8 @@ func (p TSchemaTableType) String() string {
 		return "SCH_CATALOG_META_CACHE_STATISTICS"
 	case TSchemaTableType_SCH_BACKEND_KERBEROS_TICKET_CACHE:
 		return "SCH_BACKEND_KERBEROS_TICKET_CACHE"
+	case TSchemaTableType_SCH_ROUTINE_LOAD_JOBS:
+		return "SCH_ROUTINE_LOAD_JOBS"
 	}
 	return "<UNSET>"
 }
@@ -369,6 +372,8 @@ func TSchemaTableTypeFromString(s string) (TSchemaTableType, error) {
 		return TSchemaTableType_SCH_CATALOG_META_CACHE_STATISTICS, nil
 	case "SCH_BACKEND_KERBEROS_TICKET_CACHE":
 		return TSchemaTableType_SCH_BACKEND_KERBEROS_TICKET_CACHE, nil
+	case "SCH_ROUTINE_LOAD_JOBS":
+		return TSchemaTableType_SCH_ROUTINE_LOAD_JOBS, nil
 	}
 	return TSchemaTableType(0), fmt.Errorf("not a valid TSchemaTableType string")
 }
@@ -15634,6 +15639,98 @@ func (p *TLakeSoulTable) Field3DeepEqual(src map[string]string) bool {
 	return true
 }
 
+type TDictionaryTable struct {
+}
+
+func NewTDictionaryTable() *TDictionaryTable {
+	return &TDictionaryTable{}
+}
+
+func (p *TDictionaryTable) InitDefault() {
+}
+
+var fieldIDToName_TDictionaryTable = map[int16]string{}
+
+func (p *TDictionaryTable) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		if err = iprot.Skip(fieldTypeId); err != nil {
+			goto SkipFieldTypeError
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+SkipFieldTypeError:
+	return thrift.PrependError(fmt.Sprintf("%T skip field type %d error", p, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TDictionaryTable) Write(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteStructBegin("TDictionaryTable"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TDictionaryTable) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TDictionaryTable(%+v)", *p)
+
+}
+
+func (p *TDictionaryTable) DeepEqual(ano *TDictionaryTable) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	return true
+}
+
 type TTableDescriptor struct {
 	Id                  types.TTableId        `thrift:"id,1,required" frugal:"1,required,i64" json:"id"`
 	TableType           types.TTableType      `thrift:"tableType,2,required" frugal:"2,required,TTableType" json:"tableType"`
@@ -15654,6 +15751,7 @@ type TTableDescriptor struct {
 	McTable             *TMCTable             `thrift:"mcTable,21,optional" frugal:"21,optional,TMCTable" json:"mcTable,omitempty"`
 	TrinoConnectorTable *TTrinoConnectorTable `thrift:"trinoConnectorTable,22,optional" frugal:"22,optional,TTrinoConnectorTable" json:"trinoConnectorTable,omitempty"`
 	LakesoulTable       *TLakeSoulTable       `thrift:"lakesoulTable,23,optional" frugal:"23,optional,TLakeSoulTable" json:"lakesoulTable,omitempty"`
+	DictionaryTable     *TDictionaryTable     `thrift:"dictionaryTable,24,optional" frugal:"24,optional,TDictionaryTable" json:"dictionaryTable,omitempty"`
 }
 
 func NewTTableDescriptor() *TTableDescriptor {
@@ -15803,6 +15901,15 @@ func (p *TTableDescriptor) GetLakesoulTable() (v *TLakeSoulTable) {
 	}
 	return p.LakesoulTable
 }
+
+var TTableDescriptor_DictionaryTable_DEFAULT *TDictionaryTable
+
+func (p *TTableDescriptor) GetDictionaryTable() (v *TDictionaryTable) {
+	if !p.IsSetDictionaryTable() {
+		return TTableDescriptor_DictionaryTable_DEFAULT
+	}
+	return p.DictionaryTable
+}
 func (p *TTableDescriptor) SetId(val types.TTableId) {
 	p.Id = val
 }
@@ -15860,6 +15967,9 @@ func (p *TTableDescriptor) SetTrinoConnectorTable(val *TTrinoConnectorTable) {
 func (p *TTableDescriptor) SetLakesoulTable(val *TLakeSoulTable) {
 	p.LakesoulTable = val
 }
+func (p *TTableDescriptor) SetDictionaryTable(val *TDictionaryTable) {
+	p.DictionaryTable = val
+}
 
 var fieldIDToName_TTableDescriptor = map[int16]string{
 	1:  "id",
@@ -15881,6 +15991,7 @@ var fieldIDToName_TTableDescriptor = map[int16]string{
 	21: "mcTable",
 	22: "trinoConnectorTable",
 	23: "lakesoulTable",
+	24: "dictionaryTable",
 }
 
 func (p *TTableDescriptor) IsSetMysqlTable() bool {
@@ -15933,6 +16044,10 @@ func (p *TTableDescriptor) IsSetTrinoConnectorTable() bool {
 
 func (p *TTableDescriptor) IsSetLakesoulTable() bool {
 	return p.LakesoulTable != nil
+}
+
+func (p *TTableDescriptor) IsSetDictionaryTable() bool {
+	return p.DictionaryTable != nil
 }
 
 func (p *TTableDescriptor) Read(iprot thrift.TProtocol) (err error) {
@@ -16113,6 +16228,14 @@ func (p *TTableDescriptor) Read(iprot thrift.TProtocol) (err error) {
 		case 23:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField23(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 24:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField24(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -16348,6 +16471,14 @@ func (p *TTableDescriptor) ReadField23(iprot thrift.TProtocol) error {
 	p.LakesoulTable = _field
 	return nil
 }
+func (p *TTableDescriptor) ReadField24(iprot thrift.TProtocol) error {
+	_field := NewTDictionaryTable()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.DictionaryTable = _field
+	return nil
+}
 
 func (p *TTableDescriptor) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -16429,6 +16560,10 @@ func (p *TTableDescriptor) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField23(oprot); err != nil {
 			fieldId = 23
+			goto WriteFieldError
+		}
+		if err = p.writeField24(oprot); err != nil {
+			fieldId = 24
 			goto WriteFieldError
 		}
 	}
@@ -16798,6 +16933,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
 }
 
+func (p *TTableDescriptor) writeField24(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDictionaryTable() {
+		if err = oprot.WriteFieldBegin("dictionaryTable", thrift.STRUCT, 24); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.DictionaryTable.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 24 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 24 end error: ", p), err)
+}
+
 func (p *TTableDescriptor) String() string {
 	if p == nil {
 		return "<nil>"
@@ -16867,6 +17021,9 @@ func (p *TTableDescriptor) DeepEqual(ano *TTableDescriptor) bool {
 		return false
 	}
 	if !p.Field23DeepEqual(ano.LakesoulTable) {
+		return false
+	}
+	if !p.Field24DeepEqual(ano.DictionaryTable) {
 		return false
 	}
 	return true
@@ -17001,6 +17158,13 @@ func (p *TTableDescriptor) Field22DeepEqual(src *TTrinoConnectorTable) bool {
 func (p *TTableDescriptor) Field23DeepEqual(src *TLakeSoulTable) bool {
 
 	if !p.LakesoulTable.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TTableDescriptor) Field24DeepEqual(src *TDictionaryTable) bool {
+
+	if !p.DictionaryTable.DeepEqual(src) {
 		return false
 	}
 	return true

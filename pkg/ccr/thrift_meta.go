@@ -165,22 +165,28 @@ func NewThriftMeta(spec *base.Spec, rpcFactory rpc.IRpcFactory, tableIds []int64
 		droppedIndexes[index] = struct{}{}
 	}
 	droppedIndexMap := utils.CopyMap(dbMeta.GetDroppedIndexMap())
+	droppedTableMap := utils.CopyMap(dbMeta.GetDroppedTableMap())
+	droppedPartitionMap := utils.CopyMap(dbMeta.GetDroppedPartitionMap())
 
 	return &ThriftMeta{
-		meta:              meta,
-		droppedPartitions: droppedPartitions,
-		droppedTables:     droppedTables,
-		droppedIndexes:    droppedIndexes,
-		droppedIndexMap:   droppedIndexMap,
+		meta:                meta,
+		droppedPartitions:   droppedPartitions,
+		droppedTables:       droppedTables,
+		droppedIndexes:      droppedIndexes,
+		droppedIndexMap:     droppedIndexMap,
+		droppedTableMap:     droppedTableMap,
+		droppedPartitionMap: droppedPartitionMap,
 	}, nil
 }
 
 type ThriftMeta struct {
-	meta              *Meta
-	droppedPartitions map[int64]struct{}
-	droppedTables     map[int64]struct{}
-	droppedIndexes    map[int64]struct{}
-	droppedIndexMap   map[int64]int64
+	meta                *Meta
+	droppedPartitions   map[int64]struct{}
+	droppedTables       map[int64]struct{}
+	droppedIndexes      map[int64]struct{}
+	droppedIndexMap     map[int64]int64
+	droppedTableMap     map[int64]int64
+	droppedPartitionMap map[int64]int64
 }
 
 func (tm *ThriftMeta) GetTablets(tableId, partitionId, indexId int64) (*btree.Map[int64, *TabletMeta], error) {
@@ -306,4 +312,23 @@ func (tm *ThriftMeta) IsIndexDropped(indexId int64) bool {
 
 func (tm *ThriftMeta) GetDroppedIndexMap() map[int64]int64 {
 	return tm.droppedIndexMap
+}
+
+func (tm *ThriftMeta) GetDroppedPartitionMap() map[int64]int64 {
+	return tm.droppedPartitionMap
+}
+
+func (tm *ThriftMeta) GetDroppedTableMap() map[int64]int64 {
+	return tm.droppedTableMap
+}
+
+func (tm *ThriftMeta) GetTable(tableId int64) (*TableMeta, error) {
+	dbId := tm.meta.Id
+
+	tableMeta, ok := tm.meta.Tables[tableId]
+	if !ok {
+		return nil, xerror.Errorf(xerror.Meta, "dbId: %d, tableId: %d not found", dbId, tableId)
+	}
+
+	return tableMeta, nil
 }

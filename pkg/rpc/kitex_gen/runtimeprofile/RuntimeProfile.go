@@ -10,10 +10,11 @@ import (
 )
 
 type TCounter struct {
-	Name  string        `thrift:"name,1,required" frugal:"1,required,string" json:"name"`
-	Type  metrics.TUnit `thrift:"type,2,required" frugal:"2,required,TUnit" json:"type"`
-	Value int64         `thrift:"value,3,required" frugal:"3,required,i64" json:"value"`
-	Level *int64        `thrift:"level,4,optional" frugal:"4,optional,i64" json:"level,omitempty"`
+	Name        string        `thrift:"name,1,required" frugal:"1,required,string" json:"name"`
+	Type        metrics.TUnit `thrift:"type,2,required" frugal:"2,required,TUnit" json:"type"`
+	Value       int64         `thrift:"value,3,required" frugal:"3,required,i64" json:"value"`
+	Level       *int64        `thrift:"level,4,optional" frugal:"4,optional,i64" json:"level,omitempty"`
+	Description *string       `thrift:"description,5,optional" frugal:"5,optional,string" json:"description,omitempty"`
 }
 
 func NewTCounter() *TCounter {
@@ -43,6 +44,15 @@ func (p *TCounter) GetLevel() (v int64) {
 	}
 	return *p.Level
 }
+
+var TCounter_Description_DEFAULT string
+
+func (p *TCounter) GetDescription() (v string) {
+	if !p.IsSetDescription() {
+		return TCounter_Description_DEFAULT
+	}
+	return *p.Description
+}
 func (p *TCounter) SetName(val string) {
 	p.Name = val
 }
@@ -55,16 +65,24 @@ func (p *TCounter) SetValue(val int64) {
 func (p *TCounter) SetLevel(val *int64) {
 	p.Level = val
 }
+func (p *TCounter) SetDescription(val *string) {
+	p.Description = val
+}
 
 var fieldIDToName_TCounter = map[int16]string{
 	1: "name",
 	2: "type",
 	3: "value",
 	4: "level",
+	5: "description",
 }
 
 func (p *TCounter) IsSetLevel() bool {
 	return p.Level != nil
+}
+
+func (p *TCounter) IsSetDescription() bool {
+	return p.Description != nil
 }
 
 func (p *TCounter) Read(iprot thrift.TProtocol) (err error) {
@@ -119,6 +137,14 @@ func (p *TCounter) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -213,6 +239,17 @@ func (p *TCounter) ReadField4(iprot thrift.TProtocol) error {
 	p.Level = _field
 	return nil
 }
+func (p *TCounter) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Description = _field
+	return nil
+}
 
 func (p *TCounter) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -234,6 +271,10 @@ func (p *TCounter) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -324,6 +365,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 
+func (p *TCounter) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDescription() {
+		if err = oprot.WriteFieldBegin("description", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Description); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
 func (p *TCounter) String() string {
 	if p == nil {
 		return "<nil>"
@@ -348,6 +408,9 @@ func (p *TCounter) DeepEqual(ano *TCounter) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.Level) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.Description) {
 		return false
 	}
 	return true
@@ -382,6 +445,18 @@ func (p *TCounter) Field4DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.Level != *src {
+		return false
+	}
+	return true
+}
+func (p *TCounter) Field5DeepEqual(src *string) bool {
+
+	if p.Description == src {
+		return true
+	} else if p.Description == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Description, *src) != 0 {
 		return false
 	}
 	return true

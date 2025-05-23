@@ -3,11 +3,11 @@ package handle
 import (
 	"strings"
 
-	"github.com/cloudwego/kitex/tool/internal_pkg/log"
 	"github.com/selectdb/ccr_syncer/pkg/ccr"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/record"
 	festruct "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/frontendservice"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
+	log "github.com/sirupsen/logrus"
 )
 
 func init() {

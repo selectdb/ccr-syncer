@@ -33,6 +33,7 @@ const (
 	TDataSinkType_GROUP_COMMIT_BLOCK_SINK      TDataSinkType = 12
 	TDataSinkType_HIVE_TABLE_SINK              TDataSinkType = 13
 	TDataSinkType_ICEBERG_TABLE_SINK           TDataSinkType = 14
+	TDataSinkType_DICTIONARY_SINK              TDataSinkType = 15
 )
 
 func (p TDataSinkType) String() string {
@@ -67,6 +68,8 @@ func (p TDataSinkType) String() string {
 		return "HIVE_TABLE_SINK"
 	case TDataSinkType_ICEBERG_TABLE_SINK:
 		return "ICEBERG_TABLE_SINK"
+	case TDataSinkType_DICTIONARY_SINK:
+		return "DICTIONARY_SINK"
 	}
 	return "<UNSET>"
 }
@@ -103,6 +106,8 @@ func TDataSinkTypeFromString(s string) (TDataSinkType, error) {
 		return TDataSinkType_HIVE_TABLE_SINK, nil
 	case "ICEBERG_TABLE_SINK":
 		return TDataSinkType_ICEBERG_TABLE_SINK, nil
+	case "DICTIONARY_SINK":
+		return TDataSinkType_DICTIONARY_SINK, nil
 	}
 	return TDataSinkType(0), fmt.Errorf("not a valid TDataSinkType string")
 }
@@ -696,6 +701,48 @@ func (p *TFileContent) Scan(value interface{}) (err error) {
 }
 
 func (p *TFileContent) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
+type TDictLayoutType int64
+
+const (
+	TDictLayoutType_HASH_MAP TDictLayoutType = 0
+	TDictLayoutType_IP_TRIE  TDictLayoutType = 1
+)
+
+func (p TDictLayoutType) String() string {
+	switch p {
+	case TDictLayoutType_HASH_MAP:
+		return "HASH_MAP"
+	case TDictLayoutType_IP_TRIE:
+		return "IP_TRIE"
+	}
+	return "<UNSET>"
+}
+
+func TDictLayoutTypeFromString(s string) (TDictLayoutType, error) {
+	switch s {
+	case "HASH_MAP":
+		return TDictLayoutType_HASH_MAP, nil
+	case "IP_TRIE":
+		return TDictLayoutType_IP_TRIE, nil
+	}
+	return TDictLayoutType(0), fmt.Errorf("not a valid TDictLayoutType string")
+}
+
+func TDictLayoutTypePtr(v TDictLayoutType) *TDictLayoutType { return &v }
+func (p *TDictLayoutType) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = TDictLayoutType(result.Int64)
+	return
+}
+
+func (p *TDictLayoutType) Value() (driver.Value, error) {
 	if p == nil {
 		return nil, nil
 	}
@@ -16420,6 +16467,849 @@ func (p *TIcebergTableSink) Field13DeepEqual(src *plannodes.TFileCompressType) b
 	return true
 }
 
+type TDictionarySink struct {
+	DictionaryId         *int64           `thrift:"dictionary_id,1,optional" frugal:"1,optional,i64" json:"dictionary_id,omitempty"`
+	VersionId            *int64           `thrift:"version_id,2,optional" frugal:"2,optional,i64" json:"version_id,omitempty"`
+	DictionaryName       *string          `thrift:"dictionary_name,3,optional" frugal:"3,optional,string" json:"dictionary_name,omitempty"`
+	LayoutType           *TDictLayoutType `thrift:"layout_type,4,optional" frugal:"4,optional,TDictLayoutType" json:"layout_type,omitempty"`
+	KeyOutputExprSlots   []int64          `thrift:"key_output_expr_slots,5,optional" frugal:"5,optional,list<i64>" json:"key_output_expr_slots,omitempty"`
+	ValueOutputExprSlots []int64          `thrift:"value_output_expr_slots,6,optional" frugal:"6,optional,list<i64>" json:"value_output_expr_slots,omitempty"`
+	ValueNames           []string         `thrift:"value_names,7,optional" frugal:"7,optional,list<string>" json:"value_names,omitempty"`
+	SkipNullKey          *bool            `thrift:"skip_null_key,8,optional" frugal:"8,optional,bool" json:"skip_null_key,omitempty"`
+	MemoryLimit          *int64           `thrift:"memory_limit,9,optional" frugal:"9,optional,i64" json:"memory_limit,omitempty"`
+}
+
+func NewTDictionarySink() *TDictionarySink {
+	return &TDictionarySink{}
+}
+
+func (p *TDictionarySink) InitDefault() {
+}
+
+var TDictionarySink_DictionaryId_DEFAULT int64
+
+func (p *TDictionarySink) GetDictionaryId() (v int64) {
+	if !p.IsSetDictionaryId() {
+		return TDictionarySink_DictionaryId_DEFAULT
+	}
+	return *p.DictionaryId
+}
+
+var TDictionarySink_VersionId_DEFAULT int64
+
+func (p *TDictionarySink) GetVersionId() (v int64) {
+	if !p.IsSetVersionId() {
+		return TDictionarySink_VersionId_DEFAULT
+	}
+	return *p.VersionId
+}
+
+var TDictionarySink_DictionaryName_DEFAULT string
+
+func (p *TDictionarySink) GetDictionaryName() (v string) {
+	if !p.IsSetDictionaryName() {
+		return TDictionarySink_DictionaryName_DEFAULT
+	}
+	return *p.DictionaryName
+}
+
+var TDictionarySink_LayoutType_DEFAULT TDictLayoutType
+
+func (p *TDictionarySink) GetLayoutType() (v TDictLayoutType) {
+	if !p.IsSetLayoutType() {
+		return TDictionarySink_LayoutType_DEFAULT
+	}
+	return *p.LayoutType
+}
+
+var TDictionarySink_KeyOutputExprSlots_DEFAULT []int64
+
+func (p *TDictionarySink) GetKeyOutputExprSlots() (v []int64) {
+	if !p.IsSetKeyOutputExprSlots() {
+		return TDictionarySink_KeyOutputExprSlots_DEFAULT
+	}
+	return p.KeyOutputExprSlots
+}
+
+var TDictionarySink_ValueOutputExprSlots_DEFAULT []int64
+
+func (p *TDictionarySink) GetValueOutputExprSlots() (v []int64) {
+	if !p.IsSetValueOutputExprSlots() {
+		return TDictionarySink_ValueOutputExprSlots_DEFAULT
+	}
+	return p.ValueOutputExprSlots
+}
+
+var TDictionarySink_ValueNames_DEFAULT []string
+
+func (p *TDictionarySink) GetValueNames() (v []string) {
+	if !p.IsSetValueNames() {
+		return TDictionarySink_ValueNames_DEFAULT
+	}
+	return p.ValueNames
+}
+
+var TDictionarySink_SkipNullKey_DEFAULT bool
+
+func (p *TDictionarySink) GetSkipNullKey() (v bool) {
+	if !p.IsSetSkipNullKey() {
+		return TDictionarySink_SkipNullKey_DEFAULT
+	}
+	return *p.SkipNullKey
+}
+
+var TDictionarySink_MemoryLimit_DEFAULT int64
+
+func (p *TDictionarySink) GetMemoryLimit() (v int64) {
+	if !p.IsSetMemoryLimit() {
+		return TDictionarySink_MemoryLimit_DEFAULT
+	}
+	return *p.MemoryLimit
+}
+func (p *TDictionarySink) SetDictionaryId(val *int64) {
+	p.DictionaryId = val
+}
+func (p *TDictionarySink) SetVersionId(val *int64) {
+	p.VersionId = val
+}
+func (p *TDictionarySink) SetDictionaryName(val *string) {
+	p.DictionaryName = val
+}
+func (p *TDictionarySink) SetLayoutType(val *TDictLayoutType) {
+	p.LayoutType = val
+}
+func (p *TDictionarySink) SetKeyOutputExprSlots(val []int64) {
+	p.KeyOutputExprSlots = val
+}
+func (p *TDictionarySink) SetValueOutputExprSlots(val []int64) {
+	p.ValueOutputExprSlots = val
+}
+func (p *TDictionarySink) SetValueNames(val []string) {
+	p.ValueNames = val
+}
+func (p *TDictionarySink) SetSkipNullKey(val *bool) {
+	p.SkipNullKey = val
+}
+func (p *TDictionarySink) SetMemoryLimit(val *int64) {
+	p.MemoryLimit = val
+}
+
+var fieldIDToName_TDictionarySink = map[int16]string{
+	1: "dictionary_id",
+	2: "version_id",
+	3: "dictionary_name",
+	4: "layout_type",
+	5: "key_output_expr_slots",
+	6: "value_output_expr_slots",
+	7: "value_names",
+	8: "skip_null_key",
+	9: "memory_limit",
+}
+
+func (p *TDictionarySink) IsSetDictionaryId() bool {
+	return p.DictionaryId != nil
+}
+
+func (p *TDictionarySink) IsSetVersionId() bool {
+	return p.VersionId != nil
+}
+
+func (p *TDictionarySink) IsSetDictionaryName() bool {
+	return p.DictionaryName != nil
+}
+
+func (p *TDictionarySink) IsSetLayoutType() bool {
+	return p.LayoutType != nil
+}
+
+func (p *TDictionarySink) IsSetKeyOutputExprSlots() bool {
+	return p.KeyOutputExprSlots != nil
+}
+
+func (p *TDictionarySink) IsSetValueOutputExprSlots() bool {
+	return p.ValueOutputExprSlots != nil
+}
+
+func (p *TDictionarySink) IsSetValueNames() bool {
+	return p.ValueNames != nil
+}
+
+func (p *TDictionarySink) IsSetSkipNullKey() bool {
+	return p.SkipNullKey != nil
+}
+
+func (p *TDictionarySink) IsSetMemoryLimit() bool {
+	return p.MemoryLimit != nil
+}
+
+func (p *TDictionarySink) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TDictionarySink[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TDictionarySink) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DictionaryId = _field
+	return nil
+}
+func (p *TDictionarySink) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.VersionId = _field
+	return nil
+}
+func (p *TDictionarySink) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DictionaryName = _field
+	return nil
+}
+func (p *TDictionarySink) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *TDictLayoutType
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := TDictLayoutType(v)
+		_field = &tmp
+	}
+	p.LayoutType = _field
+	return nil
+}
+func (p *TDictionarySink) ReadField5(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.KeyOutputExprSlots = _field
+	return nil
+}
+func (p *TDictionarySink) ReadField6(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.ValueOutputExprSlots = _field
+	return nil
+}
+func (p *TDictionarySink) ReadField7(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.ValueNames = _field
+	return nil
+}
+func (p *TDictionarySink) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SkipNullKey = _field
+	return nil
+}
+func (p *TDictionarySink) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.MemoryLimit = _field
+	return nil
+}
+
+func (p *TDictionarySink) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TDictionarySink"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TDictionarySink) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDictionaryId() {
+		if err = oprot.WriteFieldBegin("dictionary_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.DictionaryId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TDictionarySink) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVersionId() {
+		if err = oprot.WriteFieldBegin("version_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.VersionId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TDictionarySink) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDictionaryName() {
+		if err = oprot.WriteFieldBegin("dictionary_name", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.DictionaryName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *TDictionarySink) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLayoutType() {
+		if err = oprot.WriteFieldBegin("layout_type", thrift.I32, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.LayoutType)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *TDictionarySink) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetKeyOutputExprSlots() {
+		if err = oprot.WriteFieldBegin("key_output_expr_slots", thrift.LIST, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.I64, len(p.KeyOutputExprSlots)); err != nil {
+			return err
+		}
+		for _, v := range p.KeyOutputExprSlots {
+			if err := oprot.WriteI64(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *TDictionarySink) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetValueOutputExprSlots() {
+		if err = oprot.WriteFieldBegin("value_output_expr_slots", thrift.LIST, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.I64, len(p.ValueOutputExprSlots)); err != nil {
+			return err
+		}
+		for _, v := range p.ValueOutputExprSlots {
+			if err := oprot.WriteI64(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *TDictionarySink) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetValueNames() {
+		if err = oprot.WriteFieldBegin("value_names", thrift.LIST, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.ValueNames)); err != nil {
+			return err
+		}
+		for _, v := range p.ValueNames {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
+func (p *TDictionarySink) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSkipNullKey() {
+		if err = oprot.WriteFieldBegin("skip_null_key", thrift.BOOL, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.SkipNullKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
+func (p *TDictionarySink) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMemoryLimit() {
+		if err = oprot.WriteFieldBegin("memory_limit", thrift.I64, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.MemoryLimit); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+
+func (p *TDictionarySink) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TDictionarySink(%+v)", *p)
+
+}
+
+func (p *TDictionarySink) DeepEqual(ano *TDictionarySink) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.DictionaryId) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.VersionId) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.DictionaryName) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.LayoutType) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.KeyOutputExprSlots) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.ValueOutputExprSlots) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.ValueNames) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.SkipNullKey) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.MemoryLimit) {
+		return false
+	}
+	return true
+}
+
+func (p *TDictionarySink) Field1DeepEqual(src *int64) bool {
+
+	if p.DictionaryId == src {
+		return true
+	} else if p.DictionaryId == nil || src == nil {
+		return false
+	}
+	if *p.DictionaryId != *src {
+		return false
+	}
+	return true
+}
+func (p *TDictionarySink) Field2DeepEqual(src *int64) bool {
+
+	if p.VersionId == src {
+		return true
+	} else if p.VersionId == nil || src == nil {
+		return false
+	}
+	if *p.VersionId != *src {
+		return false
+	}
+	return true
+}
+func (p *TDictionarySink) Field3DeepEqual(src *string) bool {
+
+	if p.DictionaryName == src {
+		return true
+	} else if p.DictionaryName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.DictionaryName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TDictionarySink) Field4DeepEqual(src *TDictLayoutType) bool {
+
+	if p.LayoutType == src {
+		return true
+	} else if p.LayoutType == nil || src == nil {
+		return false
+	}
+	if *p.LayoutType != *src {
+		return false
+	}
+	return true
+}
+func (p *TDictionarySink) Field5DeepEqual(src []int64) bool {
+
+	if len(p.KeyOutputExprSlots) != len(src) {
+		return false
+	}
+	for i, v := range p.KeyOutputExprSlots {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+func (p *TDictionarySink) Field6DeepEqual(src []int64) bool {
+
+	if len(p.ValueOutputExprSlots) != len(src) {
+		return false
+	}
+	for i, v := range p.ValueOutputExprSlots {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+func (p *TDictionarySink) Field7DeepEqual(src []string) bool {
+
+	if len(p.ValueNames) != len(src) {
+		return false
+	}
+	for i, v := range p.ValueNames {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *TDictionarySink) Field8DeepEqual(src *bool) bool {
+
+	if p.SkipNullKey == src {
+		return true
+	} else if p.SkipNullKey == nil || src == nil {
+		return false
+	}
+	if *p.SkipNullKey != *src {
+		return false
+	}
+	return true
+}
+func (p *TDictionarySink) Field9DeepEqual(src *int64) bool {
+
+	if p.MemoryLimit == src {
+		return true
+	} else if p.MemoryLimit == nil || src == nil {
+		return false
+	}
+	if *p.MemoryLimit != *src {
+		return false
+	}
+	return true
+}
+
 type TDataSink struct {
 	Type                TDataSinkType             `thrift:"type,1,required" frugal:"1,required,TDataSinkType" json:"type"`
 	StreamSink          *TDataStreamSink          `thrift:"stream_sink,2,optional" frugal:"2,optional,TDataStreamSink" json:"stream_sink,omitempty"`
@@ -16434,6 +17324,7 @@ type TDataSink struct {
 	MultiCastStreamSink *TMultiCastDataStreamSink `thrift:"multi_cast_stream_sink,12,optional" frugal:"12,optional,TMultiCastDataStreamSink" json:"multi_cast_stream_sink,omitempty"`
 	HiveTableSink       *THiveTableSink           `thrift:"hive_table_sink,13,optional" frugal:"13,optional,THiveTableSink" json:"hive_table_sink,omitempty"`
 	IcebergTableSink    *TIcebergTableSink        `thrift:"iceberg_table_sink,14,optional" frugal:"14,optional,TIcebergTableSink" json:"iceberg_table_sink,omitempty"`
+	DictionarySink      *TDictionarySink          `thrift:"dictionary_sink,15,optional" frugal:"15,optional,TDictionarySink" json:"dictionary_sink,omitempty"`
 }
 
 func NewTDataSink() *TDataSink {
@@ -16554,6 +17445,15 @@ func (p *TDataSink) GetIcebergTableSink() (v *TIcebergTableSink) {
 	}
 	return p.IcebergTableSink
 }
+
+var TDataSink_DictionarySink_DEFAULT *TDictionarySink
+
+func (p *TDataSink) GetDictionarySink() (v *TDictionarySink) {
+	if !p.IsSetDictionarySink() {
+		return TDataSink_DictionarySink_DEFAULT
+	}
+	return p.DictionarySink
+}
 func (p *TDataSink) SetType(val TDataSinkType) {
 	p.Type = val
 }
@@ -16593,6 +17493,9 @@ func (p *TDataSink) SetHiveTableSink(val *THiveTableSink) {
 func (p *TDataSink) SetIcebergTableSink(val *TIcebergTableSink) {
 	p.IcebergTableSink = val
 }
+func (p *TDataSink) SetDictionarySink(val *TDictionarySink) {
+	p.DictionarySink = val
+}
 
 var fieldIDToName_TDataSink = map[int16]string{
 	1:  "type",
@@ -16608,6 +17511,7 @@ var fieldIDToName_TDataSink = map[int16]string{
 	12: "multi_cast_stream_sink",
 	13: "hive_table_sink",
 	14: "iceberg_table_sink",
+	15: "dictionary_sink",
 }
 
 func (p *TDataSink) IsSetStreamSink() bool {
@@ -16656,6 +17560,10 @@ func (p *TDataSink) IsSetHiveTableSink() bool {
 
 func (p *TDataSink) IsSetIcebergTableSink() bool {
 	return p.IcebergTableSink != nil
+}
+
+func (p *TDataSink) IsSetDictionarySink() bool {
+	return p.DictionarySink != nil
 }
 
 func (p *TDataSink) Read(iprot thrift.TProtocol) (err error) {
@@ -16778,6 +17686,14 @@ func (p *TDataSink) Read(iprot thrift.TProtocol) (err error) {
 		case 14:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField14(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 15:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField15(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -16925,6 +17841,14 @@ func (p *TDataSink) ReadField14(iprot thrift.TProtocol) error {
 	p.IcebergTableSink = _field
 	return nil
 }
+func (p *TDataSink) ReadField15(iprot thrift.TProtocol) error {
+	_field := NewTDictionarySink()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.DictionarySink = _field
+	return nil
+}
 
 func (p *TDataSink) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -16982,6 +17906,10 @@ func (p *TDataSink) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField14(oprot); err != nil {
 			fieldId = 14
+			goto WriteFieldError
+		}
+		if err = p.writeField15(oprot); err != nil {
+			fieldId = 15
 			goto WriteFieldError
 		}
 	}
@@ -17247,6 +18175,25 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
 }
 
+func (p *TDataSink) writeField15(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDictionarySink() {
+		if err = oprot.WriteFieldBegin("dictionary_sink", thrift.STRUCT, 15); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.DictionarySink.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
+}
+
 func (p *TDataSink) String() string {
 	if p == nil {
 		return "<nil>"
@@ -17298,6 +18245,9 @@ func (p *TDataSink) DeepEqual(ano *TDataSink) bool {
 		return false
 	}
 	if !p.Field14DeepEqual(ano.IcebergTableSink) {
+		return false
+	}
+	if !p.Field15DeepEqual(ano.DictionarySink) {
 		return false
 	}
 	return true
@@ -17390,6 +18340,13 @@ func (p *TDataSink) Field13DeepEqual(src *THiveTableSink) bool {
 func (p *TDataSink) Field14DeepEqual(src *TIcebergTableSink) bool {
 
 	if !p.IcebergTableSink.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TDataSink) Field15DeepEqual(src *TDictionarySink) bool {
+
+	if !p.DictionarySink.DeepEqual(src) {
 		return false
 	}
 	return true

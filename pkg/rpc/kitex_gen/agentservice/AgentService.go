@@ -177,6 +177,53 @@ func (p *TObjStorageType) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+type TCredProviderType int64
+
+const (
+	TCredProviderType_DEFAULT          TCredProviderType = 0
+	TCredProviderType_SIMPLE           TCredProviderType = 1
+	TCredProviderType_INSTANCE_PROFILE TCredProviderType = 2
+)
+
+func (p TCredProviderType) String() string {
+	switch p {
+	case TCredProviderType_DEFAULT:
+		return "DEFAULT"
+	case TCredProviderType_SIMPLE:
+		return "SIMPLE"
+	case TCredProviderType_INSTANCE_PROFILE:
+		return "INSTANCE_PROFILE"
+	}
+	return "<UNSET>"
+}
+
+func TCredProviderTypeFromString(s string) (TCredProviderType, error) {
+	switch s {
+	case "DEFAULT":
+		return TCredProviderType_DEFAULT, nil
+	case "SIMPLE":
+		return TCredProviderType_SIMPLE, nil
+	case "INSTANCE_PROFILE":
+		return TCredProviderType_INSTANCE_PROFILE, nil
+	}
+	return TCredProviderType(0), fmt.Errorf("not a valid TCredProviderType string")
+}
+
+func TCredProviderTypePtr(v TCredProviderType) *TCredProviderType { return &v }
+func (p *TCredProviderType) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = TCredProviderType(result.Int64)
+	return
+}
+
+func (p *TCredProviderType) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
 type TCompressionType int64
 
 const (
@@ -2319,18 +2366,21 @@ func (p *TTabletSchema) Field23DeepEqual(src int64) bool {
 }
 
 type TS3StorageParam struct {
-	Endpoint         *string          `thrift:"endpoint,1,optional" frugal:"1,optional,string" json:"endpoint,omitempty"`
-	Region           *string          `thrift:"region,2,optional" frugal:"2,optional,string" json:"region,omitempty"`
-	Ak               *string          `thrift:"ak,3,optional" frugal:"3,optional,string" json:"ak,omitempty"`
-	Sk               *string          `thrift:"sk,4,optional" frugal:"4,optional,string" json:"sk,omitempty"`
-	MaxConn          int32            `thrift:"max_conn,5,optional" frugal:"5,optional,i32" json:"max_conn,omitempty"`
-	RequestTimeoutMs int32            `thrift:"request_timeout_ms,6,optional" frugal:"6,optional,i32" json:"request_timeout_ms,omitempty"`
-	ConnTimeoutMs    int32            `thrift:"conn_timeout_ms,7,optional" frugal:"7,optional,i32" json:"conn_timeout_ms,omitempty"`
-	RootPath         *string          `thrift:"root_path,8,optional" frugal:"8,optional,string" json:"root_path,omitempty"`
-	Bucket           *string          `thrift:"bucket,9,optional" frugal:"9,optional,string" json:"bucket,omitempty"`
-	UsePathStyle     bool             `thrift:"use_path_style,10,optional" frugal:"10,optional,bool" json:"use_path_style,omitempty"`
-	Token            *string          `thrift:"token,11,optional" frugal:"11,optional,string" json:"token,omitempty"`
-	Provider         *TObjStorageType `thrift:"provider,12,optional" frugal:"12,optional,TObjStorageType" json:"provider,omitempty"`
+	Endpoint         *string            `thrift:"endpoint,1,optional" frugal:"1,optional,string" json:"endpoint,omitempty"`
+	Region           *string            `thrift:"region,2,optional" frugal:"2,optional,string" json:"region,omitempty"`
+	Ak               *string            `thrift:"ak,3,optional" frugal:"3,optional,string" json:"ak,omitempty"`
+	Sk               *string            `thrift:"sk,4,optional" frugal:"4,optional,string" json:"sk,omitempty"`
+	MaxConn          int32              `thrift:"max_conn,5,optional" frugal:"5,optional,i32" json:"max_conn,omitempty"`
+	RequestTimeoutMs int32              `thrift:"request_timeout_ms,6,optional" frugal:"6,optional,i32" json:"request_timeout_ms,omitempty"`
+	ConnTimeoutMs    int32              `thrift:"conn_timeout_ms,7,optional" frugal:"7,optional,i32" json:"conn_timeout_ms,omitempty"`
+	RootPath         *string            `thrift:"root_path,8,optional" frugal:"8,optional,string" json:"root_path,omitempty"`
+	Bucket           *string            `thrift:"bucket,9,optional" frugal:"9,optional,string" json:"bucket,omitempty"`
+	UsePathStyle     bool               `thrift:"use_path_style,10,optional" frugal:"10,optional,bool" json:"use_path_style,omitempty"`
+	Token            *string            `thrift:"token,11,optional" frugal:"11,optional,string" json:"token,omitempty"`
+	Provider         *TObjStorageType   `thrift:"provider,12,optional" frugal:"12,optional,TObjStorageType" json:"provider,omitempty"`
+	CredProviderType *TCredProviderType `thrift:"cred_provider_type,13,optional" frugal:"13,optional,TCredProviderType" json:"cred_provider_type,omitempty"`
+	RoleArn          *string            `thrift:"role_arn,14,optional" frugal:"14,optional,string" json:"role_arn,omitempty"`
+	ExternalId       *string            `thrift:"external_id,15,optional" frugal:"15,optional,string" json:"external_id,omitempty"`
 }
 
 func NewTS3StorageParam() *TS3StorageParam {
@@ -2457,6 +2507,33 @@ func (p *TS3StorageParam) GetProvider() (v TObjStorageType) {
 	}
 	return *p.Provider
 }
+
+var TS3StorageParam_CredProviderType_DEFAULT TCredProviderType
+
+func (p *TS3StorageParam) GetCredProviderType() (v TCredProviderType) {
+	if !p.IsSetCredProviderType() {
+		return TS3StorageParam_CredProviderType_DEFAULT
+	}
+	return *p.CredProviderType
+}
+
+var TS3StorageParam_RoleArn_DEFAULT string
+
+func (p *TS3StorageParam) GetRoleArn() (v string) {
+	if !p.IsSetRoleArn() {
+		return TS3StorageParam_RoleArn_DEFAULT
+	}
+	return *p.RoleArn
+}
+
+var TS3StorageParam_ExternalId_DEFAULT string
+
+func (p *TS3StorageParam) GetExternalId() (v string) {
+	if !p.IsSetExternalId() {
+		return TS3StorageParam_ExternalId_DEFAULT
+	}
+	return *p.ExternalId
+}
 func (p *TS3StorageParam) SetEndpoint(val *string) {
 	p.Endpoint = val
 }
@@ -2493,6 +2570,15 @@ func (p *TS3StorageParam) SetToken(val *string) {
 func (p *TS3StorageParam) SetProvider(val *TObjStorageType) {
 	p.Provider = val
 }
+func (p *TS3StorageParam) SetCredProviderType(val *TCredProviderType) {
+	p.CredProviderType = val
+}
+func (p *TS3StorageParam) SetRoleArn(val *string) {
+	p.RoleArn = val
+}
+func (p *TS3StorageParam) SetExternalId(val *string) {
+	p.ExternalId = val
+}
 
 var fieldIDToName_TS3StorageParam = map[int16]string{
 	1:  "endpoint",
@@ -2507,6 +2593,9 @@ var fieldIDToName_TS3StorageParam = map[int16]string{
 	10: "use_path_style",
 	11: "token",
 	12: "provider",
+	13: "cred_provider_type",
+	14: "role_arn",
+	15: "external_id",
 }
 
 func (p *TS3StorageParam) IsSetEndpoint() bool {
@@ -2555,6 +2644,18 @@ func (p *TS3StorageParam) IsSetToken() bool {
 
 func (p *TS3StorageParam) IsSetProvider() bool {
 	return p.Provider != nil
+}
+
+func (p *TS3StorageParam) IsSetCredProviderType() bool {
+	return p.CredProviderType != nil
+}
+
+func (p *TS3StorageParam) IsSetRoleArn() bool {
+	return p.RoleArn != nil
+}
+
+func (p *TS3StorageParam) IsSetExternalId() bool {
+	return p.ExternalId != nil
 }
 
 func (p *TS3StorageParam) Read(iprot thrift.TProtocol) (err error) {
@@ -2667,6 +2768,30 @@ func (p *TS3StorageParam) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField14(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 15:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField15(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2834,6 +2959,40 @@ func (p *TS3StorageParam) ReadField12(iprot thrift.TProtocol) error {
 	p.Provider = _field
 	return nil
 }
+func (p *TS3StorageParam) ReadField13(iprot thrift.TProtocol) error {
+
+	var _field *TCredProviderType
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := TCredProviderType(v)
+		_field = &tmp
+	}
+	p.CredProviderType = _field
+	return nil
+}
+func (p *TS3StorageParam) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.RoleArn = _field
+	return nil
+}
+func (p *TS3StorageParam) ReadField15(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExternalId = _field
+	return nil
+}
 
 func (p *TS3StorageParam) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2887,6 +3046,18 @@ func (p *TS3StorageParam) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
+			goto WriteFieldError
+		}
+		if err = p.writeField15(oprot); err != nil {
+			fieldId = 15
 			goto WriteFieldError
 		}
 	}
@@ -3135,6 +3306,63 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
 
+func (p *TS3StorageParam) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCredProviderType() {
+		if err = oprot.WriteFieldBegin("cred_provider_type", thrift.I32, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.CredProviderType)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
+
+func (p *TS3StorageParam) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRoleArn() {
+		if err = oprot.WriteFieldBegin("role_arn", thrift.STRING, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.RoleArn); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
+
+func (p *TS3StorageParam) writeField15(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExternalId() {
+		if err = oprot.WriteFieldBegin("external_id", thrift.STRING, 15); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ExternalId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
+}
+
 func (p *TS3StorageParam) String() string {
 	if p == nil {
 		return "<nil>"
@@ -3183,6 +3411,15 @@ func (p *TS3StorageParam) DeepEqual(ano *TS3StorageParam) bool {
 		return false
 	}
 	if !p.Field12DeepEqual(ano.Provider) {
+		return false
+	}
+	if !p.Field13DeepEqual(ano.CredProviderType) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.RoleArn) {
+		return false
+	}
+	if !p.Field15DeepEqual(ano.ExternalId) {
 		return false
 	}
 	return true
@@ -3308,6 +3545,42 @@ func (p *TS3StorageParam) Field12DeepEqual(src *TObjStorageType) bool {
 		return false
 	}
 	if *p.Provider != *src {
+		return false
+	}
+	return true
+}
+func (p *TS3StorageParam) Field13DeepEqual(src *TCredProviderType) bool {
+
+	if p.CredProviderType == src {
+		return true
+	} else if p.CredProviderType == nil || src == nil {
+		return false
+	}
+	if *p.CredProviderType != *src {
+		return false
+	}
+	return true
+}
+func (p *TS3StorageParam) Field14DeepEqual(src *string) bool {
+
+	if p.RoleArn == src {
+		return true
+	} else if p.RoleArn == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.RoleArn, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TS3StorageParam) Field15DeepEqual(src *string) bool {
+
+	if p.ExternalId == src {
+		return true
+	} else if p.ExternalId == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ExternalId, *src) != 0 {
 		return false
 	}
 	return true

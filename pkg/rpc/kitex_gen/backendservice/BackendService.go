@@ -15896,6 +15896,535 @@ func (p *TGetRealtimeExecStatusResponse) Field2DeepEqual(src *frontendservice.TR
 	return true
 }
 
+type TDictionaryStatus struct {
+	DictionaryId         *int64 `thrift:"dictionary_id,1,optional" frugal:"1,optional,i64" json:"dictionary_id,omitempty"`
+	VersionId            *int64 `thrift:"version_id,2,optional" frugal:"2,optional,i64" json:"version_id,omitempty"`
+	DictionaryMemorySize *int64 `thrift:"dictionary_memory_size,3,optional" frugal:"3,optional,i64" json:"dictionary_memory_size,omitempty"`
+}
+
+func NewTDictionaryStatus() *TDictionaryStatus {
+	return &TDictionaryStatus{}
+}
+
+func (p *TDictionaryStatus) InitDefault() {
+}
+
+var TDictionaryStatus_DictionaryId_DEFAULT int64
+
+func (p *TDictionaryStatus) GetDictionaryId() (v int64) {
+	if !p.IsSetDictionaryId() {
+		return TDictionaryStatus_DictionaryId_DEFAULT
+	}
+	return *p.DictionaryId
+}
+
+var TDictionaryStatus_VersionId_DEFAULT int64
+
+func (p *TDictionaryStatus) GetVersionId() (v int64) {
+	if !p.IsSetVersionId() {
+		return TDictionaryStatus_VersionId_DEFAULT
+	}
+	return *p.VersionId
+}
+
+var TDictionaryStatus_DictionaryMemorySize_DEFAULT int64
+
+func (p *TDictionaryStatus) GetDictionaryMemorySize() (v int64) {
+	if !p.IsSetDictionaryMemorySize() {
+		return TDictionaryStatus_DictionaryMemorySize_DEFAULT
+	}
+	return *p.DictionaryMemorySize
+}
+func (p *TDictionaryStatus) SetDictionaryId(val *int64) {
+	p.DictionaryId = val
+}
+func (p *TDictionaryStatus) SetVersionId(val *int64) {
+	p.VersionId = val
+}
+func (p *TDictionaryStatus) SetDictionaryMemorySize(val *int64) {
+	p.DictionaryMemorySize = val
+}
+
+var fieldIDToName_TDictionaryStatus = map[int16]string{
+	1: "dictionary_id",
+	2: "version_id",
+	3: "dictionary_memory_size",
+}
+
+func (p *TDictionaryStatus) IsSetDictionaryId() bool {
+	return p.DictionaryId != nil
+}
+
+func (p *TDictionaryStatus) IsSetVersionId() bool {
+	return p.VersionId != nil
+}
+
+func (p *TDictionaryStatus) IsSetDictionaryMemorySize() bool {
+	return p.DictionaryMemorySize != nil
+}
+
+func (p *TDictionaryStatus) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TDictionaryStatus[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TDictionaryStatus) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DictionaryId = _field
+	return nil
+}
+func (p *TDictionaryStatus) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.VersionId = _field
+	return nil
+}
+func (p *TDictionaryStatus) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DictionaryMemorySize = _field
+	return nil
+}
+
+func (p *TDictionaryStatus) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TDictionaryStatus"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TDictionaryStatus) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDictionaryId() {
+		if err = oprot.WriteFieldBegin("dictionary_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.DictionaryId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TDictionaryStatus) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVersionId() {
+		if err = oprot.WriteFieldBegin("version_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.VersionId); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TDictionaryStatus) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDictionaryMemorySize() {
+		if err = oprot.WriteFieldBegin("dictionary_memory_size", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.DictionaryMemorySize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *TDictionaryStatus) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TDictionaryStatus(%+v)", *p)
+
+}
+
+func (p *TDictionaryStatus) DeepEqual(ano *TDictionaryStatus) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.DictionaryId) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.VersionId) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.DictionaryMemorySize) {
+		return false
+	}
+	return true
+}
+
+func (p *TDictionaryStatus) Field1DeepEqual(src *int64) bool {
+
+	if p.DictionaryId == src {
+		return true
+	} else if p.DictionaryId == nil || src == nil {
+		return false
+	}
+	if *p.DictionaryId != *src {
+		return false
+	}
+	return true
+}
+func (p *TDictionaryStatus) Field2DeepEqual(src *int64) bool {
+
+	if p.VersionId == src {
+		return true
+	} else if p.VersionId == nil || src == nil {
+		return false
+	}
+	if *p.VersionId != *src {
+		return false
+	}
+	return true
+}
+func (p *TDictionaryStatus) Field3DeepEqual(src *int64) bool {
+
+	if p.DictionaryMemorySize == src {
+		return true
+	} else if p.DictionaryMemorySize == nil || src == nil {
+		return false
+	}
+	if *p.DictionaryMemorySize != *src {
+		return false
+	}
+	return true
+}
+
+type TDictionaryStatusList struct {
+	DictionaryStatusList []*TDictionaryStatus `thrift:"dictionary_status_list,1,optional" frugal:"1,optional,list<TDictionaryStatus>" json:"dictionary_status_list,omitempty"`
+}
+
+func NewTDictionaryStatusList() *TDictionaryStatusList {
+	return &TDictionaryStatusList{}
+}
+
+func (p *TDictionaryStatusList) InitDefault() {
+}
+
+var TDictionaryStatusList_DictionaryStatusList_DEFAULT []*TDictionaryStatus
+
+func (p *TDictionaryStatusList) GetDictionaryStatusList() (v []*TDictionaryStatus) {
+	if !p.IsSetDictionaryStatusList() {
+		return TDictionaryStatusList_DictionaryStatusList_DEFAULT
+	}
+	return p.DictionaryStatusList
+}
+func (p *TDictionaryStatusList) SetDictionaryStatusList(val []*TDictionaryStatus) {
+	p.DictionaryStatusList = val
+}
+
+var fieldIDToName_TDictionaryStatusList = map[int16]string{
+	1: "dictionary_status_list",
+}
+
+func (p *TDictionaryStatusList) IsSetDictionaryStatusList() bool {
+	return p.DictionaryStatusList != nil
+}
+
+func (p *TDictionaryStatusList) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TDictionaryStatusList[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TDictionaryStatusList) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*TDictionaryStatus, 0, size)
+	values := make([]TDictionaryStatus, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.DictionaryStatusList = _field
+	return nil
+}
+
+func (p *TDictionaryStatusList) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TDictionaryStatusList"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TDictionaryStatusList) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDictionaryStatusList() {
+		if err = oprot.WriteFieldBegin("dictionary_status_list", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.DictionaryStatusList)); err != nil {
+			return err
+		}
+		for _, v := range p.DictionaryStatusList {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TDictionaryStatusList) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TDictionaryStatusList(%+v)", *p)
+
+}
+
+func (p *TDictionaryStatusList) DeepEqual(ano *TDictionaryStatusList) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.DictionaryStatusList) {
+		return false
+	}
+	return true
+}
+
+func (p *TDictionaryStatusList) Field1DeepEqual(src []*TDictionaryStatus) bool {
+
+	if len(p.DictionaryStatusList) != len(src) {
+		return false
+	}
+	for i, v := range p.DictionaryStatusList {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+
 type BackendService interface {
 	ExecPlanFragment(ctx context.Context, params *palointernalservice.TExecPlanFragmentParams) (r *palointernalservice.TExecPlanFragmentResult_, err error)
 
@@ -15950,6 +16479,8 @@ type BackendService interface {
 	PublishTopicInfo(ctx context.Context, topicRequest *TPublishTopicRequest) (r *TPublishTopicResult_, err error)
 
 	GetRealtimeExecStatus(ctx context.Context, request *TGetRealtimeExecStatusRequest) (r *TGetRealtimeExecStatusResponse, err error)
+
+	GetDictionaryStatus(ctx context.Context, dictionaryIds []int64) (r *TDictionaryStatusList, err error)
 }
 
 type BackendServiceClient struct {
@@ -16217,6 +16748,15 @@ func (p *BackendServiceClient) GetRealtimeExecStatus(ctx context.Context, reques
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *BackendServiceClient) GetDictionaryStatus(ctx context.Context, dictionaryIds []int64) (r *TDictionaryStatusList, err error) {
+	var _args BackendServiceGetDictionaryStatusArgs
+	_args.DictionaryIds = dictionaryIds
+	var _result BackendServiceGetDictionaryStatusResult
+	if err = p.Client_().Call(ctx, "get_dictionary_status", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 
 type BackendServiceProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
@@ -16265,6 +16805,7 @@ func NewBackendServiceProcessor(handler BackendService) *BackendServiceProcessor
 	self.AddToProcessorMap("query_ingest_binlog", &backendServiceProcessorQueryIngestBinlog{handler: handler})
 	self.AddToProcessorMap("publish_topic_info", &backendServiceProcessorPublishTopicInfo{handler: handler})
 	self.AddToProcessorMap("get_realtime_exec_status", &backendServiceProcessorGetRealtimeExecStatus{handler: handler})
+	self.AddToProcessorMap("get_dictionary_status", &backendServiceProcessorGetDictionaryStatus{handler: handler})
 	return self
 }
 func (p *BackendServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -17564,6 +18105,54 @@ func (p *backendServiceProcessorGetRealtimeExecStatus) Process(ctx context.Conte
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("get_realtime_exec_status", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type backendServiceProcessorGetDictionaryStatus struct {
+	handler BackendService
+}
+
+func (p *backendServiceProcessorGetDictionaryStatus) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := BackendServiceGetDictionaryStatusArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("get_dictionary_status", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := BackendServiceGetDictionaryStatusResult{}
+	var retval *TDictionaryStatusList
+	if retval, err2 = p.handler.GetDictionaryStatus(ctx, args.DictionaryIds); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing get_dictionary_status: "+err2.Error())
+		oprot.WriteMessageBegin("get_dictionary_status", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("get_dictionary_status", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -26511,6 +27100,366 @@ func (p *BackendServiceGetRealtimeExecStatusResult) DeepEqual(ano *BackendServic
 }
 
 func (p *BackendServiceGetRealtimeExecStatusResult) Field0DeepEqual(src *TGetRealtimeExecStatusResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type BackendServiceGetDictionaryStatusArgs struct {
+	DictionaryIds []int64 `thrift:"dictionary_ids,1" frugal:"1,default,list<i64>" json:"dictionary_ids"`
+}
+
+func NewBackendServiceGetDictionaryStatusArgs() *BackendServiceGetDictionaryStatusArgs {
+	return &BackendServiceGetDictionaryStatusArgs{}
+}
+
+func (p *BackendServiceGetDictionaryStatusArgs) InitDefault() {
+}
+
+func (p *BackendServiceGetDictionaryStatusArgs) GetDictionaryIds() (v []int64) {
+	return p.DictionaryIds
+}
+func (p *BackendServiceGetDictionaryStatusArgs) SetDictionaryIds(val []int64) {
+	p.DictionaryIds = val
+}
+
+var fieldIDToName_BackendServiceGetDictionaryStatusArgs = map[int16]string{
+	1: "dictionary_ids",
+}
+
+func (p *BackendServiceGetDictionaryStatusArgs) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BackendServiceGetDictionaryStatusArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *BackendServiceGetDictionaryStatusArgs) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.DictionaryIds = _field
+	return nil
+}
+
+func (p *BackendServiceGetDictionaryStatusArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("get_dictionary_status_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *BackendServiceGetDictionaryStatusArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("dictionary_ids", thrift.LIST, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.I64, len(p.DictionaryIds)); err != nil {
+		return err
+	}
+	for _, v := range p.DictionaryIds {
+		if err := oprot.WriteI64(v); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *BackendServiceGetDictionaryStatusArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BackendServiceGetDictionaryStatusArgs(%+v)", *p)
+
+}
+
+func (p *BackendServiceGetDictionaryStatusArgs) DeepEqual(ano *BackendServiceGetDictionaryStatusArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.DictionaryIds) {
+		return false
+	}
+	return true
+}
+
+func (p *BackendServiceGetDictionaryStatusArgs) Field1DeepEqual(src []int64) bool {
+
+	if len(p.DictionaryIds) != len(src) {
+		return false
+	}
+	for i, v := range p.DictionaryIds {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+
+type BackendServiceGetDictionaryStatusResult struct {
+	Success *TDictionaryStatusList `thrift:"success,0,optional" frugal:"0,optional,TDictionaryStatusList" json:"success,omitempty"`
+}
+
+func NewBackendServiceGetDictionaryStatusResult() *BackendServiceGetDictionaryStatusResult {
+	return &BackendServiceGetDictionaryStatusResult{}
+}
+
+func (p *BackendServiceGetDictionaryStatusResult) InitDefault() {
+}
+
+var BackendServiceGetDictionaryStatusResult_Success_DEFAULT *TDictionaryStatusList
+
+func (p *BackendServiceGetDictionaryStatusResult) GetSuccess() (v *TDictionaryStatusList) {
+	if !p.IsSetSuccess() {
+		return BackendServiceGetDictionaryStatusResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BackendServiceGetDictionaryStatusResult) SetSuccess(x interface{}) {
+	p.Success = x.(*TDictionaryStatusList)
+}
+
+var fieldIDToName_BackendServiceGetDictionaryStatusResult = map[int16]string{
+	0: "success",
+}
+
+func (p *BackendServiceGetDictionaryStatusResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BackendServiceGetDictionaryStatusResult) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BackendServiceGetDictionaryStatusResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *BackendServiceGetDictionaryStatusResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewTDictionaryStatusList()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *BackendServiceGetDictionaryStatusResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("get_dictionary_status_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *BackendServiceGetDictionaryStatusResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *BackendServiceGetDictionaryStatusResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BackendServiceGetDictionaryStatusResult(%+v)", *p)
+
+}
+
+func (p *BackendServiceGetDictionaryStatusResult) DeepEqual(ano *BackendServiceGetDictionaryStatusResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *BackendServiceGetDictionaryStatusResult) Field0DeepEqual(src *TDictionaryStatusList) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

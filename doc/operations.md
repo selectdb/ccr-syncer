@@ -48,6 +48,12 @@ curl -X POST -H "Content-Type: application/json" -d {json_body} http://ccr_synce
     ```bash
     curl -X POST -L --post303 -H "Content-Type: application/json" -d '{}' http://ccr_syncer_host:ccr_syncer_port/list_jobs
     ```
+- `view`
+    列出展示所有job的状态
+    ```bash
+    curl -L --post303 http://ccr_syncer_host:ccr_syncer_port/view?type=$type
+    ```
+    type有三种类型`raw,html,table`, raw 表示TAB分割的表格，在 terminator 下用；html 是网页表格可通过浏览器请求查看；table 则是一些 ascii 字符形成的 table显示在terminal；默认是 html即不使用`?type=$type`
 - `job_detail`
     展示job的详细信息
     ```bash
@@ -114,6 +120,7 @@ curl -X POST -H "Content-Type: application/json" -d {json_body} http://ccr_synce
     当同步出错时进行快速恢复，该接口主要用于异常处理。目前支持两种方式：
     1. `silence`：直接跳过一条下游执行出错的 binlog，这种方式主要用于处理 binlog 类型不支持/下游环境（session variable，config）不支持等情况导致的同步中断，使用时需要指定 binlog 的 commit seq。
     2. `fullsync`：触发一次全量同步。这种方式主要用于处理如建表等无法直接跳过的 binlog，此外该方法还可以用于在发现上下游同步数据不一致时，强制下游通过快照恢复到与上游数据一致的状态。
+    3. `partialsync`: 针对某个表触发一次部分同步。这种方式主要用于处理某个表碰到了无法直接跳过的 binlog，使用时需要指定目标表名和上游的 ID。
     比如需要直接跳过 commit seq 为 1001 的 binlog：
     ```bash
     curl -X POST -L --post303 -H "Content-Type: application/json" -d '{
@@ -126,8 +133,17 @@ curl -X POST -H "Content-Type: application/json" -d {json_body} http://ccr_synce
     ```bash
     curl -X POST -L --post303 -H "Content-Type: application/json" -d '{
         "name": "job_name",
-        "skip_by": "silence"
+        "skip_by": "fullsync"
     }
+    ```
+    如果要触发某张表的部分同步：
+    ```bash
+    curl -X POST -L --post303 -H "Content-Type: application/json" -d '{
+        "name": "job_name",
+        "skip_by": "partialsync",
+        "skip_table": "foo",
+        "skip_table_id": 123
+    }'
     ```
 
 ### 一些特殊场景

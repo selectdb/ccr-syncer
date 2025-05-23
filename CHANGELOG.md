@@ -1,6 +1,44 @@
 # 更新日志
 
+# 3.0.6/2.1.10
+
 ### Fix
+
+- 修复 alias table sync 下 replace table/partial sync 失败的问题 (selectdb/ccr-syncer#382,selectdb/ccr-syncer#379)
+- 修复 alias table sync 下复用 restore job 出错的问题 (selectdb/ccr-syncer#412)
+- 修复 RPC 连接泄漏的问题 (selectdb/ccr-syncer#435)
+- 过滤 ALTER JOB 中涉及的 partition storage_policy (selectdb/ccr-syncer#480)
+- 修复 DROP INDEX 导致 UPSERT 找不到 index 的问题 (selectdb/ccr-syncer#490)
+- 修复 unknown column 导致的 VIEW 无法创建的问题 (selectdb/ccr-syncer#510)
+- 修复 gls 未释放导致的内存泄漏问题 (selectdb/ccr-syncer#576)
+- 使用 `force_replace` 修复 VIEW schema 不一致无法同步的问题 (selectdb/ccr-syncer#579)
+- 构建 table mapping 前检查 table 是否已经被删除 (selectdb/ccr-syncer#612)
+
+### Feature
+
+- 支持 txn insert (selectdb/ccr-syncer#290,selectdb/ccr-syncer#592)
+- 支持 lock binlog，提前释放不需要的 binlog，避免占用上游资源 (selectdb/ccr-syncer#399, selectdb/ccr-syncer#406, selectdb/ccr-syncer#407)
+- 支持一批获取多个 binlog (selectdb/ccr-syncer#400)
+- 增加 `metrics` 接口用于获取 ccr metrics (selectdb/ccr-syncer#402, selectdb/ccr-syncer#461)
+- 支持修改 view comment (selectdb/ccr-syncer#408)
+- 支持幂等性 (selectdb/ccr-syncer#409, selectdb/ccr-syncer#416, selectdb/ccr-syncer#415, selectdb/ccr-syncer#424, ...)
+- 增加 `desync.sh` 脚本 (selectdb/ccr-syncer#452)
+- 支持 pipline txn（并行 ingest，串行提交）(selectdb/ccr-syncer#585)
+- 增加 `/view` 接口，用于获取 JOB 状态（支持 terminal, table, html）(selectdb/ccr-syncer#588)
+
+### Improve
+
+- 增加 flag `log_retain_num` 和 `log_retain_days` 用于控制日志保留时间和天数 (selectdb/ccr-syncer#368)
+- 保存最近一次触发 fullsync 的原因，可以通过 `job_progress` 接口查询 (selectdb/ccr-syncer#389)
+- `get_lag` 接口返回更详细的信息 (selectdb/ccr-syncer#395)
+- restore 增加 `force_replace` 参数，直接跳过 signature 不匹配的 table/view (selectdb/ccr-syncer#396)
+- non-strict 或者 tmp partition 替换时，使用 partial sync (selectdb/ccr-syncer#455)
+- 根据 UPSERT delta rows 估算超时时间 (selectdb/ccr-syncer#476)
+- 增加 label name 检查 (selectdb/ccr-syncer#474)
+- 中断 job routine 避免阻塞用户 API 请求 (selectdb/ccr-syncer#496)
+- 允许不等待事务 publish 就执行下一条 ingest (selectdb/ccr-syncer#502)
+- 过滤跟 async mv 相关的 binlog (selectdb/ccr-syncer#509)
+
 
 ## 3.0.4/2.1.8
 

@@ -1,10 +1,10 @@
 package handle
 
 import (
-	"github.com/cloudwego/kitex/tool/internal_pkg/log"
 	"github.com/selectdb/ccr_syncer/pkg/ccr"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/record"
 	festruct "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/frontendservice"
+	log "github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -30,16 +30,16 @@ func (h *RenamePartitionHandle) IsBinlogCommitted(j *ccr.Job, record *record.Ren
 	}
 
 	for _, partition := range partitions {
-		if partition.Name == record.OldPartitionName {
-			log.Infof("partition %s is not renamed to %s in dest table %d, this binlog is not committed",
+		if partition.Name == record.NewPartitionName {
+			log.Infof("partition %s is not renamed to %s in dest table %d, this binlog is committed",
 				record.OldPartitionName, record.NewPartitionName, destTableId)
-			return false, nil
+			return true, nil
 		}
 	}
 
 	log.Infof("partition %s is renamed to %s in dest table %d, this binlog is not committed",
 		record.OldPartitionName, record.NewPartitionName, destTableId)
-	return true, nil
+	return false, nil
 }
 
 func (h *RenamePartitionHandle) IsIdempotent() bool {

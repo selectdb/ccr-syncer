@@ -138,6 +138,8 @@ type IngestBinlogMetaer interface {
 	IsTableDropped(tableId int64) bool
 	IsIndexDropped(indexId int64) bool
 	GetDroppedIndexMap() map[int64]int64
+	GetDroppedPartitionMap() map[int64]int64
+	GetDroppedTableMap() map[int64]int64
 }
 
 type Metaer interface {
