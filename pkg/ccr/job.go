@@ -2068,6 +2068,11 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 		return nil
 	}
 
+	if createTable.IsCreateElasticSearch() {
+		log.Warnf("create table with elasticsearch is not supported yet, skip this binlog")
+		return nil
+	}
+
 	if createTable.IsCreateMaterializedView() {
 		log.Warnf("create async materialized view is not supported yet, skip this binlog")
 		return nil
