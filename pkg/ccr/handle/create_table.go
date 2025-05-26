@@ -23,6 +23,11 @@ func (h *CreateTableHandle) Handle(j *ccr.Job, commitSeq int64, createTable *rec
 		return xerror.Errorf(xerror.Normal, "invalid sync type: %v", j.SyncType)
 	}
 
+	if createTable.IsCreateElasticSearch() {
+		log.Warnf("create table with elasticsearch is not supported yet, skip this binlog")
+		return nil
+	}
+
 	if createTable.IsCreateMaterializedView() {
 		log.Warnf("create async materialized view is not supported yet, skip this binlog")
 		return nil
