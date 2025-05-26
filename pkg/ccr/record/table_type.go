@@ -20,4 +20,5 @@ const (
 	TableTypeOlap             = "OLAP"
 	TableTypeView             = "VIEW"
 	TableTypeMaterializedView = "MATERIALIZED_VIEW"
+	TableTypeElasticSearch    = "ELASTICSEARCH"
 )

@@ -93,3 +93,7 @@ func (c *CreateTable) IsCreateMaterializedView() bool {
 
 	return strings.Contains(c.Sql, "ENGINE=MATERIALIZED_VIEW")
 }
+
+func (c *CreateTable) IsCreateElasticSearch() bool {
+	return c.TableType == TableTypeElasticSearch
+}
