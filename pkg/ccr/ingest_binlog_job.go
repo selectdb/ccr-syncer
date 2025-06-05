@@ -543,8 +543,8 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64,
 		srcIndexName := getSrcIndexName(job, srcIndexMeta)
 		if _, ok := destIndexNameMap[srcIndexName]; !ok {
 			j.setError(xerror.Errorf(xerror.Meta,
-				"index name %v not found in dest meta, is base index: %t, src index id: %d",
-				srcIndexName, srcIndexMeta.IsBaseIndex, indexId))
+				"index name %v not found in dest meta, is base index: %t, src index id: %d, shadow indexes %v",
+				srcIndexName, srcIndexMeta.IsBaseIndex, indexId, j.ccrJob.progress.ShadowIndexes))
 			return
 		}
 	}

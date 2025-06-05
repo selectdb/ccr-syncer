@@ -2320,6 +2320,8 @@ func (j *Job) HandleAlterRollup(alterJob *record.AlterJobV2) error {
 				j.progress.ShadowIndexes = make(map[int64]int64)
 			}
 			j.progress.ShadowIndexes[alterJob.RollupIndexId] = alterJob.BaseIndexId
+			log.Infof("table %d alter rollup save shadow index %d, base index id: %d",
+				alterJob.TableId, alterJob.RollupIndexId, alterJob.BaseIndexId)
 		case record.ALTER_JOB_STATE_CANCELLED:
 			// clear the shadow indexes
 			delete(j.progress.ShadowIndexes, alterJob.RollupIndexId)
@@ -2348,6 +2350,8 @@ func (j *Job) HandleSchemaChange(alterJob *record.AlterJobV2) error {
 			}
 			for shadowIndexId, originIndexId := range alterJob.ShadowIndexes {
 				j.progress.ShadowIndexes[shadowIndexId] = originIndexId
+				log.Infof("table %d schema change job save shadow index %d, origin index id: %d",
+					alterJob.TableId, shadowIndexId, originIndexId)
 			}
 		case record.ALTER_JOB_STATE_CANCELLED:
 			// clear the shadow indexes
