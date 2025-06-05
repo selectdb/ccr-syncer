@@ -53,18 +53,26 @@ func buildGenericHandleMethod[T record.Record](handle JobHandle[T]) HandleFn {
 			binlog.GetType(), progress.PrevCommitSeq, progress.CommitSeq)
 
 		data := binlog.GetData()
-		record := newGenericRecord[T]()
-		if err := record.Deserialize(data); err != nil {
+		value := newGenericRecord[T]()
+		if err := value.Deserialize(data); err != nil {
 			return err
 		}
 
-		tableId := record.GetTableId()
+		tableId := value.GetTableId()
 		if job.IsBinlogCommitted(tableId, progress.CommitSeq) {
+			// HACK: for alter job, should save the shadow indexes
+			if alterJob, ok := any(value).(*record.AlterJobV2); ok {
+				if alterJob.Type == record.ALTER_JOB_ROLLUP {
+					job.saveAlterRollupShadowIndex(alterJob)
+				} else if alterJob.Type == record.ALTER_JOB_SCHEMA_CHANGE {
+					job.saveSchemaChangeShadowIndexes(alterJob)
+				}
+			}
 			return nil
 		}
 
 		commitSeq := binlog.GetCommitSeq()
-		return handle.Handle(job, commitSeq, record)
+		return handle.Handle(job, commitSeq, value)
 	}
 }
 
