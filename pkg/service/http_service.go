@@ -105,6 +105,10 @@ type CreateCcrRequest struct {
 	ReuseBinlogLabel bool `json:"reuse_binlog_label"`
 	// replication_num: nil or -1 means inherit from upstream (default), >0 means fixed replica count, 0 is invalid
 	ReplicationNum *int `json:"replication_num,omitempty"`
+	// Storage medium for backup/restore operations: "hdd", "ssd" or "same_with_upstream"
+	StorageMedium string `json:"storage_medium"`
+	// Medium allocation mode for backup/restore operations: "strict" or "adaptive"
+	MediumAllocationMode string `json:"medium_allocation_mode"`
 }
 
 // Stringer
@@ -150,7 +154,10 @@ func createCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobMana
 		Db:               db,
 		Factory:          jobManager.GetFactory(),
 		ReplicationNum:   replicationNum,
+		StorageMedium:          request.StorageMedium,
+		MediumAllocationMode:   request.MediumAllocationMode,
 	}
+
 	job, err := ccr.NewJobFromService(request.Name, ctx)
 	if err != nil {
 		return err
@@ -1121,6 +1128,96 @@ func (s *HttpService) failpointHandler(w http.ResponseWriter, r *http.Request) {
 	result = newSuccessResult()
 }
 
+type UpdateMediumAllocationModeRequest struct {
+	CcrCommonRequest
+	MediumAllocationMode string `json:"medium_allocation_mode"`
+}
+
+func (s *HttpService) updateMediumAllocationModeHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("update medium allocation mode")
+
+	var result *defaultResult
+	defer func() { writeJson(w, result) }()
+
+	// Parse the JSON request body
+	var request UpdateMediumAllocationModeRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Warnf("update medium allocation mode failed: %+v", err)
+		result = newErrorResult(err.Error())
+		return
+	}
+
+	if request.Name == "" {
+		log.Warnf("update medium allocation mode failed: name is empty")
+		result = newErrorResult("name is empty")
+		return
+	}
+
+	if request.MediumAllocationMode == "" {
+		log.Warnf("update medium allocation mode failed: medium_allocation_mode is empty")
+		result = newErrorResult("medium_allocation_mode is empty")
+		return
+	}
+
+	if s.redirect(request.Name, w, r) {
+		return
+	}
+
+	log.Infof("update medium allocation mode for job %s to %s", request.Name, request.MediumAllocationMode)
+	if err := s.jobManager.UpdateMediumAllocationMode(request.Name, request.MediumAllocationMode); err != nil {
+		log.Warnf("update medium allocation mode failed: %+v", err)
+		result = newErrorResult(err.Error())
+	} else {
+		result = newSuccessResult()
+	}
+}
+
+type UpdateStorageMediumRequest struct {
+	CcrCommonRequest
+	StorageMedium string `json:"storage_medium"`
+}
+
+func (s *HttpService) updateStorageMediumHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("update storage medium")
+
+	var result *defaultResult
+	defer func() { writeJson(w, result) }()
+
+	// Parse the JSON request body
+	var request UpdateStorageMediumRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Warnf("update storage medium failed: %+v", err)
+		result = newErrorResult(err.Error())
+		return
+	}
+
+	if request.Name == "" {
+		log.Warnf("update storage medium failed: name is empty")
+		result = newErrorResult("name is empty")
+		return
+	}
+
+	if request.StorageMedium == "" {
+		log.Warnf("update storage medium failed: storage_medium is empty")
+		result = newErrorResult("storage_medium is empty")
+		return
+	}
+
+	if s.redirect(request.Name, w, r) {
+		return
+	}
+
+	log.Infof("update storage medium for job %s to %s", request.Name, request.StorageMedium)
+	if err := s.jobManager.UpdateStorageMedium(request.Name, request.StorageMedium); err != nil {
+		log.Warnf("update storage medium failed: %+v", err)
+		result = newErrorResult(err.Error())
+	} else {
+		result = newSuccessResult()
+	}
+}
+
 func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/version", s.versionHandler)
 	s.mux.HandleFunc("/create_ccr", s.createHandler)
@@ -1141,6 +1238,8 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.Handle("/metrics", xmetrics.GetHttpHandler())
 	s.mux.HandleFunc("/sync", s.syncHandler)
 	s.mux.HandleFunc("/view", s.showJobStateHandler)
+	s.mux.HandleFunc("/update_medium_allocation_mode", s.updateMediumAllocationModeHandler)
+	s.mux.HandleFunc("/update_storage_medium", s.updateStorageMediumHandler)
 }
 
 func (s *HttpService) Start() error {

@@ -80,6 +80,7 @@ var (
 	featureSeperatedHandles               bool
 	featureEnableSnapshotCompress         bool
 	featureOverrideReplicationNumInternal bool
+	FeatureMediumAllocationMode           bool
 
 	flagBinlogBatchSize int64
 
@@ -127,6 +128,8 @@ func init() {
 		"enable snapshot compress")
 	flag.BoolVar(&featureOverrideReplicationNumInternal, "feature_override_replication_num", true,
 		"enable override replication_num for downstream cluster")
+	flag.BoolVar(&FeatureMediumAllocationMode, "feature_medium_allocation_mode", true,
+		"enable medium allocation mode support for sync job")
 
 	flag.Int64Var(&flagBinlogBatchSize, "binlog_batch_size", 16, "the max num of binlogs to get in a batch")
 }
@@ -141,6 +144,19 @@ type SyncType int
 const (
 	DBSync    SyncType = 0
 	TableSync SyncType = 1
+)
+
+// Storage medium constants
+const (
+	StorageMediumHDD              = "hdd"
+	StorageMediumSSD              = "ssd"
+	StorageMediumSameWithUpstream = "same_with_upstream"
+)
+
+// Medium allocation mode constants
+const (
+	MediumAllocationModeStrict   = "strict"
+	MediumAllocationModeAdaptive = "adaptive"
 )
 
 func (s SyncType) String() string {
@@ -223,6 +239,10 @@ type Job struct {
 	destMeta Metaer      `json:"-"`
 	State    JobState    `json:"state"`
 	Extra    JobExtra    `json:"extra"`
+	// Storage medium for backup/restore operations: "hdd", "ssd" or "same_with_upstream"
+	StorageMedium string `json:"storage_medium"`
+	// Medium allocation mode for backup/restore operations: "strict" or "adaptive"
+	MediumAllocationMode string `json:"medium_allocation_mode"`
 
 	factory *Factory `json:"-"`
 
@@ -254,7 +274,9 @@ type JobContext struct {
 	ReuseBinlogLabel bool
 	Factory          *Factory
 	// Replication number policy: -1 means inherit from upstream (default), >0 means fixed replica num, 0 is invalid
-	ReplicationNum int
+	ReplicationNum       int
+	StorageMedium        string
+	MediumAllocationMode string
 }
 
 // new job
@@ -268,16 +290,48 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 	src := jobContext.Src
 	dest := jobContext.Dest
 	id := getJobId(name, src, dest)
+
+	// Set default storage medium if not specified
+	storageMedium := jobContext.StorageMedium
+	log.Infof("NewJobFromService: received storage_medium=%s from JobContext", storageMedium)
+	if storageMedium == "" {
+		storageMedium = StorageMediumSameWithUpstream
+		log.Infof("NewJobFromService: storage_medium was empty, set to default=%s", storageMedium)
+	}
+	// Validate storage medium
+	if storageMedium != StorageMediumHDD &&
+		storageMedium != StorageMediumSSD &&
+		storageMedium != StorageMediumSameWithUpstream {
+		return nil, xerror.Errorf(xerror.Normal, "invalid storage medium: %s, must be %s, %s or %s",
+			storageMedium, StorageMediumHDD, StorageMediumSSD, StorageMediumSameWithUpstream)
+	}
+
+	// Set default medium allocation mode if not specified
+	mediumAllocationMode := jobContext.MediumAllocationMode
+	log.Infof("NewJobFromService: received medium_allocation_mode=%s from JobContext", mediumAllocationMode)
+	if mediumAllocationMode == "" {
+		mediumAllocationMode = MediumAllocationModeAdaptive
+		log.Infof("NewJobFromService: medium_allocation_mode was empty, set to default=%s", mediumAllocationMode)
+	}
+	// Validate medium allocation mode
+	if mediumAllocationMode != MediumAllocationModeStrict &&
+		mediumAllocationMode != MediumAllocationModeAdaptive {
+		return nil, xerror.Errorf(xerror.Normal, "invalid medium allocation mode: %s, must be %s or %s",
+			mediumAllocationMode, MediumAllocationModeStrict, MediumAllocationModeAdaptive)
+	}
+
 	job := &Job{
-		Name:     name,
-		Id:       id,
-		Src:      src,
-		ISrc:     factory.NewSpecer(&src),
-		srcMeta:  factory.NewMeta(&jobContext.Src),
-		Dest:     dest,
-		IDest:    factory.NewSpecer(&dest),
-		destMeta: factory.NewMeta(&jobContext.Dest),
-		State:    JobRunning,
+		Name:                 name,
+		Id:                   id,
+		Src:                  src,
+		ISrc:                 factory.NewSpecer(&src),
+		srcMeta:              factory.NewMeta(&jobContext.Src),
+		Dest:                 dest,
+		IDest:                factory.NewSpecer(&dest),
+		destMeta:             factory.NewMeta(&jobContext.Dest),
+		State:                JobRunning,
+		StorageMedium:        storageMedium,
+		MediumAllocationMode: mediumAllocationMode,
 
 		Extra: JobExtra{
 			allowTableExists: jobContext.AllowTableExists,
@@ -294,6 +348,7 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 
 		concurrencyManager: rpc.NewConcurrencyManager(),
 	}
+	log.Infof("NewJobFromService: Job created with StorageMedium=%s, MediumAllocationMode=%s", job.StorageMedium, job.MediumAllocationMode)
 
 	// set and validate replication number policy
 	job.ReplicationNum = jobContext.ReplicationNum
@@ -795,17 +850,24 @@ func (j *Job) partialSync() error {
 		isForceReplace := featureRestoreReplaceDiffSchema && j.progress.PartialSyncData.IsView
 		isAtomicRestore := featureAtomicRestore && isForceReplace
 
+		// Use job's storage medium and medium allocation mode
+		storageMedium := j.StorageMedium
+		mediumAllocationMode := j.MediumAllocationMode
+		log.Infof("partialSync: using StorageMedium=%s, MediumAllocationMode=%s", storageMedium, mediumAllocationMode)
+
 		restoreReq := rpc.RestoreSnapshotRequest{
 			TableRefs:      tableRefs,
 			SnapshotName:   restoreSnapshotName,
 			SnapshotResult: snapshotResp,
 
 			// DO NOT drop exists tables and partitions
-			CleanPartitions: false,
-			CleanTables:     false,
-			AtomicRestore:   isAtomicRestore,
-			Compress:        false,
-			ForceReplace:    isForceReplace,
+			CleanPartitions:      false,
+			CleanTables:          false,
+			AtomicRestore:        isAtomicRestore,
+			Compress:             false,
+			ForceReplace:         isForceReplace,
+			StorageMedium:        storageMedium,
+			MediumAllocationMode: mediumAllocationMode,
 		}
 
 		// apply replication properties override if policy provided
@@ -850,6 +912,23 @@ func (j *Job) partialSync() error {
 			log.Warnf("force partial sync with replace, because the snapshot %s signature is not matched", restoreSnapshotName)
 			return j.NewPartialSnapshot(tableId, table, nil, true, false) // only in partition sync.
 		} else if err != nil {
+			// Check if it's a backend insufficient error - this requires manual intervention
+			errMsg := err.Error()
+			if isBackendInsufficientError(errMsg) {
+				log.Errorf("Restore failed: insufficient backend resources. Job storage_medium=%s, medium_allocation_mode=%s, Error: %s",
+					j.StorageMedium, j.MediumAllocationMode, errMsg)
+				// Stop the job immediately without retry, as this requires manual intervention
+				// Use Panicf to stop the job completely (not just return error and retry)
+				return xerror.Panicf(xerror.Normal,
+					"Restore failed: Insufficient backend resources. Possible causes:\n"+
+						"1. Replication number exceeds available BE nodes\n"+
+						"2. Storage medium (%s) not available - check storage_medium setting\n"+
+						"3. Replication tag mismatch\n"+
+						"4. Insufficient disk capacity on BE nodes\n"+
+						"5. All BE nodes on same host\n"+
+						"Please check target cluster configuration. Original error: %v",
+					j.StorageMedium, err)
+			}
 			j.progress.NextSubVolatile(RestoreSnapshot, inMemoryData)
 			return err
 		}
@@ -1263,6 +1342,10 @@ func (j *Job) fullSync() error {
 		if featureRestoreReplaceDiffSchema {
 			restoreReq.ForceReplace = true
 		}
+		// Set storage medium and medium allocation mode
+		restoreReq.StorageMedium = j.StorageMedium
+		restoreReq.MediumAllocationMode = j.MediumAllocationMode
+		log.Infof("fullSync: setting StorageMedium=%s, MediumAllocationMode=%s", j.StorageMedium, j.MediumAllocationMode)
 		restoreResp, err := destRpc.RestoreSnapshot(dest, &restoreReq)
 		if err != nil {
 			return err
@@ -1295,6 +1378,25 @@ func (j *Job) fullSync() error {
 
 		for {
 			restoreFinished, err := j.IDest.CheckRestoreFinished(restoreSnapshotName)
+			if err != nil {
+				// Check if it's a backend insufficient error first - this requires manual intervention
+				errMsg := err.Error()
+				if !errors.Is(err, base.ErrRestoreSignatureNotMatched) && isBackendInsufficientError(errMsg) {
+					log.Errorf("Restore failed: insufficient backend resources. Job storage_medium=%s, medium_allocation_mode=%s, Error: %s",
+						j.StorageMedium, j.MediumAllocationMode, errMsg)
+					// Stop the job immediately without retry, as this requires manual intervention
+					// Use Panicf to stop the job completely (not just return error and retry)
+					return xerror.Panicf(xerror.Normal,
+						"Restore failed: Insufficient backend resources. Possible causes:\n"+
+							"1. Replication number exceeds available BE nodes\n"+
+							"2. Storage medium (%s) not available - check storage_medium setting\n"+
+							"3. Replication tag mismatch\n"+
+							"4. Insufficient disk capacity on BE nodes\n"+
+							"5. All BE nodes on same host\n"+
+							"Please check target cluster configuration. Original error: %v",
+						j.StorageMedium, err)
+				}
+			}
 			if err != nil && errors.Is(err, base.ErrRestoreSignatureNotMatched) {
 				// We need rebuild the exists table.
 				var tableName string
@@ -3995,6 +4097,14 @@ func (j *Job) run() {
 
 			log.Warnf("job sync failed, job: %s, err: %+v", j.Name, err)
 			panicError = j.handleError(j.Name, err)
+			if panicError != nil {
+				// Pause the job when panic error occurs, so user can see the status change
+				log.Errorf("job %s encountered panic error: %+v", j.Name, panicError)
+				log.Errorf("job %s pausing automatically. Please check the error, fix it, then resume the job", j.Name)
+				if err := j.Pause(); err != nil {
+					log.Errorf("failed to pause job %s after panic error: %v", j.Name, err)
+				}
+			}
 		}
 	}
 }
@@ -4709,6 +4819,12 @@ func ResetReplicationNumFromCreateTableSql(createSql string, replicationNum int)
 	return FilterTailingCommaFromCreateTableSql(createSql)
 }
 
+func FilterMediumAllocationModeFromCreateTableSql(createSql string) string {
+	pattern := `"medium_allocation_mode"\s*=\s*"[^"]*"(,\s*)?`
+	createSql = regexp.MustCompile(pattern).ReplaceAllString(createSql, "")
+	return FilterTailingCommaFromCreateTableSql(createSql)
+}
+
 func FilterDynamicPartitionStoragePolicyFromCreateTableSql(createSql string) string {
 	// Two patterns:
 	// - "dynamic_partition.storage_policy"="storage_policy",
@@ -4729,4 +4845,66 @@ func getJobId(name string, src base.Spec, dest base.Spec) string {
 	io.WriteString(h, src.String())
 	io.WriteString(h, dest.String())
 	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+// isBackendInsufficientError checks if the error is "Failed to find enough backend"
+// This error requires manual intervention and should not be retried, possible causes:
+// 1. replication_num exceeds available BE nodes
+// 2. storage medium (SSD/HDD) not available
+// 3. replication tag mismatch
+// 4. insufficient disk capacity
+// 5. all BE nodes on same host
+func isBackendInsufficientError(errMsg string) bool {
+	lowerMsg := strings.ToLower(errMsg)
+	// This error from Doris FE indicates backend resource issues that require manual intervention
+	return strings.Contains(lowerMsg, "failed to find enough backend")
+}
+
+func (j *Job) UpdateMediumAllocationMode(mediumAllocationMode string) error {
+	defer j.raiseInterruptSignal()()
+	j.lock.Lock()
+	defer j.lock.Unlock()
+
+	// Validate medium allocation mode
+	if mediumAllocationMode != MediumAllocationModeStrict &&
+		mediumAllocationMode != MediumAllocationModeAdaptive {
+		return xerror.Errorf(xerror.Normal, "invalid medium allocation mode: %s, must be %s or %s",
+			mediumAllocationMode, MediumAllocationModeStrict, MediumAllocationModeAdaptive)
+	}
+
+	oldMediumAllocationMode := j.MediumAllocationMode
+	j.MediumAllocationMode = mediumAllocationMode
+
+	if err := j.persistJob(); err != nil {
+		j.MediumAllocationMode = oldMediumAllocationMode
+		return err
+	}
+
+	log.Infof("update job %s medium allocation mode from %s to %s", j.Name, oldMediumAllocationMode, mediumAllocationMode)
+	return nil
+}
+
+func (j *Job) UpdateStorageMedium(storageMedium string) error {
+	defer j.raiseInterruptSignal()()
+	j.lock.Lock()
+	defer j.lock.Unlock()
+
+	// Validate storage medium
+	if storageMedium != StorageMediumHDD &&
+		storageMedium != StorageMediumSSD &&
+		storageMedium != StorageMediumSameWithUpstream {
+		return xerror.Errorf(xerror.Normal, "invalid storage medium: %s, must be %s, %s or %s",
+			storageMedium, StorageMediumHDD, StorageMediumSSD, StorageMediumSameWithUpstream)
+	}
+
+	oldStorageMedium := j.StorageMedium
+	j.StorageMedium = storageMedium
+
+	if err := j.persistJob(); err != nil {
+		j.StorageMedium = oldStorageMedium
+		return err
+	}
+
+	log.Infof("update job %s storage medium from %s to %s", j.Name, oldStorageMedium, storageMedium)
+	return nil
 }
