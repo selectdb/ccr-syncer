@@ -2285,9 +2285,9 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 
 	if j.IsBinlogCommitted(alterJob.TableId, binlog.GetCommitSeq()) {
 		if alterJob.Type == record.ALTER_JOB_SCHEMA_CHANGE {
-			j.saveSchemaChangeShadowIndexes(alterJob)
-		} else if alterJob.Type == record.ALTER_JOB_ROLLUP {
-			j.saveAlterRollupShadowIndex(alterJob)
+			j.SaveSchemaChangeShadowIndexes(alterJob)
+		} else if !FeatureSkipRollupBinlogs && alterJob.Type == record.ALTER_JOB_ROLLUP {
+			j.SaveAlterRollupShadowIndex(alterJob)
 		}
 		return nil
 	}
@@ -2313,84 +2313,80 @@ func (j *Job) handleAlterJob(binlog *festruct.TBinlog) error {
 	}
 }
 
-func (j *Job) saveAlterRollupShadowIndex(alterJob *record.AlterJobV2) {
-	if !alterJob.IsFinished() {
-		switch alterJob.JobState {
-		case record.ALTER_JOB_STATE_PENDING:
-			fallthrough
-		case record.ALTER_JOB_STATE_WAITING_TXN:
-			fallthrough
-		case record.ALTER_JOB_STATE_RUNNING:
-			// Once the rollup job step to WAITING_TXN, the upsert to the rollup index is allowed,
-			// but the dest index of the downstream cluster hasn't been created.
-			//
-			// To filter the upsert to the rollup index, save the shadow index ids here.
-			if j.progress.ShadowIndexes == nil {
-				j.progress.ShadowIndexes = make(map[int64]int64)
-			}
-			if _, ok := j.progress.ShadowIndexes[alterJob.RollupIndexId]; !ok {
-				j.progress.ShadowIndexes[alterJob.RollupIndexId] = alterJob.BaseIndexId
-				log.Infof("table %d alter rollup save shadow index %d, base index id: %d",
-					alterJob.TableId, alterJob.RollupIndexId, alterJob.BaseIndexId)
-			}
-		case record.ALTER_JOB_STATE_CANCELLED:
-			// clear the shadow indexes
-			delete(j.progress.ShadowIndexes, alterJob.RollupIndexId)
+func (j *Job) SaveAlterRollupShadowIndex(alterJob *record.AlterJobV2) {
+	switch alterJob.JobState {
+	case record.ALTER_JOB_STATE_PENDING:
+		fallthrough
+	case record.ALTER_JOB_STATE_WAITING_TXN:
+		fallthrough
+	case record.ALTER_JOB_STATE_RUNNING:
+		// Once the rollup job step to WAITING_TXN, the upsert to the rollup index is allowed,
+		// but the dest index of the downstream cluster hasn't been created.
+		//
+		// To filter the upsert to the rollup index, save the shadow index ids here.
+		if j.progress.ShadowIndexes == nil {
+			j.progress.ShadowIndexes = make(map[int64]int64)
 		}
+		if _, ok := j.progress.ShadowIndexes[alterJob.RollupIndexId]; !ok {
+			j.progress.ShadowIndexes[alterJob.RollupIndexId] = alterJob.BaseIndexId
+			log.Infof("table %d alter rollup save shadow index %d, base index id: %d",
+				alterJob.TableId, alterJob.RollupIndexId, alterJob.BaseIndexId)
+		}
+	case record.ALTER_JOB_STATE_CANCELLED:
+		// clear the shadow indexes
+		delete(j.progress.ShadowIndexes, alterJob.RollupIndexId)
+	case record.ALTER_JOB_STATE_FINISHED:
+		// Once partial snapshot finished, the rollup indexes will be convert to normal index.
+		delete(j.progress.ShadowIndexes, alterJob.RollupIndexId)
 	}
 }
 
 func (j *Job) HandleAlterRollup(alterJob *record.AlterJobV2) error {
+	j.SaveAlterRollupShadowIndex(alterJob)
 	if !alterJob.IsFinished() {
-		j.saveAlterRollupShadowIndex(alterJob)
 		return nil
 	}
-
-	// Once partial snapshot finished, the rollup indexes will be convert to normal index.
-	delete(j.progress.ShadowIndexes, alterJob.RollupIndexId)
 
 	replace := true
 	isView := false
 	return j.NewPartialSnapshot(alterJob.TableId, alterJob.TableName, nil, replace, isView)
 }
 
-func (j *Job) saveSchemaChangeShadowIndexes(alterJob *record.AlterJobV2) {
-	if !alterJob.IsFinished() {
-		switch alterJob.JobState {
-		case record.ALTER_JOB_STATE_PENDING:
-			fallthrough
-		case record.ALTER_JOB_STATE_WAITING_TXN:
-			fallthrough
-		case record.ALTER_JOB_STATE_RUNNING:
-			// Once the schema change step to WAITING_TXN, the upsert to the shadow indexes is allowed,
-			// but the dest indexes of the downstream cluster hasn't been created.
-			//
-			// To filter the upsert to the shadow indexes, save the shadow index ids here.
-			if j.progress.ShadowIndexes == nil {
-				j.progress.ShadowIndexes = make(map[int64]int64)
+func (j *Job) SaveSchemaChangeShadowIndexes(alterJob *record.AlterJobV2) {
+	switch alterJob.JobState {
+	case record.ALTER_JOB_STATE_PENDING:
+		fallthrough
+	case record.ALTER_JOB_STATE_WAITING_TXN:
+		fallthrough
+	case record.ALTER_JOB_STATE_RUNNING:
+		// Once the schema change step to WAITING_TXN, the upsert to the shadow indexes is allowed,
+		// but the dest indexes of the downstream cluster hasn't been created.
+		//
+		// To filter the upsert to the shadow indexes, save the shadow index ids here.
+		if j.progress.ShadowIndexes == nil {
+			j.progress.ShadowIndexes = make(map[int64]int64)
+		}
+		for shadowIndexId, originIndexId := range alterJob.ShadowIndexes {
+			if _, ok := j.progress.ShadowIndexes[shadowIndexId]; !ok {
+				j.progress.ShadowIndexes[shadowIndexId] = originIndexId
+				log.Infof("table %d schema change job save shadow index %d, origin index id: %d",
+					alterJob.TableId, shadowIndexId, originIndexId)
 			}
-			for shadowIndexId, originIndexId := range alterJob.ShadowIndexes {
-				if _, ok := j.progress.ShadowIndexes[shadowIndexId]; !ok {
-					j.progress.ShadowIndexes[shadowIndexId] = originIndexId
-					log.Infof("table %d schema change job save shadow index %d, origin index id: %d",
-						alterJob.TableId, shadowIndexId, originIndexId)
-				}
-			}
-		case record.ALTER_JOB_STATE_CANCELLED:
-			// clear the shadow indexes
-			for shadowIndexId := range alterJob.ShadowIndexes {
-				delete(j.progress.ShadowIndexes, shadowIndexId)
-			}
+		}
+	case record.ALTER_JOB_STATE_CANCELLED:
+		// clear the shadow indexes
+		for shadowIndexId := range alterJob.ShadowIndexes {
+			delete(j.progress.ShadowIndexes, shadowIndexId)
+		}
+	case record.ALTER_JOB_STATE_FINISHED:
+		// Once partial snapshot finished, the shadow indexes will be convert to normal indexes.
+		for shadowIndexId := range alterJob.ShadowIndexes {
+			delete(j.progress.ShadowIndexes, shadowIndexId)
 		}
 	}
 }
 
 func (j *Job) HandleSchemaChange(alterJob *record.AlterJobV2) error {
-	if !alterJob.IsFinished() {
-		j.saveSchemaChangeShadowIndexes(alterJob)
-		return nil
-	}
-
 	// drop table dropTableSql
 	var destTableName string
 	if j.SyncType == TableSync {
@@ -2399,12 +2395,12 @@ func (j *Job) HandleSchemaChange(alterJob *record.AlterJobV2) error {
 		destTableName = alterJob.TableName
 	}
 
-	if FeatureSchemaChangePartialSync && alterJob.Type == record.ALTER_JOB_SCHEMA_CHANGE {
-		// Once partial snapshot finished, the shadow indexes will be convert to normal indexes.
-		for shadowIndexId := range alterJob.ShadowIndexes {
-			delete(j.progress.ShadowIndexes, shadowIndexId)
-		}
+	j.SaveSchemaChangeShadowIndexes(alterJob)
+	if !alterJob.IsFinished() {
+		return nil
+	}
 
+	if FeatureSchemaChangePartialSync && alterJob.Type == record.ALTER_JOB_SCHEMA_CHANGE {
 		replaceTable := true
 		isView := false
 		return j.NewPartialSnapshot(alterJob.TableId, alterJob.TableName, nil, replaceTable, isView)

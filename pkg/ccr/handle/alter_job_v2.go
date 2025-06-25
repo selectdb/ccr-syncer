@@ -41,54 +41,16 @@ func (*AlterJobV2Handle) Handle(j *ccr.Job, commitSeq int64, alterJob *record.Al
 }
 
 func handleAlterRollup(j *ccr.Job, alterJob *record.AlterJobV2) error {
-	job_progress := j.GetJobProgress()
+	j.SaveAlterRollupShadowIndex(alterJob)
 	if !alterJob.IsFinished() {
-		switch alterJob.JobState {
-		case record.ALTER_JOB_STATE_PENDING:
-			// Once the rollup job step to WAITING_TXN, the upsert to the rollup index is allowed,
-			// but the dest index of the downstream cluster hasn't been created.
-			//
-			// To filter the upsert to the rollup index, save the shadow index ids here.
-			if job_progress.ShadowIndexes == nil {
-				job_progress.ShadowIndexes = make(map[int64]int64)
-			}
-			job_progress.ShadowIndexes[alterJob.RollupIndexId] = alterJob.BaseIndexId
-		case record.ALTER_JOB_STATE_CANCELLED:
-			// clear the shadow indexes
-			delete(job_progress.ShadowIndexes, alterJob.RollupIndexId)
-		}
 		return nil
 	}
-
-	// Once partial snapshot finished, the rollup indexes will be convert to normal index.
-	delete(job_progress.ShadowIndexes, alterJob.RollupIndexId)
 
 	return j.NewPartialSnapshot(alterJob.TableId, alterJob.TableName, nil, true, false)
 }
 
 func handleSchemaChange(j *ccr.Job, alterJob *record.AlterJobV2) error {
 	job_progress := j.GetJobProgress()
-	if !alterJob.IsFinished() {
-		switch alterJob.JobState {
-		case record.ALTER_JOB_STATE_PENDING:
-			// Once the schema change step to WAITING_TXN, the upsert to the shadow indexes is allowed,
-			// but the dest indexes of the downstream cluster hasn't been created.
-			//
-			// To filter the upsert to the shadow indexes, save the shadow index ids here.
-			if job_progress.ShadowIndexes == nil {
-				job_progress.ShadowIndexes = make(map[int64]int64)
-			}
-			for shadowIndexId, originIndexId := range alterJob.ShadowIndexes {
-				job_progress.ShadowIndexes[shadowIndexId] = originIndexId
-			}
-		case record.ALTER_JOB_STATE_CANCELLED:
-			// clear the shadow indexes
-			for shadowIndexId := range alterJob.ShadowIndexes {
-				delete(job_progress.ShadowIndexes, shadowIndexId)
-			}
-		}
-		return nil
-	}
 
 	// drop table dropTableSql
 	var destTableName string
@@ -98,12 +60,12 @@ func handleSchemaChange(j *ccr.Job, alterJob *record.AlterJobV2) error {
 		destTableName = alterJob.TableName
 	}
 
-	if ccr.FeatureSchemaChangePartialSync && alterJob.Type == record.ALTER_JOB_SCHEMA_CHANGE {
-		// Once partial snapshot finished, the shadow indexes will be convert to normal indexes.
-		for shadowIndexId := range alterJob.ShadowIndexes {
-			delete(job_progress.ShadowIndexes, shadowIndexId)
-		}
+	j.SaveSchemaChangeShadowIndexes(alterJob)
+	if !alterJob.IsFinished() {
+		return nil
+	}
 
+	if ccr.FeatureSchemaChangePartialSync && alterJob.Type == record.ALTER_JOB_SCHEMA_CHANGE {
 		return j.NewPartialSnapshot(alterJob.TableId, alterJob.TableName, nil, true, false)
 	}
 
