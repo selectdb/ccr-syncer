@@ -62,10 +62,10 @@ func buildGenericHandleMethod[T record.Record](handle JobHandle[T]) HandleFn {
 		if job.IsBinlogCommitted(tableId, progress.CommitSeq) {
 			// HACK: for alter job, should save the shadow indexes
 			if alterJob, ok := any(value).(*record.AlterJobV2); ok {
-				if alterJob.Type == record.ALTER_JOB_ROLLUP {
-					job.saveAlterRollupShadowIndex(alterJob)
+				if !FeatureSkipRollupBinlogs && alterJob.Type == record.ALTER_JOB_ROLLUP {
+					job.SaveAlterRollupShadowIndex(alterJob)
 				} else if alterJob.Type == record.ALTER_JOB_SCHEMA_CHANGE {
-					job.saveSchemaChangeShadowIndexes(alterJob)
+					job.SaveSchemaChangeShadowIndexes(alterJob)
 				}
 			}
 			return nil
