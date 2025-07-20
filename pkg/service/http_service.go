@@ -768,6 +768,29 @@ func (s *HttpService) showJobStateHandler(w http.ResponseWriter, r *http.Request
 		for _, states := range data {
 			sb.WriteString(strings.Join(states, "\t") + "\n")
 		}
+	case "type=json":
+		// raw type output would using json
+		sb.WriteString("{\"success\":true,\"jobs\":[")
+		rowNumber := len(data)
+		for _, states := range data {
+			rowNumber = rowNumber - 1
+			sb.WriteString("{")
+			sb.WriteString("\"jobName\":\"" + states[0] + "\",")
+			sb.WriteString("\"type\":\"" + states[1] + "\",")
+			sb.WriteString("\"lag\":\"" + states[2] + "\",")
+			sb.WriteString("\"lagSec\":\"" + states[3] + "\",")
+			sb.WriteString("\"syncState\":\"" + states[4] + "\",")
+			sb.WriteString("\"subSyncState\":\"" + states[5] + "\",")
+			sb.WriteString("\"lastFullSyncTime\":\"" + states[6] + "\",")
+			sb.WriteString("\"lastFullSyncReason\":\"" + states[7] + "\",")
+			sb.WriteString("\"isHostMapping\":\"" + states[8] + "\",")
+			sb.WriteString("\"otherArgs\":\"" + states[9] + "\"")
+			sb.WriteString("}")
+			if rowNumber > 0 {
+				sb.WriteString(",")
+			}
+		}
+		sb.WriteString("]}")
 	default:
 		log.Warnf("show job state with unknow type: %+v", r.URL.RawQuery)
 		result = fmt.Sprintf("show job state with unknow type: %+v", r.URL.RawQuery)
