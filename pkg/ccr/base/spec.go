@@ -1131,6 +1131,9 @@ func (s *Spec) WaitTransactionDone(txnId int64) {
 	for {
 		if err := s.waitTransactionDone(txnId); err != nil {
 			log.Errorf("wait transaction done failed, err +%v", err)
+			if strings.Contains(err.Error(), "does not exist") {
+				break
+			}
 			time.Sleep(time.Second)
 		} else {
 			break
