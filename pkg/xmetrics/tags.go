@@ -21,7 +21,7 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 )
 
-func ErrorLabels(err *xerror.XError) prometheus.Labels {
+func ErrorLabels(jobName string, err *xerror.XError) prometheus.Labels {
 	labels := make(prometheus.Labels)
 	labels["error"] = err.Category().Name()
 
@@ -35,5 +35,6 @@ func ErrorLabels(err *xerror.XError) prometheus.Labels {
 	}
 
 	labels["type"] = type_
+	labels["name"] = jobName
 	return labels
 }
