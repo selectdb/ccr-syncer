@@ -138,7 +138,148 @@
                         ]
                     }
                 },
-                "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Lag (Secs)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 295
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "SyncState"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "0": {
+                        "index": 3,
+                        "text": "DBFullSync"
+                      },
+                      "1": {
+                        "index": 4,
+                        "text": "DBTablesIncrementalSync"
+                      },
+                      "2": {
+                        "index": 5,
+                        "text": "DBSpecificTableFullSync"
+                      },
+                      "3": {
+                        "index": 6,
+                        "text": "DBIncrementalSync"
+                      },
+                      "4": {
+                        "index": 7,
+                        "text": "DBPartialSync"
+                      },
+                      "500": {
+                        "index": 2,
+                        "text": "TableFullSync"
+                      },
+                      "501": {
+                        "index": 0,
+                        "text": "TableIncrementalSync"
+                      },
+                      "502": {
+                        "index": 1,
+                        "text": "TablePartialSync"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "SubSyncState"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "1": {
+                        "index": 5,
+                        "text": "GetSnapshotInfo"
+                      },
+                      "2": {
+                        "index": 6,
+                        "text": "AddExtraInfo"
+                      },
+                      "3": {
+                        "index": 7,
+                        "text": "RestoreSnapshot"
+                      },
+                      "4": {
+                        "index": 8,
+                        "text": "PersistRestoreInfo"
+                      },
+                      "5": {
+                        "index": 9,
+                        "text": "WaitBackupDone"
+                      },
+                      "6": {
+                        "index": 10,
+                        "text": "WaitRestoreDone"
+                      },
+                      "11": {
+                        "index": 11,
+                        "text": "BeginTransaction"
+                      },
+                      "12": {
+                        "index": 12,
+                        "text": "IngestBinlog"
+                      },
+                      "13": {
+                        "index": 13,
+                        "text": "CommitTransaction"
+                      },
+                      "14": {
+                        "index": 14,
+                        "text": "RollbackTransaction"
+                      },
+                      "200": {
+                        "index": 3,
+                        "text": "LaunchTransaction"
+                      },
+                      "201": {
+                        "index": 0,
+                        "text": "CommitPipeline"
+                      },
+                      "202": {
+                        "index": 1,
+                        "text": "CommitPipelineTransaction"
+                      },
+                      "203": {
+                        "index": 2,
+                        "text": "RollbackPipeline"
+                      },
+                      "-1": {
+                        "index": 4,
+                        "text": "Done"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
             },
             "gridPos": {
                 "h": 8,
@@ -2769,16 +2910,16 @@
                             },
                             "disableTextWrap": false,
                             "editorMode": "code",
-                            "expr": "ccr_error_total{instance=\"$instance\"}",
+          "expr": "sum by (name)(increase(ccr_error_total[1m]))",
                             "fullMetaSearch": false,
                             "includeNullMetadata": true,
-                            "legendFormat": "{{error}} - {{type}}",
+          "legendFormat": "{{name}}",
                             "range": true,
                             "refId": "A",
                             "useBackend": false
                         }
                     ],
-                    "title": "Cumulative error",
+      "title": "increase by 1min ",
                     "type": "timeseries"
                 }
             ],

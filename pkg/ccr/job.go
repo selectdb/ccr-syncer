@@ -3792,14 +3792,14 @@ func (j *Job) sync() error {
 }
 
 // if err is Panic, return it
-func (j *Job) handleError(err error) error {
+func (j *Job) handleError(jobName string, err error) error {
 	var xerr *xerror.XError
 	if !errors.As(err, &xerr) {
 		log.Errorf("convert error to xerror failed, err: %+v", err)
 		return nil
 	}
 
-	xmetrics.RecordError(xerr)
+	xmetrics.RecordError(jobName, xerr)
 	if xerr.IsPanic() {
 		log.Errorf("job panic, job: %s, err: %+v", j.Name, err)
 		return err
@@ -3850,7 +3850,7 @@ func (j *Job) run() {
 			}
 
 			log.Warnf("job sync failed, job: %s, err: %+v", j.Name, err)
-			panicError = j.handleError(err)
+			panicError = j.handleError(j.Name, err)
 		}
 	}
 }
