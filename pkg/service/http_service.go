@@ -719,7 +719,12 @@ func (s *HttpService) showJobStateHandler(w http.ResponseWriter, r *http.Request
 		}
 
 		totalTime := CalculateTimeDifferenceInSeconds(lastBinlogTimestamp, firstBinlogTimestamp)
-		line = append(line, fmt.Sprintf("%v", lag/int64(totalTime)))
+		if totalTime > 0 {
+			line = append(line, fmt.Sprintf("%v", lag/int64(totalTime)))
+		} else {
+			line = append(line, fmt.Sprintf("%v", 0))
+		}
+
 		// sync state
 		line = append(line, jobProgress.SyncState.String())
 		// sub sync state
