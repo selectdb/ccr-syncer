@@ -64,7 +64,7 @@ func init() {
 	errorCounters = promauto.With(registry).NewCounterVec(prometheus.CounterOpts{
 		Name: "ccr_error_total",
 		Help: "The number of errors",
-	}, []string{"error", "type"})
+	}, []string{"error", "type", "name"})
 
 	feRpcCounters = promauto.With(registry).NewCounterVec(prometheus.CounterOpts{
 		Name: "ccr_fe_rpc_total",
@@ -151,8 +151,8 @@ func init() {
 	}, []string{"host", "db"})
 }
 
-func RecordError(err *xerror.XError) {
-	errorCounters.With(ErrorLabels(err)).Inc()
+func RecordError(jobName string, err *xerror.XError) {
+	errorCounters.With(ErrorLabels(jobName, err)).Inc()
 }
 
 func RecordFeRpc(method, addr string) func() {
