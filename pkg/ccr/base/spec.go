@@ -687,22 +687,26 @@ func (s *Spec) CheckTableExistsByName(tableName string) (bool, error) {
 	}
 	defer rows.Close()
 
-	var table string
+	exists := false
 	for rows.Next() {
 		rowParser := utils.NewRowParser()
 		if err := rowParser.Parse(rows); err != nil {
 			return false, xerror.Wrap(err, xerror.Normal, sql)
 		}
-		table, err = rowParser.GetString(fmt.Sprintf("Tables_in_%s", s.Database))
+		table, err := rowParser.GetString(fmt.Sprintf("Tables_in_%s", s.Database))
 		if err != nil {
 			return false, xerror.Wrap(err, xerror.Normal, sql)
+		}
+		if table == tableName {
+			log.Debugf("check table exist by tablename: %s", tableName)
+			exists = true
 		}
 	}
 	if err := rows.Err(); err != nil {
 		return false, xerror.Wrapf(err, xerror.Normal, "scan table name failed, sql: %s", sql)
 	}
 
-	return table != "", nil
+	return exists, nil
 }
 
 func (s *Spec) CancelRestoreIfExists(snapshotName string) error {
