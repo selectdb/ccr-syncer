@@ -83,6 +83,22 @@ func ParseBackupState(state string) BackupState {
 	}
 }
 
+// isSystemDatabase 判断是否为系统数据库，需要跳过
+func isSystemDatabase(dbName string) bool {
+	systemDatabases := []string{
+		"information_schema",
+		"mysql",
+		"__internal_schema",
+	}
+
+	for _, sysDb := range systemDatabases {
+		if dbName == sysDb {
+			return true
+		}
+	}
+	return false
+}
+
 type RestoreState int
 
 const (
@@ -462,6 +478,40 @@ func (s *Spec) GetAllTables() ([]string, error) {
 	}
 
 	return tables, nil
+}
+
+func (s *Spec) GetAllDatabases() ([]string, error) {
+	log.Tracef("get all databases from cluster")
+
+	db, err := s.Connect()
+	if err != nil {
+		return nil, err
+	}
+
+	sql := "SHOW DATABASES"
+	rows, err := db.Query(sql)
+	if err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "query %s failed", sql)
+	}
+	defer rows.Close()
+
+	var databases []string
+	for rows.Next() {
+		var database string
+		if err := rows.Scan(&database); err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "scan database failed")
+		}
+		// 过滤系统数据库
+		if !isSystemDatabase(database) {
+			databases = append(databases, database)
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "rows error")
+	}
+
+	return databases, nil
 }
 
 func (s *Spec) queryResult(querySQL string, queryColumn string, errMsg string) ([]string, error) {

@@ -103,6 +103,8 @@ type CreateCcrRequest struct {
 	// For table sync, allow to create ccr job even if the target table already exists.
 	AllowTableExists bool `json:"allow_table_exists"`
 	ReuseBinlogLabel bool `json:"reuse_binlog_label"`
+	// 是否为集群级同步，如果为true，将获取源集群所有数据库并为每个数据库创建同步任务
+	ClusterSync bool `json:"cluster_sync"`
 }
 
 // Stringer
@@ -156,6 +158,245 @@ func createCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobMana
 	return nil
 }
 
+// createClusterCcr 创建集群级别的CCR同步任务
+// 获取源集群的所有数据库，为每个数据库创建一个同步任务
+func createClusterCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobManager) error {
+	log.Infof("create cluster ccr %s", request)
+
+	// 获取源集群的所有数据库列表
+	databases, err := getDatabaseList(&request.Src)
+	if err != nil {
+		return xerror.Wrapf(err, xerror.Normal, "Failed to get database list from source cluster")
+	}
+
+	if len(databases) == 0 {
+		return xerror.Errorf(xerror.Normal, "No databases found in source cluster")
+	}
+
+	log.Infof("Found %d databases, starting to create cluster-level sync tasks: %v", len(databases), databases)
+
+	var errors []string
+	successCount := 0
+
+	for _, dbName := range databases {
+		// 为每个数据库创建一个新的请求
+		dbRequest := &CreateCcrRequest{
+			Name:             fmt.Sprintf("%s_%s", request.Name, dbName), // 任务名称加上数据库名称
+			Src:              request.Src,
+			Dest:             request.Dest,
+			SkipError:        request.SkipError,
+			AllowTableExists: request.AllowTableExists,
+			ReuseBinlogLabel: request.ReuseBinlogLabel,
+			ClusterSync:      false, // 设置为false，避免递归调用
+		}
+
+		dbRequest.Src.Database = dbName
+		dbRequest.Dest.Database = dbName
+
+		if err := createCcr(dbRequest, db, jobManager); err != nil {
+			errMsg := fmt.Sprintf("Failed to create sync task for database %s: %v", dbName, err)
+			log.Warnf(errMsg)
+			errors = append(errors, errMsg)
+		} else {
+			successCount++
+			log.Infof("Successfully created sync task for database %s", dbName)
+		}
+	}
+
+	if len(errors) > 0 {
+		if successCount == 0 {
+			return xerror.Errorf(xerror.Normal, "All database sync tasks creation failed: %s", strings.Join(errors, "; "))
+		} else {
+			log.Warnf("Partial cluster sync tasks creation failed, success: %d, failed: %d, errors: %s",
+				successCount, len(errors), strings.Join(errors, "; "))
+		}
+	}
+
+	log.Infof("Cluster-level sync tasks creation completed, success: %d, failed: %d", successCount, len(errors))
+
+	// 启动守护任务，周期性检测源集群新增数据库，传入已有的数据库列表
+	go startDatabaseMonitor(request, db, jobManager, databases)
+
+	return nil
+}
+
+// startDatabaseMonitor 启动一个守护任务，周期性检测源集群新增和删除的数据库，并创建或删除对应的同步任务
+func startDatabaseMonitor(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobManager, initialDatabases []string) {
+	log.Infof("Starting database monitor daemon, task name prefix: %s", request.Name)
+
+	existingDatabases := initializeDatabaseTracking(initialDatabases)
+	log.Infof("Initialized database monitoring, currently have %d databases", len(existingDatabases))
+
+	checkInterval := 2 * time.Minute
+	ticker := time.NewTicker(checkInterval)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		monitorDatabaseChanges(request, db, jobManager, existingDatabases)
+	}
+}
+
+func initializeDatabaseTracking(initialDatabases []string) map[string]bool {
+	existingDatabases := make(map[string]bool)
+	for _, dbName := range initialDatabases {
+		existingDatabases[dbName] = true
+	}
+	return existingDatabases
+}
+
+// monitorDatabaseChanges 检测数据库变化并处理
+func monitorDatabaseChanges(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobManager, existingDatabases map[string]bool) {
+	currentDatabases, err := request.Src.GetAllDatabases()
+	if err != nil {
+		log.Errorf("Failed to get database list: %v", err)
+		return
+	}
+
+	currentDatabaseMap := make(map[string]bool)
+	for _, dbName := range currentDatabases {
+		if dbName == "" {
+			continue
+		}
+		currentDatabaseMap[dbName] = true
+	}
+
+	newDatabases := identifyNewDatabases(currentDatabases, existingDatabases)
+	deletedDatabases := identifyDeletedDatabases(existingDatabases, currentDatabaseMap)
+
+	handleNewDatabases(newDatabases, request, db, jobManager)
+	handleDeletedDatabases(deletedDatabases, request, jobManager)
+	logMonitoringStatus(newDatabases, deletedDatabases, existingDatabases)
+}
+
+func identifyNewDatabases(currentDatabases []string, existingDatabases map[string]bool) []string {
+	var newDatabases []string
+	for _, dbName := range currentDatabases {
+		if !existingDatabases[dbName] {
+			newDatabases = append(newDatabases, dbName)
+			existingDatabases[dbName] = true
+		}
+	}
+	return newDatabases
+}
+
+func identifyDeletedDatabases(existingDatabases map[string]bool, currentDatabaseMap map[string]bool) []string {
+	var deletedDatabases []string
+	for dbName := range existingDatabases {
+		if !currentDatabaseMap[dbName] {
+			deletedDatabases = append(deletedDatabases, dbName)
+			delete(existingDatabases, dbName)
+		}
+	}
+	return deletedDatabases
+}
+
+func handleNewDatabases(newDatabases []string, request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobManager) {
+	if len(newDatabases) == 0 {
+		return
+	}
+
+	log.Infof("Found %d new databases: %v", len(newDatabases), newDatabases)
+
+	for _, dbName := range newDatabases {
+		if dbName == "" {
+			log.Warnf("Skipping empty database name")
+			continue
+		}
+
+		jobName := fmt.Sprintf("%s_%s", request.Name, dbName)
+		jobExists, err := db.IsJobExist(jobName)
+		if err != nil {
+			log.Warnf("Error checking if job %s exists: %v", jobName, err)
+			continue
+		}
+
+		if jobExists {
+			log.Warnf("Job %s already exists, skipping sync task creation for database %s", jobName, dbName)
+			continue
+		}
+
+		dbRequest := &CreateCcrRequest{
+			Name:             jobName,
+			Src:              request.Src,
+			Dest:             request.Dest,
+			SkipError:        request.SkipError,
+			AllowTableExists: request.AllowTableExists,
+			ReuseBinlogLabel: request.ReuseBinlogLabel,
+			ClusterSync:      false, // 设置为false，避免递归调用
+		}
+
+		dbRequest.Src.Database = dbName
+		dbRequest.Dest.Database = dbName
+
+		maxRetries := 3
+		for i := 0; i < maxRetries; i++ {
+			if err := createCcr(dbRequest, db, jobManager); err != nil {
+				if i == maxRetries-1 {
+					log.Warnf("Failed to create sync task for new database %s (attempt %d/%d): %v", dbName, i+1, maxRetries, err)
+				} else {
+					log.Warnf("Failed to create sync task for new database %s (attempt %d/%d): %v, will retry", dbName, i+1, maxRetries, err)
+					time.Sleep(time.Second * time.Duration(i+1)) // 指数退避
+				}
+			} else {
+				log.Infof("Successfully created sync task for new database %s", dbName)
+				break
+			}
+		}
+	}
+}
+
+func handleDeletedDatabases(deletedDatabases []string, request *CreateCcrRequest, jobManager *ccr.JobManager) {
+	if len(deletedDatabases) == 0 {
+		return
+	}
+
+	log.Infof("Found %d deleted databases: %v", len(deletedDatabases), deletedDatabases)
+
+	for _, dbName := range deletedDatabases {
+		if dbName == "" {
+			log.Warnf("Skipping empty database name")
+			continue
+		}
+
+		jobName := fmt.Sprintf("%s_%s", request.Name, dbName)
+
+		maxRetries := 3
+		for i := 0; i < maxRetries; i++ {
+			if err := jobManager.RemoveJob(jobName); err != nil {
+				if i == maxRetries-1 {
+					log.Warnf("Failed to remove sync task for deleted database %s (attempt %d/%d): %v", dbName, i+1, maxRetries, err)
+				} else {
+					log.Warnf("Failed to remove sync task for deleted database %s (attempt %d/%d): %v, will retry", dbName, i+1, maxRetries, err)
+					time.Sleep(time.Second * time.Duration(i+1)) // 指数退避
+				}
+			} else {
+				log.Infof("Successfully removed sync task for deleted database %s", dbName)
+				break
+			}
+		}
+	}
+}
+
+// logMonitoringStatus 记录监控状态
+func logMonitoringStatus(newDatabases []string, deletedDatabases []string, existingDatabases map[string]bool) {
+	if len(newDatabases) == 0 && len(deletedDatabases) == 0 {
+		log.Infof("No database changes detected, currently have %d databases", len(existingDatabases))
+	}
+}
+
+func getDatabaseList(spec *base.Spec) ([]string, error) {
+	log.Infof("Getting database list for cluster %s", spec.Host)
+
+	// 使用Specer接口的GetAllDatabases方法
+	databases, err := spec.GetAllDatabases()
+	if err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "Failed to get database list")
+	}
+
+	log.Infof("Got %d user databases: %v", len(databases), databases)
+	return databases, nil
+}
+
 // return exit(bool)
 func (s *HttpService) redirect(jobName string, w http.ResponseWriter, r *http.Request) bool {
 	if jobExist, err := s.db.IsJobExist(jobName); err != nil {
@@ -205,12 +446,20 @@ func (s *HttpService) createHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Call the createCcr function to create the CCR
-	if err = createCcr(&request, s.db, s.jobManager); err != nil {
-		log.Warnf("create ccr failed: %+v", err)
-		createResult = newErrorResult(err.Error())
+	if request.ClusterSync {
+		if err = createClusterCcr(&request, s.db, s.jobManager); err != nil {
+			log.Warnf("create cluster ccr failed: %+v", err)
+			createResult = newErrorResult(err.Error())
+		} else {
+			createResult = newSuccessResult()
+		}
 	} else {
-		createResult = newSuccessResult()
+		if err = createCcr(&request, s.db, s.jobManager); err != nil {
+			log.Warnf("create ccr failed: %+v", err)
+			createResult = newErrorResult(err.Error())
+		} else {
+			createResult = newSuccessResult()
+		}
 	}
 }
 
