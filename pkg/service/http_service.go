@@ -25,6 +25,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/selectdb/ccr_syncer/pkg/ccr"
@@ -38,6 +39,13 @@ import (
 
 	"github.com/olekukonko/tablewriter"
 	log "github.com/sirupsen/logrus"
+)
+
+// Global variable to store database monitor check interval
+var (
+	databaseMonitorInterval time.Duration = 2 * time.Minute
+	intervalMutex           sync.RWMutex
+	intervalUpdateChan      = make(chan time.Duration, 1)
 )
 
 // TODO(Drogon): impl a generic http request handle parse json
@@ -103,6 +111,8 @@ type CreateCcrRequest struct {
 	// For table sync, allow to create ccr job even if the target table already exists.
 	AllowTableExists bool `json:"allow_table_exists"`
 	ReuseBinlogLabel bool `json:"reuse_binlog_label"`
+	// Whether it's cluster-level sync, if true, will get all databases from source cluster and create sync task for each database
+	ClusterSync bool `json:"cluster_sync"`
 }
 
 // Stringer
@@ -156,6 +166,250 @@ func createCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobMana
 	return nil
 }
 
+// createClusterCcr creates cluster-level CCR synchronization tasks
+// Gets all databases from the source cluster and creates a sync task for each database
+func createClusterCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobManager) error {
+	log.Infof("create cluster ccr %s", request)
+
+	// Get all database list from source cluster
+	databases, err := getDatabaseList(&request.Src)
+	if err != nil {
+		return xerror.Wrapf(err, xerror.Normal, "Failed to get database list from source cluster")
+	}
+
+	if len(databases) == 0 {
+		return xerror.Errorf(xerror.Normal, "No databases found in source cluster")
+	}
+
+	log.Infof("Found %d databases, starting to create cluster-level sync tasks: %v", len(databases), databases)
+
+	var errors []string
+	successCount := 0
+
+	for _, dbName := range databases {
+		// Create a new request for each database
+		dbRequest := &CreateCcrRequest{
+			Name:             fmt.Sprintf("%s_%s", request.Name, dbName), // Task name with database name appended
+			Src:              request.Src,
+			Dest:             request.Dest,
+			SkipError:        request.SkipError,
+			AllowTableExists: request.AllowTableExists,
+			ReuseBinlogLabel: request.ReuseBinlogLabel,
+			ClusterSync:      false, // Set to false to avoid recursive calls
+		}
+
+		dbRequest.Src.Database = dbName
+		dbRequest.Dest.Database = dbName
+
+		if err := createCcr(dbRequest, db, jobManager); err != nil {
+			errMsg := fmt.Sprintf("Failed to create sync task for database %s: %v", dbName, err)
+			log.Warnf(errMsg)
+			errors = append(errors, errMsg)
+		} else {
+			successCount++
+			log.Infof("Successfully created sync task for database %s", dbName)
+		}
+	}
+
+	if len(errors) > 0 {
+		if successCount == 0 {
+			return xerror.Errorf(xerror.Normal, "All database sync tasks creation failed: %s", strings.Join(errors, "; "))
+		} else {
+			log.Warnf("Partial cluster sync tasks creation failed, success: %d, failed: %d, errors: %s",
+				successCount, len(errors), strings.Join(errors, "; "))
+		}
+	}
+
+	log.Infof("Cluster-level sync tasks creation completed, success: %d, failed: %d", successCount, len(errors))
+
+	// Start daemon task to periodically detect new databases in source cluster, passing existing database list
+	go startDatabaseMonitor(request, db, jobManager, databases)
+
+	return nil
+}
+
+// startDatabaseMonitor starts a daemon task to periodically detect new and deleted databases in source cluster, and create or delete corresponding sync tasks
+func startDatabaseMonitor(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobManager, initialDatabases []string) {
+	log.Infof("Starting database monitor daemon, task name prefix: %s", request.Name)
+
+	existingDatabases := initializeDatabaseTracking(initialDatabases)
+	log.Infof("Initialized database monitoring, currently have %d databases", len(existingDatabases))
+
+	intervalMutex.RLock()
+	currentInterval := databaseMonitorInterval
+	intervalMutex.RUnlock()
+
+	ticker := time.NewTicker(currentInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			monitorDatabaseChanges(request, db, jobManager, existingDatabases)
+		case newInterval := <-intervalUpdateChan:
+			if newInterval != currentInterval {
+				log.Infof("Database monitor interval changed from %v to %v", currentInterval, newInterval)
+				ticker.Stop()
+				ticker = time.NewTicker(newInterval)
+				currentInterval = newInterval
+			}
+		}
+	}
+}
+
+func initializeDatabaseTracking(initialDatabases []string) map[string]bool {
+	existingDatabases := make(map[string]bool)
+	for _, dbName := range initialDatabases {
+		existingDatabases[dbName] = true
+	}
+	return existingDatabases
+}
+
+// monitorDatabaseChanges detects database changes and handles them
+func monitorDatabaseChanges(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobManager, existingDatabases map[string]bool) {
+	currentDatabases, err := request.Src.GetAllDatabases()
+	if err != nil {
+		log.Errorf("Failed to get database list: %v", err)
+		return
+	}
+
+	currentDatabaseMap := make(map[string]bool)
+	for _, dbName := range currentDatabases {
+		if dbName == "" {
+			continue
+		}
+		currentDatabaseMap[dbName] = true
+	}
+
+	newDatabases := identifyNewDatabases(currentDatabases, existingDatabases)
+	deletedDatabases := identifyDeletedDatabases(existingDatabases, currentDatabaseMap)
+
+	handleNewDatabases(newDatabases, request, db, jobManager)
+	handleDeletedDatabases(deletedDatabases, request, jobManager)
+}
+
+func identifyNewDatabases(currentDatabases []string, existingDatabases map[string]bool) []string {
+	var newDatabases []string
+	for _, dbName := range currentDatabases {
+		if !existingDatabases[dbName] {
+			newDatabases = append(newDatabases, dbName)
+			existingDatabases[dbName] = true
+		}
+	}
+	return newDatabases
+}
+
+func identifyDeletedDatabases(existingDatabases map[string]bool, currentDatabaseMap map[string]bool) []string {
+	var deletedDatabases []string
+	for dbName := range existingDatabases {
+		if !currentDatabaseMap[dbName] {
+			deletedDatabases = append(deletedDatabases, dbName)
+			delete(existingDatabases, dbName)
+		}
+	}
+	return deletedDatabases
+}
+
+func handleNewDatabases(newDatabases []string, request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobManager) {
+	if len(newDatabases) == 0 {
+		return
+	}
+
+	log.Infof("Found %d new databases: %v", len(newDatabases), newDatabases)
+
+	for _, dbName := range newDatabases {
+		if dbName == "" {
+			log.Warnf("Skipping empty database name")
+			continue
+		}
+
+		jobName := fmt.Sprintf("%s_%s", request.Name, dbName)
+		jobExists, err := db.IsJobExist(jobName)
+		if err != nil {
+			log.Warnf("Error checking if job %s exists: %v", jobName, err)
+			continue
+		}
+
+		if jobExists {
+			log.Warnf("Job %s already exists, skipping sync task creation for database %s", jobName, dbName)
+			continue
+		}
+
+		dbRequest := &CreateCcrRequest{
+			Name:             jobName,
+			Src:              request.Src,
+			Dest:             request.Dest,
+			SkipError:        request.SkipError,
+			AllowTableExists: request.AllowTableExists,
+			ReuseBinlogLabel: request.ReuseBinlogLabel,
+			ClusterSync:      false, // Set to false to avoid recursive calls
+		}
+
+		dbRequest.Src.Database = dbName
+		dbRequest.Dest.Database = dbName
+
+		maxRetries := 3
+		for i := 0; i < maxRetries; i++ {
+			if err := createCcr(dbRequest, db, jobManager); err != nil {
+				if i == maxRetries-1 {
+					log.Warnf("Failed to create sync task for new database %s (attempt %d/%d): %v", dbName, i+1, maxRetries, err)
+				} else {
+					log.Warnf("Failed to create sync task for new database %s (attempt %d/%d): %v, will retry", dbName, i+1, maxRetries, err)
+					time.Sleep(time.Second * time.Duration(i+1)) // Exponential backoff
+				}
+			} else {
+				log.Infof("Successfully created sync task for new database %s", dbName)
+				break
+			}
+		}
+	}
+}
+
+func handleDeletedDatabases(deletedDatabases []string, request *CreateCcrRequest, jobManager *ccr.JobManager) {
+	if len(deletedDatabases) == 0 {
+		return
+	}
+
+	log.Infof("Found %d deleted databases: %v", len(deletedDatabases), deletedDatabases)
+
+	for _, dbName := range deletedDatabases {
+		if dbName == "" {
+			log.Warnf("Skipping empty database name")
+			continue
+		}
+
+		jobName := fmt.Sprintf("%s_%s", request.Name, dbName)
+
+		maxRetries := 3
+		for i := 0; i < maxRetries; i++ {
+			if err := jobManager.RemoveJob(jobName); err != nil {
+				if i == maxRetries-1 {
+					log.Warnf("Failed to remove sync task for deleted database %s (attempt %d/%d): %v", dbName, i+1, maxRetries, err)
+				} else {
+					log.Warnf("Failed to remove sync task for deleted database %s (attempt %d/%d): %v, will retry", dbName, i+1, maxRetries, err)
+					time.Sleep(time.Second * time.Duration(i+1)) // Exponential backoff
+				}
+			} else {
+				log.Infof("Successfully removed sync task for deleted database %s", dbName)
+				break
+			}
+		}
+	}
+}
+
+func getDatabaseList(spec *base.Spec) ([]string, error) {
+	log.Infof("Getting database list for cluster %s", spec.Host)
+
+	// Use Specer interface's GetAllDatabases method
+	databases, err := spec.GetAllDatabases()
+	if err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "Failed to get database list")
+	}
+
+	log.Infof("Got %d user databases: %v", len(databases), databases)
+	return databases, nil
+}
+
 // return exit(bool)
 func (s *HttpService) redirect(jobName string, w http.ResponseWriter, r *http.Request) bool {
 	if jobExist, err := s.db.IsJobExist(jobName); err != nil {
@@ -205,12 +459,20 @@ func (s *HttpService) createHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Call the createCcr function to create the CCR
-	if err = createCcr(&request, s.db, s.jobManager); err != nil {
-		log.Warnf("create ccr failed: %+v", err)
-		createResult = newErrorResult(err.Error())
+	if request.ClusterSync {
+		if err = createClusterCcr(&request, s.db, s.jobManager); err != nil {
+			log.Warnf("create cluster ccr failed: %+v", err)
+			createResult = newErrorResult(err.Error())
+		} else {
+			createResult = newSuccessResult()
+		}
 	} else {
-		createResult = newSuccessResult()
+		if err = createCcr(&request, s.db, s.jobManager); err != nil {
+			log.Warnf("create ccr failed: %+v", err)
+			createResult = newErrorResult(err.Error())
+		} else {
+			createResult = newSuccessResult()
+		}
 	}
 }
 
@@ -1084,6 +1346,67 @@ func (s *HttpService) failpointHandler(w http.ResponseWriter, r *http.Request) {
 	result = newSuccessResult()
 }
 
+func (s *HttpService) updateMonitorIntervalHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("update database monitor interval")
+
+	var result *defaultResult
+	defer func() { writeJson(w, result) }()
+
+	// Parse the JSON request body
+	var request struct {
+		IntervalSeconds int `json:"interval_seconds"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Warnf("update monitor interval failed: %+v", err)
+		result = newErrorResult(err.Error())
+		return
+	}
+
+	if request.IntervalSeconds <= 0 {
+		log.Warnf("update monitor interval failed: interval_seconds must be positive")
+		result = newErrorResult("interval_seconds must be positive")
+		return
+	}
+
+	newInterval := time.Duration(request.IntervalSeconds) * time.Second
+
+	intervalMutex.Lock()
+	oldInterval := databaseMonitorInterval
+	databaseMonitorInterval = newInterval
+	intervalMutex.Unlock()
+
+	// Send update notification through channel (non-blocking)
+	select {
+	case intervalUpdateChan <- newInterval:
+	default:
+		// Channel is full, but that's okay since we only need the latest value
+	}
+
+	log.Infof("Database monitor interval updated from %v to %v", oldInterval, newInterval)
+	result = newSuccessResult()
+}
+
+func (s *HttpService) getMonitorIntervalHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("get database monitor interval")
+
+	type result struct {
+		*defaultResult
+		IntervalSeconds int `json:"interval_seconds"`
+	}
+
+	intervalMutex.RLock()
+	currentInterval := databaseMonitorInterval
+	intervalMutex.RUnlock()
+
+	intervalResult := &result{
+		defaultResult:   newSuccessResult(),
+		IntervalSeconds: int(currentInterval.Seconds()),
+	}
+
+	writeJson(w, intervalResult)
+}
+
 func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/version", s.versionHandler)
 	s.mux.HandleFunc("/create_ccr", s.createHandler)
@@ -1101,6 +1424,8 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/update_host_mapping", s.updateHostMappingHandler)
 	s.mux.HandleFunc("/job_skip_binlog", s.skipBinlogHandler)
 	s.mux.HandleFunc("/failpoint", s.failpointHandler)
+	s.mux.HandleFunc("/update_monitor_interval", s.updateMonitorIntervalHandler)
+	s.mux.HandleFunc("/get_monitor_interval", s.getMonitorIntervalHandler)
 	s.mux.Handle("/metrics", xmetrics.GetHttpHandler())
 	s.mux.HandleFunc("/sync", s.syncHandler)
 	s.mux.HandleFunc("/view", s.showJobStateHandler)

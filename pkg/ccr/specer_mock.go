@@ -217,6 +217,21 @@ func (mr *MockSpecerMockRecorder) Exec(sql any) *gomock.Call {
 }
 
 // GetAllTables mocks base method.
+func (m *MockSpecer) GetAllDatabases() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllDatabases")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAllDatabases indicates an expected call of GetAllDatabases.
+func (mr *MockSpecerMockRecorder) GetAllDatabases() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllDatabases", reflect.TypeOf((*MockSpecer)(nil).GetAllDatabases))
+}
+
+// GetAllTables mocks base method.
 func (m *MockSpecer) GetAllTables() ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAllTables")
