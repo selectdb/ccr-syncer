@@ -103,6 +103,8 @@ type CreateCcrRequest struct {
 	// For table sync, allow to create ccr job even if the target table already exists.
 	AllowTableExists bool `json:"allow_table_exists"`
 	ReuseBinlogLabel bool `json:"reuse_binlog_label"`
+	// replication_num: nil or -1 means inherit from upstream (default), >0 means fixed replica count, 0 is invalid
+	ReplicationNum *int `json:"replication_num,omitempty"`
 }
 
 // Stringer
@@ -132,6 +134,12 @@ func (s *HttpService) versionHandler(w http.ResponseWriter, r *http.Request) {
 func createCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobManager) error {
 	log.Infof("create ccr %s", request)
 
+	// Default to -1 (inherit mode) when replication_num is not specified
+	replicationNum := -1
+	if request.ReplicationNum != nil {
+		replicationNum = *request.ReplicationNum
+	}
+
 	ctx := &ccr.JobContext{
 		Context:          context.Background(),
 		Src:              request.Src,
@@ -141,6 +149,7 @@ func createCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobMana
 		ReuseBinlogLabel: request.ReuseBinlogLabel,
 		Db:               db,
 		Factory:          jobManager.GetFactory(),
+		ReplicationNum:   replicationNum,
 	}
 	job, err := ccr.NewJobFromService(request.Name, ctx)
 	if err != nil {

@@ -27,6 +27,7 @@ import (
 	"math"
 	"math/rand"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -60,24 +61,25 @@ const (
 )
 
 var (
-	FeatureSchemaChangePartialSync      bool
-	featureCleanTableAndPartitions      bool
-	featureAtomicRestore                bool
-	FeatureCreateViewDropExists         bool
-	featureReplaceNotMatchedWithAlias   bool
-	featureFilterShadowIndexesUpsert    bool
-	featureReuseRunningBackupRestoreJob bool
-	featureCompressedSnapshot           bool
-	FeatureSkipRollupBinlogs            bool
-	featureTxnInsert                    bool
-	FeatureFilterStorageMedium          bool
-	featureRestoreReplaceDiffSchema     bool
-	featureIdempotentDDL                bool
-	featureSkipWaitingTxnPublish        bool
-	featureSkipCheckAsyncMvTable        bool
-	featurePipelineCommit               bool
-	featureSeperatedHandles             bool
-	featureEnableSnapshotCompress       bool
+	FeatureSchemaChangePartialSync        bool
+	featureCleanTableAndPartitions        bool
+	featureAtomicRestore                  bool
+	FeatureCreateViewDropExists           bool
+	featureReplaceNotMatchedWithAlias     bool
+	featureFilterShadowIndexesUpsert      bool
+	featureReuseRunningBackupRestoreJob   bool
+	featureCompressedSnapshot             bool
+	FeatureSkipRollupBinlogs              bool
+	featureTxnInsert                      bool
+	FeatureFilterStorageMedium            bool
+	featureRestoreReplaceDiffSchema       bool
+	featureIdempotentDDL                  bool
+	featureSkipWaitingTxnPublish          bool
+	featureSkipCheckAsyncMvTable          bool
+	featurePipelineCommit                 bool
+	featureSeperatedHandles               bool
+	featureEnableSnapshotCompress         bool
+	featureOverrideReplicationNumInternal bool
 
 	flagBinlogBatchSize int64
 
@@ -123,8 +125,15 @@ func init() {
 		"enable the seperated handles (the refactor)")
 	flag.BoolVar(&featureEnableSnapshotCompress, "feature_enable_snapshot_compress", true,
 		"enable snapshot compress")
+	flag.BoolVar(&featureOverrideReplicationNumInternal, "feature_override_replication_num", true,
+		"enable override replication_num for downstream cluster")
 
 	flag.Int64Var(&flagBinlogBatchSize, "binlog_batch_size", 16, "the max num of binlogs to get in a batch")
+}
+
+// FeatureOverrideReplicationNum returns whether the feature is enabled
+func FeatureOverrideReplicationNum() bool {
+	return featureOverrideReplicationNumInternal
 }
 
 type SyncType int
@@ -230,6 +239,9 @@ type Job struct {
 	pipelineCtx        *JobPipelineContext     `json:"-"`
 
 	lock sync.Mutex `json:"-"`
+
+	// Replication number policy: -1 means inherit from upstream (default), >0 means fixed replica num, 0 is invalid
+	ReplicationNum int `json:"replication_num,omitempty"`
 }
 
 type JobContext struct {
@@ -241,6 +253,8 @@ type JobContext struct {
 	AllowTableExists bool
 	ReuseBinlogLabel bool
 	Factory          *Factory
+	// Replication number policy: -1 means inherit from upstream (default), >0 means fixed replica num, 0 is invalid
+	ReplicationNum int
 }
 
 // new job
@@ -279,6 +293,24 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 		stop:     make(chan struct{}),
 
 		concurrencyManager: rpc.NewConcurrencyManager(),
+	}
+
+	// set and validate replication number policy
+	job.ReplicationNum = jobContext.ReplicationNum
+	if job.ReplicationNum < -1 || job.ReplicationNum == 0 {
+		return nil, xerror.Errorf(xerror.Normal, "invalid replication_num: %d, must be -1 (inherit) or > 0 (fixed)", job.ReplicationNum)
+	}
+	if job.ReplicationNum > 0 {
+		backs, err := job.destMeta.GetBackends()
+		if err != nil {
+			return nil, xerror.Wrap(err, xerror.Normal, "get dest backends failed")
+		}
+		if len(backs) == 0 {
+			return nil, xerror.Errorf(xerror.Normal, "no available backends in dest cluster")
+		}
+		if job.ReplicationNum > len(backs) {
+			return nil, xerror.Errorf(xerror.Normal, "replication %d exceeds available BE %d", job.ReplicationNum, len(backs))
+		}
 	}
 
 	if err := job.valid(); err != nil {
@@ -395,6 +427,29 @@ func (j *Job) IsTableSyncWithAlias() bool {
 	return j.SyncType == TableSync && j.Src.Table != j.Dest.Table
 }
 
+// buildRestoreReplicationProperties decides restore properties according to replication number policy.
+// Mode:
+// - -1 (inherit, default): use reserve_replica=true to keep same replica number as source
+// - >0 (fixed): use replication_num = N, with strict capacity validation (fail by default)
+func (j *Job) buildRestoreReplicationProperties() (map[string]string, error) {
+	if !FeatureOverrideReplicationNum() {
+		// feature disabled, use default behavior (inherit)
+		return nil, nil
+	}
+
+	p := j.ReplicationNum
+	if p == -1 {
+		// inherit mode: let FE use default reserve_replica=true
+		return nil, nil
+	}
+
+	// fixed mode: p > 0
+	props := map[string]string{
+		"replication_num": strconv.Itoa(int(p)),
+	}
+	return props, nil
+}
+
 func (j *Job) isTableDropped(tableId int64) (bool, error) {
 	// Keep compatible with the old version, which doesn't have the table id in partial sync data.
 	if tableId == 0 {
@@ -410,6 +465,18 @@ func (j *Job) isTableDropped(tableId int64) (bool, error) {
 
 func (j *Job) getSourceThriftMeta(tableId int64) (*ThriftMeta, error) {
 	return j.factory.NewThriftMeta(&j.Src, j.factory, []int64{tableId})
+}
+
+// validateReplicaFail ensures the requested replica number does not exceed available BE nodes.
+func (j *Job) validateReplicaFail(num int) error {
+	backs, err := j.destMeta.GetBackends()
+	if err != nil {
+		return err
+	}
+	if num <= len(backs) {
+		return nil
+	}
+	return xerror.Errorf(xerror.Normal, "replication %d exceeds available BE %d", num, len(backs))
 }
 
 func (j *Job) addExtraInfo(jobInfo []byte) ([]byte, error) {
@@ -740,6 +807,14 @@ func (j *Job) partialSync() error {
 			Compress:        false,
 			ForceReplace:    isForceReplace,
 		}
+
+		// apply replication properties override if policy provided
+		if props, err := j.buildRestoreReplicationProperties(); err != nil {
+			return err
+		} else if props != nil {
+			restoreReq.PropertiesOverride = props
+		}
+
 		restoreResp, err := destRpc.RestoreSnapshot(dest, &restoreReq)
 		if err != nil {
 			return err
@@ -1168,6 +1243,12 @@ func (j *Job) fullSync() error {
 			CleanTables:     false,
 			AtomicRestore:   false,
 			Compress:        compress,
+		}
+		// apply replication properties override if policy provided
+		if props, err := j.buildRestoreReplicationProperties(); err != nil {
+			return err
+		} else if props != nil {
+			restoreReq.PropertiesOverride = props
 		}
 		if featureCleanTableAndPartitions {
 			// drop exists partitions, and drop tables if in db sync.
@@ -2121,6 +2202,10 @@ func (j *Job) handleCreateTable(binlog *festruct.TBinlog) error {
 	}
 	createTable.Sql = FilterDynamicPartitionStoragePolicyFromCreateTableSql(createTable.Sql)
 
+	if FeatureOverrideReplicationNum() && j.ReplicationNum > 0 {
+		createTable.Sql = ResetReplicationNumFromCreateTableSql(createTable.Sql, j.ReplicationNum)
+	}
+
 	if err = j.IDest.CreateTableOrView(createTable, j.Src.Database); err != nil {
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "Can not found function") {
@@ -2266,6 +2351,13 @@ func (j *Job) handleModifyProperty(binlog *festruct.TBinlog) error {
 
 	if j.IsBinlogCommitted(modifyProperty.TableId, binlog.GetCommitSeq()) {
 		return nil
+	}
+
+	if FeatureOverrideReplicationNum() && j.ReplicationNum > 0 {
+		if _, exists := modifyProperty.Properties["default.replication_allocation"]; exists {
+			delete(modifyProperty.Properties, "default.replication_allocation")
+			log.Debugf("delete default.replication_allocation from modify table property")
+		}
 	}
 
 	destTableName, err := j.GetDestNameBySrcId(modifyProperty.TableId)
@@ -3553,7 +3645,6 @@ func (j *Job) handleNonBarrierBinlog(binlog *festruct.TBinlog) error {
 		utils.RemoveJobFailpoint(j.Name, "handle_binlog_idempotent:before") // only work once
 		return xerror.Errorf(xerror.Normal, "fail to handle binlog by failpoint handle_binlog_idempotent:before")
 	}
-
 	var err error
 	if featureSeperatedHandles && IsJobHandleRegistered(binlogType) {
 		err = HandleBinlog(j, binlog)
@@ -4606,6 +4697,12 @@ func IsSessionVariableRequired(msg string) bool {
 func FilterStorageMediumFromCreateTableSql(createSql string) string {
 	pattern := `"storage_medium"\s*=\s*"[^"]*"(,\s*)?`
 	createSql = regexp.MustCompile(pattern).ReplaceAllString(createSql, "")
+	return FilterTailingCommaFromCreateTableSql(createSql)
+}
+
+func ResetReplicationNumFromCreateTableSql(createSql string, replicationNum int) string {
+	re := regexp.MustCompile(`("replication_allocation"\s*=\s*"[^:]*:\s*)\d+`)
+	createSql = re.ReplaceAllString(createSql, fmt.Sprintf("${1}%d", replicationNum))
 	return FilterTailingCommaFromCreateTableSql(createSql)
 }
 
