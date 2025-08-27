@@ -53734,6 +53734,1094 @@ func (p *TGetSnapshotResult_) Field7DeepEqual(src *int64) bool {
 	return true
 }
 
+type TGetGlobalSnapshotRequest struct {
+	Cluster      *string        `thrift:"cluster,1,optional" frugal:"1,optional,string" json:"cluster,omitempty"`
+	User         *string        `thrift:"user,2,optional" frugal:"2,optional,string" json:"user,omitempty"`
+	Passwd       *string        `thrift:"passwd,3,optional" frugal:"3,optional,string" json:"passwd,omitempty"`
+	Token        *string        `thrift:"token,4,optional" frugal:"4,optional,string" json:"token,omitempty"`
+	LabelName    *string        `thrift:"label_name,5,optional" frugal:"5,optional,string" json:"label_name,omitempty"`
+	SnapshotName *string        `thrift:"snapshot_name,6,optional" frugal:"6,optional,string" json:"snapshot_name,omitempty"`
+	SnapshotType *TSnapshotType `thrift:"snapshot_type,7,optional" frugal:"7,optional,TSnapshotType" json:"snapshot_type,omitempty"`
+}
+
+func NewTGetGlobalSnapshotRequest() *TGetGlobalSnapshotRequest {
+	return &TGetGlobalSnapshotRequest{}
+}
+
+func (p *TGetGlobalSnapshotRequest) InitDefault() {
+}
+
+var TGetGlobalSnapshotRequest_Cluster_DEFAULT string
+
+func (p *TGetGlobalSnapshotRequest) GetCluster() (v string) {
+	if !p.IsSetCluster() {
+		return TGetGlobalSnapshotRequest_Cluster_DEFAULT
+	}
+	return *p.Cluster
+}
+
+var TGetGlobalSnapshotRequest_User_DEFAULT string
+
+func (p *TGetGlobalSnapshotRequest) GetUser() (v string) {
+	if !p.IsSetUser() {
+		return TGetGlobalSnapshotRequest_User_DEFAULT
+	}
+	return *p.User
+}
+
+var TGetGlobalSnapshotRequest_Passwd_DEFAULT string
+
+func (p *TGetGlobalSnapshotRequest) GetPasswd() (v string) {
+	if !p.IsSetPasswd() {
+		return TGetGlobalSnapshotRequest_Passwd_DEFAULT
+	}
+	return *p.Passwd
+}
+
+var TGetGlobalSnapshotRequest_Token_DEFAULT string
+
+func (p *TGetGlobalSnapshotRequest) GetToken() (v string) {
+	if !p.IsSetToken() {
+		return TGetGlobalSnapshotRequest_Token_DEFAULT
+	}
+	return *p.Token
+}
+
+var TGetGlobalSnapshotRequest_LabelName_DEFAULT string
+
+func (p *TGetGlobalSnapshotRequest) GetLabelName() (v string) {
+	if !p.IsSetLabelName() {
+		return TGetGlobalSnapshotRequest_LabelName_DEFAULT
+	}
+	return *p.LabelName
+}
+
+var TGetGlobalSnapshotRequest_SnapshotName_DEFAULT string
+
+func (p *TGetGlobalSnapshotRequest) GetSnapshotName() (v string) {
+	if !p.IsSetSnapshotName() {
+		return TGetGlobalSnapshotRequest_SnapshotName_DEFAULT
+	}
+	return *p.SnapshotName
+}
+
+var TGetGlobalSnapshotRequest_SnapshotType_DEFAULT TSnapshotType
+
+func (p *TGetGlobalSnapshotRequest) GetSnapshotType() (v TSnapshotType) {
+	if !p.IsSetSnapshotType() {
+		return TGetGlobalSnapshotRequest_SnapshotType_DEFAULT
+	}
+	return *p.SnapshotType
+}
+func (p *TGetGlobalSnapshotRequest) SetCluster(val *string) {
+	p.Cluster = val
+}
+func (p *TGetGlobalSnapshotRequest) SetUser(val *string) {
+	p.User = val
+}
+func (p *TGetGlobalSnapshotRequest) SetPasswd(val *string) {
+	p.Passwd = val
+}
+func (p *TGetGlobalSnapshotRequest) SetToken(val *string) {
+	p.Token = val
+}
+func (p *TGetGlobalSnapshotRequest) SetLabelName(val *string) {
+	p.LabelName = val
+}
+func (p *TGetGlobalSnapshotRequest) SetSnapshotName(val *string) {
+	p.SnapshotName = val
+}
+func (p *TGetGlobalSnapshotRequest) SetSnapshotType(val *TSnapshotType) {
+	p.SnapshotType = val
+}
+
+var fieldIDToName_TGetGlobalSnapshotRequest = map[int16]string{
+	1: "cluster",
+	2: "user",
+	3: "passwd",
+	4: "token",
+	5: "label_name",
+	6: "snapshot_name",
+	7: "snapshot_type",
+}
+
+func (p *TGetGlobalSnapshotRequest) IsSetCluster() bool {
+	return p.Cluster != nil
+}
+
+func (p *TGetGlobalSnapshotRequest) IsSetUser() bool {
+	return p.User != nil
+}
+
+func (p *TGetGlobalSnapshotRequest) IsSetPasswd() bool {
+	return p.Passwd != nil
+}
+
+func (p *TGetGlobalSnapshotRequest) IsSetToken() bool {
+	return p.Token != nil
+}
+
+func (p *TGetGlobalSnapshotRequest) IsSetLabelName() bool {
+	return p.LabelName != nil
+}
+
+func (p *TGetGlobalSnapshotRequest) IsSetSnapshotName() bool {
+	return p.SnapshotName != nil
+}
+
+func (p *TGetGlobalSnapshotRequest) IsSetSnapshotType() bool {
+	return p.SnapshotType != nil
+}
+
+func (p *TGetGlobalSnapshotRequest) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TGetGlobalSnapshotRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TGetGlobalSnapshotRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Cluster = _field
+	return nil
+}
+func (p *TGetGlobalSnapshotRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.User = _field
+	return nil
+}
+func (p *TGetGlobalSnapshotRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Passwd = _field
+	return nil
+}
+func (p *TGetGlobalSnapshotRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Token = _field
+	return nil
+}
+func (p *TGetGlobalSnapshotRequest) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.LabelName = _field
+	return nil
+}
+func (p *TGetGlobalSnapshotRequest) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SnapshotName = _field
+	return nil
+}
+func (p *TGetGlobalSnapshotRequest) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *TSnapshotType
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := TSnapshotType(v)
+		_field = &tmp
+	}
+	p.SnapshotType = _field
+	return nil
+}
+
+func (p *TGetGlobalSnapshotRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TGetGlobalSnapshotRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TGetGlobalSnapshotRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCluster() {
+		if err = oprot.WriteFieldBegin("cluster", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Cluster); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TGetGlobalSnapshotRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetUser() {
+		if err = oprot.WriteFieldBegin("user", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.User); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TGetGlobalSnapshotRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPasswd() {
+		if err = oprot.WriteFieldBegin("passwd", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Passwd); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *TGetGlobalSnapshotRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetToken() {
+		if err = oprot.WriteFieldBegin("token", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Token); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *TGetGlobalSnapshotRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLabelName() {
+		if err = oprot.WriteFieldBegin("label_name", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.LabelName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *TGetGlobalSnapshotRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSnapshotName() {
+		if err = oprot.WriteFieldBegin("snapshot_name", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SnapshotName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *TGetGlobalSnapshotRequest) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSnapshotType() {
+		if err = oprot.WriteFieldBegin("snapshot_type", thrift.I32, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.SnapshotType)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+
+func (p *TGetGlobalSnapshotRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TGetGlobalSnapshotRequest(%+v)", *p)
+
+}
+
+func (p *TGetGlobalSnapshotRequest) DeepEqual(ano *TGetGlobalSnapshotRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Cluster) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.User) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Passwd) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.Token) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.LabelName) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.SnapshotName) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.SnapshotType) {
+		return false
+	}
+	return true
+}
+
+func (p *TGetGlobalSnapshotRequest) Field1DeepEqual(src *string) bool {
+
+	if p.Cluster == src {
+		return true
+	} else if p.Cluster == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Cluster, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TGetGlobalSnapshotRequest) Field2DeepEqual(src *string) bool {
+
+	if p.User == src {
+		return true
+	} else if p.User == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.User, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TGetGlobalSnapshotRequest) Field3DeepEqual(src *string) bool {
+
+	if p.Passwd == src {
+		return true
+	} else if p.Passwd == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Passwd, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TGetGlobalSnapshotRequest) Field4DeepEqual(src *string) bool {
+
+	if p.Token == src {
+		return true
+	} else if p.Token == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Token, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TGetGlobalSnapshotRequest) Field5DeepEqual(src *string) bool {
+
+	if p.LabelName == src {
+		return true
+	} else if p.LabelName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.LabelName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TGetGlobalSnapshotRequest) Field6DeepEqual(src *string) bool {
+
+	if p.SnapshotName == src {
+		return true
+	} else if p.SnapshotName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SnapshotName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TGetGlobalSnapshotRequest) Field7DeepEqual(src *TSnapshotType) bool {
+
+	if p.SnapshotType == src {
+		return true
+	} else if p.SnapshotType == nil || src == nil {
+		return false
+	}
+	if *p.SnapshotType != *src {
+		return false
+	}
+	return true
+}
+
+type TGetGlobalSnapshotResult_ struct {
+	Status        *status.TStatus        `thrift:"status,1,optional" frugal:"1,optional,status.TStatus" json:"status,omitempty"`
+	GlobalInfo    []byte                 `thrift:"global_info,2,optional" frugal:"2,optional,binary" json:"global_info,omitempty"`
+	MasterAddress *types.TNetworkAddress `thrift:"master_address,3,optional" frugal:"3,optional,types.TNetworkAddress" json:"master_address,omitempty"`
+	ExpiredAt     *int64                 `thrift:"expiredAt,4,optional" frugal:"4,optional,i64" json:"expiredAt,omitempty"`
+	CommitSeq     *int64                 `thrift:"commit_seq,5,optional" frugal:"5,optional,i64" json:"commit_seq,omitempty"`
+}
+
+func NewTGetGlobalSnapshotResult_() *TGetGlobalSnapshotResult_ {
+	return &TGetGlobalSnapshotResult_{}
+}
+
+func (p *TGetGlobalSnapshotResult_) InitDefault() {
+}
+
+var TGetGlobalSnapshotResult__Status_DEFAULT *status.TStatus
+
+func (p *TGetGlobalSnapshotResult_) GetStatus() (v *status.TStatus) {
+	if !p.IsSetStatus() {
+		return TGetGlobalSnapshotResult__Status_DEFAULT
+	}
+	return p.Status
+}
+
+var TGetGlobalSnapshotResult__GlobalInfo_DEFAULT []byte
+
+func (p *TGetGlobalSnapshotResult_) GetGlobalInfo() (v []byte) {
+	if !p.IsSetGlobalInfo() {
+		return TGetGlobalSnapshotResult__GlobalInfo_DEFAULT
+	}
+	return p.GlobalInfo
+}
+
+var TGetGlobalSnapshotResult__MasterAddress_DEFAULT *types.TNetworkAddress
+
+func (p *TGetGlobalSnapshotResult_) GetMasterAddress() (v *types.TNetworkAddress) {
+	if !p.IsSetMasterAddress() {
+		return TGetGlobalSnapshotResult__MasterAddress_DEFAULT
+	}
+	return p.MasterAddress
+}
+
+var TGetGlobalSnapshotResult__ExpiredAt_DEFAULT int64
+
+func (p *TGetGlobalSnapshotResult_) GetExpiredAt() (v int64) {
+	if !p.IsSetExpiredAt() {
+		return TGetGlobalSnapshotResult__ExpiredAt_DEFAULT
+	}
+	return *p.ExpiredAt
+}
+
+var TGetGlobalSnapshotResult__CommitSeq_DEFAULT int64
+
+func (p *TGetGlobalSnapshotResult_) GetCommitSeq() (v int64) {
+	if !p.IsSetCommitSeq() {
+		return TGetGlobalSnapshotResult__CommitSeq_DEFAULT
+	}
+	return *p.CommitSeq
+}
+func (p *TGetGlobalSnapshotResult_) SetStatus(val *status.TStatus) {
+	p.Status = val
+}
+func (p *TGetGlobalSnapshotResult_) SetGlobalInfo(val []byte) {
+	p.GlobalInfo = val
+}
+func (p *TGetGlobalSnapshotResult_) SetMasterAddress(val *types.TNetworkAddress) {
+	p.MasterAddress = val
+}
+func (p *TGetGlobalSnapshotResult_) SetExpiredAt(val *int64) {
+	p.ExpiredAt = val
+}
+func (p *TGetGlobalSnapshotResult_) SetCommitSeq(val *int64) {
+	p.CommitSeq = val
+}
+
+var fieldIDToName_TGetGlobalSnapshotResult_ = map[int16]string{
+	1: "status",
+	2: "global_info",
+	3: "master_address",
+	4: "expiredAt",
+	5: "commit_seq",
+}
+
+func (p *TGetGlobalSnapshotResult_) IsSetStatus() bool {
+	return p.Status != nil
+}
+
+func (p *TGetGlobalSnapshotResult_) IsSetGlobalInfo() bool {
+	return p.GlobalInfo != nil
+}
+
+func (p *TGetGlobalSnapshotResult_) IsSetMasterAddress() bool {
+	return p.MasterAddress != nil
+}
+
+func (p *TGetGlobalSnapshotResult_) IsSetExpiredAt() bool {
+	return p.ExpiredAt != nil
+}
+
+func (p *TGetGlobalSnapshotResult_) IsSetCommitSeq() bool {
+	return p.CommitSeq != nil
+}
+
+func (p *TGetGlobalSnapshotResult_) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TGetGlobalSnapshotResult_[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TGetGlobalSnapshotResult_) ReadField1(iprot thrift.TProtocol) error {
+	_field := status.NewTStatus()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Status = _field
+	return nil
+}
+func (p *TGetGlobalSnapshotResult_) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field []byte
+	if v, err := iprot.ReadBinary(); err != nil {
+		return err
+	} else {
+		_field = []byte(v)
+	}
+	p.GlobalInfo = _field
+	return nil
+}
+func (p *TGetGlobalSnapshotResult_) ReadField3(iprot thrift.TProtocol) error {
+	_field := types.NewTNetworkAddress()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.MasterAddress = _field
+	return nil
+}
+func (p *TGetGlobalSnapshotResult_) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExpiredAt = _field
+	return nil
+}
+func (p *TGetGlobalSnapshotResult_) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CommitSeq = _field
+	return nil
+}
+
+func (p *TGetGlobalSnapshotResult_) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TGetGlobalSnapshotResult"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TGetGlobalSnapshotResult_) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStatus() {
+		if err = oprot.WriteFieldBegin("status", thrift.STRUCT, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Status.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TGetGlobalSnapshotResult_) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetGlobalInfo() {
+		if err = oprot.WriteFieldBegin("global_info", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBinary([]byte(p.GlobalInfo)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TGetGlobalSnapshotResult_) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMasterAddress() {
+		if err = oprot.WriteFieldBegin("master_address", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.MasterAddress.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *TGetGlobalSnapshotResult_) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExpiredAt() {
+		if err = oprot.WriteFieldBegin("expiredAt", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ExpiredAt); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *TGetGlobalSnapshotResult_) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCommitSeq() {
+		if err = oprot.WriteFieldBegin("commit_seq", thrift.I64, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.CommitSeq); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *TGetGlobalSnapshotResult_) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TGetGlobalSnapshotResult_(%+v)", *p)
+
+}
+
+func (p *TGetGlobalSnapshotResult_) DeepEqual(ano *TGetGlobalSnapshotResult_) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Status) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.GlobalInfo) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.MasterAddress) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.ExpiredAt) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.CommitSeq) {
+		return false
+	}
+	return true
+}
+
+func (p *TGetGlobalSnapshotResult_) Field1DeepEqual(src *status.TStatus) bool {
+
+	if !p.Status.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TGetGlobalSnapshotResult_) Field2DeepEqual(src []byte) bool {
+
+	if bytes.Compare(p.GlobalInfo, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TGetGlobalSnapshotResult_) Field3DeepEqual(src *types.TNetworkAddress) bool {
+
+	if !p.MasterAddress.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TGetGlobalSnapshotResult_) Field4DeepEqual(src *int64) bool {
+
+	if p.ExpiredAt == src {
+		return true
+	} else if p.ExpiredAt == nil || src == nil {
+		return false
+	}
+	if *p.ExpiredAt != *src {
+		return false
+	}
+	return true
+}
+func (p *TGetGlobalSnapshotResult_) Field5DeepEqual(src *int64) bool {
+
+	if p.CommitSeq == src {
+		return true
+	} else if p.CommitSeq == nil || src == nil {
+		return false
+	}
+	if *p.CommitSeq != *src {
+		return false
+	}
+	return true
+}
+
 type TTableRef struct {
 	Table     *string `thrift:"table,1,optional" frugal:"1,optional,string" json:"table,omitempty"`
 	AliasName *string `thrift:"alias_name,3,optional" frugal:"3,optional,string" json:"alias_name,omitempty"`
@@ -74380,6 +75468,8 @@ type FrontendService interface {
 
 	GetSnapshot(ctx context.Context, request *TGetSnapshotRequest) (r *TGetSnapshotResult_, err error)
 
+	GetGlobalSnapshot(ctx context.Context, request *TGetGlobalSnapshotRequest) (r *TGetGlobalSnapshotResult_, err error)
+
 	RestoreSnapshot(ctx context.Context, request *TRestoreSnapshotRequest) (r *TRestoreSnapshotResult_, err error)
 
 	LockBinlog(ctx context.Context, request *TLockBinlogRequest) (r *TLockBinlogResult_, err error)
@@ -74701,6 +75791,15 @@ func (p *FrontendServiceClient) GetSnapshot(ctx context.Context, request *TGetSn
 	_args.Request = request
 	var _result FrontendServiceGetSnapshotResult
 	if err = p.Client_().Call(ctx, "getSnapshot", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *FrontendServiceClient) GetGlobalSnapshot(ctx context.Context, request *TGetGlobalSnapshotRequest) (r *TGetGlobalSnapshotResult_, err error) {
+	var _args FrontendServiceGetGlobalSnapshotArgs
+	_args.Request = request
+	var _result FrontendServiceGetGlobalSnapshotResult
+	if err = p.Client_().Call(ctx, "getGlobalSnapshot", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
@@ -75083,6 +76182,7 @@ func NewFrontendServiceProcessor(handler FrontendService) *FrontendServiceProces
 	self.AddToProcessorMap("rollbackTxn", &frontendServiceProcessorRollbackTxn{handler: handler})
 	self.AddToProcessorMap("getBinlog", &frontendServiceProcessorGetBinlog{handler: handler})
 	self.AddToProcessorMap("getSnapshot", &frontendServiceProcessorGetSnapshot{handler: handler})
+	self.AddToProcessorMap("getGlobalSnapshot", &frontendServiceProcessorGetGlobalSnapshot{handler: handler})
 	self.AddToProcessorMap("restoreSnapshot", &frontendServiceProcessorRestoreSnapshot{handler: handler})
 	self.AddToProcessorMap("lockBinlog", &frontendServiceProcessorLockBinlog{handler: handler})
 	self.AddToProcessorMap("waitingTxnStatus", &frontendServiceProcessorWaitingTxnStatus{handler: handler})
@@ -76323,6 +77423,54 @@ func (p *frontendServiceProcessorGetSnapshot) Process(ctx context.Context, seqId
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("getSnapshot", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type frontendServiceProcessorGetGlobalSnapshot struct {
+	handler FrontendService
+}
+
+func (p *frontendServiceProcessorGetGlobalSnapshot) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := FrontendServiceGetGlobalSnapshotArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("getGlobalSnapshot", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := FrontendServiceGetGlobalSnapshotResult{}
+	var retval *TGetGlobalSnapshotResult_
+	if retval, err2 = p.handler.GetGlobalSnapshot(ctx, args.Request); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getGlobalSnapshot: "+err2.Error())
+		oprot.WriteMessageBegin("getGlobalSnapshot", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("getGlobalSnapshot", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -86532,6 +87680,346 @@ func (p *FrontendServiceGetSnapshotResult) DeepEqual(ano *FrontendServiceGetSnap
 }
 
 func (p *FrontendServiceGetSnapshotResult) Field0DeepEqual(src *TGetSnapshotResult_) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type FrontendServiceGetGlobalSnapshotArgs struct {
+	Request *TGetGlobalSnapshotRequest `thrift:"request,1" frugal:"1,default,TGetGlobalSnapshotRequest" json:"request"`
+}
+
+func NewFrontendServiceGetGlobalSnapshotArgs() *FrontendServiceGetGlobalSnapshotArgs {
+	return &FrontendServiceGetGlobalSnapshotArgs{}
+}
+
+func (p *FrontendServiceGetGlobalSnapshotArgs) InitDefault() {
+}
+
+var FrontendServiceGetGlobalSnapshotArgs_Request_DEFAULT *TGetGlobalSnapshotRequest
+
+func (p *FrontendServiceGetGlobalSnapshotArgs) GetRequest() (v *TGetGlobalSnapshotRequest) {
+	if !p.IsSetRequest() {
+		return FrontendServiceGetGlobalSnapshotArgs_Request_DEFAULT
+	}
+	return p.Request
+}
+func (p *FrontendServiceGetGlobalSnapshotArgs) SetRequest(val *TGetGlobalSnapshotRequest) {
+	p.Request = val
+}
+
+var fieldIDToName_FrontendServiceGetGlobalSnapshotArgs = map[int16]string{
+	1: "request",
+}
+
+func (p *FrontendServiceGetGlobalSnapshotArgs) IsSetRequest() bool {
+	return p.Request != nil
+}
+
+func (p *FrontendServiceGetGlobalSnapshotArgs) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FrontendServiceGetGlobalSnapshotArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetGlobalSnapshotArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewTGetGlobalSnapshotRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Request = _field
+	return nil
+}
+
+func (p *FrontendServiceGetGlobalSnapshotArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("getGlobalSnapshot_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetGlobalSnapshotArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Request.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *FrontendServiceGetGlobalSnapshotArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("FrontendServiceGetGlobalSnapshotArgs(%+v)", *p)
+
+}
+
+func (p *FrontendServiceGetGlobalSnapshotArgs) DeepEqual(ano *FrontendServiceGetGlobalSnapshotArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Request) {
+		return false
+	}
+	return true
+}
+
+func (p *FrontendServiceGetGlobalSnapshotArgs) Field1DeepEqual(src *TGetGlobalSnapshotRequest) bool {
+
+	if !p.Request.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type FrontendServiceGetGlobalSnapshotResult struct {
+	Success *TGetGlobalSnapshotResult_ `thrift:"success,0,optional" frugal:"0,optional,TGetGlobalSnapshotResult_" json:"success,omitempty"`
+}
+
+func NewFrontendServiceGetGlobalSnapshotResult() *FrontendServiceGetGlobalSnapshotResult {
+	return &FrontendServiceGetGlobalSnapshotResult{}
+}
+
+func (p *FrontendServiceGetGlobalSnapshotResult) InitDefault() {
+}
+
+var FrontendServiceGetGlobalSnapshotResult_Success_DEFAULT *TGetGlobalSnapshotResult_
+
+func (p *FrontendServiceGetGlobalSnapshotResult) GetSuccess() (v *TGetGlobalSnapshotResult_) {
+	if !p.IsSetSuccess() {
+		return FrontendServiceGetGlobalSnapshotResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *FrontendServiceGetGlobalSnapshotResult) SetSuccess(x interface{}) {
+	p.Success = x.(*TGetGlobalSnapshotResult_)
+}
+
+var fieldIDToName_FrontendServiceGetGlobalSnapshotResult = map[int16]string{
+	0: "success",
+}
+
+func (p *FrontendServiceGetGlobalSnapshotResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *FrontendServiceGetGlobalSnapshotResult) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FrontendServiceGetGlobalSnapshotResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetGlobalSnapshotResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewTGetGlobalSnapshotResult_()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *FrontendServiceGetGlobalSnapshotResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("getGlobalSnapshot_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *FrontendServiceGetGlobalSnapshotResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *FrontendServiceGetGlobalSnapshotResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("FrontendServiceGetGlobalSnapshotResult(%+v)", *p)
+
+}
+
+func (p *FrontendServiceGetGlobalSnapshotResult) DeepEqual(ano *FrontendServiceGetGlobalSnapshotResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *FrontendServiceGetGlobalSnapshotResult) Field0DeepEqual(src *TGetGlobalSnapshotResult_) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

@@ -46,6 +46,7 @@ func NewServiceInfo() *kitex.ServiceInfo {
 		"rollbackTxn":               kitex.NewMethodInfo(rollbackTxnHandler, newFrontendServiceRollbackTxnArgs, newFrontendServiceRollbackTxnResult, false),
 		"getBinlog":                 kitex.NewMethodInfo(getBinlogHandler, newFrontendServiceGetBinlogArgs, newFrontendServiceGetBinlogResult, false),
 		"getSnapshot":               kitex.NewMethodInfo(getSnapshotHandler, newFrontendServiceGetSnapshotArgs, newFrontendServiceGetSnapshotResult, false),
+		"getGlobalSnapshot":         kitex.NewMethodInfo(getGlobalSnapshotHandler, newFrontendServiceGetGlobalSnapshotArgs, newFrontendServiceGetGlobalSnapshotResult, false),
 		"restoreSnapshot":           kitex.NewMethodInfo(restoreSnapshotHandler, newFrontendServiceRestoreSnapshotArgs, newFrontendServiceRestoreSnapshotResult, false),
 		"lockBinlog":                kitex.NewMethodInfo(lockBinlogHandler, newFrontendServiceLockBinlogArgs, newFrontendServiceLockBinlogResult, false),
 		"waitingTxnStatus":          kitex.NewMethodInfo(waitingTxnStatusHandler, newFrontendServiceWaitingTxnStatusArgs, newFrontendServiceWaitingTxnStatusResult, false),
@@ -547,6 +548,24 @@ func newFrontendServiceGetSnapshotArgs() interface{} {
 
 func newFrontendServiceGetSnapshotResult() interface{} {
 	return frontendservice.NewFrontendServiceGetSnapshotResult()
+}
+
+func getGlobalSnapshotHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*frontendservice.FrontendServiceGetGlobalSnapshotArgs)
+	realResult := result.(*frontendservice.FrontendServiceGetGlobalSnapshotResult)
+	success, err := handler.(frontendservice.FrontendService).GetGlobalSnapshot(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newFrontendServiceGetGlobalSnapshotArgs() interface{} {
+	return frontendservice.NewFrontendServiceGetGlobalSnapshotArgs()
+}
+
+func newFrontendServiceGetGlobalSnapshotResult() interface{} {
+	return frontendservice.NewFrontendServiceGetGlobalSnapshotResult()
 }
 
 func restoreSnapshotHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1469,6 +1488,16 @@ func (p *kClient) GetSnapshot(ctx context.Context, request *frontendservice.TGet
 	_args.Request = request
 	var _result frontendservice.FrontendServiceGetSnapshotResult
 	if err = p.c.Call(ctx, "getSnapshot", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetGlobalSnapshot(ctx context.Context, request *frontendservice.TGetGlobalSnapshotRequest) (r *frontendservice.TGetGlobalSnapshotResult_, err error) {
+	var _args frontendservice.FrontendServiceGetGlobalSnapshotArgs
+	_args.Request = request
+	var _result frontendservice.FrontendServiceGetGlobalSnapshotResult
+	if err = p.c.Call(ctx, "getGlobalSnapshot", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

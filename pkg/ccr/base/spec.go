@@ -83,7 +83,7 @@ func ParseBackupState(state string) BackupState {
 	}
 }
 
-// isSystemDatabase 判断是否为系统数据库，需要跳过
+// isSystemDatabase determines if it's a system database that should be skipped
 func isSystemDatabase(dbName string) bool {
 	systemDatabases := []string{
 		"information_schema",
@@ -501,7 +501,7 @@ func (s *Spec) GetAllDatabases() ([]string, error) {
 		if err := rows.Scan(&database); err != nil {
 			return nil, xerror.Wrapf(err, xerror.Normal, "scan database failed")
 		}
-		// 过滤系统数据库
+		// Filter system databases
 		if !isSystemDatabase(database) {
 			databases = append(databases, database)
 		}
@@ -823,6 +823,45 @@ func (s *Spec) CreateSnapshot(snapshotName string, tables []string) error {
 	return nil
 }
 
+// CreateGlobalSnapshot creates a global snapshot for synchronizing global objects
+// Sets different properties based on different options
+func (s *Spec) CreateGlobalSnapshot(snapshotName string, backupPrivilege, backupCatalog, backupWorkloadGroup bool) error {
+	log.Infof("Creating global snapshot %s", snapshotName)
+
+	db, err := s.Connect()
+	if err != nil {
+		return err
+	}
+
+	// Build SQL statement
+	sql := fmt.Sprintf("BACKUP GLOBAL SNAPSHOT %s TO `__keep_on_local__`", utils.FormatKeywordName(snapshotName))
+
+	// Add properties based on different options
+	properties := make([]string, 0)
+	if backupPrivilege {
+		properties = append(properties, "\"backup_privilege\" = \"true\"")
+	}
+	if backupCatalog {
+		properties = append(properties, "\"backup_catalog\" = \"true\"")
+	}
+	if backupWorkloadGroup {
+		properties = append(properties, "\"backup_workload_group\" = \"true\"")
+	}
+
+	// If there are properties, add PROPERTIES clause
+	if len(properties) > 0 {
+		sql += fmt.Sprintf(" PROPERTIES (%s)", strings.Join(properties, ", "))
+	}
+
+	log.Infof("Creating global snapshot SQL: %s", sql)
+	_, err = db.Exec(sql)
+	if err != nil {
+		return xerror.Wrapf(err, xerror.Normal, "Failed to create global snapshot %s, SQL: %s", snapshotName, sql)
+	}
+
+	return nil
+}
+
 // mysql> BACKUP SNAPSHOT ccr.snapshot_20230605 TO `__keep_on_local__` ON (src_1 PARTITION (`p1`)) PROPERTIES ("type" = "full");
 func (s *Spec) CreatePartialSnapshot(snapshotName, table string, partitions []string) error {
 	if len(table) == 0 {
@@ -895,6 +934,87 @@ func (s *Spec) checkBackupFinished(snapshotName string) (BackupState, string, er
 	}
 
 	return BackupStateUnknown, "", xerror.Errorf(xerror.Normal, "no backup state found, sql: %s", sql)
+}
+
+// checkGlobalBackupFinished checks global backup status
+func (s *Spec) checkGlobalBackupFinished(snapshotName string) (BackupState, string, error) {
+	log.Tracef("Checking global backup status %s", snapshotName)
+
+	db, err := s.Connect()
+	if err != nil {
+		return BackupStateUnknown, "", err
+	}
+
+	sql := fmt.Sprintf("SHOW GLOBAL BACKUP WHERE SnapshotName = \"%s\"", snapshotName)
+	log.Infof("Checking global backup status SQL: %s", sql)
+	rows, err := db.Query(sql)
+	if err != nil {
+		return BackupStateUnknown, "", xerror.Wrapf(err, xerror.Normal, "Failed to query global backup status, SQL: %s", sql)
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return BackupStateUnknown, "", xerror.Wrap(err, xerror.Normal, sql)
+		}
+
+		stateStr, err := rowParser.GetString("State")
+		if err != nil {
+			return BackupStateUnknown, "", xerror.Wrap(err, xerror.Normal, "Failed to parse global backup State")
+		}
+
+		status, err := rowParser.GetString("Status")
+		if err != nil {
+			return BackupStateUnknown, "", xerror.Wrap(err, xerror.Normal, "Failed to parse global backup Status")
+		}
+
+		log.Infof("Checking global snapshot %s backup status: [%v]", snapshotName, stateStr)
+		return ParseBackupState(stateStr), status, nil
+	}
+
+	if err := rows.Err(); err != nil {
+		return BackupStateUnknown, "", xerror.Wrapf(err, xerror.Normal, "Check global backup status, SQL: %s", sql)
+	}
+
+	return BackupStateUnknown, "", xerror.Errorf(xerror.Normal, "Global backup status not found, SQL: %s", sql)
+}
+
+// CheckGlobalBackupFinished checks if global backup is finished
+func (s *Spec) CheckGlobalBackupFinished(snapshotName string) (bool, error) {
+	log.Tracef("Checking if global backup is finished, spec: %s, snapshot: %s", s.String(), snapshotName)
+
+	// Retry network related errors to avoid full sync when target network is interrupted or process is restarted
+	if backupState, status, err := s.checkGlobalBackupFinished(snapshotName); err != nil && !isNetworkRelated(err) {
+		return false, err
+	} else if err == nil && backupState == BackupStateFinished {
+		return true, nil
+	} else if err == nil && backupState == BackupStateCancelled {
+		return false, xerror.Errorf(xerror.Normal, "Global backup failed or cancelled, backup status: %s", status)
+	} else {
+		// BackupStatePending, BackupStateUnknown or network related errors
+		if err != nil {
+			log.Warnf("Failed to check global backup status, spec: %s, snapshot: %s, err: %v", s.String(), snapshotName, err)
+		}
+		return false, nil
+	}
+}
+
+func (s *Spec) RestoreGlobalInfo(sqls string) error {
+	log.Infof("Restoring global information")
+
+	db, err := s.Connect()
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Executing global restore SQL: %s", sqls)
+	_, err = db.Exec(sqls)
+	if err != nil {
+		return xerror.Wrapf(err, xerror.Normal, "Failed to restore global information, SQL: %s", sqls)
+	}
+
+	return nil
 }
 
 func (s *Spec) CheckBackupFinished(snapshotName string) (bool, error) {

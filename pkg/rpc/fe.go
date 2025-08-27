@@ -108,6 +108,7 @@ type IFeRpc interface {
 	GetBinlog(*base.Spec, int64, int64) (*festruct.TGetBinlogResult_, error)
 	GetBinlogLag(*base.Spec, int64) (*festruct.TGetBinlogLagResult_, error)
 	GetSnapshot(*base.Spec, string, bool) (*festruct.TGetSnapshotResult_, error)
+	GetGlobalSnapshot(*base.Spec, string) (*festruct.TGetGlobalSnapshotResult_, error)
 	RestoreSnapshot(*base.Spec, *RestoreSnapshotRequest) (*festruct.TRestoreSnapshotResult_, error)
 	GetMasterToken(*base.Spec) (*festruct.TGetMasterTokenResult_, error)
 	GetDbMeta(spec *base.Spec) (*festruct.TGetMetaResult_, error)
@@ -471,6 +472,14 @@ func (rpc *FeRpc) GetSnapshot(spec *base.Spec, labelName string, compress bool) 
 	return convertResult[festruct.TGetSnapshotResult_](result, err)
 }
 
+func (rpc *FeRpc) GetGlobalSnapshot(spec *base.Spec, labelName string) (*festruct.TGetGlobalSnapshotResult_, error) {
+	caller := func(client IFeRpc) (resultType, error) {
+		return client.GetGlobalSnapshot(spec, labelName)
+	}
+	result, err := rpc.callWithMasterRedirect(caller)
+	return convertResult[festruct.TGetGlobalSnapshotResult_](result, err)
+}
+
 func (rpc *FeRpc) RestoreSnapshot(spec *base.Spec, req *RestoreSnapshotRequest) (*festruct.TRestoreSnapshotResult_, error) {
 	caller := func(client IFeRpc) (resultType, error) {
 		return client.RestoreSnapshot(spec, req)
@@ -796,6 +805,41 @@ func (rpc *singleFeClient) GetSnapshot(spec *base.Spec, labelName string, compre
 		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), req.GetSnapshotName(), req.GetSnapshotType(), req.GetEnableCompress())
 	if resp, err := client.GetSnapshot(context.Background(), req); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "GetSnapshot error: %v, req: %+v", err, req)
+	} else {
+		return resp, nil
+	}
+}
+
+//	struct TGetGlobalSnapshotRequest {
+//	    1: optional string cluster
+//	    2: optional string user
+//	    3: optional string passwd
+//	    4: optional string token
+//	    5: optional string label_name
+//	    6: optional string snapshot_name
+//	    7: optional TSnapshotType snapshot_type
+//	}
+//
+// Get Global Snapshot rpc
+func (rpc *singleFeClient) GetGlobalSnapshot(spec *base.Spec, labelName string) (*festruct.TGetGlobalSnapshotResult_, error) {
+	log.Tracef("Call GetGlobalSnapshot, addr: %s, spec: %s, label: %s", rpc.Address(), spec, labelName)
+
+	defer xmetrics.RecordFeRpc("GetGlobalSnapshot", rpc.addr)()
+
+	client := rpc.client
+	snapshotType := festruct.TSnapshotType_LOCAL
+	req := &festruct.TGetGlobalSnapshotRequest{
+		Cluster:      &spec.Cluster,
+		User:         &spec.User,
+		Passwd:       &spec.Password,
+		SnapshotName: &labelName,
+		SnapshotType: &snapshotType,
+	}
+
+	log.Tracef("GetGlobalSnapshotRequest user %s, cluster %s, snapshot name %s, snapshot type %d",
+		req.GetUser(), req.GetCluster(), req.GetSnapshotName(), req.GetSnapshotType())
+	if resp, err := client.GetGlobalSnapshot(context.Background(), req); err != nil {
+		return nil, xerror.Wrapf(err, xerror.RPC, "GetGlobalSnapshot error: %v, req: %+v", err, req)
 	} else {
 		return resp, nil
 	}

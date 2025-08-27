@@ -40,6 +40,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Global sync related constants
+const (
+	MAX_CHECK_RETRY_TIMES = 20
+	BACKUP_CHECK_DURATION = 5 * time.Second
+)
+
 // TODO(Drogon): impl a generic http request handle parse json
 
 func writeJson(w http.ResponseWriter, data interface{}) {
@@ -103,7 +109,7 @@ type CreateCcrRequest struct {
 	// For table sync, allow to create ccr job even if the target table already exists.
 	AllowTableExists bool `json:"allow_table_exists"`
 	ReuseBinlogLabel bool `json:"reuse_binlog_label"`
-	// 是否为集群级同步，如果为true，将获取源集群所有数据库并为每个数据库创建同步任务
+	// Whether it's cluster-level sync, if true, will get all databases from source cluster and create sync task for each database
 	ClusterSync bool `json:"cluster_sync"`
 }
 
@@ -158,12 +164,12 @@ func createCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobMana
 	return nil
 }
 
-// createClusterCcr 创建集群级别的CCR同步任务
-// 获取源集群的所有数据库，为每个数据库创建一个同步任务
+// createClusterCcr creates cluster-level CCR sync tasks
+// Gets all databases from source cluster and creates a sync task for each database
 func createClusterCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobManager) error {
 	log.Infof("create cluster ccr %s", request)
 
-	// 获取源集群的所有数据库列表
+	// Get all database list from source cluster
 	databases, err := getDatabaseList(&request.Src)
 	if err != nil {
 		return xerror.Wrapf(err, xerror.Normal, "Failed to get database list from source cluster")
@@ -179,15 +185,15 @@ func createClusterCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.
 	successCount := 0
 
 	for _, dbName := range databases {
-		// 为每个数据库创建一个新的请求
+		// Create a new request for each database
 		dbRequest := &CreateCcrRequest{
-			Name:             fmt.Sprintf("%s_%s", request.Name, dbName), // 任务名称加上数据库名称
+			Name:             fmt.Sprintf("%s_%s", request.Name, dbName), // Task name with database name
 			Src:              request.Src,
 			Dest:             request.Dest,
 			SkipError:        request.SkipError,
 			AllowTableExists: request.AllowTableExists,
 			ReuseBinlogLabel: request.ReuseBinlogLabel,
-			ClusterSync:      false, // 设置为false，避免递归调用
+			ClusterSync:      false, // Set to false to avoid recursive calls
 		}
 
 		dbRequest.Src.Database = dbName
@@ -214,13 +220,13 @@ func createClusterCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.
 
 	log.Infof("Cluster-level sync tasks creation completed, success: %d, failed: %d", successCount, len(errors))
 
-	// 启动守护任务，周期性检测源集群新增数据库，传入已有的数据库列表
+	// Start daemon task to periodically detect new databases in source cluster, pass existing database list
 	go startDatabaseMonitor(request, db, jobManager, databases)
 
 	return nil
 }
 
-// startDatabaseMonitor 启动一个守护任务，周期性检测源集群新增和删除的数据库，并创建或删除对应的同步任务
+// startDatabaseMonitor starts a daemon task to periodically detect new and deleted databases in source cluster, and create or delete corresponding sync tasks
 func startDatabaseMonitor(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobManager, initialDatabases []string) {
 	log.Infof("Starting database monitor daemon, task name prefix: %s", request.Name)
 
@@ -244,7 +250,7 @@ func initializeDatabaseTracking(initialDatabases []string) map[string]bool {
 	return existingDatabases
 }
 
-// monitorDatabaseChanges 检测数据库变化并处理
+// monitorDatabaseChanges detects database changes and handles them
 func monitorDatabaseChanges(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobManager, existingDatabases map[string]bool) {
 	currentDatabases, err := request.Src.GetAllDatabases()
 	if err != nil {
@@ -322,7 +328,7 @@ func handleNewDatabases(newDatabases []string, request *CreateCcrRequest, db sto
 			SkipError:        request.SkipError,
 			AllowTableExists: request.AllowTableExists,
 			ReuseBinlogLabel: request.ReuseBinlogLabel,
-			ClusterSync:      false, // 设置为false，避免递归调用
+			ClusterSync:      false, // Set to false to avoid recursive calls
 		}
 
 		dbRequest.Src.Database = dbName
@@ -332,10 +338,12 @@ func handleNewDatabases(newDatabases []string, request *CreateCcrRequest, db sto
 		for i := 0; i < maxRetries; i++ {
 			if err := createCcr(dbRequest, db, jobManager); err != nil {
 				if i == maxRetries-1 {
-					log.Warnf("Failed to create sync task for new database %s (attempt %d/%d): %v", dbName, i+1, maxRetries, err)
+					log.Warnf("Failed to create sync task for new database %s (attempt %d/%d): %v",
+						dbName, i+1, maxRetries, err)
 				} else {
-					log.Warnf("Failed to create sync task for new database %s (attempt %d/%d): %v, will retry", dbName, i+1, maxRetries, err)
-					time.Sleep(time.Second * time.Duration(i+1)) // 指数退避
+					log.Warnf("Failed to create sync task for new database %s (attempt %d/%d): %v, will retry",
+						dbName, i+1, maxRetries, err)
+					time.Sleep(time.Second * time.Duration(i+1)) // Exponential backoff
 				}
 			} else {
 				log.Infof("Successfully created sync task for new database %s", dbName)
@@ -367,7 +375,7 @@ func handleDeletedDatabases(deletedDatabases []string, request *CreateCcrRequest
 					log.Warnf("Failed to remove sync task for deleted database %s (attempt %d/%d): %v", dbName, i+1, maxRetries, err)
 				} else {
 					log.Warnf("Failed to remove sync task for deleted database %s (attempt %d/%d): %v, will retry", dbName, i+1, maxRetries, err)
-					time.Sleep(time.Second * time.Duration(i+1)) // 指数退避
+					time.Sleep(time.Second * time.Duration(i+1)) // Exponential backoff
 				}
 			} else {
 				log.Infof("Successfully removed sync task for deleted database %s", dbName)
@@ -377,7 +385,7 @@ func handleDeletedDatabases(deletedDatabases []string, request *CreateCcrRequest
 	}
 }
 
-// logMonitoringStatus 记录监控状态
+// logMonitoringStatus logs monitoring status
 func logMonitoringStatus(newDatabases []string, deletedDatabases []string, existingDatabases map[string]bool) {
 	if len(newDatabases) == 0 && len(deletedDatabases) == 0 {
 		log.Infof("No database changes detected, currently have %d databases", len(existingDatabases))
@@ -387,7 +395,7 @@ func logMonitoringStatus(newDatabases []string, deletedDatabases []string, exist
 func getDatabaseList(spec *base.Spec) ([]string, error) {
 	log.Infof("Getting database list for cluster %s", spec.Host)
 
-	// 使用Specer接口的GetAllDatabases方法
+	// Use Specer interface's GetAllDatabases method
 	databases, err := spec.GetAllDatabases()
 	if err != nil {
 		return nil, xerror.Wrapf(err, xerror.Normal, "Failed to get database list")
@@ -1333,9 +1341,195 @@ func (s *HttpService) failpointHandler(w http.ResponseWriter, r *http.Request) {
 	result = newSuccessResult()
 }
 
+// SyncGlobalRequest defines the structure of global sync request
+type SyncGlobalRequest struct {
+	// Required fields
+	Name string    `json:"name"`
+	Src  base.Spec `json:"src"`
+	Dest base.Spec `json:"dest"`
+	// Optional fields
+	All                 bool `json:"all"`
+	BackupPrivilege     bool `json:"backup_privilege"`
+	BackupCatalog       bool `json:"backup_catalog"`
+	BackupWorkloadGroup bool `json:"backup_workload_group"`
+}
+
+// Validate SyncGlobalRequest to ensure only one optional field is true
+func (r *SyncGlobalRequest) validate() error {
+	// Check required fields
+	if r.Name == "" {
+		return xerror.Errorf(xerror.Normal, "name is required")
+	}
+
+	// Check optional fields logic:
+	// If 'all' is set, other options don't need to be checked
+	// If 'all' is not set, other options can be set freely (multiple or none)
+	if r.All {
+		// If 'all' is set, validation passes regardless of other options
+		return nil
+	}
+
+	// If 'all' is not set, check if at least one other option is set
+	if !r.BackupPrivilege && !r.BackupCatalog && !r.BackupWorkloadGroup {
+		return xerror.Errorf(xerror.Normal, "Must specify at least one sync option: all, backup_privilege, backup_catalog, backup_workload_group")
+	}
+
+	return nil
+}
+
+// String method implements Stringer interface
+func (r *SyncGlobalRequest) String() string {
+	return fmt.Sprintf("name: %s, src: %v, dest: %v, all: %v, backup_privilege: %v, backup_catalog: %v, backup_workload_group: %v",
+		r.Name, r.Src, r.Dest, r.All, r.BackupPrivilege, r.BackupCatalog, r.BackupWorkloadGroup)
+}
+
+// syncGlobal executes global sync operation
+// createGlobalSnapshot creates a global snapshot on the source cluster
+func createGlobalSnapshot(request *SyncGlobalRequest) error {
+	log.Infof("Creating global snapshot %s", request.Name)
+
+	err := request.Src.CreateGlobalSnapshot(
+		request.Name,
+		request.BackupPrivilege,
+		request.BackupCatalog,
+		request.BackupWorkloadGroup,
+	)
+	if err != nil {
+		return xerror.Wrapf(err, xerror.Normal, "Failed to create global snapshot")
+	}
+
+	return nil
+}
+
+// waitForGlobalBackupCompletion waits for the global backup to complete
+func waitForGlobalBackupCompletion(request *SyncGlobalRequest) error {
+	log.Infof("Waiting for global backup %s to complete", request.Name)
+
+	for i := 0; i < MAX_CHECK_RETRY_TIMES; i++ {
+		finished, err := request.Src.CheckGlobalBackupFinished(request.Name)
+		if err != nil {
+			return xerror.Wrapf(err, xerror.Normal, "Failed to check global backup status")
+		}
+
+		if finished {
+			log.Infof("Global backup %s completed", request.Name)
+			return nil
+		}
+
+		time.Sleep(BACKUP_CHECK_DURATION)
+	}
+
+	return xerror.Errorf(xerror.Normal, "Timeout waiting for global backup completion, max retry times: %d", MAX_CHECK_RETRY_TIMES)
+}
+
+// processGlobalSnapshotInfo retrieves and processes global snapshot information
+func processGlobalSnapshotInfo(request *SyncGlobalRequest) error {
+	log.Infof("Getting global snapshot %s details", request.Name)
+
+	feRpc, err := rpc.NewFeRpc(&request.Src)
+	if err != nil {
+		log.Warnf("Failed to create FE RPC client: %+v", err)
+		// Don't return error because backup has completed successfully
+		return nil
+	}
+
+	snapshot, err := feRpc.GetGlobalSnapshot(&request.Src, request.Name)
+	if err != nil {
+		log.Warnf("Failed to get global snapshot details: %+v", err)
+		// Don't return error because backup has completed successfully
+		return nil
+	}
+
+	log.Infof("Global snapshot details: %+v", snapshot)
+
+	if snapshot.GlobalInfo == nil {
+		log.Warnf("Global snapshot information is empty")
+		return nil
+	}
+
+	return executeGlobalSnapshotSQL(request, snapshot.GlobalInfo)
+}
+
+// executeGlobalSnapshotSQL converts and executes global snapshot SQL statements
+func executeGlobalSnapshotSQL(request *SyncGlobalRequest, globalInfo []byte) error {
+	// GlobalInfo contains SQL statements, not JSON format
+	sqlStatements, err := ccr.NewBackupSqlsFromBytes(globalInfo)
+	if err != nil {
+		log.Warnf("Failed to convert global snapshot SQL statements: %+v", err)
+		return nil // Don't return error as this is not critical
+	}
+
+	log.Infof("Global snapshot SQL statements: %s", sqlStatements)
+
+	// Call RestoreGlobalInfo function to execute corresponding SQL on dest cluster
+	err = request.Dest.RestoreGlobalInfo(sqlStatements)
+	if err != nil {
+		log.Errorf("Failed to execute global snapshot SQL: %+v", err)
+		return err
+	}
+
+	log.Infof("Global snapshot SQL executed successfully")
+	return nil
+}
+
+// syncGlobal executes global sync operation
+func syncGlobal(request *SyncGlobalRequest) error {
+	log.Infof("Executing global sync %s", request)
+
+	// Step 1: Create global snapshot
+	if err := createGlobalSnapshot(request); err != nil {
+		return err
+	}
+
+	// Step 2: Wait for backup completion
+	if err := waitForGlobalBackupCompletion(request); err != nil {
+		return err
+	}
+
+	// Step 3: Process snapshot information and execute SQL
+	if err := processGlobalSnapshotInfo(request); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// syncGlobalHandler handles global sync requests
+func (s *HttpService) syncGlobalHandler(w http.ResponseWriter, r *http.Request) {
+	log.Infof("Global sync request")
+
+	var syncResult *defaultResult
+	defer func() { writeJson(w, syncResult) }()
+
+	// Parse JSON request body
+	var request SyncGlobalRequest
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Warnf("Failed to parse global sync request: %+v", err)
+		syncResult = newErrorResult(err.Error())
+		return
+	}
+
+	// Validate request
+	if err = request.validate(); err != nil {
+		log.Warnf("Global sync request validation failed: %+v", err)
+		syncResult = newErrorResult(err.Error())
+		return
+	}
+
+	// Execute global sync
+	if err = syncGlobal(&request); err != nil {
+		log.Warnf("Global sync failed: %+v", err)
+		syncResult = newErrorResult(err.Error())
+	} else {
+		syncResult = newSuccessResult()
+	}
+}
+
 func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/version", s.versionHandler)
 	s.mux.HandleFunc("/create_ccr", s.createHandler)
+	s.mux.HandleFunc("/sync_global", s.syncGlobalHandler)
 	s.mux.HandleFunc("/pause", s.pauseHandler)
 	s.mux.HandleFunc("/resume", s.resumeHandler)
 	s.mux.HandleFunc("/delete", s.deleteHandler)

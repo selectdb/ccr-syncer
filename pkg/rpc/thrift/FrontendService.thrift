@@ -1197,6 +1197,24 @@ struct TGetSnapshotResult {
     7: optional i64 commit_seq;
 }
 
+struct TGetGlobalSnapshotRequest {
+    1: optional string cluster
+    2: optional string user
+    3: optional string passwd
+    4: optional string token
+    5: optional string label_name
+    6: optional string snapshot_name
+    7: optional TSnapshotType snapshot_type
+}
+
+struct TGetGlobalSnapshotResult {
+    1: optional Status.TStatus status
+    2: optional binary global_info
+    3: optional Types.TNetworkAddress master_address
+    4: optional i64 expiredAt;  // in millis
+    5: optional i64 commit_seq;
+}
+
 struct TTableRef {
     1: optional string table
     3: optional string alias_name
@@ -1590,6 +1608,7 @@ service FrontendService {
     TRollbackTxnResult rollbackTxn(1: TRollbackTxnRequest request)
     TGetBinlogResult getBinlog(1: TGetBinlogRequest request)
     TGetSnapshotResult getSnapshot(1: TGetSnapshotRequest request)
+    TGetGlobalSnapshotResult getGlobalSnapshot(1: TGetGlobalSnapshotRequest request)
     TRestoreSnapshotResult restoreSnapshot(1: TRestoreSnapshotRequest request)
     TLockBinlogResult lockBinlog(1: TLockBinlogRequest request)
 
