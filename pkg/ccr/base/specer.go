@@ -47,7 +47,10 @@ type Specer interface {
 	CancelRestoreIfExists(snapshotName string) error
 	CreatePartialSnapshot(snapshotName, table string, partitions []string) error
 	CreateSnapshot(snapshotName string, tables []string) error
+	CreateGlobalSnapshot(snapshotName string, backupPrivilege, backupCatalog, backupWorkloadGroup bool) error
+	RestoreGlobalInfo(sqls string) error
 	CheckBackupFinished(snapshotName string) (bool, error)
+	CheckGlobalBackupFinished(snapshotName string) (bool, error)
 	CheckRestoreFinished(snapshotName string) (bool, error)
 	GetRestoreSignatureNotMatchedTableOrView(snapshotName string) (string, bool, error)
 	WaitTransactionDone(txnId int64) // busy wait

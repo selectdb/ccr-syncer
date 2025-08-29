@@ -55,6 +55,10 @@ func NewBackupJobInfoFromJson(data []byte) (*BackupJobInfo, error) {
 	return jobInfo, nil
 }
 
+func NewBackupSqlsFromBytes(backupSqls []byte) (string, error) {
+	return string(backupSqls), nil
+}
+
 func (i *BackupJobInfo) TableNameMapping() map[int64]string {
 	tableMapping := make(map[int64]string)
 	for tableName, tableInfo := range i.BackupObjects {

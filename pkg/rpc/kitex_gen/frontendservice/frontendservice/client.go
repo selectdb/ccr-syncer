@@ -38,6 +38,7 @@ type Client interface {
 	RollbackTxn(ctx context.Context, request *frontendservice.TRollbackTxnRequest, callOptions ...callopt.Option) (r *frontendservice.TRollbackTxnResult_, err error)
 	GetBinlog(ctx context.Context, request *frontendservice.TGetBinlogRequest, callOptions ...callopt.Option) (r *frontendservice.TGetBinlogResult_, err error)
 	GetSnapshot(ctx context.Context, request *frontendservice.TGetSnapshotRequest, callOptions ...callopt.Option) (r *frontendservice.TGetSnapshotResult_, err error)
+	GetGlobalSnapshot(ctx context.Context, request *frontendservice.TGetGlobalSnapshotRequest, callOptions ...callopt.Option) (r *frontendservice.TGetGlobalSnapshotResult_, err error)
 	RestoreSnapshot(ctx context.Context, request *frontendservice.TRestoreSnapshotRequest, callOptions ...callopt.Option) (r *frontendservice.TRestoreSnapshotResult_, err error)
 	LockBinlog(ctx context.Context, request *frontendservice.TLockBinlogRequest, callOptions ...callopt.Option) (r *frontendservice.TLockBinlogResult_, err error)
 	WaitingTxnStatus(ctx context.Context, request *frontendservice.TWaitingTxnStatusRequest, callOptions ...callopt.Option) (r *frontendservice.TWaitingTxnStatusResult_, err error)
@@ -229,6 +230,11 @@ func (p *kFrontendServiceClient) GetBinlog(ctx context.Context, request *fronten
 func (p *kFrontendServiceClient) GetSnapshot(ctx context.Context, request *frontendservice.TGetSnapshotRequest, callOptions ...callopt.Option) (r *frontendservice.TGetSnapshotResult_, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetSnapshot(ctx, request)
+}
+
+func (p *kFrontendServiceClient) GetGlobalSnapshot(ctx context.Context, request *frontendservice.TGetGlobalSnapshotRequest, callOptions ...callopt.Option) (r *frontendservice.TGetGlobalSnapshotResult_, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetGlobalSnapshot(ctx, request)
 }
 
 func (p *kFrontendServiceClient) RestoreSnapshot(ctx context.Context, request *frontendservice.TRestoreSnapshotRequest, callOptions ...callopt.Option) (r *frontendservice.TRestoreSnapshotResult_, err error) {
