@@ -1,6 +1,26 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License
 package storage
 
-import "errors"
+import (
+	"database/sql"
+	"errors"
+	"flag"
+)
 
 var (
 	ErrJobExists    = errors.New("job exists")
@@ -9,8 +29,19 @@ var (
 
 const (
 	InvalidCheckTimestamp int64 = -1
-	remoteDBName string = "ccr"
+	defaultMaxOpenConns   int   = 20
+	defaultMaxIdleConns   int   = 5
 )
+
+var maxOpenConns int
+var maxAllowedPacket int64
+
+func init() {
+	flag.Int64Var(&maxAllowedPacket, "mysql_max_allowed_packet", defaultMaxAllowedPacket,
+		"Config the max allowed packet to send to mysql server, the upper limit is 1GB")
+	flag.IntVar(&maxOpenConns, "db_max_open_conns", defaultMaxOpenConns,
+		"Config the max open connections for db user")
+}
 
 type DB interface {
 	// Add ccr job
@@ -46,4 +77,15 @@ type DB interface {
 
 	// GetAllData
 	GetAllData() (map[string][]string, error)
+	// GetJobs
+	GetJobs() ([]string, error)
+}
+
+func SetDBOptions(db *sql.DB) {
+	db.SetMaxOpenConns(maxOpenConns)
+	if maxOpenConns > 0 {
+		db.SetMaxIdleConns(maxOpenConns / 4)
+	} else {
+		db.SetMaxIdleConns(defaultMaxIdleConns)
+	}
 }

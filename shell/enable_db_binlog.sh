@@ -49,8 +49,21 @@ fi
 echo "enable db ${db} binlog"
 # use mysql client list all tables in db
 tables=$(${mysql_client} -e "use ${db};show tables;" 2>/dev/null | sed '1d') 
+view_or_external_tables=$(${mysql_client} -e "select table_name from information_schema.tables where table_schema=\"${db}\" and table_type in ('VIEW','EXTERNAL TABLE')" 2>/dev/null | sed '1d')
 for table in $tables; do
     echo "table: $table"
+
+    # skip view
+    is_view_or_external_table="false"
+    for view_or_external_table in $view_or_external_tables; do
+      if [ "$view_or_external_table" == "$table" ]; then
+        is_view_or_external_table="true"
+        break
+      fi
+    done
+    if [ "$is_view_or_external_table" == "true" ]; then
+      continue
+    fi
 
     # check table binlog is enable
     table_binlog_enable=$($mysql_client -e "show create table ${db}.${table}" 2>/dev/null | grep '"binlog.enable" = "true"')
@@ -60,8 +73,8 @@ for table in $tables; do
         echo "table ${table} binlog is enable"
     else
         echo "enable table ${table} binlog"
-        ${mysql_client} -e "ALTER TABLE $db.$table SET (\"binlog.enable\" = \"true\");" || exit 1
+        ${mysql_client} -e "ALTER TABLE $db.$table SET (\"binlog.enable\" = \"true\", \"binlog.ttl_seconds\"=\"86400\");" || exit 1
     fi
 done
-${mysql_client} -e "ALTER DATABASE $db SET properties (\"binlog.enable\" = \"true\");" || exit 1
+${mysql_client} -e "ALTER DATABASE $db SET properties (\"binlog.enable\" = \"true\", \"binlog.ttl_seconds\"=\"86400\");" || exit 1
 # mysql -uroot -p123456 -e "use test;show tables;"

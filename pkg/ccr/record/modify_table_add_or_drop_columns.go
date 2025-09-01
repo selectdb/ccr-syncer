@@ -1,3 +1,19 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License
 package record
 
 import (
@@ -8,9 +24,31 @@ import (
 )
 
 type ModifyTableAddOrDropColumns struct {
-	DbId    int64  `json:"dbId"`
-	TableId int64  `json:"tableId"`
-	RawSql  string `json:"rawSql"`
+	DbId              int64                    `json:"dbId"`
+	TableId           int64                    `json:"tableId"`
+	BaseIndexId       int64                    `json:"baseIndexId"`
+	RawSql            string                   `json:"rawSql"`
+	IndexSchemaMap    map[int64][]ColumnSchema `json:"indexSchemaMap"`
+	OldIndexSchemaMap map[int64][]ColumnSchema `json:"oldIndexSchemaMap"`
+	IndexNameToId     map[string]int64         `json:"indexNameToId"`
+}
+
+type ColumnSchema struct {
+	Name         string     `json:"name"`
+	Type         ColumnType `json:"type"`
+	IsKey        bool       `json:"isKey"`
+	IsAllowNull  bool       `json:"isAllowNull"`
+	DefaultValue string     `json:"defaultValue,omitempty"`
+	Comment      string     `json:"comment"`
+	Visible      bool       `json:"visible"`
+}
+
+type ColumnType struct {
+	Clazz     string `json:"clazz"`
+	Type      string `json:"type"`
+	Len       int    `json:"len"`
+	Precision int    `json:"precision"`
+	Scale     int    `json:"scale"`
 }
 
 func NewModifyTableAddOrDropColumnsFromJson(data string) (*ModifyTableAddOrDropColumns, error) {
@@ -34,5 +72,6 @@ func NewModifyTableAddOrDropColumnsFromJson(data string) (*ModifyTableAddOrDropC
 
 // String
 func (c *ModifyTableAddOrDropColumns) String() string {
-	return fmt.Sprintf("ModifyTableAddOrDropColumns: DbId: %d, TableId: %d, RawSql: %s", c.DbId, c.TableId, c.RawSql)
+	return fmt.Sprintf("ModifyTableAddOrDropColumns: DbId: %d, TableId: %d, BaseIndexId: %d, RawSql: %s",
+		c.DbId, c.TableId, c.BaseIndexId, c.RawSql)
 }

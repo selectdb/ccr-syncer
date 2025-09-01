@@ -1,3 +1,19 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License
 package storage
 
 import (
@@ -37,8 +53,8 @@ func (ls LoadSlice) Swap(i, j int) {
 
 func filterHighLoadSyncer(sumLoad int, loadList LoadSlice) (LoadSlice, int, error) {
 	sort.Sort(loadList)
-	if len(loadList) == 0 {
-		return nil, 0, xerror.Errorf(xerror.Normal, "loadList is empty!")
+	if len(loadList) == 0 || sumLoad == 0 {
+		return make(LoadSlice, 0), 0, nil
 	}
 	averageLoad := float64(sumLoad) / float64(len(loadList))
 	for i := len(loadList) - 1; i >= 0; i-- {
@@ -54,6 +70,10 @@ func RebalanceLoad(additionalLoad int, currentLoad int, loadList LoadSlice) (Loa
 	load, sumLoad, err := filterHighLoadSyncer(additionalLoad+currentLoad, loadList)
 	if err != nil {
 		return nil, err
+	}
+
+	if sumLoad == 0 || len(load) == 0 {
+		return make(LoadSlice, 0), nil
 	}
 
 	averageLoad := sumLoad / len(load)

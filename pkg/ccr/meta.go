@@ -1,3 +1,19 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License
 package ccr
 
 import (
@@ -9,6 +25,7 @@ import (
 
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	"github.com/selectdb/ccr_syncer/pkg/rpc"
+	tstatus "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/status"
 	utils "github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
@@ -20,6 +37,10 @@ const (
 	degree = 128
 
 	showErrMsg = "show proc '/dbs/' failed"
+)
+
+var (
+	TrueValues = []string{"Yes", "yes", "YES", "OK", "ok", "True", "TRUE", "true"}
 )
 
 // All Update* functions force to update meta from fe
@@ -41,6 +62,19 @@ type Meta struct {
 	BackendHostPort2IdMap map[string]int64
 }
 
+func NewMeta(spec *base.Spec) *Meta {
+	return &Meta{
+		Spec: spec,
+		DatabaseMeta: DatabaseMeta{
+			Tables: make(map[int64]*TableMeta),
+		},
+		Backends:              make(map[int64]*base.Backend),
+		DatabaseName2IdMap:    make(map[string]int64),
+		TableName2IdMap:       make(map[string]int64),
+		BackendHostPort2IdMap: make(map[string]int64),
+	}
+}
+
 func (m *Meta) GetDbId() (int64, error) {
 	dbName := m.Database
 
@@ -53,9 +87,9 @@ func (m *Meta) GetDbId() (int64, error) {
 	// +-------+------------------------------------+----------+----------+-------------+--------------------------+--------------+--------------+------------------+
 	// | DbId  | DbName                             | TableNum | Size     | Quota       | LastConsistencyCheckTime | ReplicaCount | ReplicaQuota | TransactionQuota |
 	// +-------+------------------------------------+----------+----------+-------------+--------------------------+--------------+--------------+------------------+
-	// | 0     | default_cluster:information_schema | 24       | 0.000    | 1024.000 TB | NULL                     | 0            | 1073741824   | 100              |
-	// | 10002 | default_cluster:__internal_schema  | 4        | 0.000    | 1024.000 TB | NULL                     | 28           | 1073741824   | 100              |
-	// | 10116 | default_cluster:ccr                | 2        | 2.738 KB | 1024.000 TB | NULL                     | 27           | 1073741824   | 100              |
+	// | 0     | information_schema | 24       | 0.000    | 1024.000 TB | NULL                     | 0            | 1073741824   | 100              |
+	// | 10002 | __internal_schema  | 4        | 0.000    | 1024.000 TB | NULL                     | 28           | 1073741824   | 100              |
+	// | 10116 | ccr                | 2        | 2.738 KB | 1024.000 TB | NULL                     | 27           | 1073741824   | 100              |
 	// +-------+------------------------------------+----------+----------+-------------+--------------------------+--------------+--------------+------------------+
 	db, err := m.Connect()
 	if err != nil {
@@ -84,7 +118,9 @@ func (m *Meta) GetDbId() (int64, error) {
 		}
 
 		// match parsedDbname == dbname, return dbId
-		if parsedDbName == dbFullName {
+		// the default_cluster prefix of db name will be removed in Doris v2.1.
+		// here we compare both db name and db full name to make it compatible.
+		if parsedDbName == dbName || parsedDbName == dbFullName {
 			m.DatabaseName2IdMap[dbFullName] = dbId
 			m.DatabaseMeta.Id = dbId
 			return dbId, nil
@@ -96,6 +132,7 @@ func (m *Meta) GetDbId() (int64, error) {
 	}
 
 	// not found
+	// ATTN: we don't treat db not found as xerror.Meta category.
 	return 0, xerror.Errorf(xerror.Normal, "%s not found dbId", dbFullName)
 }
 
@@ -105,8 +142,9 @@ func (m *Meta) GetFullTableName(tableName string) string {
 	return fullTableName
 }
 
+// Update table meta, return xerror.Meta category if no such table exists.
 func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) {
-	log.Infof("UpdateTable tableName: %s, tableId: %d", tableName, tableId)
+	log.Tracef("UpdateTable tableName: %s, tableId: %d", tableName, tableId)
 
 	dbId, err := m.GetDbId()
 	if err != nil {
@@ -127,6 +165,7 @@ func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) 
 	}
 
 	query := fmt.Sprintf("show proc '/dbs/%d/'", dbId)
+	log.Tracef("UpdateTable Sql: %s", query)
 	rows, err := db.Query(query)
 	if err != nil {
 		return nil, xerror.Wrap(err, xerror.Normal, query)
@@ -147,16 +186,21 @@ func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) 
 		if err != nil {
 			return nil, xerror.Wrapf(err, xerror.Normal, query)
 		}
+		parsedTableType, err := rowParser.GetString("Type")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, query)
+		}
 
 		// match parsedDbname == dbname, return dbId
 		if parsedTableName == tableName || parsedTableId == tableId {
 			fullTableName := m.GetFullTableName(parsedTableName)
-			log.Debugf("found table:%s, tableId:%d", fullTableName, parsedTableId)
+			log.Tracef("update table found table:%s, tableId:%d, type:%s", fullTableName, parsedTableId, parsedTableType)
 			m.TableName2IdMap[fullTableName] = parsedTableId
 			tableMeta := &TableMeta{
 				DatabaseMeta:   &m.DatabaseMeta,
 				Id:             parsedTableId,
 				Name:           parsedTableName,
+				Type:           parsedTableType,
 				PartitionIdMap: make(map[int64]*PartitionMeta),
 			}
 			m.Tables[parsedTableId] = tableMeta
@@ -169,7 +213,7 @@ func (m *Meta) UpdateTable(tableName string, tableId int64) (*TableMeta, error) 
 	}
 
 	// not found
-	return nil, xerror.Errorf(xerror.Normal, "tableId %v not found table", tableId)
+	return nil, xerror.Errorf(xerror.Meta, "tableName %s tableId %v not found table", tableName, tableId)
 }
 
 func (m *Meta) GetTable(tableId int64) (*TableMeta, error) {
@@ -245,10 +289,6 @@ func (m *Meta) UpdatePartitions(tableId int64) error {
 		if err != nil {
 			return xerror.Wrapf(err, xerror.Normal, query)
 		}
-		partitionKey, err := rowParser.GetString("PartitionKey")
-		if err != nil {
-			return xerror.Wrapf(err, xerror.Normal, query)
-		}
 		partitionRange, err := rowParser.GetString("Range")
 		if err != nil {
 			return xerror.Wrapf(err, xerror.Normal, query)
@@ -258,7 +298,6 @@ func (m *Meta) UpdatePartitions(tableId int64) error {
 			TableMeta: table,
 			Id:        partitionId,
 			Name:      partitionName,
-			Key:       partitionKey,
 			Range:     partitionRange,
 		}
 		partitions = append(partitions, partition)
@@ -293,7 +332,7 @@ func (m *Meta) getPartitionsWithUpdate(tableId int64, depth int64) (map[int64]*P
 
 func (m *Meta) getPartitions(tableId int64, depth int64) (map[int64]*PartitionMeta, error) {
 	if depth >= 3 {
-		return nil, fmt.Errorf("getPartitions depth >= 3")
+		return nil, xerror.Errorf(xerror.Normal, "getPartitions depth >= 3")
 	}
 
 	tableMeta, err := m.GetTable(tableId)
@@ -307,10 +346,12 @@ func (m *Meta) getPartitions(tableId int64, depth int64) (map[int64]*PartitionMe
 	return tableMeta.PartitionIdMap, nil
 }
 
+// Get partition id map, return xerror.Meta category if no such table exists.
 func (m *Meta) GetPartitionIdMap(tableId int64) (map[int64]*PartitionMeta, error) {
 	return m.getPartitions(tableId, 0)
 }
 
+// Get partition range map, return xerror.Meta category if no such table exists.
 func (m *Meta) GetPartitionRangeMap(tableId int64) (map[string]*PartitionMeta, error) {
 	if _, err := m.GetPartitionIdMap(tableId); err != nil {
 		return nil, err
@@ -346,6 +387,7 @@ func (m *Meta) GetPartitionIds(tableName string) ([]int64, error) {
 	return partitionIds, nil
 }
 
+// Get partition range by name, return xerror.Meta category if no such table or partition exists.
 func (m *Meta) GetPartitionName(tableId int64, partitionId int64) (string, error) {
 	partitions, err := m.GetPartitionIdMap(tableId)
 	if err != nil {
@@ -358,13 +400,14 @@ func (m *Meta) GetPartitionName(tableId int64, partitionId int64) (string, error
 			return "", err
 		}
 		if partition, ok = partitions[partitionId]; !ok {
-			return "", xerror.Errorf(xerror.Normal, "partitionId %d not found", partitionId)
+			return "", xerror.Errorf(xerror.Meta, "partitionId %d not found", partitionId)
 		}
 	}
 
 	return partition.Name, nil
 }
 
+// Get partition range by id, return xerror.Meta category if no such table or partition exists.
 func (m *Meta) GetPartitionRange(tableId int64, partitionId int64) (string, error) {
 	partitions, err := m.GetPartitionIdMap(tableId)
 	if err != nil {
@@ -377,13 +420,14 @@ func (m *Meta) GetPartitionRange(tableId int64, partitionId int64) (string, erro
 			return "", err
 		}
 		if partition, ok = partitions[partitionId]; !ok {
-			return "", xerror.Errorf(xerror.Normal, "partitionId %d not found", partitionId)
+			return "", xerror.Errorf(xerror.Meta, "partitionId %d not found", partitionId)
 		}
 	}
 
 	return partition.Range, nil
 }
 
+// Get partition id by name, return xerror.Meta category if no such partition exists.
 func (m *Meta) GetPartitionIdByName(tableId int64, partitionName string) (int64, error) {
 	// TODO: optimize performance
 	partitions, err := m.GetPartitionIdMap(tableId)
@@ -406,9 +450,10 @@ func (m *Meta) GetPartitionIdByName(tableId int64, partitionName string) (int64,
 		}
 	}
 
-	return 0, xerror.Errorf(xerror.Normal, "partition name %s not found", partitionName)
+	return 0, xerror.Errorf(xerror.Meta, "partition name %s not found", partitionName)
 }
 
+// Get partition id by range, return xerror.Meta category if no such partition exists.
 func (m *Meta) GetPartitionIdByRange(tableId int64, partitionRange string) (int64, error) {
 	// TODO: optimize performance
 	partitions, err := m.GetPartitionIdMap(tableId)
@@ -431,7 +476,7 @@ func (m *Meta) GetPartitionIdByRange(tableId int64, partitionRange string) (int6
 		}
 	}
 
-	return 0, xerror.Errorf(xerror.Normal, "partition range %s not found", partitionRange)
+	return 0, xerror.Errorf(xerror.Meta, "partition range %s not found", partitionRange)
 }
 
 func (m *Meta) UpdateBackends() error {
@@ -472,11 +517,6 @@ func (m *Meta) UpdateBackends() error {
 		}
 
 		var port int64
-		port, err = rowParser.GetInt64("HeartbeatPort")
-		if err != nil {
-			return xerror.Wrapf(err, xerror.Normal, query)
-		}
-		backend.HeartbeatPort = uint16(port)
 		port, err = rowParser.GetInt64("BePort")
 		if err != nil {
 			return xerror.Wrapf(err, xerror.Normal, query)
@@ -497,6 +537,10 @@ func (m *Meta) UpdateBackends() error {
 		backends = append(backends, &backend)
 	}
 
+	if err := rows.Err(); err != nil {
+		return xerror.Wrap(err, xerror.Normal, query)
+	}
+
 	for _, backend := range backends {
 		m.Backends[backend.Id] = backend
 
@@ -507,11 +551,85 @@ func (m *Meta) UpdateBackends() error {
 	return nil
 }
 
+func (m *Meta) GetFrontends() ([]*base.Frontend, error) {
+	db, err := m.Connect()
+	if err != nil {
+		return nil, err
+	}
+
+	query := "select Host, QueryPort, RpcPort, IsMaster from frontends();"
+	log.Debug(query)
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, xerror.Wrap(err, xerror.Normal, query)
+	}
+
+	frontends := make([]*base.Frontend, 0)
+	defer rows.Close()
+	for rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, query)
+		}
+
+		var fe base.Frontend
+		fe.Host, err = rowParser.GetString("Host")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, query)
+		}
+
+		fe.Port, err = rowParser.GetString("QueryPort")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, query)
+		}
+
+		fe.ThriftPort, err = rowParser.GetString("RpcPort")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, query)
+		}
+
+		fe.IsMaster, err = rowParser.GetBool("IsMaster")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, query)
+		}
+
+		frontends = append(frontends, &fe)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, xerror.Wrap(err, xerror.Normal, query)
+	}
+
+	if len(m.HostMapping) != 0 {
+		for _, frontend := range frontends {
+			if host, ok := m.HostMapping[frontend.Host]; ok {
+				frontend.Host = host
+			} else {
+				return nil, xerror.Errorf(xerror.Normal,
+					"the public ip of host %s is not found, consider adding it via HTTP API /add_host_mapping", frontend.Host)
+			}
+		}
+	}
+
+	return frontends, nil
+}
+
 func (m *Meta) GetBackends() ([]*base.Backend, error) {
 	if len(m.Backends) > 0 {
 		backends := make([]*base.Backend, 0, len(m.Backends))
 		for _, backend := range m.Backends {
-			backends = append(backends, backend)
+			backend := *backend // copy
+			backends = append(backends, &backend)
+		}
+		if len(m.HostMapping) != 0 {
+			for _, backend := range backends {
+				if host, ok := m.HostMapping[backend.Host]; ok {
+					backend.Host = host
+				} else {
+					return nil, xerror.Errorf(xerror.Normal,
+						"the public ip of host %s is not found, consider adding it via HTTP API /add_host_mapping", backend.Host)
+				}
+			}
 		}
 		return backends, nil
 	}
@@ -555,6 +673,7 @@ func (m *Meta) GetBackendId(host string, portStr string) (int64, error) {
 	return 0, xerror.Errorf(xerror.Normal, "hostPort: %s not found", hostPort)
 }
 
+// Update indexes by table and partition, return xerror.Meta category if no such table or partition exists.
 func (m *Meta) UpdateIndexes(tableId int64, partitionId int64) error {
 	// TODO: Optimize performance
 	// Step 1: get dbId
@@ -577,7 +696,7 @@ func (m *Meta) UpdateIndexes(tableId int64, partitionId int64) error {
 
 	partition, ok := partitions[partitionId]
 	if !ok {
-		return xerror.Errorf(xerror.Normal, "partitionId: %d not found", partitionId)
+		return xerror.Errorf(xerror.Meta, "partitionId: %d not found", partitionId)
 	}
 
 	// mysql> show proc '/dbs/10116/10118/partitions/10117';
@@ -617,10 +736,12 @@ func (m *Meta) UpdateIndexes(tableId int64, partitionId int64) error {
 		}
 		log.Debugf("indexId: %d, indexName: %s", indexId, indexName)
 
+		isBaseIndex := table.Name == indexName // it might be staled, caused by rename table
 		index := &IndexMeta{
 			PartitionMeta: partition,
 			Id:            indexId,
 			Name:          indexName,
+			IsBaseIndex:   isBaseIndex,
 		}
 		indexes = append(indexes, index)
 	}
@@ -639,6 +760,7 @@ func (m *Meta) UpdateIndexes(tableId int64, partitionId int64) error {
 	return nil
 }
 
+// Get indexes by table and partition, return xerror.Meta if no such table or partition exists.
 func (m *Meta) getIndexes(tableId int64, partitionId int64, hasUpdate bool) (map[int64]*IndexMeta, error) {
 	partitions, err := m.GetPartitionIdMap(tableId)
 	if err != nil {
@@ -648,7 +770,7 @@ func (m *Meta) getIndexes(tableId int64, partitionId int64, hasUpdate bool) (map
 	partition, ok := partitions[partitionId]
 	if !ok || len(partition.IndexIdMap) == 0 {
 		if hasUpdate {
-			return nil, xerror.Errorf(xerror.Normal, "partitionId: %d not found", partitionId)
+			return nil, xerror.Errorf(xerror.Meta, "partitionId: %d not found", partitionId)
 		}
 
 		err = m.UpdateIndexes(tableId, partitionId)
@@ -661,22 +783,75 @@ func (m *Meta) getIndexes(tableId int64, partitionId int64, hasUpdate bool) (map
 	return partition.IndexIdMap, nil
 }
 
+// Get indexes id map by table and partition, return xerror.Meta if no such table or partition exists.
 func (m *Meta) GetIndexIdMap(tableId int64, partitionId int64) (map[int64]*IndexMeta, error) {
 	return m.getIndexes(tableId, partitionId, false)
 }
 
-func (m *Meta) GetIndexNameMap(tableId int64, partitionId int64) (map[string]*IndexMeta, error) {
+// Get indexes name map by table and partition, return xerror.Meta if no such table or partition exists.
+func (m *Meta) GetIndexNameMap(tableId int64, partitionId int64) (map[string]*IndexMeta, *IndexMeta, error) {
 	if _, err := m.getIndexes(tableId, partitionId, false); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	partitions, err := m.GetPartitionIdMap(tableId)
 	if err != nil {
+		return nil, nil, err
+	}
+
+	if partition, ok := partitions[partitionId]; !ok {
+		return nil, nil, xerror.Errorf(xerror.Meta, "partition %d is not found", partitionId)
+	} else {
+		return partition.IndexNameMap, nil, nil
+	}
+}
+
+func (m *Meta) ShowIndexes(tableName string) ([]*IndexDesc, error) {
+	conn, err := m.Connect()
+	if err != nil {
 		return nil, err
 	}
 
-	partition := partitions[partitionId]
-	return partition.IndexNameMap, nil
+	dbName := utils.FormatKeywordName(m.Database)
+	tableName = utils.FormatKeywordName(tableName)
+	query := fmt.Sprintf("SHOW INDEXES FROM %s.%s", dbName, tableName)
+	log.Debugf("show indexes sql: %s", query)
+
+	rows, err := conn.Query(query)
+	if err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "show indexes sql: %s", query)
+	}
+
+	defer rows.Close()
+	indexes := make([]*IndexDesc, 0)
+	for rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "parse describe table %s rows", tableName)
+		}
+
+		name, err := rowParser.GetString("Key_name")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "parse indexes Key_name failed")
+		}
+
+		indexType, err := rowParser.GetString("Index_type")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "parse indexes Index_type failed")
+		}
+
+		desc := IndexDesc{
+			Name:      name,
+			IndexType: indexType,
+		}
+		indexes = append(indexes, &desc)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "show indexes sql: %s", query)
+	}
+
+	return indexes, nil
 }
 
 func (m *Meta) updateReplica(index *IndexMeta) error {
@@ -756,6 +931,7 @@ func (m *Meta) updateReplica(index *IndexMeta) error {
 	return nil
 }
 
+// Update replicas by table and partition, return xerror.Meta category if no such table or partition exists.
 func (m *Meta) UpdateReplicas(tableId int64, partitionId int64) error {
 	indexes, err := m.GetIndexIdMap(tableId, partitionId)
 	if err != nil {
@@ -763,7 +939,7 @@ func (m *Meta) UpdateReplicas(tableId int64, partitionId int64) error {
 	}
 
 	if len(indexes) == 0 {
-		return xerror.Errorf(xerror.Normal, "indexes is empty")
+		return xerror.Errorf(xerror.Meta, "indexes is empty")
 	}
 
 	// TODO: Update index as much as possible, record error
@@ -776,6 +952,7 @@ func (m *Meta) UpdateReplicas(tableId int64, partitionId int64) error {
 	return nil
 }
 
+// Get replicas by table and partition, return xerror.Meta category if no such table or partition exists.
 func (m *Meta) GetReplicas(tableId int64, partitionId int64) (*btree.Map[int64, *ReplicaMeta], error) {
 	indexes, err := m.GetIndexIdMap(tableId, partitionId)
 	if err != nil {
@@ -783,7 +960,7 @@ func (m *Meta) GetReplicas(tableId int64, partitionId int64) (*btree.Map[int64, 
 	}
 
 	if len(indexes) == 0 {
-		return nil, xerror.Errorf(xerror.Normal, "indexes is empty")
+		return nil, xerror.Errorf(xerror.Meta, "indexes is empty")
 	}
 
 	// fast path, no rollup
@@ -820,6 +997,7 @@ func (m *Meta) GetReplicas(tableId int64, partitionId int64) (*btree.Map[int64, 
 	return replicas, nil
 }
 
+// Get tablets by table, partition and index, return xerror.Meta category if no such table, partition or index exists.
 func (m *Meta) GetTablets(tableId, partitionId, indexId int64) (*btree.Map[int64, *TabletMeta], error) {
 	_, err := m.GetReplicas(tableId, partitionId)
 	if err != nil {
@@ -834,7 +1012,7 @@ func (m *Meta) GetTablets(tableId, partitionId, indexId int64) (*btree.Map[int64
 	if tablets, ok := indexes[indexId]; ok {
 		return tablets.TabletMetas, nil
 	} else {
-		return nil, xerror.Errorf(xerror.Normal, "index %d not found", indexId)
+		return nil, xerror.Errorf(xerror.Meta, "index %d not found", indexId)
 	}
 }
 
@@ -846,10 +1024,12 @@ func (m *Meta) UpdateToken(rpcFactory rpc.IRpcFactory) error {
 		return err
 	}
 
-	if token, err := rpc.GetMasterToken(spec); err != nil {
+	if resp, err := rpc.GetMasterToken(spec); err != nil {
 		return err
+	} else if resp.GetStatus().GetStatusCode() != tstatus.TStatusCode_OK {
+		return xerror.Errorf(xerror.Meta, "get master token failed, status: %s", resp.GetStatus().String())
 	} else {
-		m.token = token
+		m.token = resp.GetToken()
 		return nil
 	}
 }
@@ -879,7 +1059,6 @@ func (m *Meta) GetTableNameById(tableId int64) (string, error) {
 		return "", err
 	}
 
-	var tableName string
 	sql := fmt.Sprintf("show table %d", tableId)
 	rows, err := db.Query(sql)
 	if err != nil {
@@ -887,15 +1066,18 @@ func (m *Meta) GetTableNameById(tableId int64) (string, error) {
 	}
 	defer rows.Close()
 
+	var tableName string
 	for rows.Next() {
 		rowParser := utils.NewRowParser()
 		if err := rowParser.Parse(rows); err != nil {
 			return "", xerror.Wrapf(err, xerror.Normal, sql)
 		}
+
 		tableName, err = rowParser.GetString("TableName")
 		if err != nil {
 			return "", xerror.Wrap(err, xerror.Normal, sql)
 		}
+		log.Debugf("found table %d name %s", tableId, tableName)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -948,15 +1130,21 @@ func (m *Meta) GetTables() (map[int64]*TableMeta, error) {
 		if err != nil {
 			return nil, xerror.Wrapf(err, xerror.Normal, query)
 		}
+		tableType, err := rowParser.GetString("Type")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "get tables Type failed, query: %s", query)
+		}
+
+		fullTableName := m.GetFullTableName(tableName)
+		log.Debugf("found table: %s, id: %d, type: %s", fullTableName, tableId, tableType)
 
 		// match parsedDbname == dbname, return dbId
-		fullTableName := m.GetFullTableName(tableName)
-		log.Debugf("found table:%s, tableId:%d", fullTableName, tableId)
 		tableName2IdMap[fullTableName] = tableId
 		tables[tableId] = &TableMeta{
 			DatabaseMeta:   &m.DatabaseMeta,
 			Id:             tableId,
 			Name:           tableName,
+			Type:           tableType,
 			PartitionIdMap: make(map[int64]*PartitionMeta),
 		}
 	}
@@ -975,7 +1163,7 @@ func (m *Meta) CheckBinlogFeature() error {
 	if binlogIsEnabled, err := m.isFEBinlogFeature(); err != nil {
 		return err
 	} else if !binlogIsEnabled {
-		return xerror.Errorf(xerror.Normal, "Fe %v:%v enable_binlog_feature=false, please set it true in fe.conf",
+		return xerror.Errorf(xerror.Normal, "Fe %v:%v enable_feature_binlog=false, please set it true in fe.conf",
 			m.Spec.Host, m.Spec.Port)
 	}
 
@@ -1058,6 +1246,11 @@ func (m *Meta) DirtyGetTables() map[int64]*TableMeta {
 	return m.Tables
 }
 
+func (m *Meta) ClearTablesCache() {
+	m.Tables = make(map[int64]*TableMeta)
+	m.TableName2IdMap = make(map[string]int64)
+}
+
 func (m *Meta) ClearDB(dbName string) {
 	if m.Database != dbName {
 		log.Info("dbName not match, skip clear")
@@ -1088,4 +1281,191 @@ func (m *Meta) ClearTable(dbName string, tableName string) {
 	delete(m.Tables, tableId)
 
 	delete(m.TableName2IdMap, tableName)
+}
+
+func (m *Meta) IsPartitionDropped(partitionId int64) bool {
+	panic("IsPartitionDropped is not supported, please use ThriftMeta instead")
+}
+
+func (m *Meta) IsTableDropped(partitionId int64) bool {
+	panic("IsTableDropped is not supported, please use ThriftMeta instead")
+}
+
+func (m *Meta) IsIndexDropped(indexId int64) bool {
+	panic("IsIndexDropped is not supported, please use ThriftMeta instead")
+}
+
+func (m *Meta) GetDroppedIndexMap() map[int64]int64 {
+	panic("GetDroppedIndexMap is not supported, please use ThriftMeta instead")
+}
+
+func (m *Meta) GetDroppedPartitionMap() map[int64]int64 {
+	panic("GetDroppedPartitionMap is not supported, please use ThriftMeta instead")
+}
+
+func (m *Meta) GetDroppedTableMap() map[int64]int64 {
+	panic("GetDroppedTableMap is not supported, please use ThriftMeta instead")
+}
+
+// Describe table all by sql
+// DESC ${tableName} ALL
+func (m *Meta) DescribeTableAll(tableName string) (map[string]*MaterializedIndexDesc, error) {
+	db, err := m.Connect()
+	if err != nil {
+		return nil, err
+	}
+
+	dbName := utils.FormatKeywordName(m.Database)
+	tableName = utils.FormatKeywordName(tableName)
+	query := fmt.Sprintf("DESC %s.%s ALL", dbName, tableName)
+	log.Debugf("describe table sql: %s", query)
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "describe table %s", tableName)
+	}
+	defer rows.Close()
+
+	var indexName string
+	var indexKeysType string
+	columns := make(map[string]*MaterializedIndexDesc, 0)
+	for rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "parse describe table %s rows", tableName)
+		}
+
+		name, err := rowParser.GetString("Field")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Field failed, table: %s", tableName)
+		}
+
+		// mysql> desc t all;
+		// +-----------+---------------+-------+------+--------------+------+-------+---------+-------+---------+------------+-------------+
+		// | IndexName | IndexKeysType | Field | Type | InternalType | Null | Key   | Default | Extra | Visible | DefineExpr | WhereClause |
+		// +-----------+---------------+-------+------+--------------+------+-------+---------+-------+---------+------------+-------------+
+		// | t         | DUP_KEYS      | test  | int  | int          | Yes  | true  | NULL    |       | true    |            |             |
+		// |           |               | id    | int  | int          | Yes  | false | NULL    | NONE  | true    |            |             |
+		// |           |               |       |      |              |      |       |         |       |         |            |             |
+		// | ru1       | DUP_KEYS      | id    | int  | int          | Yes  | true  | NULL    |       | true    |            |             |
+		// +-----------+---------------+-------+------+--------------+------+-------+---------+-------+---------+------------+-------------+
+		// field is empty, skip scan
+		if name == "" {
+			indexName = ""
+			indexKeysType = ""
+			continue
+		} else if indexName == "" {
+			indexName, err = rowParser.GetString("IndexName")
+			if err != nil {
+				return nil, xerror.Wrapf(err, xerror.Normal, "describe table get IndexName failed, table: %s", tableName)
+			}
+
+			indexKeysType, err = rowParser.GetString("IndexKeysType")
+			if err != nil {
+				return nil, xerror.Wrapf(err, xerror.Normal, "describe table get IndexKeysType failed, table: %s", tableName)
+			}
+		}
+
+		// get Type, Null, Key, Default, Extra
+		typ, err := rowParser.GetString("Type")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Type failed, table: %s", tableName)
+		}
+
+		internalType, err := rowParser.GetString("InternalType")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get InternalType failed, table: %s", tableName)
+		}
+
+		null, err := rowParser.GetString("Null")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Null failed, table: %s", tableName)
+		}
+
+		key, err := rowParser.GetString("Key")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Key failed, table: %s", tableName)
+		}
+
+		defaultValue, err := rowParser.GetString("Default")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Default failed, table: %s", tableName)
+		}
+
+		extra, err := rowParser.GetString("Extra")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Extra failed, table: %s", tableName)
+		}
+
+		visible, err := rowParser.GetString("Visible")
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table get Visible failed, table: %s", tableName)
+		}
+
+		isVisible := utils.Contains(TrueValues, visible)
+		isNull := utils.Contains(TrueValues, null)
+		isKey := utils.Contains(TrueValues, key)
+		if defaultValue == "NULL" {
+			defaultValue = ""
+		}
+
+		columnDesc := ColumnDesc{
+			Name:         name,
+			Type:         typ,
+			InternalType: internalType,
+			IsNull:       isNull,
+			IsKey:        isKey,
+			Default:      defaultValue,
+			Extra:        extra,
+			Visible:      isVisible,
+		}
+		if materializedIndex, ok := columns[indexName]; ok {
+			materializedIndex.ColumnDesc = append(materializedIndex.ColumnDesc, columnDesc)
+		} else {
+			columns[indexName] = &MaterializedIndexDesc{
+				IndexName:     indexName,
+				IndexKeysType: indexKeysType,
+				ColumnDesc:    []ColumnDesc{columnDesc},
+			}
+		}
+
+		if err := rows.Err(); err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "describe table %s", tableName)
+		}
+	}
+	return columns, nil
+
+}
+
+func (m *Meta) ShowTables() ([]string, error) {
+	db, err := m.Connect()
+	if err != nil {
+		return nil, err
+	}
+
+	dbName := utils.FormatKeywordName(m.Database)
+	query := fmt.Sprintf("SHOW TABLES FROM %s", dbName)
+	log.Debugf("show tables from %s, sql: %s", m.Database, query)
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, xerror.Wrapf(err, xerror.Normal, "show tables from %s", dbName)
+	}
+
+	tables := []string{}
+	defer rows.Close()
+	for rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "parse show tables from %s rows", dbName)
+		}
+
+		table, err := rowParser.GetString(fmt.Sprintf("Tables_in_%s", m.Database))
+		if err != nil {
+			return nil, xerror.Wrapf(err, xerror.Normal, "show tables from %s get table error", m.Database)
+		}
+
+		tables = append(tables, table)
+	}
+	return tables, nil
 }

@@ -1,3 +1,19 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License
 package ccr
 
 import (
@@ -8,6 +24,10 @@ import (
 	"github.com/tidwall/btree"
 )
 
+const (
+	IndexTypeInverted string = "INVERTED"
+)
+
 type DatabaseMeta struct {
 	Id     int64
 	Tables map[int64]*TableMeta // tableId -> tableMeta
@@ -16,35 +36,38 @@ type DatabaseMeta struct {
 type TableMeta struct {
 	DatabaseMeta      *DatabaseMeta
 	Id                int64
-	Name              string                    // maybe dirty, such after rename
+	BaseIndexId       int64
+	Name              string // maybe dirty, such after rename
+	Type              string
 	PartitionIdMap    map[int64]*PartitionMeta  // partitionId -> partitionMeta
 	PartitionRangeMap map[string]*PartitionMeta // partitionRange -> partitionMeta
 }
 
 // Stringer
 func (t *TableMeta) String() string {
-	return fmt.Sprintf("TableMeta{(id:%d), (name:%s)}", t.Id, t.Name)
+	return fmt.Sprintf("TableMeta{(id:%d), (name:%s), (type:%s)}", t.Id, t.Name, t.Type)
 }
 
 type PartitionMeta struct {
-	TableMeta    *TableMeta
-	Id           int64
-	Name         string
-	Key          string
-	Range        string
-	IndexIdMap   map[int64]*IndexMeta  // indexId -> indexMeta
-	IndexNameMap map[string]*IndexMeta // indexName -> indexMeta
+	TableMeta      *TableMeta
+	Id             int64
+	Name           string
+	Range          string
+	VisibleVersion int64
+	IndexIdMap     map[int64]*IndexMeta  // indexId -> indexMeta
+	IndexNameMap   map[string]*IndexMeta // indexName -> indexMeta
 }
 
 // Stringer
 func (p *PartitionMeta) String() string {
-	return fmt.Sprintf("PartitionMeta{(id:%d), (name:%s), (key:%s), (range:%s)}", p.Id, p.Name, p.Key, p.Range)
+	return fmt.Sprintf("PartitionMeta{(id:%d), (name:%s), (range:%s)}", p.Id, p.Name, p.Range)
 }
 
 type IndexMeta struct {
 	PartitionMeta *PartitionMeta
 	Id            int64
 	Name          string
+	IsBaseIndex   bool
 	TabletMetas   *btree.Map[int64, *TabletMeta]  // tabletId -> tablet
 	ReplicaMetas  *btree.Map[int64, *ReplicaMeta] // replicaId -> replica
 }
@@ -60,11 +83,63 @@ type ReplicaMeta struct {
 	Id         int64
 	TabletId   int64
 	BackendId  int64
+	Version    int64
+}
+
+type MaterializedIndexDesc struct {
+	IndexName     string
+	IndexKeysType string
+	ColumnDesc    []ColumnDesc
+}
+
+func (m *MaterializedIndexDesc) String() string {
+	return fmt.Sprintf("MaterializedIndexDesc{ indexName:%s, indexKeysType:%s, columnDesc:%v}",
+		m.IndexName, m.IndexKeysType, m.ColumnDesc)
+}
+
+type ColumnDesc struct {
+	Name         string
+	Type         string
+	InternalType string
+	IsNull       bool
+	IsKey        bool
+	Default      string
+	Extra        string
+	Visible      bool
+}
+
+func (c *ColumnDesc) String() string {
+	return fmt.Sprintf("ColumnDesc{ name:%s, type:%s, isNull:%t, isKey:%t, visible:%t}",
+		c.Name, c.Type, c.IsNull, c.IsKey, c.Visible)
+}
+
+type IndexDesc struct {
+	Name      string
+	IndexType string
+}
+
+func (i *IndexDesc) String() string {
+	return fmt.Sprintf("IndexDesc{ name:%s, indexType:%s}", i.Name, i.IndexType)
 }
 
 type MetaCleaner interface {
 	ClearDB(dbName string)
 	ClearTable(dbName string, tableName string)
+}
+
+type IngestBinlogMetaer interface {
+	GetTablets(tableId, partitionId, indexId int64) (*btree.Map[int64, *TabletMeta], error)
+	GetPartitionIdByRange(tableId int64, partitionRange string) (int64, error)
+	GetPartitionRangeMap(tableId int64) (map[string]*PartitionMeta, error)
+	GetIndexIdMap(tableId, partitionId int64) (map[int64]*IndexMeta, error)
+	GetIndexNameMap(tableId, partitionId int64) (map[string]*IndexMeta, *IndexMeta, error)
+	GetBackendMap() (map[int64]*base.Backend, error)
+	IsPartitionDropped(partitionId int64) bool
+	IsTableDropped(tableId int64) bool
+	IsIndexDropped(indexId int64) bool
+	GetDroppedIndexMap() map[int64]int64
+	GetDroppedPartitionMap() map[int64]int64
+	GetDroppedTableMap() map[int64]int64
 }
 
 type Metaer interface {
@@ -76,38 +151,35 @@ type Metaer interface {
 	GetTableId(tableName string) (int64, error)
 	GetTableNameById(tableId int64) (string, error)
 	GetTables() (map[int64]*TableMeta, error)
+	DescribeTableAll(tableName string) (map[string]*MaterializedIndexDesc, error)
 
 	UpdatePartitions(tableId int64) error
 	GetPartitionIdMap(tableId int64) (map[int64]*PartitionMeta, error)
-	GetPartitionRangeMap(tableId int64) (map[string]*PartitionMeta, error)
 	GetPartitionIds(tableName string) ([]int64, error)
 	GetPartitionName(tableId int64, partitionId int64) (string, error)
 	GetPartitionRange(tableId int64, partitionId int64) (string, error)
 	GetPartitionIdByName(tableId int64, partitionName string) (int64, error)
-	GetPartitionIdByRange(tableId int64, partitionRange string) (int64, error)
 
+	GetFrontends() ([]*base.Frontend, error)
 	UpdateBackends() error
 	GetBackends() ([]*base.Backend, error)
-	GetBackendMap() (map[int64]*base.Backend, error)
 	GetBackendId(host, portStr string) (int64, error)
 
 	UpdateIndexes(tableId, partitionId int64) error
-	GetIndexIdMap(tableId, partitionId int64) (map[int64]*IndexMeta, error)
-	GetIndexNameMap(tableId, partitionId int64) (map[string]*IndexMeta, error)
+	ShowIndexes(tableName string) ([]*IndexDesc, error)
+	ShowTables() ([]string, error)
 
 	UpdateReplicas(tableId, partitionId int64) error
 	GetReplicas(tableId, partitionId int64) (*btree.Map[int64, *ReplicaMeta], error)
-
-	GetTablets(tableId, partitionId, indexId int64) (*btree.Map[int64, *TabletMeta], error)
 
 	UpdateToken(rpcFactory rpc.IRpcFactory) error
 	GetMasterToken(rpcFactory rpc.IRpcFactory) (string, error)
 
 	CheckBinlogFeature() error
 	DirtyGetTables() map[int64]*TableMeta
+	ClearTablesCache()
 
-	// from Spec
-	DbExec(sql string) error
+	IngestBinlogMetaer
 
 	MetaCleaner
 }

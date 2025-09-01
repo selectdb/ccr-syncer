@@ -1,7 +1,24 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License
 package ccr
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 
 	"github.com/selectdb/ccr_syncer/pkg/storage"
@@ -9,9 +26,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	ErrJobExist = "job exist"
-)
+var errJobExist = xerror.NewWithoutStack(xerror.Normal, "job exist")
+var errJobName = xerror.NewWithoutStack(xerror.Normal, "job name does not match the regex of doris")
 
 // job manager is thread safety
 type JobManager struct {
@@ -45,9 +61,14 @@ func (jm *JobManager) AddJob(job *Job) error {
 	jm.lock.Lock()
 	defer jm.lock.Unlock()
 
+	// Step 0: check job name
+	if !CheckLabelRegex(job.Name) {
+		return xerror.XWrapf(errJobName, "job: %s", job.Name)
+	}
+
 	// Step 1: check job exist
 	if _, ok := jm.jobs[job.Name]; ok {
-		return xerror.Errorf(xerror.Normal, "%s: %s", ErrJobExist, job.Name)
+		return xerror.XWrapf(errJobExist, "job: %s", job.Name)
 	}
 
 	// Step 2: check job first run, mostly for dest/src fe db/table info
@@ -82,6 +103,7 @@ func (jm *JobManager) Recover(jobNames []string) error {
 		if _, ok := jm.jobs[jobName]; ok {
 			continue
 		}
+
 		log.Infof("recover job: %s", jobName)
 
 		if jobInfo, err := jm.db.GetJobInfo(jobName); err != nil {
@@ -107,14 +129,21 @@ func (jm *JobManager) RemoveJob(name string) error {
 	jm.lock.Lock()
 	defer jm.lock.Unlock()
 
+	job := jm.jobs[name]
 	// check job exist
-	if job, ok := jm.jobs[name]; ok {
-		// stop job
-		job.Stop()
-		delete(jm.jobs, name)
-		return jm.db.RemoveJob(name)
-	} else {
+	if job == nil {
 		return xerror.Errorf(xerror.Normal, "job not exist: %s", name)
+	}
+
+	// stop job
+	job.Delete()
+	if err := jm.db.RemoveJob(name); err == nil {
+		delete(jm.jobs, name)
+		log.Infof("job [%s] has been successfully deleted, but it needs to wait until an isochronous point before it will completely STOP", name)
+		return nil
+	} else {
+		log.Errorf("remove job [%s] in db failed: %+v, but job is stopped", name, err)
+		return fmt.Errorf("remove job [%s] in db failed, but job is stopped, if can resume/delete, please do it manually", name)
 	}
 }
 
@@ -158,17 +187,6 @@ func (jm *JobManager) runJob(job *Job) {
 		}
 		jm.wg.Done()
 	}()
-}
-
-func (jm *JobManager) GetLag(jobName string) (int64, error) {
-	jm.lock.RLock()
-	defer jm.lock.RUnlock()
-
-	if job, ok := jm.jobs[jobName]; ok {
-		return job.GetLag()
-	} else {
-		return 0, xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
-	}
 }
 
 func (jm *JobManager) dealJob(jobName string, dealFunc func(job *Job) error) error {
@@ -216,6 +234,17 @@ func (jm *JobManager) Desync(jobName string) error {
 	}
 }
 
+func (jm *JobManager) Sync(jobName string) error {
+	jm.lock.RLock()
+	defer jm.lock.RUnlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return job.Sync()
+	} else {
+		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
+	}
+}
+
 func (jm *JobManager) ListJobs() []*JobStatus {
 	jm.lock.RLock()
 	defer jm.lock.RUnlock()
@@ -225,4 +254,26 @@ func (jm *JobManager) ListJobs() []*JobStatus {
 		jobs = append(jobs, job.Status())
 	}
 	return jobs
+}
+
+func (jm *JobManager) UpdateHostMapping(jobName string, srcHostMapping, destHostMapping map[string]string) error {
+	jm.lock.Lock()
+	defer jm.lock.Unlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return job.UpdateHostMapping(srcHostMapping, destHostMapping)
+	} else {
+		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
+	}
+}
+
+func (jm *JobManager) SkipBinlog(jobName string, params SkipBinlogParams) error {
+	jm.lock.Lock()
+	defer jm.lock.Unlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return job.SkipBinlog(params)
+	} else {
+		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
+	}
 }

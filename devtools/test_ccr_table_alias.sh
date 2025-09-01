@@ -19,5 +19,6 @@ curl -X POST -H "Content-Type: application/json" -d '{
       "password": "",
       "database": "ccr",
       "table": "src_1_alias"
-    }
+    },
+    "skip_error": false
 }' http://127.0.0.1:9190/create_ccr

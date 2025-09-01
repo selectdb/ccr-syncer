@@ -9,6 +9,31 @@ tag := $(shell git describe --abbrev=0 --always --dirty --tags)
 sha := $(shell git rev-parse --short HEAD)
 git_tag_sha := $(tag):$(sha)
 
+ifeq ($(shell uname -i),x86_64)
+	# Make them happy
+	platform := x64
+else
+	platform := arm64
+endif
+tarball_suffix := $(tag)-$(platform)
+
+LDFLAGS="-X 'github.com/selectdb/ccr_syncer/pkg/version.GitTagSha=$(git_tag_sha)'"
+GOFLAGS=
+
+GOFORMAT := gofmt -l -d -w
+
+# COVERAGE=ON make
+ifeq ($(COVERAGE),ON)
+    GOFLAGS += -cover
+endif
+
+.PHONY: flag_coverage
+## COVERAGE=ON : Set coverage flag
+
+.PHONY: default
+## default: Build ccr_syncer
+default: ccr_syncer
+
 .PHONY: build
 ## build : Build binary
 build: ccr_syncer get_binlog ingest_binlog get_meta snapshot_op get_master_token spec_checker rows_parse
@@ -27,12 +52,12 @@ lint:
 .PHONY: fmt
 ## fmt : Format all code
 fmt:
-	$(V)go fmt ./...
+	$(V)$(GOFORMAT) .
 
 .PHONY: test
 ## test : Run test
 test:
-	$(V)go test $(shell go list ./... | grep -v github.com/selectdb/ccr_syncer/cmd | grep -v github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/) | grep -F -v '[no test files]'
+	$(V)go test $(shell go list ./... | grep -v github.com/selectdb/ccr_syncer/cmd | grep -v github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/)
 
 .PHONY: help
 ## help : Print help message
@@ -42,11 +67,24 @@ help: Makefile
 
 # --------------- ------------------ ---------------
 # --------------- User Defined Tasks ---------------
-.PHONY: cmd/ccr_syncer
+
+.PHONY: cloc
+## cloc : Count lines of code
+cloc:
+	$(V)tokei -C . -e pkg/rpc/kitex_gen -e pkg/rpc/thrift
+
+.PHONY: gen_mock
+## gen_mock : Generate mock
+gen_mock:
+	$(V)mockgen -source=pkg/rpc/fe.go -destination=pkg/ccr/fe_mock.go -package=ccr
+	$(V)mockgen -source=pkg/ccr/metaer.go -destination=pkg/ccr/metaer_mock.go -package=ccr
+	$(V)mockgen -source=pkg/ccr/metaer_factory.go -destination=pkg/ccr/metaer_factory_mock.go -package=ccr
+	$(V)mockgen -source=pkg/rpc/rpc_factory.go -destination=pkg/ccr/rpc_factory_mock.go -package=ccr
+
 .PHONY: ccr_syncer
 ## ccr_syncer : Build ccr_syncer binary
 ccr_syncer: bin
-	$(V)go build -ldflags "-X github.com/selectdb/ccr_syncer/pkg/version.GitTagSha=$(git_tag_sha)" -o bin/ccr_syncer ./cmd/ccr_syncer
+	$(V)go build ${GOFLAGS} -ldflags ${LDFLAGS} -o bin/ccr_syncer ./cmd/ccr_syncer
 
 .PHONY: get_binlog
 ## get_binlog : Build get_binlog binary
@@ -59,9 +97,9 @@ run_get_binlog: get_binlog
 
 .PHONY: sync_thrift
 ## sync_thrift : Sync thrift
-# TODO(Drogon): Add build thrift
 sync_thrift:
-	$(V)rsync -avc $(THRIFT_DIR)/ rpc/thrift/
+	$(V)rsync -avc $(THRIFT_DIR)/ pkg/rpc/thrift/
+	$(V)$(MAKE) -C pkg/rpc/ gen_thrift
 
 .PHONY: ingest_binlog
 ## ingest_binlog : Build ingest_binlog binary
@@ -98,7 +136,29 @@ get_lag: bin
 rows_parse: bin
 	$(V)go build -o bin/rows_parse ./cmd/rows_parse
 
+.PHONY: thrift_get_meta
+## thrift_get_meta : Build thrift_get_meta binary
+thrift_get_meta: bin
+	$(V)go build -o bin/thrift_get_meta ./cmd/thrift_get_meta
+
+.PHONY: metrics
+## metrics : Build metrics binary
+metrics: bin
+	$(V)go build -o bin/metrics ./cmd/metrics
+
 .PHONY: todos
 ## todos : Print all todos
 todos:
-	$(V)grep -rnw . -e "TODO" | grep -v '^./rpc/thrift' | grep -v '^./.git'
+	$(V)grep -rnw . -e "TODO" | grep -v '^./pkg/rpc/thrift' | grep -v '^./.git'
+
+.PHONY: tarball
+## tarball : Archive files and release ccr-syncer-$(version)-$(platform).tar.xz
+tarball: default
+	$(V)mkdir -p tarball/ccr-syncer-$(tarball_suffix)/{bin,db,doc,log}
+	$(V)cp CHANGELOG.md README.md LICENSE tarball/ccr-syncer-$(tarball_suffix)/
+	$(V)cp bin/ccr_syncer tarball/ccr-syncer-$(tarball_suffix)/bin/
+	$(V)cp shell/{enable_db_binlog.sh,start_syncer.sh,stop_syncer.sh} tarball/ccr-syncer-$(tarball_suffix)/bin/
+	$(V)cp -r doc/* tarball/ccr-syncer-$(tarball_suffix)/doc/
+	$(V)cd tarball/ && tar cfJ ccr-syncer-$(tarball_suffix).tar.xz ccr-syncer-$(tarball_suffix)
+	$(V)echo archive: tarball/ccr-syncer-$(tarball_suffix).tar.xz
+

@@ -1,31 +1,68 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License
 package ccr
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/modern-go/gls"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/record"
+	"github.com/selectdb/ccr_syncer/pkg/rpc"
 	utils "github.com/selectdb/ccr_syncer/pkg/utils"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 
 	bestruct "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/backendservice"
+	festruct "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/frontendservice"
 	tstatus "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/status"
 	ttypes "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/types"
 
 	log "github.com/sirupsen/logrus"
 )
 
+var errNotFoundDestMappingTableId = xerror.NewWithoutStack(xerror.Meta, "not found dest mapping table id")
+var errTriggerPartialSnapshot = xerror.NewWithoutStack(xerror.Normal, "trigger new partial snapshot")
+
 type commitInfosCollector struct {
 	commitInfos     []*ttypes.TTabletCommitInfo
 	commitInfosLock sync.Mutex
 }
 
+type subTxnInfosCollector struct {
+	subTxnDestTableId     map[int64]int64
+	subTxnIdToCommitInfos map[int64]([]*ttypes.TTabletCommitInfo)
+	subTxnInfosLock       sync.Mutex
+}
+
 func newCommitInfosCollector() *commitInfosCollector {
 	return &commitInfosCollector{
 		commitInfos: make([]*ttypes.TTabletCommitInfo, 0),
+	}
+}
+
+func newSubTxnInfosCollector() *subTxnInfosCollector {
+	return &subTxnInfosCollector{
+		subTxnDestTableId:     make(map[int64]int64),
+		subTxnIdToCommitInfos: make(map[int64]([]*ttypes.TTabletCommitInfo)),
 	}
 }
 
@@ -36,6 +73,27 @@ func (cic *commitInfosCollector) appendCommitInfos(commitInfo ...*ttypes.TTablet
 	cic.commitInfos = append(cic.commitInfos, commitInfo...)
 }
 
+func (c *subTxnInfosCollector) appendSubTxnCommitInfos(stid, destTableId int64, commitInfo ...*ttypes.TTabletCommitInfo) {
+	c.subTxnInfosLock.Lock()
+	defer c.subTxnInfosLock.Unlock()
+
+	if c.subTxnIdToCommitInfos == nil {
+		c.subTxnIdToCommitInfos = make(map[int64]([]*ttypes.TTabletCommitInfo))
+	}
+	if c.subTxnDestTableId == nil {
+		c.subTxnDestTableId = make(map[int64]int64)
+	}
+	c.subTxnDestTableId[stid] = destTableId
+
+	tabletCommitInfos := c.subTxnIdToCommitInfos[stid]
+	if tabletCommitInfos == nil {
+		tabletCommitInfos = make([]*ttypes.TTabletCommitInfo, 0)
+	}
+
+	tabletCommitInfos = append(tabletCommitInfos, commitInfo...)
+	c.subTxnIdToCommitInfos[stid] = tabletCommitInfos
+}
+
 func (cic *commitInfosCollector) CommitInfos() []*ttypes.TTabletCommitInfo {
 	cic.commitInfosLock.Lock()
 	defer cic.commitInfosLock.Unlock()
@@ -43,47 +101,60 @@ func (cic *commitInfosCollector) CommitInfos() []*ttypes.TTabletCommitInfo {
 	return cic.commitInfos
 }
 
+func (c *subTxnInfosCollector) SubTxnToCommitInfos() map[int64]([]*ttypes.TTabletCommitInfo) {
+	c.subTxnInfosLock.Lock()
+	defer c.subTxnInfosLock.Unlock()
+
+	return c.subTxnIdToCommitInfos
+}
+
+func (c *subTxnInfosCollector) SubTxnInfos() []*festruct.TSubTxnInfo {
+	c.subTxnInfosLock.Lock()
+	defer c.subTxnInfosLock.Unlock()
+
+	subTxnInfos := make([]*festruct.TSubTxnInfo, 0, len(c.subTxnDestTableId))
+	for stid, destTableId := range c.subTxnDestTableId {
+		txnInfo := &festruct.TSubTxnInfo{
+			SubTxnId:          utils.ThriftValueWrapper(stid),
+			TableId:           utils.ThriftValueWrapper(destTableId),
+			TabletCommitInfos: c.subTxnIdToCommitInfos[stid],
+		}
+		subTxnInfos = append(subTxnInfos, txnInfo)
+	}
+	return subTxnInfos
+}
+
 type tabletIngestBinlogHandler struct {
 	ingestJob       *IngestBinlogJob
 	binlogVersion   int64
+	stid            int64
 	srcTablet       *TabletMeta
 	destTablet      *TabletMeta
 	destPartitionId int64
+	destTableId     int64
+
+	deltaRows int64
 
 	*commitInfosCollector
-
-	err     error
-	errLock sync.Mutex
+	*subTxnInfosCollector
 
 	cancel atomic.Bool
 	wg     sync.WaitGroup
 }
 
-func (h *tabletIngestBinlogHandler) setError(err error) {
-	h.errLock.Lock()
-	defer h.errLock.Unlock()
-
-	h.err = err
-}
-
-func (h *tabletIngestBinlogHandler) error() error {
-	h.errLock.Lock()
-	defer h.errLock.Unlock()
-
-	return h.err
-}
-
 // handle Replica
-func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool {
+func (h *tabletIngestBinlogHandler) handleReplica(ctx context.Context, srcReplica, destReplica *ReplicaMeta) bool {
 	destReplicaId := destReplica.Id
-	log.Debugf("handle dest replica id: %d", destReplicaId)
+	log.Tracef("txn %d tablet ingest binlog: handle dest replica id: %d, dest tablet id %d",
+		h.ingestJob.txnId, destReplicaId, h.destTablet.Id)
 
 	if h.cancel.Load() {
-		log.Infof("job canceled, replica id: %d", destReplicaId)
+		log.Infof("txn %d job canceled, replica id: %d", h.ingestJob.txnId, destReplicaId)
 		return true
 	}
 
 	j := h.ingestJob
+	destStid := h.stid
 	binlogVersion := h.binlogVersion
 	srcTablet := h.srcTablet
 	destPartitionId := h.destPartitionId
@@ -95,30 +166,28 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 	}
 	destTabletId := destReplica.TabletId
 
-	destRpc, err := h.ingestJob.ccrJob.rpcFactory.NewBeRpc(destBackend)
+	destRpc, err := h.ingestJob.ccrJob.factory.NewBeRpc(destBackend)
 	if err != nil {
 		j.setError(err)
+		return false
+	}
+	srcBackendId := srcReplica.BackendId
+	srcBackend := j.GetSrcBackend(srcBackendId)
+	if srcBackend == nil {
+		j.setError(xerror.XWrapf(errBackendNotFound, "backend id: %d", srcBackendId))
 		return false
 	}
 	loadId := ttypes.NewTUniqueId()
 	loadId.SetHi(-1)
 	loadId.SetLo(-1)
 
-	srcReplicas := srcTablet.ReplicaMetas
-	// srcBackendIds := make([]int64, 0, srcReplicas.Len())
-	iter := srcReplicas.Iter()
-	if ok := iter.First(); !ok {
-		j.setError(xerror.Errorf(xerror.Meta, "src replicas is empty"))
-		return false
-	}
-	srcBackendId := iter.Value().BackendId
-	srcBackend := j.GetSrcBackend(srcBackendId)
-	if srcBackend == nil {
-		j.setError(xerror.XWrapf(errBackendNotFound, "backend id: %d", srcBackendId))
-		return false
+	// for txn insert
+	txnId := j.txnId
+	if destStid != 0 {
+		txnId = destStid
 	}
 	req := &bestruct.TIngestBinlogRequest{
-		TxnId:          utils.ThriftValueWrapper(j.txnId),
+		TxnId:          utils.ThriftValueWrapper(txnId),
 		RemoteTabletId: utils.ThriftValueWrapper[int64](srcTablet.Id),
 		BinlogVersion:  utils.ThriftValueWrapper(binlogVersion),
 		RemoteHost:     utils.ThriftValueWrapper(srcBackend.Host),
@@ -131,65 +200,127 @@ func (h *tabletIngestBinlogHandler) handleReplica(destReplica *ReplicaMeta) bool
 		TabletId:  destTabletId,
 		BackendId: destBackend.Id,
 	}
+	cwind := h.ingestJob.ccrJob.concurrencyManager.GetWindow(destBackend.Id)
 
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
 
-		gls.ResetGls(gls.GoID(), map[interface{}]interface{}{})
-		gls.Set("job", j.ccrJob.Name)
-		defer gls.ResetGls(gls.GoID(), map[interface{}]interface{}{})
+		gls.ResetGls(gls.GoID(), map[any]any{"job": j.ccrJob.Name})
+		defer gls.DeleteGls(gls.GoID())
 
-		resp, err := destRpc.IngestBinlog(req)
+		cwind.Acquire()
+		defer cwind.Release()
+
+		var options []rpc.BeRpcOption
+		if h.deltaRows > 0 {
+			// estimate downloading time according to delta rows
+			estimatedBytes := h.deltaRows * 1024         // each row 1KB
+			estimatedDownloadSpeed := int64(1024 * 1024) // a slow download speed 1MB/s
+			estimatedElapsed := estimatedBytes / estimatedDownloadSpeed
+			estimatedDuration := time.Duration(estimatedElapsed) * time.Second
+			if estimatedDuration > time.Hour {
+				estimatedDuration = time.Hour
+			}
+			if estimatedDuration > rpc.RpcTimeout {
+				options = append(options, rpc.WithBeRpcTimeout(estimatedDuration))
+			}
+		}
+
+		resp, err := destRpc.IngestBinlog(ctx, req, options...)
 		if err != nil {
 			j.setError(err)
 			return
 		}
 
-		log.Debugf("ingest resp: %v", resp)
+		log.Tracef("txn %d tablet ingest binlog resp: %v", j.txnId, resp)
 		if !resp.IsSetStatus() {
-			err = xerror.Errorf(xerror.BE, "ingest resp status not set")
+			err = xerror.Errorf(xerror.BE, "ingest resp status not set, req: %+v", req)
 			j.setError(err)
 			return
 		} else if resp.Status.StatusCode != tstatus.TStatusCode_OK {
-			err = xerror.Errorf(xerror.BE, "ingest resp status code: %v, msg: %v", resp.Status.StatusCode, resp.Status.ErrorMsgs)
+			err = xerror.Errorf(xerror.BE, "ingest error, req %v, resp status code: %v, msg: %v", req, resp.Status.StatusCode, resp.Status.ErrorMsgs)
 			j.setError(err)
 			return
 		} else {
 			h.appendCommitInfos(commitInfo)
+
+			// for txn insert
+			if destStid != 0 {
+				h.appendSubTxnCommitInfos(destStid, h.destTableId, commitInfo)
+			}
 		}
 	}()
 
 	return true
 }
 
-func (h *tabletIngestBinlogHandler) handle() {
-	log.Debugf("handle tablet ingest binlog, src tablet id: %d, dest tablet id: %d", h.srcTablet.Id, h.destTablet.Id)
+func (h *tabletIngestBinlogHandler) handle(ctx context.Context) {
+	log.Tracef("txn %d, tablet ingest binlog, src tablet id: %d, dest tablet id: %d, total %d replicas",
+		h.ingestJob.txnId, h.srcTablet.Id, h.destTablet.Id, h.srcTablet.ReplicaMetas.Len())
 
+	// all src replicas version > binlogVersion
+	srcReplicas := make([]*ReplicaMeta, 0, h.srcTablet.ReplicaMetas.Len())
+	h.srcTablet.ReplicaMetas.Scan(func(srcReplicaId int64, srcReplica *ReplicaMeta) bool {
+		if srcReplica.Version >= h.binlogVersion {
+			srcReplicas = append(srcReplicas, srcReplica)
+		}
+		return true
+	})
+
+	if len(srcReplicas) == 0 {
+		h.ingestJob.setError(xerror.Errorf(xerror.Meta, "no src replica version > %d", h.binlogVersion))
+		return
+	}
+
+	srcReplicaIndex := 0
 	h.destTablet.ReplicaMetas.Scan(func(destReplicaId int64, destReplica *ReplicaMeta) bool {
-		return h.handleReplica(destReplica)
+		// round robbin
+		srcReplica := srcReplicas[srcReplicaIndex%len(srcReplicas)]
+		srcReplicaIndex++
+		return h.handleReplica(ctx, srcReplica, destReplica)
 	})
 	h.wg.Wait()
 
 	h.ingestJob.appendCommitInfos(h.CommitInfos()...)
+	// for txn insert
+	if h.stid != 0 {
+		commitInfos := h.SubTxnToCommitInfos()[h.stid]
+		h.ingestJob.appendSubTxnCommitInfos(h.stid, h.destTableId, commitInfos...)
+	}
 }
 
 type IngestContext struct {
 	context.Context
+	commitSeq    int64
 	txnId        int64
 	tableRecords []*record.TableRecord
+	tableMapping map[int64]int64
+	stidMapping  map[int64]int64
 }
 
-func NewIngestContext(txnId int64, tableRecords []*record.TableRecord) *IngestContext {
+func NewIngestContext(commitSeq, txnId int64, tableRecords []*record.TableRecord,
+	tableMapping map[int64]int64, stidMapping map[int64]int64) *IngestContext {
 	return &IngestContext{
 		Context:      context.Background(),
+		commitSeq:    commitSeq,
 		txnId:        txnId,
 		tableRecords: tableRecords,
+		tableMapping: tableMapping,
+		stidMapping:  stidMapping,
 	}
 }
 
 type IngestBinlogJob struct {
-	ccrJob       *Job // ccr job
+	ccrJob  *Job // ccr job
+	factory *Factory
+
+	tableMapping map[int64]int64
+	srcMeta      IngestBinlogMetaer
+	destMeta     IngestBinlogMetaer
+	stidMap      map[int64]int64
+
+	commitSeq    int64
 	txnId        int64
 	tableRecords []*record.TableRecord
 
@@ -199,6 +330,7 @@ type IngestBinlogJob struct {
 	tabletIngestJobs []*tabletIngestBinlogHandler
 
 	*commitInfosCollector
+	*subTxnInfosCollector
 
 	err     error
 	errLock sync.RWMutex
@@ -214,11 +346,17 @@ func NewIngestBinlogJob(ctx context.Context, ccrJob *Job) (*IngestBinlogJob, err
 	}
 
 	return &IngestBinlogJob{
-		ccrJob:       ccrJob,
+		ccrJob:  ccrJob,
+		factory: ccrJob.factory,
+
+		tableMapping: ingestCtx.tableMapping,
+		commitSeq:    ingestCtx.commitSeq,
 		txnId:        ingestCtx.txnId,
 		tableRecords: ingestCtx.tableRecords,
+		stidMap:      ingestCtx.stidMapping,
 
 		commitInfosCollector: newCommitInfosCollector(),
+		subTxnInfosCollector: newSubTxnInfosCollector(),
 	}, nil
 }
 
@@ -242,6 +380,10 @@ func (j *IngestBinlogJob) GetTabletCommitInfos() []*ttypes.TTabletCommitInfo {
 	return j.commitInfos
 }
 
+func (j *IngestBinlogJob) GetSubTxnInfos() []*festruct.TSubTxnInfo {
+	return j.SubTxnInfos()
+}
+
 func (j *IngestBinlogJob) setError(err error) {
 	j.errLock.Lock()
 	defer j.errLock.Unlock()
@@ -259,26 +401,27 @@ func (j *IngestBinlogJob) Error() error {
 type prepareIndexArg struct {
 	binlogVersion   int64
 	srcTableId      int64
+	stid            int64
 	srcPartitionId  int64
 	destTableId     int64
 	destPartitionId int64
 	srcIndexMeta    *IndexMeta
 	destIndexMeta   *IndexMeta
+	deltaRows       map[int64]int64
 }
 
 func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
-	log.Debugf("prepareIndex: %v", arg)
+	log.Tracef("txn %d ingest binlog: prepare index %s, src %d, dest %d",
+		j.txnId, arg.srcIndexMeta.Name, arg.srcIndexMeta.Id, arg.destIndexMeta.Id)
 
 	// Step 1: check tablets
-	log.Debugf("arg %+v", arg)
-	job := j.ccrJob
-	srcTablets, err := job.srcMeta.GetTablets(arg.srcTableId, arg.srcPartitionId, arg.srcIndexMeta.Id)
+	srcTablets, err := j.srcMeta.GetTablets(arg.srcTableId, arg.srcPartitionId, arg.srcIndexMeta.Id)
 	if err != nil {
 		j.setError(err)
 		return
 	}
 
-	destTablets, err := job.destMeta.GetTablets(arg.destTableId, arg.destPartitionId, arg.destIndexMeta.Id)
+	destTablets, err := j.destMeta.GetTablets(arg.destTableId, arg.destPartitionId, arg.destIndexMeta.Id)
 	if err != nil {
 		j.setError(err)
 		return
@@ -290,7 +433,7 @@ func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 	}
 
 	if srcTablets.Len() == 0 {
-		log.Warn("src tablets length: 0, skip")
+		log.Warnf("txn %d ingest binlog: src tablets length: 0, skip", j.txnId)
 		return
 	}
 
@@ -312,12 +455,16 @@ func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 		destTablet := destIter.Value()
 		tabletIngestBinlogHandler := &tabletIngestBinlogHandler{
 			ingestJob:       j,
+			stid:            arg.stid,
 			binlogVersion:   arg.binlogVersion,
 			srcTablet:       srcTablet,
 			destTablet:      destTablet,
 			destPartitionId: arg.destPartitionId,
+			destTableId:     arg.destTableId,
+			deltaRows:       arg.deltaRows[srcTablet.Id],
 
 			commitInfosCollector: newCommitInfosCollector(),
+			subTxnInfosCollector: newSubTxnInfosCollector(),
 		}
 		j.tabletIngestJobs = append(j.tabletIngestJobs, tabletIngestBinlogHandler)
 
@@ -329,13 +476,13 @@ func (j *IngestBinlogJob) prepareIndex(arg *prepareIndexArg) {
 	}
 }
 
-func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partitionRecord record.PartitionRecord, indexIds []int64) {
-	log.Debugf("partitionRecord: %v", partitionRecord)
+func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64,
+	partitionRecord record.PartitionRecord, indexIds []int64, deltaRows map[int64]int64) {
+	log.Tracef("txn %d ingest binlog: prepare partition: %v", j.txnId, partitionRecord)
 	// 废弃 preparePartition， 上面index的那部分是这里的实现
 	// 还是要求一下和下游对齐的index length，这个是不可以recover的
 	// 思考那些是recover用的，主要就是tablet那块的
 
-	// TODO(Drogon): add use Backup/Restore to handle this
 	if len(indexIds) == 0 {
 		j.setError(xerror.Errorf(xerror.Meta, "index ids is empty"))
 		return
@@ -345,19 +492,21 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 
 	srcPartitionId := partitionRecord.Id
 	srcPartitionRange := partitionRecord.Range
-	destPartitionId, err := job.destMeta.GetPartitionIdByRange(destTableId, srcPartitionRange)
+	sourceStid := partitionRecord.Stid
+	stidMap := j.stidMap
+	destPartitionId, err := j.destMeta.GetPartitionIdByRange(destTableId, srcPartitionRange)
 	if err != nil {
 		j.setError(err)
 		return
 	}
 
 	// Step 1: check index id
-	srcIndexIdMap, err := j.ccrJob.srcMeta.GetIndexIdMap(srcTableId, srcPartitionId)
+	srcIndexIdMap, err := j.srcMeta.GetIndexIdMap(srcTableId, srcPartitionId)
 	if err != nil {
 		j.setError(err)
 		return
 	}
-	destIndexNameMap, err := j.ccrJob.destMeta.GetIndexNameMap(destTableId, destPartitionId)
+	destIndexNameMap, destBaseIndex, err := j.destMeta.GetIndexNameMap(destTableId, destPartitionId)
 	if err != nil {
 		j.setError(err)
 		return
@@ -367,21 +516,35 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 		srcIndexName := srcIndexMeta.Name
 		if ccrJob.SyncType == TableSync && srcIndexName == ccrJob.Src.Table {
 			return ccrJob.Dest.Table
+		} else if srcIndexMeta.IsBaseIndex {
+			return destBaseIndex.Name
 		} else {
 			return srcIndexName
 		}
 	}
 
 	for _, indexId := range indexIds {
+		if _, ok := j.ccrJob.Extra.DroppedIndexes[indexId]; ok || j.srcMeta.IsIndexDropped(indexId) {
+			continue
+		}
+		if featureFilterShadowIndexesUpsert {
+			if _, ok := j.ccrJob.progress.ShadowIndexes[indexId]; ok {
+				continue
+			}
+		}
 		srcIndexMeta, ok := srcIndexIdMap[indexId]
 		if !ok {
+			log.Warnf("index id %d not found in src meta, dropped indexes %v, shadow indexes %v, src meta dropped indexes: %v",
+				indexId, j.ccrJob.Extra.DroppedIndexes, j.ccrJob.progress.ShadowIndexes, j.srcMeta.GetDroppedIndexMap())
 			j.setError(xerror.Errorf(xerror.Meta, "index id %v not found in src meta", indexId))
 			return
 		}
 
 		srcIndexName := getSrcIndexName(job, srcIndexMeta)
 		if _, ok := destIndexNameMap[srcIndexName]; !ok {
-			j.setError(xerror.Errorf(xerror.Meta, "index name %v not found in dest meta", srcIndexName))
+			j.setError(xerror.Errorf(xerror.Meta,
+				"index name %v not found in dest meta, is base index: %t, src index id: %d, shadow indexes %v",
+				srcIndexName, srcIndexMeta.IsBaseIndex, indexId, j.ccrJob.progress.ShadowIndexes))
 			return
 		}
 	}
@@ -390,21 +553,55 @@ func (j *IngestBinlogJob) preparePartition(srcTableId, destTableId int64, partit
 	prepareIndexArg := prepareIndexArg{
 		binlogVersion:   partitionRecord.Version,
 		srcTableId:      srcTableId,
+		stid:            stidMap[sourceStid],
 		srcPartitionId:  srcPartitionId,
 		destTableId:     destTableId,
 		destPartitionId: destPartitionId,
+		deltaRows:       deltaRows,
 	}
+	droppedIndexes := []int64{}
 	for _, indexId := range indexIds {
+		if _, ok := j.ccrJob.Extra.DroppedIndexes[indexId]; ok || j.srcMeta.IsIndexDropped(indexId) {
+			log.Infof("txn %d ingest binlog: skip the dropped index %d", j.txnId, indexId)
+			droppedIndexes = append(droppedIndexes, indexId)
+			continue
+		}
+		if featureFilterShadowIndexesUpsert {
+			if _, ok := j.ccrJob.progress.ShadowIndexes[indexId]; ok {
+				log.Infof("txn %d ingest binlog: skip the shadow index %d", j.txnId, indexId)
+				continue
+			}
+		}
+
 		srcIndexMeta := srcIndexIdMap[indexId]
 		destIndexMeta := destIndexNameMap[getSrcIndexName(job, srcIndexMeta)]
 		prepareIndexArg.srcIndexMeta = srcIndexMeta
 		prepareIndexArg.destIndexMeta = destIndexMeta
 		j.prepareIndex(&prepareIndexArg)
+		if j.Error() != nil {
+			return
+		}
+	}
+
+	if len(droppedIndexes) > 0 && len(droppedIndexes) != len(indexIds) {
+		var sb strings.Builder
+		for indexId, commitSeq := range j.srcMeta.GetDroppedIndexMap() {
+			sb.WriteString(fmt.Sprintf("%d=%d", indexId, commitSeq))
+			if sb.Len() != 0 {
+				sb.WriteString(", ")
+			}
+		}
+		log.Warnf("txn %d ingest binlog: not all indexes are dropped, skip indexes: %v, total indexes: %v, src dropped indexes: [%s]",
+			j.txnId, droppedIndexes, indexIds, sb.String())
 	}
 }
 
 func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
-	log.Debugf("tableRecord: %v", tableRecord)
+	log.Tracef("txn %d ingest binlog: prepare table: %d", j.txnId, tableRecord.Id)
+	if j.srcMeta.IsTableDropped(tableRecord.Id) {
+		log.Infof("txn %d ingest binlog: skip the dropped table %d", j.txnId, tableRecord.Id)
+		return
+	}
 
 	if len(tableRecord.PartitionRecords) == 0 {
 		j.setError(xerror.Errorf(xerror.Meta, "partition records is empty"))
@@ -424,7 +621,7 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 		destTableId = job.Dest.TableId
 	case DBSync:
 		srcTableId = tableRecord.Id
-		destTableId, err = job.getDestTableIdBySrc(tableRecord.Id)
+		destTableId, err = job.GetDestTableIdBySrc(tableRecord.Id)
 		if err != nil {
 			break
 		}
@@ -437,26 +634,30 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 	}
 
 	// Step 1: check all partitions in partition records are in src/dest cluster
-	srcPartitionMap, err := job.srcMeta.GetPartitionRangeMap(srcTableId)
+	srcPartitionMap, err := j.srcMeta.GetPartitionRangeMap(srcTableId)
 	if err != nil {
 		j.setError(err)
 		return
 	}
-	destPartitionMap, err := job.destMeta.GetPartitionRangeMap(destTableId)
+	destPartitionMap, err := j.destMeta.GetPartitionRangeMap(destTableId)
 	if err != nil {
 		j.setError(err)
 		return
 	}
 	for _, partitionRecord := range tableRecord.PartitionRecords {
+		if partitionRecord.IsTemp || j.srcMeta.IsPartitionDropped(partitionRecord.Id) {
+			continue
+		}
 		rangeKey := partitionRecord.Range
-		// TODO(Improvment, Fix): this may happen after drop partition, can seek partition for more time, check from recycle bin
 		if _, ok := srcPartitionMap[rangeKey]; !ok {
-			err = xerror.Errorf(xerror.Meta, "partition range: %v not in src cluster", rangeKey)
+			log.Debugf("the expected partition range: '%s', the source partition map: %v", rangeKey, srcPartitionMap)
+			err = xerror.Errorf(xerror.Meta, "partition range: %s not in src cluster", rangeKey)
 			j.setError(err)
 			return
 		}
 		if _, ok := destPartitionMap[rangeKey]; !ok {
-			err = xerror.Errorf(xerror.Meta, "partition range: %v not in dest cluster", rangeKey)
+			log.Debugf("the expected partition range: '%s', the dest partition map: %v", rangeKey, destPartitionMap)
+			err = xerror.Errorf(xerror.Meta, "partition range: %s not in dest cluster", rangeKey)
 			j.setError(err)
 			return
 		}
@@ -464,23 +665,34 @@ func (j *IngestBinlogJob) prepareTable(tableRecord *record.TableRecord) {
 
 	// Step 2: prepare partitions
 	for _, partitionRecord := range tableRecord.PartitionRecords {
-		j.preparePartition(srcTableId, destTableId, partitionRecord, tableRecord.IndexIds)
+		if partitionRecord.IsTemp {
+			log.Debugf("skip ingest binlog to an temp partition, id: %d range: %s, version: %d",
+				partitionRecord.Id, partitionRecord.Range, partitionRecord.Version)
+			continue
+		}
+		if j.srcMeta.IsPartitionDropped(partitionRecord.Id) {
+			log.Infof("txn %d skip the dropped partition %d, range: %s, version: %d",
+				j.txnId, partitionRecord.Id, partitionRecord.Range, partitionRecord.Version)
+			continue
+		}
+		j.preparePartition(srcTableId, destTableId, partitionRecord, tableRecord.IndexIds, tableRecord.DeltaRows)
+		if j.Error() != nil {
+			return
+		}
 	}
 }
 
 func (j *IngestBinlogJob) prepareBackendMap() {
-	log.Debug("prepareBackendMap")
-
-	job := j.ccrJob
+	log.Tracef("txn %d ingest binlog: prepare backend map", j.txnId)
 
 	var err error
-	j.srcBackendMap, err = job.srcMeta.GetBackendMap()
+	j.srcBackendMap, err = j.srcMeta.GetBackendMap()
 	if err != nil {
 		j.setError(err)
 		return
 	}
 
-	j.destBackendMap, err = job.destMeta.GetBackendMap()
+	j.destBackendMap, err = j.destMeta.GetBackendMap()
 	if err != nil {
 		j.setError(err)
 		return
@@ -488,44 +700,220 @@ func (j *IngestBinlogJob) prepareBackendMap() {
 }
 
 func (j *IngestBinlogJob) prepareTabletIngestJobs() {
-	log.Debugf("prepareTabletIngestJobs, table length: %d", len(j.tableRecords))
+	log.Tracef("txn %d ingest binlog: prepare tablet ingest jobs, table length: %d", j.txnId, len(j.tableRecords))
 
 	j.tabletIngestJobs = make([]*tabletIngestBinlogHandler, 0)
 	for _, tableRecord := range j.tableRecords {
 		j.prepareTable(tableRecord)
-		if j.Error() != nil {
+		err := j.Error()
+		if err != nil {
+			if xerror.IsCategory(err, xerror.Meta) {
+				log.Warnf("txn %d ingest binlog: prepare table %d failed, err: %v, dropped tables %v, dropped partitions %v, dropped indexes %v",
+					j.txnId, tableRecord.Id, err, j.srcMeta.GetDroppedTableMap(), j.srcMeta.GetDroppedPartitionMap(), j.srcMeta.GetDroppedIndexMap())
+			}
 			return
 		}
 	}
 }
 
-func (j *IngestBinlogJob) runTabletIngestJobs() {
-	log.Debugf("runTabletIngestJobs, job length: %d", len(j.tabletIngestJobs))
-
+func (j *IngestBinlogJob) runTabletIngestJobs(ctx context.Context) {
+	log.Infof("txn %d ingest binlog: run %d tablet ingest jobs", j.txnId, len(j.tabletIngestJobs))
 	for _, tabletIngestJob := range j.tabletIngestJobs {
 		j.wg.Add(1)
 		go func(tabletIngestJob *tabletIngestBinlogHandler) {
-			tabletIngestJob.handle()
+			tabletIngestJob.handle(ctx)
 			j.wg.Done()
 		}(tabletIngestJob)
 	}
 	j.wg.Wait()
 }
 
-// TODO(Drogon): use monad error handle
+func (j *IngestBinlogJob) prepareMeta() {
+	log.Tracef("txn %d ingest binlog: prepare meta with %d table records", j.txnId, len(j.tableRecords))
+	srcTableIds := make([]int64, 0, len(j.tableRecords))
+	job := j.ccrJob
+	factory := j.factory
+
+	switch job.SyncType {
+	case DBSync:
+		for _, tableRecord := range j.tableRecords {
+			srcTableIds = append(srcTableIds, tableRecord.Id)
+		}
+	case TableSync:
+		srcTableIds = append(srcTableIds, job.Src.TableId)
+	default:
+		err := xerror.Panicf(xerror.Normal, "invalid sync type: %s", job.SyncType)
+		j.setError(err)
+		return
+	}
+
+	srcMeta, err := factory.NewThriftMeta(&job.Src, j.ccrJob.factory, srcTableIds)
+	if err != nil {
+		j.setError(err)
+		return
+	}
+
+	destTableIds := make([]int64, 0, len(j.tableRecords))
+	switch job.SyncType {
+	case DBSync:
+		for _, srcTableId := range srcTableIds {
+			if destTableId, ok := j.tableMapping[srcTableId]; ok {
+				destTableIds = append(destTableIds, destTableId)
+			} else {
+				err := xerror.XWrapf(errNotFoundDestMappingTableId, "src table id: %d", srcTableId)
+				j.setError(err)
+				return
+			}
+		}
+	case TableSync:
+		destTableIds = append(destTableIds, job.Dest.TableId)
+	default:
+		err := xerror.Panicf(xerror.Normal, "invalid sync type: %s", job.SyncType)
+		j.setError(err)
+		return
+	}
+
+	destMeta, err := factory.NewThriftMeta(&job.Dest, j.ccrJob.factory, destTableIds)
+	if err != nil {
+		j.setError(err)
+		return
+	}
+
+	j.srcMeta = srcMeta
+	j.destMeta = destMeta
+}
+
+// Apply the dropped binlogs to the dest cluster, to avoid blocking the ingest binlog.
+func (j *IngestBinlogJob) applyDroppedBinlogs() {
+	droppedIndexMap := j.srcMeta.GetDroppedIndexMap()
+	for indexId, commitSeq := range droppedIndexMap {
+		if j.ccrJob.Extra.DroppedIndexes == nil {
+			j.ccrJob.Extra.DroppedIndexes = make(map[int64]any)
+		}
+		j.ccrJob.Extra.DroppedIndexes[indexId] = struct{}{}
+		if commitSeq < j.commitSeq {
+			// ignore the binlog that has been committed
+			continue
+		}
+
+		if _, ok := j.ccrJob.Extra.AppliedBinlogs[commitSeq]; ok {
+			continue
+		}
+
+		binlog, err := j.ccrJob.GetSpecifiedBinlog(commitSeq)
+		if err != nil {
+			j.setError(err)
+			return
+		}
+
+		if binlog.GetType() == festruct.TBinlogType_BARRIER {
+			barrierLog, err := record.NewBarrierLogFromJson(binlog.GetData())
+			if err != nil {
+				j.setError(err)
+				return
+			}
+
+			if barrierLog.Binlog != "" {
+				// keep compatible with old version
+				binlogType := festruct.TBinlogType(barrierLog.BinlogType)
+				newBinlog := festruct.NewTBinlog()
+				newBinlog.SetCommitSeq(utils.ThriftValueWrapper(binlog.GetCommitSeq()))
+				newBinlog.SetTimestamp(utils.ThriftValueWrapper(binlog.GetTimestamp()))
+				newBinlog.SetType(&binlogType)
+				newBinlog.SetDbId(utils.ThriftValueWrapper(binlog.GetDbId()))
+				newBinlog.SetData(&barrierLog.Binlog)
+				newBinlog.SetTableIds(binlog.GetTableIds())
+				binlog = newBinlog
+			}
+		}
+
+		if binlog.GetType() == festruct.TBinlogType_ALTER_JOB {
+			log.Infof("txn %d ingest binlog: trigger new partial snapshot by alter job binlog, commitSeq: %d", j.txnId, commitSeq)
+			alterJobRecord, err := record.NewAlterJobV2FromJson(binlog.GetData())
+			if err != nil {
+				j.setError(err)
+				return
+			}
+
+			if !isMatchTableId(j.tableRecords, alterJobRecord.TableId) {
+				log.Tracef("txn %d ingest binlog: skip alter job binlog, table id %d not in table records", j.txnId, alterJobRecord.TableId)
+				continue
+			}
+
+			j.ccrJob.Extra.PartialSnapshotParams = &PartialSnapshotParams{
+				TableId:    alterJobRecord.TableId,
+				TableName:  alterJobRecord.TableName,
+				Partitions: nil,
+				Replace:    true,
+				IsView:     false,
+			}
+			j.setError(errTriggerPartialSnapshot)
+			return
+		}
+
+		if binlog.GetType() != festruct.TBinlogType_DROP_ROLLUP {
+			log.Tracef("txn %d ingest binlog: skip drop binlog %s data %s", j.txnId, binlog.GetType(), binlog.GetData())
+			continue
+		} else {
+			dropRollupRecord, err := record.NewDropRollupFromJson(binlog.GetData())
+			if err != nil {
+				j.setError(err)
+				return
+			}
+			if !isMatchTableId(j.tableRecords, dropRollupRecord.TableId) {
+				log.Tracef("txn %d ingest binlog: skip drop rollup binlog, table id %d not in table records", j.txnId, dropRollupRecord.TableId)
+				continue
+			}
+		}
+
+		// Apply the drop rollup binlog to the dest cluster
+		log.Infof("txn %d ingest binlog: apply drop rollup binlog, commitSeq: %d", j.txnId, commitSeq)
+		allowNotExists := true
+		err = j.ccrJob.handleDropRollup(binlog, allowNotExists)
+		if err != nil {
+			j.setError(err)
+			return
+		}
+
+		if j.ccrJob.Extra.AppliedBinlogs == nil {
+			j.ccrJob.Extra.AppliedBinlogs = make(map[int64]any)
+		}
+		j.ccrJob.Extra.AppliedBinlogs[commitSeq] = struct{}{}
+	}
+}
+
 func (j *IngestBinlogJob) Run() {
-	j.prepareBackendMap()
+	j.Prepare()
 	if err := j.Error(); err != nil {
 		return
 	}
+	j.Ingest(context.Background())
+}
 
-	j.prepareTabletIngestJobs()
-	if err := j.Error(); err != nil {
-		return
+func (j *IngestBinlogJob) Prepare() {
+	steps := []func(){
+		j.prepareMeta,
+		j.applyDroppedBinlogs,
+		j.prepareBackendMap,
+		j.prepareTabletIngestJobs,
 	}
+	for _, step := range steps {
+		step()
+		if err := j.Error(); err != nil {
+			return
+		}
+	}
+}
 
-	j.runTabletIngestJobs()
-	if err := j.Error(); err != nil {
-		return
+func isMatchTableId(tableRecords []*record.TableRecord, tableId int64) bool {
+	for _, tableRecord := range tableRecords {
+		if tableRecord.Id == tableId {
+			return true
+		}
 	}
+	return false
+}
+
+func (j *IngestBinlogJob) Ingest(ctx context.Context) {
+	j.runTabletIngestJobs(ctx)
 }

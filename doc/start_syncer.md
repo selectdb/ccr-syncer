@@ -22,13 +22,20 @@ output_dir
 bash bin/start_syncer.sh --daemon
 ```
 
+### --config_file
+该配置文件指定CCR Syncer元数据库的信息，文件内容包括db_type，db_host，db_port，db_user，db_password。默认值是db.conf
+使用该选项启动CCR Syncer进程后，**不应再使用db_type，db_host，db_port，db_user，db_password来指定元数据信息**
+```bash
+bash bin/start_syncer.sh --config_file /path/to/db.conf
+```
+
 ### --db_type  
-Syncer目前能够使用两种数据库来保存自身的元数据，分别为`sqlite3`（对应本地存储）和`mysql`（本地或远端存储）  
+Syncer目前能够使用两种数据库来保存自身的元数据，分别为`sqlite3`（对应本地存储）和`mysql` 或者`postgresql`（本地或远端存储）
 ```bash
 bash bin/start_syncer.sh --db_type mysql
 ```
 默认值为sqlite3  
-在使用mysql存储元数据时，Syncer会使用`CREATE IF NOT EXISTS`来创建一个名为`ccr`的库，ccr相关的元数据表都会保存在其中
+在使用mysql或者postgresql存储元数据时，Syncer会使用`CREATE IF NOT EXISTS`来创建一个名为`ccr`的库，ccr相关的元数据表都会保存在其中
 
 ### --db_dir  
 **这个选项仅在db使用`sqlite3`时生效**  
@@ -38,7 +45,7 @@ bash bin/start_syncer.sh --db_dir /path/to/ccr.db
 ```
 默认路径为`SYNCER_OUTPUT_DIR/db`，文件名为`ccr.db`
 ### --db_host & db_port & db_user & db_password
-**这个选项仅在db使用`mysql`时生效**  
+**这个选项仅在db使用`mysql`或者`postgresql`时生效**  
 ```bash
 bash bin/start_syncer.sh --db_host 127.0.0.1 --db_port 3306 --db_user root --db_password "qwe123456"
 ```
@@ -54,7 +61,7 @@ bash bin/start_syncer.sh --log_dir /path/to/ccr_syncer.log
 ```bash
 bash bin/start_syncer.sh --log_level info
 ```
-日志的格式如下，其中hook只会在`log_level > info`的时候打印：
+
 ```
 #        time         level        msg                  hooks
 [2023-07-18 16:30:18] TRACE This is trace type. ccrName=xxx line=xxx
@@ -81,3 +88,31 @@ pid文件是stop_syncer.sh脚本用于关闭Syncer的凭据，里面保存了对
 bash bin/start_syncer.sh --pid_dir /path/to/pids
 ```
 默认值为`SYNCER_OUTPUT_DIR/bin`
+
+### --commit_txn_timeout
+用于指定提交事务超时时间
+```bash
+bash bin/start_syncer.sh --commit_txn_timeout 33s
+```
+默认值为33s
+
+### --connect_timeout duration
+用于指定连接超时时间
+```bash
+bash bin/start_syncer.sh --connect_timeout 10s
+```
+默认值为1s
+
+### --local_repo_name string
+用于指定本地仓库名称
+```bash
+bash bin/start_syncer.sh --local_repo_name "repo_name"
+```
+默认值为""
+
+### --rpc_timeout duration
+用于指定rpc超时时间
+```bash
+bash bin/start_syncer.sh --rpc_timeout 30s
+```
+默认值为3s
