@@ -130,8 +130,9 @@ func init() {
 type SyncType int
 
 const (
-	DBSync    SyncType = 0
-	TableSync SyncType = 1
+	DBSync      SyncType = 0
+	TableSync   SyncType = 1
+	ClusterSync SyncType = 2
 )
 
 func (s SyncType) String() string {
@@ -140,6 +141,8 @@ func (s SyncType) String() string {
 		return "db_sync"
 	case TableSync:
 		return "table_sync"
+	case ClusterSync:
+		return "cluster_sync"
 	default:
 		return "unknown_sync"
 	}
