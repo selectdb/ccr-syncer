@@ -77,6 +77,7 @@ var (
 	featureSkipCheckAsyncMvTable        bool
 	featurePipelineCommit               bool
 	featureSeperatedHandles             bool
+	featureEnableSnapshotCompress       bool
 
 	flagBinlogBatchSize int64
 
@@ -120,6 +121,8 @@ func init() {
 		"enable pipeline commit for upsert binlogs")
 	flag.BoolVar(&featureSeperatedHandles, "feature_seperated_handles", false,
 		"enable the seperated handles (the refactor)")
+	flag.BoolVar(&featureEnableSnapshotCompress, "feature_enable_snapshot_compress", true,
+		"enable snapshot compress")
 
 	flag.Int64Var(&flagBinlogBatchSize, "binlog_batch_size", 16, "the max num of binlogs to get in a batch")
 }
@@ -968,7 +971,7 @@ func (j *Job) fullSync() error {
 		}
 
 		log.Tracef("fullsync begin get snapshot %s", snapshotName)
-		compress := false
+		compress := featureEnableSnapshotCompress
 		snapshotResp, err := srcRpc.GetSnapshot(src, snapshotName, compress)
 		if err != nil {
 			return err
