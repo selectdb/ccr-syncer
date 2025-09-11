@@ -44,7 +44,7 @@ type TableRecord struct {
 }
 
 func (t *TableRecord) String() string {
-	return fmt.Sprintf("TableRecord{Id: %d, PartitionRecords: %v, IndexIds: %v}", t.Id, t.PartitionRecords, t.IndexIds)
+	return fmt.Sprintf("TableRecord{Id: %d, PartitionRecords: %v, IndexIds: %v, DeltaRows: %v}", t.Id, t.PartitionRecords, t.IndexIds, t.DeltaRows)
 }
 
 type Upsert struct {
