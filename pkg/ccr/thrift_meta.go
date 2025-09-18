@@ -61,9 +61,14 @@ func NewThriftMeta(spec *base.Spec, rpcFactory rpc.IRpcFactory, tableIds []int64
 	}
 
 	for _, backend := range backendMetaResp.GetBackends() {
+		// Compatibility fix: Replace with remote IP address
+		host := backend.GetHost()
+		if host == "127.0.0.1" {
+			host = spec.Host
+		}
 		backendMeta := &base.Backend{
 			Id:       backend.GetId(),
-			Host:     backend.GetHost(),
+			Host:     host,
 			BePort:   uint16(backend.GetBePort()),
 			HttpPort: uint16(backend.GetHttpPort()),
 			BrpcPort: uint16(backend.GetBrpcPort()),

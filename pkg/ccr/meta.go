@@ -541,6 +541,14 @@ func (m *Meta) UpdateBackends() error {
 		return xerror.Wrap(err, xerror.Normal, query)
 	}
 
+	// Compatibility fix: Replace with remote IP address
+	for i := range backends {
+		backend := backends[i]
+		if backend.Host == "127.0.0.1" {
+			backend.Host = m.Host
+		}
+	}
+
 	for _, backend := range backends {
 		m.Backends[backend.Id] = backend
 
