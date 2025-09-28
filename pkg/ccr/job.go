@@ -2988,6 +2988,55 @@ func (j *Job) handleRecoverInfo(binlog *festruct.TBinlog) error {
 	return j.NewPartialSnapshot(recoverInfo.TableId, recoverInfo.TableName, nil, true, isView)
 }
 
+func (j *Job) handleModifyDistributionBucketNum(binlog *festruct.TBinlog) error {
+	log.Infof("handle modify distribution bucket num binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
+
+	data := binlog.GetData()
+	modifyDistributionBucketNum, err := record.NewModifyDistributionBucketNumFromJson(data)
+	if err != nil {
+		return err
+	}
+
+	commitSeq := binlog.GetCommitSeq()
+	if j.IsBinlogCommitted(modifyDistributionBucketNum.TableId, commitSeq) {
+		return nil
+	}
+
+	destTableName, err := j.GetDestNameBySrcId(modifyDistributionBucketNum.TableId)
+	if err != nil {
+		return err
+	}
+	bucketType := modifyDistributionBucketNum.Type
+	autoBucket := modifyDistributionBucketNum.AutoBucket
+	bucketNum := modifyDistributionBucketNum.BucketNum
+	columnsName := modifyDistributionBucketNum.ColumnsName
+	return j.IDest.ModifyDistributionBucketNum(destTableName, bucketType, autoBucket, bucketNum, columnsName)
+}
+
+func (j *Job) handleModifyDistributionType(binlog *festruct.TBinlog) error {
+	log.Infof("handle modify distribution type binlog, prevCommitSeq: %d, commitSeq: %d",
+		j.progress.PrevCommitSeq, j.progress.CommitSeq)
+
+	data := binlog.GetData()
+	modifyDistributionType, err := record.NewModifyDistributionTypeFromJson(data)
+	if err != nil {
+		return err
+	}
+
+	commitSeq := binlog.GetCommitSeq()
+	if j.IsBinlogCommitted(modifyDistributionType.TableId, commitSeq) {
+		return nil
+	}
+
+	destTableName, err := j.GetDestNameBySrcId(modifyDistributionType.TableId)
+	if err != nil {
+		return err
+	}
+
+	return j.IDest.ModifyDistributionType(destTableName)
+}
+
 func (j *Job) handleBarrier(binlog *festruct.TBinlog) error {
 	data := binlog.GetData()
 	barrierLog, err := record.NewBarrierLogFromJson(data)
@@ -3556,6 +3605,10 @@ func (j *Job) handleNonBarrierBinlog(binlog *festruct.TBinlog) error {
 			err = j.handleDropRollup(binlog, false)
 		case festruct.TBinlogType_RECOVER_INFO:
 			err = j.handleRecoverInfo(binlog)
+		case festruct.TBinlogType_MODIFY_DISTRIBUTION_BUCKET_NUM:
+			err = j.handleModifyDistributionBucketNum(binlog)
+		case festruct.TBinlogType_MODIFY_DISTRIBUTION_TYPE:
+			err = j.handleModifyDistributionType(binlog)
 		default:
 			return xerror.Errorf(xerror.Normal, "unknown binlog type: %v, commit seq %d, data %s",
 				binlogType, commitSeq, binlog.GetData())
@@ -4055,28 +4108,11 @@ func (j *Job) Desync() error {
 
 // check show create table contain some string
 func (j *Job) CheckCreateTable(tableName, expectedStr string) (bool, error) {
-	db, err := j.Dest.Connect()
+	createSql, err := j.IDest.GetCreateTableSql(tableName)
 	if err != nil {
-		return false, err
+		return false, xerror.Wrapf(err, xerror.Normal, "check create table %s", tableName)
 	}
 
-	dbName := utils.FormatKeywordName(j.Dest.Database)
-	tableName = utils.FormatKeywordName(tableName)
-	query := fmt.Sprintf("SHOW CREATE TABLE %s.%s", dbName, tableName)
-	log.Infof("show create table sql: %s", query)
-	rows, err := db.Query(query)
-	if err != nil {
-		return false, xerror.Wrapf(err, xerror.Normal, "show create table %s", tableName)
-	}
-	defer rows.Close()
-	rowParser := utils.NewRowParser()
-	if err := rowParser.Parse(rows); err != nil {
-		return false, xerror.Wrapf(err, xerror.Normal, "parse show create table %s rows", tableName)
-	}
-	createSql, err := rowParser.GetString("Create Table")
-	if err != nil {
-		return false, xerror.Wrapf(err, xerror.Normal, query)
-	}
 	return strings.Contains(createSql, expectedStr), nil
 }
 
