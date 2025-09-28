@@ -1559,6 +1559,43 @@ func (s *Spec) ModifyTableProperty(destTableName string, modifyProperty *record.
 	return s.Exec(sql)
 }
 
+func (s *Spec) GetCreateTableSql(tableName string) (string, error) {
+	dbName := utils.FormatKeywordName(s.Database)
+	tableName = utils.FormatKeywordName(tableName)
+	query := fmt.Sprintf("SHOW CREATE TABLE %s.%s", dbName, tableName)
+	log.Infof("show create table sql: %s", query)
+
+	db, err := s.Connect()
+	if err != nil {
+		return "", xerror.Wrapf(err, xerror.Normal, "show create table sql: connect to %s", s.String())
+	}
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return "", xerror.Wrapf(err, xerror.Normal, "show create table %s", tableName)
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		return "", xerror.Errorf(xerror.Normal, "show create table %s: result is empty", tableName)
+	}
+
+	rowParser := utils.NewRowParser()
+	if err := rowParser.Parse(rows); err != nil {
+		return "", xerror.Wrapf(err, xerror.Normal, "parse show create table %s rows", tableName)
+	}
+	createSql, err := rowParser.GetString("Create Table")
+	if err != nil {
+		return "", xerror.Wrapf(err, xerror.Normal, "parse show create table %s fields", tableName)
+	}
+
+	if err := rows.Err(); err != nil {
+		return "", xerror.Wrapf(err, xerror.Normal, "show create table %s rows error", tableName)
+	}
+
+	return createSql, nil
+}
+
 // Determine whether the error are network related, eg connection refused, connection reset, exposed from net packages.
 func isNetworkRelated(err error) bool {
 	msg := err.Error()
