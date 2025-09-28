@@ -79,5 +79,7 @@ type Specer interface {
 	ModifyDistributionType(destTableName string) error
 	ModifyDistributionBucketNum(destTableName string, bucketType string, autoBucket bool, bucketNum int, columnsName string) error
 
+	GetCreateTableSql(tableName string) (string, error)
+
 	utils.Subject[SpecEvent]
 }
