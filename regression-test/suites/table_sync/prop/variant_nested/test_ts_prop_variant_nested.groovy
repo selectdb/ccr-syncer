@@ -38,7 +38,7 @@ suite("test_ts_prop_variant_nested") {
     target_sql "DROP TABLE IF EXISTS TEST_${dbName}.${tableName}"
 
     helper.enableDbBinlog()
-
+    sql 'SET enable_variant_flatten_nested = true'
     sql """
         CREATE TABLE if NOT EXISTS ${tableName}
         (

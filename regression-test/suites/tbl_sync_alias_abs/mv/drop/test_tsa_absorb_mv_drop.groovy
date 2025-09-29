@@ -50,7 +50,7 @@ suite("test_tsa_absorb_mv_drop") {
     // Create materialized view first
     sql """
         CREATE MATERIALIZED VIEW mv_${tableName} AS
-        SELECT id, col1, col3 FROM ${tableName}
+        SELECT id as mv_id, col1 as mv_col1, col3 as mv_col3 FROM ${tableName}
         """
     
     def materializedFinished = { res -> Boolean
