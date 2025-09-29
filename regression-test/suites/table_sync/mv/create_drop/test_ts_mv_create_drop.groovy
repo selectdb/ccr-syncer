@@ -92,7 +92,7 @@ suite("test_ts_mv_create_drop") {
     // }
     sql """
         CREATE MATERIALIZED VIEW ${tableName}_incr AS
-        SELECT id as mv_id, col2 as mv_col2, col4 as mv_col4 FROM ${tableName}
+        SELECT id as mv_id_1, col2 as mv_col2_1, col4 as mv_col4_1 FROM ${tableName}
         """
 
     def materializedFinished1 = { res -> Boolean
