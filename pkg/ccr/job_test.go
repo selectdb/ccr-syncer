@@ -31,6 +31,7 @@ func TestIsSessionVariableRequired(t *testing.T) {
 		"which is greater than 38 is disabled by default. set enable_decimal256 = true to enable it",
 		"if we have a column with decimalv3 type and set enable_decimal_conversion = false",
 		"Incorrect column name '名称'. Column regex is '^[_a-zA-Z@0-9\\s/][.a-zA-Z0-9_+-/?@#$%^&*\"\\s,:]{0,255}$'",
+		"If you want to enable variant flatten nested, please set session variable: enable_variant_flatten_nested = true",
 	}
 	for i, test := range tests {
 		if !ccr.IsSessionVariableRequired(test) {

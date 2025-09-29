@@ -4599,7 +4599,7 @@ func isStatusContainsAny(status *tstatus.TStatus, patterns ...string) bool {
 }
 
 func IsSessionVariableRequired(msg string) bool {
-	re := regexp.MustCompile(`set enable_.+=.+|Incorrect column name .* Column regex is`)
+	re := regexp.MustCompile(`set enable_.+=.+|set .* enable_.+=.+|Incorrect column name .* Column regex is`)
 	return re.MatchString(msg)
 }
 
