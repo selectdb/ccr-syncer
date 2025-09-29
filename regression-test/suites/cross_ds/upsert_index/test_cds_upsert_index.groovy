@@ -73,7 +73,7 @@ suite("test_cds_upsert_index") {
 
     sql """
         CREATE MATERIALIZED VIEW mtr_${tableName}_full AS
-        SELECT col1, col3 FROM ${tableName}
+        SELECT col1 as mv_col1, col3 as mv_col3 FROM ${tableName}
         """
 
     sql """ INSERT INTO ${tableName} VALUES (1, 1, 1, 1, 1) """

@@ -96,7 +96,7 @@ suite("test_ds_view_basic") {
 
     sql """
         create materialized view user_id_name_${suffix} as
-        select user_id, name from ${tableDuplicate0};
+        select user_id as mv_user_id, name as mv_name from ${tableDuplicate0};
         """
 
     def checkViewExistFunc = { res -> Boolean

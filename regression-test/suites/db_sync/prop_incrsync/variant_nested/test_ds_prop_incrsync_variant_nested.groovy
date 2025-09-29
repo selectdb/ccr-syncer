@@ -45,6 +45,7 @@ suite("test_ds_prop_incrsync_incsync_variant_nested") {
     helper.ccrJobDelete()
     helper.ccrJobCreate()
 
+    sql 'SET enable_variant_flatten_nested = true'
     sql """
         CREATE TABLE if NOT EXISTS ${tableNameFull}
         (

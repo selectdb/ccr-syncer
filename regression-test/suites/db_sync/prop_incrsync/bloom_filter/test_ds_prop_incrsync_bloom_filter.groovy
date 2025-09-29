@@ -64,9 +64,10 @@ suite("test_ds_prop_incrsync_incsync_bloom_filter") {
     assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${tableNameFull}\"", exist, 60, "target"))
 
     def target_res = target_sql "SHOW CREATE TABLE ${tableNameFull}"
-
+    logger.info("show create table: ${target_res}")
     assertTrue(target_res[0][1].contains("\"bloom_filter_columns\" = \"test\""))
-    assertTrue(target_res[0][1].contains("INDEX id_idx (`id`) USING INVERTED COMMENT 'test_index'"))
+    assertTrue(target_res[0][1].contains("INDEX id_idx (`id`) USING INVERTED COMMENT 'test_index'") ||
+                target_res[0][1].contains("INDEX id_idx (`id`) USING INVERTED COMMENT \"test_index\""))
 
     sql """
         CREATE TABLE if NOT EXISTS ${tableNameIncrement}
@@ -93,7 +94,8 @@ suite("test_ds_prop_incrsync_incsync_bloom_filter") {
     assertTrue(helper.checkShowTimesOf("SHOW TABLES LIKE \"${tableNameIncrement}\"", exist, 60, "target"))
 
     target_res = target_sql "SHOW CREATE TABLE ${tableNameIncrement}"
-
+    logger.info("show create table: ${target_res}")
     assertTrue(target_res[0][1].contains("\"bloom_filter_columns\" = \"test\""))
-    assertTrue(target_res[0][1].contains("INDEX id_idx (`id`) USING INVERTED COMMENT 'test_index'"))
+    assertTrue(target_res[0][1].contains("INDEX id_idx (`id`) USING INVERTED COMMENT 'test_index'") ||
+                target_res[0][1].contains("INDEX id_idx (`id`) USING INVERTED COMMENT \"test_index\""))
 }
