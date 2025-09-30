@@ -17,6 +17,7 @@
 package base_test
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -223,5 +224,64 @@ func TestNormalizeCreateTableSql(t *testing.T) {
 		if actual := base.NormalizeCreateViewSql("target", "source", c.origin); actual != c.expect {
 			t.Errorf("case %d failed, expect %s, but got %s", i, c.expect, actual)
 		}
+	}
+}
+
+func TestHandleSchemaChangeVariantProperties(t *testing.T) {
+	data := `{
+	"dbId":1759183589184,
+	"tableId":1759183589229,
+	"baseIndexId":1759183589230,
+	"indexSchemaMap": {
+		"1759183589230":[{
+			"name":"id",
+			"type":{"clazz":"ScalarType","type":"INT","len":-1,"precision":0,"scale":0},
+			"isAggregationTypeImplicit":false,
+			"isKey":true,"isAllowNull":true,
+			"isAutoInc":false,
+			"autoIncInitValue":-1,
+			"comment":"",
+			"stats":{"avgSerializedSize":-1.0,"maxSize":-1,"numDistinctValues":-1,"numNulls":-1},
+			"children":[],"visible":true,"uniqueId":0,"clusterKeyId":-1,"hasOnUpdateDefaultValue":false,"gctt":[]
+		}, {
+			"name":"j","type":{"clazz":"ScalarType","type":"JSONB","len":-1,"precision":0,"scale":0},
+			"aggregationType":"NONE","isAggregationTypeImplicit":true,"isKey":false,"isAllowNull":true,
+			"isAutoInc":false,"autoIncInitValue":0,"comment":"",
+			"stats":{"avgSerializedSize":-1.0,"maxSize":-1,"numDistinctValues":-1,"numNulls":-1},
+			"children":[],"visible":true,"uniqueId":1,"clusterKeyId":-1,"hasOnUpdateDefaultValue":false,"gctt":[]
+		},{
+			"name":"v",
+			"type":{"clazz":"VariantType","fieldMap":{},"fields":[],"variantMaxSubcolumnsCount":2,"enableTypedPathsToSparse":false,
+				"variantMaxSparseColumnStatisticsSize":10000,"type":"VARIANT","len":-1,"precision":0,"scale":0},
+			"aggregationType":"NONE","isAggregationTypeImplicit":true,"isKey":false,"isAllowNull":true,"isAutoInc":false,"autoIncInitValue":0,
+			"comment":"",
+			"stats":{"avgSerializedSize":-1.0,"maxSize":-1,"numDistinctValues":-1,"numNulls":-1},
+			"children":[],"visible":true,"uniqueId":2,"clusterKeyId":-1,"hasOnUpdateDefaultValue":false,"gctt":[]
+		}]},
+		"oldIndexSchemaMap":{
+			"1759183589230":[
+				{"name":"id","type":{"clazz":"ScalarType","type":"INT","len":-1,"precision":0,"scale":0},
+					"isAggregationTypeImplicit":false,"isKey":true,"isAllowNull":true,"isAutoInc":false,"autoIncInitValue":-1,"comment":"",
+					"stats":{"avgSerializedSize":-1.0,"maxSize":-1,"numDistinctValues":-1,"numNulls":-1},
+					"children":[],"visible":true,"uniqueId":0,"clusterKeyId":-1,"hasOnUpdateDefaultValue":false,"gctt":[]},
+				{"name":"j","type":{"clazz":"ScalarType","type":"JSONB","len":-1,"precision":0,"scale":0},
+					"aggregationType":"NONE","isAggregationTypeImplicit":true,"isKey":false,"isAllowNull":true,"isAutoInc":false,
+					"autoIncInitValue":0,"comment":"","stats":{"avgSerializedSize":-1.0,"maxSize":-1,"numDistinctValues":-1,"numNulls":-1},
+					"children":[],"visible":true,"uniqueId":1,"clusterKeyId":-1,"hasOnUpdateDefaultValue":false,"gctt":[]}
+				]},"indexNameToId":{"tbl_332464610":1759183589230},
+				"indexes":[],"jobId":1759183590091,
+				"rawSql":"%s"}`
+
+	raw := "ALTER TABLE `regression_test_db_sync_cdt_column_add`.`tbl_332464610` ADD COLUMN `v` variant\\u003cPROPERTIES (\\\"variant_max_subcolumns_count\\\" \\u003d \\\"2\\\",)\u003e NULL COMMENT \\\"\\\""
+	expect := "ALTER TABLE `regression_test_db_sync_cdt_column_add`.`tbl_332464610` ADD COLUMN `v` variant<PROPERTIES (\"variant_max_subcolumns_count\" = \"2\")> NULL COMMENT \"\""
+
+	data = fmt.Sprintf(data, raw)
+	origin, err := record.NewModifyTableAddOrDropColumnsFromJson(data)
+	if err != nil {
+		t.Errorf("unmarshal json failed, err: %v", err)
+		return
+	}
+	if actual := base.HandleSchemaChangeVariantProperties(origin.RawSql, origin); actual != expect {
+		t.Errorf("case failed, expect %s, but got %s", expect, actual)
 	}
 }

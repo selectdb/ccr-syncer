@@ -1708,6 +1708,14 @@ func HandleSchemaChangeDefaultValue(sql string, lightningSchemaChange *record.Mo
 	return sql
 }
 
+func HandleSchemaChangeVariantProperties(sql string, lightningSchemaChange *record.ModifyTableAddOrDropColumns) string {
+	re := regexp.MustCompile(`variant<.*PROPERTIES\s*\(.*,\)>|VARIANT<.*PROPERTIES\s*\(.*,\)>`)
+	replaceFn := func(match string) string {
+		return strings.ReplaceAll(match, ",)>", ")>")
+	}
+	return re.ReplaceAllStringFunc(sql, replaceFn)
+}
+
 func NormalizeCreateViewSql(destDatabase string, srcDatabase string, createSql string) string {
 	log.Tracef("create view, use dest db name to replace source db name")
 	originSql := createSql
