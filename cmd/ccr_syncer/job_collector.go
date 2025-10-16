@@ -22,7 +22,6 @@ import (
 
 	"github.com/selectdb/ccr_syncer/pkg/ccr"
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
-	"github.com/selectdb/ccr_syncer/pkg/rpc"
 	"github.com/selectdb/ccr_syncer/pkg/storage"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
 	"github.com/selectdb/ccr_syncer/pkg/xmetrics"
@@ -30,12 +29,20 @@ import (
 )
 
 type JobCollector struct {
-	db   storage.DB
-	stop chan struct{}
+	db       storage.DB
+	hostInfo string
+	factory  *ccr.Factory
+	stop     chan struct{}
 }
 
-func NewJobCollector(db storage.DB) *JobCollector {
-	return &JobCollector{db: db, stop: make(chan struct{})}
+func NewJobCollector(db storage.DB, hostInfo string, factory *ccr.Factory) *JobCollector {
+	log.Infof("JobCollector initialized with hostInfo: %s", hostInfo)
+	return &JobCollector{
+		db:       db,
+		hostInfo: hostInfo,
+		factory:  factory,
+		stop:     make(chan struct{}),
+	}
 }
 
 func (c *JobCollector) Collect() {
@@ -59,10 +66,12 @@ func (c *JobCollector) Stop() {
 }
 
 func (c *JobCollector) updateMetrics() error {
-	jobs, err := c.db.GetJobs()
+	_, jobs, err := c.db.GetStampAndJobs(c.hostInfo)
 	if err != nil {
-		return xerror.Wrapf(err, xerror.Normal, "get all jobs failed")
+		return xerror.Wrapf(err, xerror.Normal, "get jobs by belong_to %s failed", c.hostInfo)
 	}
+
+	log.Debugf("JobCollector fetched %d jobs for hostInfo: %s", len(jobs), c.hostInfo)
 
 	runningJobNum := 0
 	for _, jobName := range jobs {
@@ -84,7 +93,7 @@ func (c *JobCollector) updateMetrics() error {
 
 		srcSpec := &jobInfo.Src
 		commitSeq := jobProgress.CommitSeq
-		lag, interval, err := getJobLag(srcSpec, commitSeq)
+		lag, interval, err := c.getJobLag(srcSpec, commitSeq)
 		if err != nil {
 			log.Warnf("get job %s lag failed: %+v", jobName, err)
 			continue
@@ -128,8 +137,8 @@ func loadJobInfo(jobName string, db storage.DB) (*ccr.Job, error) {
 	return &job, nil
 }
 
-func getJobLag(spec *base.Spec, commitSeq int64) (int64, float64, error) {
-	feRpc, err := rpc.NewFeRpc(spec)
+func (c *JobCollector) getJobLag(spec *base.Spec, commitSeq int64) (int64, float64, error) {
+	feRpc, err := c.factory.NewFeRpc(spec)
 	if err != nil {
 		return 0, 0, xerror.Wrapf(err, xerror.Normal, "new fe rpc failed")
 	}
