@@ -80,6 +80,7 @@ var (
 	featureSeperatedHandles               bool
 	featureEnableSnapshotCompress         bool
 	featureOverrideReplicationNumInternal bool
+	featureResyncOnTableRecreate          bool
 
 	flagBinlogBatchSize int64
 
@@ -127,6 +128,8 @@ func init() {
 		"enable snapshot compress")
 	flag.BoolVar(&featureOverrideReplicationNumInternal, "feature_override_replication_num", true,
 		"enable override replication_num for downstream cluster")
+	flag.BoolVar(&featureResyncOnTableRecreate, "feature_resync_on_table_recreate", false,
+		"enable auto resync when upstream table is dropped and recreated with the same name")
 
 	flag.Int64Var(&flagBinlogBatchSize, "binlog_batch_size", 16, "the max num of binlogs to get in a batch")
 }
@@ -1005,6 +1008,47 @@ func (j *Job) fullSync() error {
 				return nil
 			}
 		case TableSync:
+			// Step 1.2.1: For table sync, check if the source table still exists before creating snapshot.
+			// This handles the case where the table is dropped again during full sync.
+			// Reuse checkTableExistsForTableSync to check table status.
+			tableExists, tableIdChanged, newTableId, err := j.checkTableExistsForTableSync()
+			if err != nil {
+				log.Warnf("check table exists failed during full sync, will retry, err: %+v", err)
+				return nil
+			}
+
+			if !tableExists {
+				// Table has been dropped during full sync, wait for recreate (regardless of feature flag)
+				// TableDroppedFlag already set by checkTableExistsForTableSync
+				if featureResyncOnTableRecreate {
+					log.Warnf("table %s.%s has been dropped during full sync, waiting for recreate",
+						j.Src.Database, j.Src.Table)
+				} else {
+					log.Warnf("table %s.%s has been dropped during full sync. Auto-resync disabled, waiting and retry. "+
+						"Enable with: -feature_resync_on_table_recreate=true",
+						j.Src.Database, j.Src.Table)
+				}
+				return nil
+			}
+
+			// Step 1.2.2: Check if table_id changed again (table dropped and recreated during full sync)
+			if tableIdChanged {
+				// Table was recreated again with a new table_id during full sync
+				log.Infof("table %s.%s was recreated again during full sync, old table_id: %d, new table_id: %d",
+					j.Src.Database, j.Src.Table, j.Src.TableId, newTableId)
+				oldTableId := j.Src.TableId
+				j.Src.TableId = newTableId
+				// Note: Dest.TableId will be updated after full sync completes
+				if err := j.persistJob(); err != nil {
+					// Rollback: restore old table_id so next retry can detect the change again
+					j.Src.TableId = oldTableId
+					log.Errorf("persist job failed after table recreate during full sync, will retry, err: %+v", err)
+					return err
+				}
+				// Continue with the new table_id, no need to restart full sync
+				// because we haven't created snapshot yet
+			}
+
 			backupTableList = append(backupTableList, j.Src.Table)
 		default:
 			return xerror.Errorf(xerror.Normal, "invalid sync type %s", j.SyncType)
@@ -1470,6 +1514,13 @@ func (j *Job) fullSync() error {
 				return err
 			}
 
+			// Reset table dropped state after successful full sync
+			if j.progress.TableDroppedFlag {
+				log.Infof("table %s.%s full sync completed, resetting table dropped state", j.Src.Database, j.Src.Table)
+				j.progress.TableDroppedFlag = false
+				j.progress.TableDroppedTime = 0
+			}
+
 			j.progress.PartitionCommitSeqMap = nil
 			j.progress.TableCommitSeqMap = nil
 			j.progress.TableMapping = nil
@@ -1488,6 +1539,12 @@ func (j *Job) fullSync() error {
 }
 
 func (j *Job) persistJob() error {
+	if utils.HasJobFailpoint(j.Name, "persist_job_failed") {
+		log.Warnf("fail to persist job by failpoint")
+		utils.RemoveJobFailpoint(j.Name, "persist_job_failed") // Auto-remove after first trigger
+		return xerror.Errorf(xerror.Normal, "fail to persist job by failpoint")
+	}
+
 	data, err := json.Marshal(j)
 	if err != nil {
 		return xerror.Errorf(xerror.Normal, "marshal job failed, job: %v", j)
@@ -3812,6 +3869,24 @@ func (j *Job) incrementalSyncInternal() error {
 		case tstatus.TStatusCode_BINLOG_NOT_FOUND_DB:
 			return xerror.Errorf(xerror.Normal, "can't found db")
 		case tstatus.TStatusCode_BINLOG_NOT_FOUND_TABLE:
+			// Could mean: 1) table dropped, or 2) binlog just enabled, or 3) other transient issues
+			if j.SyncType == TableSync {
+				// Use unified handler to check and handle all scenarios
+				action, err := j.handleTableNotFoundForTableSync()
+				switch action {
+				case TableNotFoundWait:
+					return nil
+				case TableNotFoundTriggerFullSync:
+					return nil // State changed to TableFullSync, will be handled in next loop
+				case TableNotFoundBinlogNotReady:
+					log.Infof("table %s.%s exists but binlog not ready, waiting and retry",
+						j.Src.Database, j.Src.Table)
+					return nil
+				case TableNotFoundError:
+					return err
+				}
+			}
+			// For DBSync, this is an error (table dropped is handled by DROP_TABLE binlog)
 			return xerror.Errorf(xerror.Normal, "can't found table")
 		default:
 			return xerror.Errorf(xerror.Normal, "invalid binlog status type: %v, msg: %s",
@@ -3832,6 +3907,149 @@ func (j *Job) incrementalSyncInternal() error {
 		}
 	}
 	return nil
+}
+
+// checkTableExistsForTableSync checks if the source table exists and whether its table_id has changed.
+// This is used for auto-recovery when a table is dropped and recreated with the same name.
+// Returns: (tableExists bool, tableIdChanged bool, newTableId int64, error)
+func (j *Job) checkTableExistsForTableSync() (bool, bool, int64, error) {
+	if j.SyncType != TableSync {
+		return false, false, 0, xerror.Errorf(xerror.Normal, "checkTableExistsForTableSync only works for table sync")
+	}
+
+	// Check if table exists by name
+	exists, err := j.Src.CheckTableExists()
+	if err != nil {
+		log.Warnf("check table exists failed, err: %+v", err)
+		return false, false, 0, err
+	}
+
+	if !exists {
+		// Table does not exist
+		if !j.progress.TableDroppedFlag {
+			j.progress.TableDroppedFlag = true
+			j.progress.TableDroppedTime = time.Now().Unix()
+			j.progress.Persist()
+			log.Infof("table %s.%s is dropped, waiting for recreate", j.Src.Database, j.Src.Table)
+		}
+		return false, false, 0, nil
+	}
+
+	// Table exists, check if table_id changed
+	// Use UpdateTable to force fetch from upstream cluster, not from cache
+	tableMeta, err := j.srcMeta.UpdateTable(j.Src.Table, 0)
+	if err != nil {
+		log.Warnf("update table meta failed, err: %+v", err)
+		return true, false, 0, err
+	}
+	newTableId := tableMeta.Id
+
+	if newTableId != j.Src.TableId {
+		// Table was recreated with a new table_id
+		var droppedDuration time.Duration
+		if j.progress.TableDroppedTime > 0 {
+			droppedDuration = time.Since(time.Unix(j.progress.TableDroppedTime, 0))
+		}
+		log.Infof("table %s.%s was recreated, old table_id: %d, new table_id: %d, dropped duration: %v",
+			j.Src.Database, j.Src.Table, j.Src.TableId, newTableId, droppedDuration)
+		return true, true, newTableId, nil
+	}
+
+	// Table exists with same table_id, reset drop state
+	if j.progress.TableDroppedFlag {
+		j.progress.TableDroppedFlag = false
+		j.progress.TableDroppedTime = 0
+		j.progress.Persist()
+	}
+
+	return true, false, newTableId, nil
+}
+
+// TableNotFoundAction represents the action to take when table is not found
+type TableNotFoundAction int
+
+const (
+	// TableNotFoundWait means continue waiting for table to be recreated
+	TableNotFoundWait TableNotFoundAction = iota
+	// TableNotFoundTriggerFullSync means table was recreated, trigger full sync
+	TableNotFoundTriggerFullSync
+	// TableNotFoundBinlogNotReady means table exists but binlog not ready (just enabled)
+	TableNotFoundBinlogNotReady
+	// TableNotFoundError means an error occurred and job should be paused or failed
+	TableNotFoundError
+)
+
+// handleTableNotFoundForTableSync handles table not found scenario for table sync.
+// This is the unified handler for auto-recovery when upstream table is dropped.
+// Note: This function should only be called when j.SyncType == TableSync.
+// Returns: (action TableNotFoundAction, err error)
+//   - TableNotFoundWait: table dropped, continue waiting for recreate
+//   - TableNotFoundTriggerFullSync: table was recreated, trigger full sync
+//   - TableNotFoundBinlogNotReady: table exists but binlog not ready, wait and retry
+//   - TableNotFoundError: error occurred
+func (j *Job) handleTableNotFoundForTableSync() (TableNotFoundAction, error) {
+	// Check if table exists and whether table_id changed
+	tableExists, tableIdChanged, newTableId, err := j.checkTableExistsForTableSync()
+	if err != nil {
+		log.Warnf("check table exists failed, will retry later, err: %+v", err)
+		return TableNotFoundWait, nil
+	}
+
+	// Case 1: Table does not exist (dropped)
+	if !tableExists {
+		if !featureResyncOnTableRecreate {
+			// Just log warning and continue waiting
+			log.Warnf("upstream table %s.%s has been dropped (table not found). "+
+				"Auto-resync is disabled. Options: "+
+				"1) Enable auto-resync by setting -feature_resync_on_table_recreate=true and restart syncer; "+
+				"2) Or manually pause/delete the job.",
+				j.Src.Database, j.Src.Table)
+		}
+		// TableDroppedFlag already set by checkTableExistsForTableSync
+		return TableNotFoundWait, nil
+	}
+
+	// Case 2: Table was recreated with a new table_id
+	if tableIdChanged {
+		if !featureResyncOnTableRecreate {
+			// Feature disabled: log warning and continue waiting (same as Case 1)
+			log.Warnf("upstream table %s.%s was recreated with new table_id %d (old: %d), but auto-resync is disabled. "+
+				"Options: "+
+				"1) Enable auto-resync by setting -feature_resync_on_table_recreate=true and restart syncer; "+
+				"2) Or manually pause/delete the job.",
+				j.Src.Database, j.Src.Table, newTableId, j.Src.TableId)
+			return TableNotFoundWait, nil
+		}
+
+		log.Infof("table %s.%s was recreated with new table_id %d, triggering full sync to recover",
+			j.Src.Database, j.Src.Table, newTableId)
+
+		// Persist job with new table_id
+		oldTableId := j.Src.TableId
+		j.Src.TableId = newTableId
+		if err := j.persistJob(); err != nil {
+			// Rollback: restore old table_id so next retry can detect the change again
+			j.Src.TableId = oldTableId
+			log.Errorf("persist job failed after table recreate, will retry, err: %+v", err)
+			return TableNotFoundError, err
+		}
+		// Reset progress to trigger full sync
+		// NOTE: Do NOT reset TableDroppedFlag here. It will be reset after full sync completes.
+		// This handles the case where table is dropped again during full sync.
+		j.progress.SyncState = TableFullSync
+		j.progress.PrevCommitSeq = 0
+		j.progress.CommitSeq = 0
+		j.progress.SubSyncState = BeginCreateSnapshot
+		j.progress.Persist()
+
+		log.Infof("table %s.%s auto-recovery triggered, switching to full sync", j.Src.Database, j.Src.Table)
+		return TableNotFoundTriggerFullSync, nil
+	}
+
+	// Case 3: Table exists with same table_id
+	// TableDroppedFlag already reset by checkTableExistsForTableSync
+	// This means binlog just not ready
+	return TableNotFoundBinlogNotReady, nil
 }
 
 func (j *Job) recoverJobProgress() error {
@@ -4527,7 +4745,7 @@ func (j *Job) GetSpecifiedBinlog(commitSeq int64) (*festruct.TBinlog, error) {
 	case tstatus.TStatusCode_BINLOG_NOT_FOUND_DB:
 		return nil, xerror.Errorf(xerror.Normal, "can't found db, commit seq: %d", commitSeq)
 	case tstatus.TStatusCode_BINLOG_NOT_FOUND_TABLE:
-		return nil, xerror.Errorf(xerror.Normal, "can't found table, commit seq: %d", commitSeq)
+		return nil, xerror.Errorf(xerror.Normal, "can't found table binlog, commit seq: %d", commitSeq)
 	default:
 		return nil, xerror.Errorf(xerror.Normal, "invalid binlog status type: %v, msg: %s",
 			status.StatusCode, utils.FirstOr(status.GetErrorMsgs(), ""))

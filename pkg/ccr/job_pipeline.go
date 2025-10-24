@@ -17,6 +17,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// errTableRecreatedTriggerFullSync is returned when table is recreated with a new table_id,
+// triggering the auto-recovery mechanism to switch to full sync.
+var errTableRecreatedTriggerFullSync = xerror.NewWithoutStack(xerror.Normal, "table recreated, trigger full sync")
+
 type TxnLink struct {
 	// The previous txn link
 	Prev <-chan any
@@ -240,7 +244,11 @@ func (j *Job) pipelineSync() error {
 
 			// fetch the binlogs, if the binlogs is empty.
 			if !j.pipelineCtx.hasBinlogs() {
-				if err := j.getNextBinlogs(); err != nil {
+				if err := j.getNextBinlogs(); err == errTableRecreatedTriggerFullSync {
+					// Table was recreated, exit pipeline and trigger full sync
+					j.resetPipeline()
+					return nil
+				} else if err != nil {
 					return err
 				}
 				hasMoreBinlogs = len(j.pipelineCtx.Binlogs) > 0
@@ -491,6 +499,24 @@ func (j *Job) getNextBinlogs() error {
 	case tstatus.TStatusCode_BINLOG_NOT_FOUND_DB:
 		return xerror.Errorf(xerror.Normal, "can't found db")
 	case tstatus.TStatusCode_BINLOG_NOT_FOUND_TABLE:
+		// Could mean: 1) table dropped, or 2) binlog just enabled, or 3) other transient issues
+		if j.SyncType == TableSync {
+			// Use unified handler to check and handle all scenarios
+			action, err := j.handleTableNotFoundForTableSync()
+			switch action {
+			case TableNotFoundWait:
+				return nil
+			case TableNotFoundTriggerFullSync:
+				return errTableRecreatedTriggerFullSync
+			case TableNotFoundBinlogNotReady:
+				log.Infof("table %s.%s exists but binlog not ready, waiting and retry",
+					j.Src.Database, j.Src.Table)
+				return nil
+			case TableNotFoundError:
+				return err
+			}
+		}
+		// For DBSync, this is an error (table dropped is handled by DROP_TABLE binlog)
 		return xerror.Errorf(xerror.Normal, "can't found table")
 	default:
 		return xerror.Errorf(xerror.Normal, "invalid binlog status type: %v, msg: %s",

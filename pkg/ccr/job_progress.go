@@ -205,6 +205,10 @@ type JobProgress struct {
 	TableAliases map[string]string `json:"table_aliases,omitempty"`
 	PrevTxnId    int64             `json:"prev_txn_id,omitempty"`
 
+	// For table level auto recover when table is dropped and recreated
+	TableDroppedFlag bool  `json:"table_dropped_flag,omitempty"`
+	TableDroppedTime int64 `json:"table_dropped_time,omitempty"` // Unix timestamp in seconds
+
 	// The shadow indexes of the pending schema changes
 	ShadowIndexes map[int64]int64 `json:"shadow_index_map,omitempty"`
 
