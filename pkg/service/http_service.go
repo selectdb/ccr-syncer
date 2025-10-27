@@ -298,7 +298,7 @@ func (s *HttpService) getLagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	srcSpec := &job.Src
-	feRpc, err := rpc.NewFeRpc(srcSpec)
+	feRpc, err := s.jobManager.GetFactory().NewFeRpc(srcSpec)
 	if err != nil {
 		log.Warnf("new fe rpc failed: %+v", err)
 		lagResult = &result{
