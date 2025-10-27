@@ -23,6 +23,7 @@ import (
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	beservice "github.com/selectdb/ccr_syncer/pkg/rpc/kitex_gen/backendservice/backendservice"
 	"github.com/selectdb/ccr_syncer/pkg/xerror"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/cloudwego/kitex/client"
 )
@@ -33,7 +34,7 @@ type IRpcFactory interface {
 }
 
 type RpcFactory struct {
-	feRpcs     map[*base.Spec]IFeRpc
+	feRpcs     map[string]IFeRpc // key: connection string (cluster+host+port)
 	feRpcsLock sync.Mutex
 
 	beRpcs     map[base.Backend]IBeRpc
@@ -42,9 +43,15 @@ type RpcFactory struct {
 
 func NewRpcFactory() IRpcFactory {
 	return &RpcFactory{
-		feRpcs: make(map[*base.Spec]IFeRpc),
+		feRpcs: make(map[string]IFeRpc),
 		beRpcs: make(map[base.Backend]IBeRpc),
 	}
+}
+
+// getFeKey generates a cache key for FE RPC based on connection info
+// Key format: "cluster@host:port:thrift_port"
+func getFeKey(spec *base.Spec) string {
+	return fmt.Sprintf("%s@%s:%s:%s", spec.Cluster, spec.Host, spec.Port, spec.ThriftPort)
 }
 
 func (rf *RpcFactory) NewFeRpc(spec *base.Spec) (IFeRpc, error) {
@@ -53,13 +60,18 @@ func (rf *RpcFactory) NewFeRpc(spec *base.Spec) (IFeRpc, error) {
 		return nil, err
 	}
 
+	// Generate cache key based on connection info (cluster + FE address)
+	key := getFeKey(spec)
+
 	rf.feRpcsLock.Lock()
-	if feRpc, ok := rf.feRpcs[spec]; ok {
+	if feRpc, ok := rf.feRpcs[key]; ok {
 		rf.feRpcsLock.Unlock()
+		log.Debugf("RpcFactory: reused cached FeRpc for %s (cache hit)", key)
 		return feRpc, nil
 	}
 	rf.feRpcsLock.Unlock()
 
+	log.Debugf("RpcFactory: creating new FeRpc for %s (cache miss)", key)
 	feRpc, err := NewFeRpc(spec)
 	if err != nil {
 		return nil, err
@@ -67,7 +79,7 @@ func (rf *RpcFactory) NewFeRpc(spec *base.Spec) (IFeRpc, error) {
 
 	rf.feRpcsLock.Lock()
 	defer rf.feRpcsLock.Unlock()
-	rf.feRpcs[spec] = feRpc
+	rf.feRpcs[key] = feRpc
 	return feRpc, nil
 }
 
