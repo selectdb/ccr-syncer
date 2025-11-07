@@ -99,6 +99,9 @@ type RestoreSnapshotRequest struct {
 	CleanTables     bool
 	Compress        bool
 	ForceReplace    bool
+	// PropertiesOverride allows caller to pass-through properties for restore job,
+	// such as replication settings. If set, it will be preferred over defaults.
+	PropertiesOverride map[string]string
 }
 
 type IFeRpc interface {
@@ -848,8 +851,14 @@ func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, restoreReq *RestoreS
 	client := rpc.client
 	repoName := "__keep_on_local__"
 	properties := make(map[string]string)
-	properties["reserve_replica"] = "true"
-
+	if restoreReq.PropertiesOverride != nil {
+		for k, v := range restoreReq.PropertiesOverride {
+			properties[k] = v
+		}
+	} else {
+		// default fallback for compatibility: keep downstream replicas consistent with upstream
+		properties["reserve_replica"] = "true"
+	}
 	// Support compressed snapshot
 	meta := restoreReq.SnapshotResult.GetMeta()
 	jobInfo := restoreReq.SnapshotResult.GetJobInfo()
