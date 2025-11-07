@@ -73,6 +73,10 @@ func (h *CreateTableHandle) Handle(j *ccr.Job, commitSeq int64, createTable *rec
 	}
 	createTable.Sql = ccr.FilterDynamicPartitionStoragePolicyFromCreateTableSql(createTable.Sql)
 
+	if ccr.FeatureOverrideReplicationNum() && j.ReplicationNum > 0 {
+		createTable.Sql = ccr.ResetReplicationNumFromCreateTableSql(createTable.Sql, j.ReplicationNum)
+	}
+
 	if err := j.IDest.CreateTableOrView(createTable, j.Src.Database); err != nil {
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "Can not found function") {
