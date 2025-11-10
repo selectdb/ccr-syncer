@@ -615,42 +615,36 @@ func (m *Meta) GetFrontends() ([]*base.Frontend, error) {
 }
 
 func (m *Meta) GetBackends() ([]*base.Backend, error) {
-	if len(m.Backends) > 0 {
-		backends := make([]*base.Backend, 0, len(m.Backends))
-		for _, backend := range m.Backends {
-			backend := *backend // copy
-			backends = append(backends, &backend)
-		}
-		if len(m.HostMapping) != 0 {
-			for _, backend := range backends {
-				if host, ok := m.HostMapping[backend.Host]; ok {
-					backend.Host = host
-				} else {
-					return nil, xerror.Errorf(xerror.Normal,
-						"the public ip of host %s is not found, consider adding it via HTTP API /add_host_mapping", backend.Host)
-				}
-			}
-		}
-		return backends, nil
-	}
-
+	// Always fetch latest backend information from FE
 	if err := m.UpdateBackends(); err != nil {
 		return nil, err
 	}
 
-	return m.GetBackends()
+	backends := make([]*base.Backend, 0, len(m.Backends))
+	for _, backend := range m.Backends {
+		backend := *backend // copy
+		backends = append(backends, &backend)
+	}
+	if len(m.HostMapping) != 0 {
+		for _, backend := range backends {
+			if host, ok := m.HostMapping[backend.Host]; ok {
+				backend.Host = host
+			} else {
+				return nil, xerror.Errorf(xerror.Normal,
+					"the public ip of host %s is not found, consider adding it via HTTP API /add_host_mapping", backend.Host)
+			}
+		}
+	}
+	return backends, nil
 }
 
 func (m *Meta) GetBackendMap() (map[int64]*base.Backend, error) {
-	if len(m.Backends) > 0 {
-		return m.Backends, nil
-	}
-
+	// Always fetch latest backend information from FE
 	if err := m.UpdateBackends(); err != nil {
 		return nil, err
 	}
 
-	return m.GetBackendMap()
+	return m.Backends, nil
 }
 
 func (m *Meta) GetBackendId(host string, portStr string) (int64, error) {

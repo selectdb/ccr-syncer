@@ -301,15 +301,8 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 		return nil, xerror.Errorf(xerror.Normal, "invalid replication_num: %d, must be -1 (inherit) or > 0 (fixed)", job.ReplicationNum)
 	}
 	if job.ReplicationNum > 0 {
-		backs, err := job.destMeta.GetBackends()
-		if err != nil {
-			return nil, xerror.Wrap(err, xerror.Normal, "get dest backends failed")
-		}
-		if len(backs) == 0 {
-			return nil, xerror.Errorf(xerror.Normal, "no available backends in dest cluster")
-		}
-		if job.ReplicationNum > len(backs) {
-			return nil, xerror.Errorf(xerror.Normal, "replication %d exceeds available BE %d", job.ReplicationNum, len(backs))
+		if err := job.validateReplicaFail(job.ReplicationNum); err != nil {
+			return nil, err
 		}
 	}
 
