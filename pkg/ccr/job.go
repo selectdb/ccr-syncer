@@ -4363,6 +4363,9 @@ func (j *Job) changeJobState(state JobState) error {
 		j.State = originState
 		return err
 	}
+
+	j.updateJobStatus()
+
 	log.Debugf("change job %s state from %s to %s", j.Name, originState, state)
 	return nil
 }
