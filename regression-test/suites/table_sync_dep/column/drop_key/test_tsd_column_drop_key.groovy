@@ -40,11 +40,11 @@ suite("test_tsd_column_drop_key") {
         CREATE TABLE if NOT EXISTS ${tableName}
         (
             `test` INT,
-            `value` INT,
-            `id` INT
+            `id` INT,
+            `value` INT
         )
         ENGINE=OLAP
-        DUPLICATE KEY(`test`, `value`)
+        DUPLICATE KEY(`test`, `id`)
         DISTRIBUTED BY HASH(`value`) BUCKETS 1
         PROPERTIES (
             "replication_allocation" = "tag.location.default: 1",
