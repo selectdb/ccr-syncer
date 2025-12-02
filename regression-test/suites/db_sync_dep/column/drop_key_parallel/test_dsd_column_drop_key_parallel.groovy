@@ -14,14 +14,14 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-suite("test_dsd_column_drop_key") {
+suite("test_dsd_column_drop_key_parallel") {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", "helper.groovy"))
 
     def tableName = "tbl_" + helper.randomSuffix()
     def test_num = 0
     def test_new_column_num = 1
-    def insert_num = 5
+    def insert_num = 50
 
     def exist = { res -> Boolean
         return res.size() != 0
@@ -61,7 +61,6 @@ suite("test_dsd_column_drop_key") {
     assertTrue(helper.checkShowTimesOf(""" SHOW TABLES LIKE "${tableName}" """, exist, 60, "target"))
 
     // 1. Pause ccr job
-    helper.ccrJobPause()
 
     // 2. Insert N data
     for (int index = 0; index < insert_num; index++) {
@@ -70,7 +69,9 @@ suite("test_dsd_column_drop_key") {
             """
     }
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> return r.size() == insert_num }, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> return r.size() == insert_num }, 60, "target"))
+
+    helper.ccrJobPause()
 
     // 3. Do operation & wait it finishes upstream
     sql """
@@ -78,23 +79,33 @@ suite("test_dsd_column_drop_key") {
         DROP COLUMN `id`
         """
 
-    assertTrue(helper.checkShowTimesOf(""" show columns from ${tableName} """, { r -> return r.size() == 2 }, 60, "sql"))
-
+    // There are some insert operations are executed in parallel with drop column.
 
     // 4. Insert N data
-    for (int index = insert_num; index < insert_num * 2; index++) {
-        sql """
-            INSERT INTO ${tableName} VALUES (${test_num}, ${index})
-            """
-    }
+    int index = insert_num;
+    try {
+        for (; index < insert_num * 2; index++) {
+            sql """
+                INSERT INTO ${tableName} VALUES (${test_num}, ${index}, ${index})
+                """
+        }
+    } catch (Exception) { }
 
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2 }, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" show columns from ${tableName} """, { r -> return r.size() == 2 }, 60, "sql"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == index }, 60, "sql"))
 
     // 5. Resume ccr job
     helper.ccrJobResume()
 
     // 6. Verify data and operation are synced downstream
-    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num * 2 }, 60, "target"))
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == index }, 60, "target"))
     assertTrue(helper.checkShowTimesOf(""" show columns from ${tableName} """, { r -> return r.size() == 2 }, 60, "target"))
+
+    for (; index < insert_num * 3; index++) {
+        sql """
+            INSERT INTO ${tableName} VALUES (${test_num}, ${index})
+            """
+    }
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == index }, 60, "target"))
 }
 
