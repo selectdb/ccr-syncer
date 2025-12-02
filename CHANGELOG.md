@@ -1,5 +1,39 @@
 # 更新日志
 
+# 3.0.7/2.1.11 (最新)
+
+### Fix
+
+- 修复并行测试中删除键列的问题 (selectdb/ccr-syncer#657)
+- 修复无法获取新作业状态的问题 (selectdb/ccr-syncer#653)
+- 修复 ARM CPU (kunpeng 9200) 兼容性问题，升级 sonic 版本 (selectdb/ccr-syncer#631)
+- 修复 SHOW TABLES LIKE '%01' 模糊查询返回错误结果的问题 (selectdb/ccr-syncer#627)
+- 修复整数除零错误 (selectdb/ccr-syncer#628)
+- 修复 JobCollector 不复用 FE RPC 连接的问题 (selectdb/ccr-syncer#645)
+- 修复添加带属性的 variant 列的问题 (selectdb/ccr-syncer#643)
+- 修复 shadow indexes 提交后未清理的问题 (selectdb/ccr-syncer#623, selectdb/ccr-syncer#621)
+- 修复跳过创建 elasticsearch 记录的问题 (selectdb/ccr-syncer#619)
+
+### Feature
+
+- 支持为下游集群自定义 replication_num (selectdb/ccr-syncer#649)
+- API 支持 type=json 格式 (selectdb/ccr-syncer#629)
+- 暴露 feature_enable_snapshot_compress 标志 (selectdb/ccr-syncer#635)
+- 添加从 follower 获取 binlog 的模糊选项 (selectdb/ccr-syncer#614)
+
+### Improve
+
+- 增强错误监控：添加错误名称到指标，改进错误面板显示，添加值映射 (selectdb/ccr-syncer#630)
+- TableRecord String() 方法增加 delta rows 字段显示 (selectdb/ccr-syncer#638)
+- 添加 partition.retention_count 表属性测试 (selectdb/ccr-syncer#646)
+- 改进测试用例以适应行为变化 (selectdb/ccr-syncer#641)
+- 当需要 enable_variant_flatten_nested 会话变量时强制部分同步 (selectdb/ccr-syncer#642)
+- 添加 shadow index ID 日志记录 (selectdb/ccr-syncer#620)
+
+### Test
+
+- 添加并行测试中删除键列的测试用例 (selectdb/ccr-syncer#657)
+
 # 3.0.6/2.1.10
 
 ### Fix
