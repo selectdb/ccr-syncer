@@ -1,5 +1,32 @@
 # 更新日志
 
+# 3.0.7/2.1.11
+
+### Fix
+
+- 修复并行测试中删除键列的问题 (selectdb/ccr-syncer#657)
+- 修复无法获取新作业状态的问题 (selectdb/ccr-syncer#653)
+- 修复 JobCollector 重用 FE RPC 连接的问题 (selectdb/ccr-syncer#645)
+- 修复 SHOW TABLES like '%01' 返回错误结果的问题 (selectdb/ccr-syncer#627)
+- 修复 ARM(Kunpeng 9200) 平台 sonic 版本兼容性问题 (selectdb/ccr-syncer#631)
+- 修复整数除零错误 (selectdb/ccr-syncer#628)
+- 修复日志提交后清理 shadow indexes 的问题 (selectdb/ccr-syncer#623)
+- 修复 binlog 提交时保存 shadow indexes 的问题 (selectdb/ccr-syncer#621)
+- 修复跳过创建 Elasticsearch 记录的问题 (selectdb/ccr-syncer#619)
+- 修复处理 MODIFY_DISTRIBUTION_BUCKET_NUM/_TYPE 的问题 (selectdb/ccr-syncer#640)
+
+### Feature
+
+- 支持为下游集群自定义副本数量 (selectdb/ccr-syncer#649)
+- 在 API 使用中添加 type=json 支持 (selectdb/ccr-syncer#629)
+- 暴露 feature_enable_snapshot_compress 标志 (selectdb/ccr-syncer#635)
+
+### Improve
+
+- TableRecord String() 方法增加 delta rows 字段 (selectdb/ccr-syncer#638)
+- 为错误指标添加名称字段，改进错误面板显示方式 (selectdb/ccr-syncer#630)
+- 增加 shadow index ID 日志记录 (selectdb/ccr-syncer#620)
+
 # 3.0.6/2.1.10
 
 ### Fix
