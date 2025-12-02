@@ -310,15 +310,3 @@ func (mr *MockSpecerMockRecorder) Valid() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Valid", reflect.TypeOf((*MockSpecer)(nil).Valid))
 }
-
-// WaitTransactionDone mocks base method.
-func (m *MockSpecer) WaitTransactionDone(txnId int64) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "WaitTransactionDone", txnId)
-}
-
-// WaitTransactionDone indicates an expected call of WaitTransactionDone.
-func (mr *MockSpecerMockRecorder) WaitTransactionDone(txnId any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitTransactionDone", reflect.TypeOf((*MockSpecer)(nil).WaitTransactionDone), txnId)
-}
