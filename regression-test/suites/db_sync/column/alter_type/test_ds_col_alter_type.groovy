@@ -117,5 +117,15 @@ suite("test_ds_col_alter_type") {
     assertTrue(helper.checkShowTimesOf("SHOW COLUMNS FROM ${tableName}", value_is_big_int, 60, "sql"))
 
     assertTrue(helper.checkShowTimesOf("SHOW COLUMNS FROM ${tableName}", value_is_big_int, 60, "target_sql"))
+
+    sql """
+        INSERT INTO ${tableName} VALUES (100, 100, 100)
+        """
+    sql """
+        INSERT INTO ${tableName} VALUES (200, 200, 200)
+        """
+    sql "sync"
+
+    assertTrue(helper.checkShowTimesOf(""" select * from ${tableName} """, { r -> r.size() == insert_num + 2 }, 60, "target_sql"))
 }
 
