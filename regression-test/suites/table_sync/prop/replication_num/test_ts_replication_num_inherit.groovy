@@ -19,6 +19,8 @@ suite('test_ts_replication_num_inherit') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
 
+    logger.info("Disable since ccrJobCreateWithReplicationNum is not implemented yet")
+
     def suffix = helper.randomSuffix()
     def tableName = 'tbl_' + suffix
     
