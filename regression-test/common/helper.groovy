@@ -166,6 +166,31 @@ class Helper {
         }
     }
 
+    void ccrJobCreateWithReplicationNum(table = "", int replicationNum) {
+        def bodyJson = get_ccr_body "${table}"
+        def jsonSlurper = new groovy.json.JsonSlurper()
+        def object = jsonSlurper.parseText "${bodyJson}"
+        object['replication_num'] = replicationNum
+        logger.info("json object with replication_num=${replicationNum}: ${object}")
+
+        bodyJson = new groovy.json.JsonBuilder(object).toString()
+        suite.httpTest {
+            uri "/create_ccr"
+            endpoint syncerAddress
+            body "${bodyJson}"
+            op "post"
+            check { code, body ->
+                if (!"${code}".toString().equals("200")) {
+                    throw new Exception("request failed, code: ${code}, body: ${body}")
+                }
+                def value = jsonSlurper.parseText "${body}"
+                if (!value.success) {
+                    throw new Exception("request failed, error msg: ${value.error_msg}")
+                }
+            }
+        }
+    }
+
     void ccrJobPause(table = "") {
         def bodyJson = get_ccr_body "${table}"
         suite.httpTest {
