@@ -339,6 +339,11 @@ func NewJobFromJson(jsonData string, db storage.DB, factory *Factory) (*Job, err
 		job.Id = getJobId(job.Name, job.Src, job.Dest)
 	}
 
+	// for compatibility
+	if job.ReplicationNum == 0 {
+		job.ReplicationNum = -1
+	}
+
 	// recover all not json fields
 	job.factory = factory
 	job.ISrc = factory.NewSpecer(&job.Src)
@@ -438,8 +443,9 @@ func (j *Job) buildRestoreReplicationProperties() (map[string]string, error) {
 	}
 
 	p := j.ReplicationNum
-	if p == -1 {
+	if p == -1 || p == 0 {
 		// inherit mode: let FE use default reserve_replica=true
+		// p == 0 is also treated as inherit mode for compatibility with legacy jobs
 		return nil, nil
 	}
 
