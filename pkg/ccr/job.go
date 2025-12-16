@@ -4484,6 +4484,12 @@ func (j *Job) SkipBinlog(params SkipBinlogParams) error {
 	return nil
 }
 
+// InvalidateBackendsCache invalidates the backends cache for both src and dest clusters.
+func (j *Job) InvalidateBackendsCache() {
+	j.srcMeta.InvalidateBackendsCache()
+	j.destMeta.InvalidateBackendsCache()
+}
+
 func (j *Job) GetSpecifiedBinlog(commitSeq int64) (*festruct.TBinlog, error) {
 	if binlog, ok := j.Extra.CachedBinlogs[commitSeq]; ok {
 		return binlog, nil
