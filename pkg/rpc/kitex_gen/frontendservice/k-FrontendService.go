@@ -39360,6 +39360,34 @@ func (p *TRestoreSnapshotRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 18:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField18(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 19:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField19(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -39659,6 +39687,32 @@ func (p *TRestoreSnapshotRequest) FastReadField17(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TRestoreSnapshotRequest) FastReadField18(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.StorageMedium = &v
+
+	}
+	return offset, nil
+}
+
+func (p *TRestoreSnapshotRequest) FastReadField19(buf []byte) (int, error) {
+	offset := 0
+
+	if v, l, err := bthrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		p.MediumAllocationMode = &v
+
+	}
+	return offset, nil
+}
+
 // for compatibility
 func (p *TRestoreSnapshotRequest) FastWrite(buf []byte) int {
 	return 0
@@ -39685,6 +39739,8 @@ func (p *TRestoreSnapshotRequest) FastWriteNocopy(buf []byte, binaryWriter bthri
 		offset += p.fastWriteField10(buf[offset:], binaryWriter)
 		offset += p.fastWriteField11(buf[offset:], binaryWriter)
 		offset += p.fastWriteField12(buf[offset:], binaryWriter)
+		offset += p.fastWriteField18(buf[offset:], binaryWriter)
+		offset += p.fastWriteField19(buf[offset:], binaryWriter)
 	}
 	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
 	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
@@ -39712,6 +39768,8 @@ func (p *TRestoreSnapshotRequest) BLength() int {
 		l += p.field15Length()
 		l += p.field16Length()
 		l += p.field17Length()
+		l += p.field18Length()
+		l += p.field19Length()
 	}
 	l += bthrift.Binary.FieldStopLength()
 	l += bthrift.Binary.StructEndLength()
@@ -39923,6 +39981,28 @@ func (p *TRestoreSnapshotRequest) fastWriteField17(buf []byte, binaryWriter bthr
 	return offset
 }
 
+func (p *TRestoreSnapshotRequest) fastWriteField18(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetStorageMedium() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "storage_medium", thrift.STRING, 18)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.StorageMedium)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *TRestoreSnapshotRequest) fastWriteField19(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetMediumAllocationMode() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "medium_allocation_mode", thrift.STRING, 19)
+		offset += bthrift.Binary.WriteStringNocopy(buf[offset:], binaryWriter, *p.MediumAllocationMode)
+
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
 func (p *TRestoreSnapshotRequest) field1Length() int {
 	l := 0
 	if p.IsSetCluster() {
@@ -40114,6 +40194,28 @@ func (p *TRestoreSnapshotRequest) field17Length() int {
 	if p.IsSetForceReplace() {
 		l += bthrift.Binary.FieldBeginLength("force_replace", thrift.BOOL, 17)
 		l += bthrift.Binary.BoolLength(*p.ForceReplace)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TRestoreSnapshotRequest) field18Length() int {
+	l := 0
+	if p.IsSetStorageMedium() {
+		l += bthrift.Binary.FieldBeginLength("storage_medium", thrift.STRING, 18)
+		l += bthrift.Binary.StringLengthNocopy(*p.StorageMedium)
+
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *TRestoreSnapshotRequest) field19Length() int {
+	l := 0
+	if p.IsSetMediumAllocationMode() {
+		l += bthrift.Binary.FieldBeginLength("medium_allocation_mode", thrift.STRING, 19)
+		l += bthrift.Binary.StringLengthNocopy(*p.MediumAllocationMode)
 
 		l += bthrift.Binary.FieldEndLength()
 	}

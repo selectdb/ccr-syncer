@@ -99,6 +99,8 @@ type RestoreSnapshotRequest struct {
 	CleanTables     bool
 	Compress        bool
 	ForceReplace    bool
+	StorageMedium          string
+	MediumAllocationMode   string
 	// PropertiesOverride allows caller to pass-through properties for restore job,
 	// such as replication settings. If set, it will be preferred over defaults.
 	PropertiesOverride map[string]string
@@ -875,26 +877,28 @@ func (rpc *singleFeClient) RestoreSnapshot(spec *base.Spec, restoreReq *RestoreS
 	}
 
 	req := &festruct.TRestoreSnapshotRequest{
-		Table:           &spec.Table,
-		LabelName:       &restoreReq.SnapshotName,
-		RepoName:        &repoName,
-		TableRefs:       restoreReq.TableRefs,
-		Properties:      properties,
-		Meta:            meta,
-		JobInfo:         jobInfo,
-		CleanTables:     &restoreReq.CleanTables,
-		CleanPartitions: &restoreReq.CleanPartitions,
-		AtomicRestore:   &restoreReq.AtomicRestore,
-		Compressed:      utils.ThriftValueWrapper(restoreReq.Compress),
-		ForceReplace:    &restoreReq.ForceReplace,
+		Table:                  &spec.Table,
+		LabelName:              &restoreReq.SnapshotName,
+		RepoName:               &repoName,
+		TableRefs:              restoreReq.TableRefs,
+		Properties:             properties,
+		Meta:                   meta,
+		JobInfo:                jobInfo,
+		CleanTables:            &restoreReq.CleanTables,
+		CleanPartitions:        &restoreReq.CleanPartitions,
+		AtomicRestore:          &restoreReq.AtomicRestore,
+		Compressed:             utils.ThriftValueWrapper(restoreReq.Compress),
+		ForceReplace:           &restoreReq.ForceReplace,
+		StorageMedium:          utils.ThriftValueWrapper(restoreReq.StorageMedium),
+		MediumAllocationMode:   utils.ThriftValueWrapper(restoreReq.MediumAllocationMode),
 	}
 	setAuthInfo(req, spec)
 
 	// NOTE: ignore meta, because it's too large
-	log.Debugf("RestoreSnapshotRequest user %s, db %s, table %s, label name %s, properties %v, clean tables: %t, clean partitions: %t, atomic restore: %t, compressed: %t, forceReplace: %t",
+	log.Debugf("RestoreSnapshotRequest user %s, db %s, table %s, label name %s, properties %v, clean tables: %t, clean partitions: %t, atomic restore: %t, compressed: %t, forceReplace: %t, storageMedium: %s, mediumAllocationMode: %s",
 		req.GetUser(), req.GetDb(), req.GetTable(), req.GetLabelName(), properties,
 		restoreReq.CleanTables, restoreReq.CleanPartitions, restoreReq.AtomicRestore,
-		req.GetCompressed(), restoreReq.ForceReplace)
+		req.GetCompressed(), restoreReq.ForceReplace, restoreReq.StorageMedium, restoreReq.MediumAllocationMode)
 
 	if resp, err := client.RestoreSnapshot(context.Background(), req); err != nil {
 		return nil, xerror.Wrapf(err, xerror.RPC, "RestoreSnapshot failed")

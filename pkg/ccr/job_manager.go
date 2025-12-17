@@ -277,3 +277,25 @@ func (jm *JobManager) SkipBinlog(jobName string, params SkipBinlogParams) error 
 		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
 	}
 }
+
+func (jm *JobManager) UpdateMediumAllocationMode(jobName string, mediumAllocationMode string) error {
+	jm.lock.Lock()
+	defer jm.lock.Unlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return job.UpdateMediumAllocationMode(mediumAllocationMode)
+	} else {
+		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
+	}
+}
+
+func (jm *JobManager) UpdateStorageMedium(jobName string, storageMedium string) error {
+	jm.lock.Lock()
+	defer jm.lock.Unlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return job.UpdateStorageMedium(storageMedium)
+	} else {
+		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
+	}
+}

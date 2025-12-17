@@ -1,6 +1,8 @@
 package handle
 
 import (
+	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/selectdb/ccr_syncer/pkg/ccr"
@@ -16,6 +18,70 @@ func init() {
 
 type CreateTableHandle struct {
 	IdempotentJobHandle[*record.CreateTable]
+}
+
+// Check if error message indicates storage medium or capacity related issues
+func isStorageMediumError(errMsg string) bool {
+	// Doris returns "Failed to find enough backend" for storage/capacity issues
+	return strings.Contains(strings.ToLower(errMsg), "failed to find enough backend")
+}
+
+// Set specific property in CREATE TABLE SQL
+func setPropertyInCreateTableSql(createSql string, key string, value string) string {
+	// Add property to PROPERTIES clause
+	pattern := `(?i)(PROPERTIES\s*\(\s*)`
+	replacement := fmt.Sprintf(`${1}"%s" = "%s", `, key, value)
+	createSql = regexp.MustCompile(pattern).ReplaceAllString(createSql, replacement)
+
+	// Clean up trailing comma if PROPERTIES was empty
+	return ccr.FilterTailingCommaFromCreateTableSql(createSql)
+}
+
+// Set specific storage_medium in CREATE TABLE SQL
+func setStorageMediumInCreateTableSql(createSql string, medium string) string {
+	// Remove existing storage_medium first
+	createSql = ccr.FilterStorageMediumFromCreateTableSql(createSql)
+	return setPropertyInCreateTableSql(createSql, "storage_medium", medium)
+}
+
+// Set specific medium_allocation_mode in CREATE TABLE SQL
+func setMediumAllocationModeInCreateTableSql(createSql string, mode string) string {
+	// Remove existing medium_allocation_mode first
+	createSql = ccr.FilterMediumAllocationModeFromCreateTableSql(createSql)
+	return setPropertyInCreateTableSql(createSql, "medium_allocation_mode", mode)
+}
+
+// Process CREATE TABLE SQL according to storage medium policy
+func processCreateTableSqlByMediumPolicy(j *ccr.Job, createTable *record.CreateTable) {
+	storageMedium := j.StorageMedium
+	mediumAllocationMode := j.MediumAllocationMode
+
+	// Process storage_medium
+	switch storageMedium {
+	case ccr.StorageMediumSameWithUpstream:
+		// Keep upstream storage_medium unchanged
+		log.Infof("using same_with_upstream storage medium, keeping original storage_medium")
+
+	case ccr.StorageMediumHDD:
+		log.Infof("using hdd storage medium, setting storage_medium to hdd")
+		createTable.Sql = setStorageMediumInCreateTableSql(createTable.Sql, "hdd")
+
+	case ccr.StorageMediumSSD:
+		log.Infof("using ssd storage medium, setting storage_medium to ssd")
+		createTable.Sql = setStorageMediumInCreateTableSql(createTable.Sql, "ssd")
+
+	default:
+		log.Warnf("unknown storage medium: %s, falling back to filter storage_medium", storageMedium)
+		if ccr.FeatureFilterStorageMedium {
+			createTable.Sql = ccr.FilterStorageMediumFromCreateTableSql(createTable.Sql)
+		}
+	}
+
+	// Process medium_allocation_mode from CCR job parameter
+	if mediumAllocationMode != "" {
+		log.Infof("setting medium_allocation_mode to %s", mediumAllocationMode)
+		createTable.Sql = setMediumAllocationModeInCreateTableSql(createTable.Sql, mediumAllocationMode)
+	}
 }
 
 func (h *CreateTableHandle) Handle(j *ccr.Job, commitSeq int64, createTable *record.CreateTable) error {
@@ -68,9 +134,8 @@ func (h *CreateTableHandle) Handle(j *ccr.Job, commitSeq int64, createTable *rec
 		}
 	}
 
-	if ccr.FeatureFilterStorageMedium {
-		createTable.Sql = ccr.FilterStorageMediumFromCreateTableSql(createTable.Sql)
-	}
+	// Process SQL according to storage medium policy
+	processCreateTableSqlByMediumPolicy(j, createTable)
 	createTable.Sql = ccr.FilterDynamicPartitionStoragePolicyFromCreateTableSql(createTable.Sql)
 
 	if ccr.FeatureOverrideReplicationNum() && j.ReplicationNum > 0 {
@@ -79,26 +144,49 @@ func (h *CreateTableHandle) Handle(j *ccr.Job, commitSeq int64, createTable *rec
 
 	if err := j.IDest.CreateTableOrView(createTable, j.Src.Database); err != nil {
 		errMsg := err.Error()
+
+		// Skip unsupported features
 		if strings.Contains(errMsg, "Can not found function") {
 			log.Warnf("skip creating table/view because the UDF function is not supported yet: %s", errMsg)
 			return nil
-		} else if strings.Contains(errMsg, "Can not find resource") {
+		}
+		if strings.Contains(errMsg, "Can not find resource") {
 			log.Warnf("skip creating table/view for the resource is not supported yet: %s", errMsg)
 			return nil
-		} else if createTable.IsCreateView() && strings.Contains(errMsg, "Unknown column") {
+		}
+
+		// Trigger partial snapshot for recoverable errors
+		if createTable.IsCreateView() && strings.Contains(errMsg, "Unknown column") {
 			log.Warnf("create view but the column is not found, trigger partial snapshot, commit seq: %d, msg: %s",
 				commitSeq, errMsg)
 			replace := false // new view no need to replace
 			isView := true
 			return j.NewPartialSnapshot(createTable.TableId, createTable.TableName, nil, replace, isView)
 		}
-		if len(createTable.TableName) > 0 && ccr.IsSessionVariableRequired(errMsg) { // ignore doris 2.0.3
+		if len(createTable.TableName) > 0 && ccr.IsSessionVariableRequired(errMsg) {
 			log.Infof("a session variable is required to create table %s, force partial snapshot, commit seq: %d, msg: %s",
 				createTable.TableName, commitSeq, errMsg)
 			replace := false // new table no need to replace
 			isView := false
 			return j.NewPartialSnapshot(createTable.TableId, createTable.TableName, nil, replace, isView)
 		}
+
+		// Storage medium related error: pause job and require manual intervention
+		if isStorageMediumError(errMsg) {
+			log.Errorf("create table %s failed due to storage medium issue, job will be paused. "+
+				"Current storage_medium=%s. Please check target cluster resources or update storage_medium via API. Error: %s",
+				createTable.TableName, j.StorageMedium, errMsg)
+			return xerror.Panicf(xerror.Normal,
+				"Create table failed: storage medium issue for table %s. "+
+					"Current storage_medium=%s. Possible causes:\n"+
+					"1. Storage medium (%s) not available on target cluster\n"+
+					"2. Insufficient disk capacity\n"+
+					"3. Replication number exceeds available BE nodes\n"+
+					"Please check target cluster configuration or update storage_medium via /update_storage_medium API. "+
+					"Original error: %s",
+				createTable.TableName, j.StorageMedium, j.StorageMedium, errMsg)
+		}
+
 		return xerror.Wrapf(err, xerror.Normal, "create table %d", createTable.TableId)
 	}
 

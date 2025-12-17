@@ -1595,6 +1595,51 @@ func (s *Spec) GetCreateTableSql(tableName string) (string, error) {
 
 	return createSql, nil
 }
+func (s *Spec) ModifyPartitionProperty(destTableName string, batchModifyPartitionsInfo *record.BatchModifyPartitionsInfo) error {
+	if batchModifyPartitionsInfo == nil || len(batchModifyPartitionsInfo.Infos) == 0 {
+		log.Warnf("empty partition infos, skip modify partition property")
+		return nil
+	}
+
+	dbName := utils.FormatKeywordName(s.Database)
+	destTableName = utils.FormatKeywordName(destTableName)
+
+	var lastErr error
+	successCount := 0
+	for _, partitionInfo := range batchModifyPartitionsInfo.Infos {
+		if partitionInfo.DataProperty == nil || partitionInfo.DataProperty.StorageMedium == "" {
+			log.Warnf("partition %d has no storage medium, skip modify partition property", partitionInfo.PartitionId)
+			continue
+		}
+
+		sql := fmt.Sprintf("ALTER TABLE %s.%s MODIFY PARTITION %s SET (\"storage_medium\" = \"%s\")",
+			dbName, destTableName, utils.FormatKeywordName(partitionInfo.PartitionName), partitionInfo.DataProperty.StorageMedium)
+
+		log.Infof("modify partition property sql: %s", sql)
+		if err := s.Exec(sql); err != nil {
+			errMsg := err.Error()
+			// Skip if partition not found (partition may have been dropped)
+			if strings.Contains(errMsg, "does not exist") || strings.Contains(errMsg, "not found") {
+				log.Warnf("partition %s not found, skip: %v", partitionInfo.PartitionName, err)
+				continue
+			}
+			// For other errors, record and continue to try remaining partitions
+			log.Warnf("modify partition %s property failed: %v", partitionInfo.PartitionName, err)
+			lastErr = err
+		} else {
+			successCount++
+		}
+	}
+
+	// Return error if any partition modification failed (except partition not found)
+	if lastErr != nil {
+		return xerror.Wrapf(lastErr, xerror.Normal,
+			"modify partition storage medium failed, success: %d, total: %d",
+			successCount, len(batchModifyPartitionsInfo.Infos))
+	}
+
+	return nil
+}
 
 // Determine whether the error are network related, eg connection refused, connection reset, exposed from net packages.
 func isNetworkRelated(err error) bool {
