@@ -18,9 +18,6 @@
 suite('test_ds_replication_num_fixed') {
     def helper = new GroovyShell(new Binding(['suite': delegate]))
             .evaluate(new File("${context.config.suitePath}/../common", 'helper.groovy'))
-            
-    logger.info("Disable since ccrJobCreateWithReplicationNum is not implemented yet")
-    return
 
     def suffix = helper.randomSuffix()
     def tableName1 = 'tbl1_' + suffix
