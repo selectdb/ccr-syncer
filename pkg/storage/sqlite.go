@@ -33,7 +33,8 @@ type SQLiteDB struct {
 }
 
 func NewSQLiteDB(dbPath string) (DB, error) {
-	db, err := sql.Open("sqlite3", dbPath)
+	dsn := fmt.Sprintf("file:%s?_busy_timeout=5000&_journal_mode=WAL", dbPath)
+	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		return nil, xerror.Wrapf(err, xerror.DB, "sqlite: open sqlite3 path %s failed", dbPath)
 	}
