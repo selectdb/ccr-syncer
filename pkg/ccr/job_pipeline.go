@@ -481,7 +481,9 @@ func (j *Job) getNextBinlogs() error {
 		// consume prev txn id for not to check and wait prev transaction finished
 		if j.progress.PrevTxnId != -1 {
 			log.Infof("consume prev txn id: %d", j.progress.PrevTxnId)
-			j.Dest.WaitTransactionDone(j.progress.PrevTxnId)
+			if err := j.Dest.WaitTransactionDoneWithContext(j.pipelineCtx.Context, j.progress.PrevTxnId); err != nil {
+				return err
+			}
 			j.progress.PrevTxnId = -1
 			j.progress.Persist()
 		}
@@ -798,8 +800,40 @@ func (j *Job) commitTxn(ctx *TxnContext) error {
 	}
 	log.Tracef("commit txn %d resp: %v", txnId, resp)
 
-	if statusCode := resp.Status.GetStatusCode(); statusCode == tstatus.TStatusCode_PUBLISH_TIMEOUT {
-		dest.WaitTransactionDone(txnId)
+	statusCode := resp.Status.GetStatusCode()
+
+	// Failpoint: simulate PUBLISH_TIMEOUT with slow wait to test job deletion during publish
+	if utils.HasJobFailpoint(j.Name, "publish_wait_test") {
+		log.Infof("failpoint: publish_wait_test triggered for job %s, forcing PUBLISH_TIMEOUT", j.Name)
+		statusCode = tstatus.TStatusCode_PUBLISH_TIMEOUT
+	}
+
+	if statusCode == tstatus.TStatusCode_PUBLISH_TIMEOUT {
+		// Use pipeline context for cancellation support when waiting for transaction
+		var waitCtx context.Context
+		if j.pipelineCtx != nil && j.pipelineCtx.Context != nil {
+			waitCtx = j.pipelineCtx.Context
+		} else {
+			log.Warnf("pipelineCtx is nil in commitTxn, wait transaction %d without cancellation support", txnId)
+			waitCtx = context.Background()
+		}
+
+		// Failpoint: add delay before checking transaction status
+		if utils.HasJobFailpoint(j.Name, "publish_wait_test") {
+			log.Infof("failpoint: publish_wait_test waiting 30 seconds for job %s (can be cancelled)", j.Name)
+			select {
+			case <-waitCtx.Done():
+				log.Warnf("failpoint: publish_wait_test cancelled for job %s: %v", j.Name, waitCtx.Err())
+				return waitCtx.Err()
+			case <-time.After(30 * time.Second):
+				log.Infof("failpoint: publish_wait_test wait completed for job %s", j.Name)
+			}
+		}
+
+		if err := dest.WaitTransactionDoneWithContext(waitCtx, txnId); err != nil {
+			log.Warnf("wait transaction %d cancelled: %v", txnId, err)
+			return err
+		}
 	} else if statusCode != tstatus.TStatusCode_OK {
 		err := xerror.Errorf(xerror.Normal, "commit txn failed, status: %v", resp.Status)
 		return err

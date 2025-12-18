@@ -27,6 +27,7 @@ import (
 )
 
 var errJobExist = xerror.NewWithoutStack(xerror.Normal, "job exist")
+var errJobDeleting = xerror.NewWithoutStack(xerror.Normal, "job is being deleted, please wait and retry")
 var errJobName = xerror.NewWithoutStack(xerror.Normal, "job name does not match the regex of doris")
 
 // job manager is thread safety
@@ -67,7 +68,11 @@ func (jm *JobManager) AddJob(job *Job) error {
 	}
 
 	// Step 1: check job exist
-	if _, ok := jm.jobs[job.Name]; ok {
+	if existingJob, ok := jm.jobs[job.Name]; ok {
+		// Distinguish between "job is running" and "job is being deleted"
+		if existingJob.IsDeleted() {
+			return xerror.XWrapf(errJobDeleting, "job: %s", job.Name)
+		}
 		return xerror.XWrapf(errJobExist, "job: %s", job.Name)
 	}
 
@@ -135,16 +140,19 @@ func (jm *JobManager) RemoveJob(name string) error {
 		return xerror.Errorf(xerror.Normal, "job not exist: %s", name)
 	}
 
-	// stop job
+	// Step 1: Mark job as deleted and interrupt running operations
 	job.Delete()
-	if err := jm.db.RemoveJob(name); err == nil {
-		delete(jm.jobs, name)
-		log.Infof("job [%s] has been successfully deleted, but it needs to wait until an isochronous point before it will completely STOP", name)
-		return nil
-	} else {
+
+	// Step 2: Remove from database (only once, maybeDeleted no longer does this)
+	if err := jm.db.RemoveJob(name); err != nil {
 		log.Errorf("remove job [%s] in db failed: %+v, but job is stopped", name, err)
 		return fmt.Errorf("remove job [%s] in db failed, but job is stopped, if can resume/delete, please do it manually", name)
 	}
+
+	// Step 3: Don't remove from map here!
+
+	log.Infof("job [%s] has been marked for deletion, will be removed from map after goroutine exits", name)
+	return nil
 }
 
 // go run all jobs and wait for stop chan
@@ -181,11 +189,28 @@ func (jm *JobManager) runJob(job *Job) {
 	jm.wg.Add(1)
 
 	go func() {
+		defer func() {
+			// 1. Recover from panic to ensure cleanup always runs
+			if r := recover(); r != nil {
+				log.Errorf("job %s panic: %v", job.Name, r)
+			}
+
+			// 2. If job was deleted, remove from map after goroutine exits
+			if job.IsDeleted() {
+				jm.lock.Lock()
+				delete(jm.jobs, job.Name)
+				jm.lock.Unlock()
+				log.Infof("job [%s] goroutine exited, removed from map", job.Name)
+			}
+
+			// 3. Always call wg.Done()
+			jm.wg.Done()
+		}()
+
 		err := job.Run()
 		if err != nil {
 			log.Errorf("job run failed, job name: %s, error: %+v", job.Name, err)
 		}
-		jm.wg.Done()
 	}()
 }
 

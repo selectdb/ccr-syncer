@@ -17,6 +17,8 @@
 package base
 
 import (
+	"context"
+
 	"github.com/selectdb/ccr_syncer/pkg/ccr/record"
 	"github.com/selectdb/ccr_syncer/pkg/utils"
 )
@@ -45,12 +47,13 @@ type Specer interface {
 	GetValidBackupJob(snapshotNamePrefix string) (string, error)
 	GetValidRestoreJob(snapshotNamePrefix string) (string, error)
 	CancelRestoreIfExists(snapshotName string) error
+	CancelBackupIfExists(snapshotName string) error
 	CreatePartialSnapshot(snapshotName, table string, partitions []string) error
 	CreateSnapshot(snapshotName string, tables []string) error
 	CheckBackupFinished(snapshotName string) (bool, error)
 	CheckRestoreFinished(snapshotName string) (bool, error)
 	GetRestoreSignatureNotMatchedTableOrView(snapshotName string) (string, bool, error)
-	WaitTransactionDone(txnId int64) // busy wait
+	WaitTransactionDoneWithContext(ctx context.Context, txnId int64) error // wait with context support for cancellation
 
 	LightningSchemaChange(srcDatabase string, tableAlias string, changes *record.ModifyTableAddOrDropColumns) error
 	RenameColumn(destTableName string, renameColumn *record.RenameColumn) error
