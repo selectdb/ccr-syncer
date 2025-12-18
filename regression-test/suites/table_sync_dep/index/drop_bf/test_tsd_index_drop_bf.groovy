@@ -108,22 +108,32 @@ suite("test_tsd_index_drop_bf") {
         ALTER TABLE ${tableName}
         SET ("bloom_filter_columns" = "")
     """
+
+    // Insert more data in parallel, to create the shadow index.
+    def num_values = insert_num
+    insert_num *= 2
+    for (int index = num_values; index < insert_num; index++) {
+        sql """
+            INSERT INTO ${tableName} VALUES (1, ${index}, 'user_${index}', 'data_${index}')
+        """
+    }
     sql "sync"
 
     // Verify bloom filter was removed upstream
     assertTrue(helper.checkShowTimesOf("""
         SHOW CREATE TABLE ${context.dbName}.${tableName}
-        """, 
+        """,
         noBloomFilter, 30, "sql"))
 
     // 4. Insert more data after dropping bloom filter
     sql """
         INSERT INTO ${tableName} VALUES
-        (1, 100, "post_drop_user_1", "extra_data_1"),
-        (1, 101, "post_drop_user_2", "extra_data_2"),
-        (1, 102, "post_drop_unique", "extra_data_3")
+        (2, 100, "post_drop_user_1", "extra_data_1"),
+        (2, 101, "post_drop_user_2", "extra_data_2"),
+        (2, 102, "post_drop_unique", "extra_data_3")
     """
     sql "sync"
+    insert_num += 3
 
     // Verify query still works without bloom filter
     assertTrue(helper.checkShowTimesOf(
@@ -137,7 +147,7 @@ suite("test_tsd_index_drop_bf") {
     // Check all data is synced
     assertTrue(helper.checkShowTimesOf(
         """ select * from ${tableName} """,
-        has_count(insert_num + 3), 60, "target"))
+        has_count(insert_num), 60, "target"))
     
     // Check bloom filter is removed downstream
     assertTrue(helper.checkShowTimesOf("""
@@ -149,4 +159,14 @@ suite("test_tsd_index_drop_bf") {
     assertTrue(helper.checkShowTimesOf(
         """ select * from ${tableName} where username = 'post_drop_unique' """,
         has_count(1), 30, "target"))
+        
+    // Insert some more data to verify downstream is still functional
+    sql """
+        INSERT INTO ${tableName} VALUES
+        (3, 200, "final_user_1", "final_data_1"),
+        (3, 201, "final_user_2", "final_data_2")
+    """
+    assertTrue(helper.checkShowTimesOf(
+        """ select * from ${tableName} """,
+        has_count(insert_num + 2), 60, "target"))
 }

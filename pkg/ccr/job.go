@@ -936,13 +936,17 @@ func (j *Job) partialSync() error {
 			j.progress.TableMapping[tableId] = destTable.Id
 			j.progress.NextWithPersist(j.progress.CommitSeq, DBTablesIncrementalSync, Done, "")
 		case TableSync:
-			commitSeq, ok := j.progress.TableCommitSeqMap[j.Src.TableId]
-			if !ok {
-				return xerror.Errorf(xerror.Normal, "table id %d, commit seq not found", j.Src.TableId)
-			}
+			var commitSeq int64
 			if len(partitions) > 0 {
 				// Only commit partition commit seq map, instead of the entire table commit seq.
 				commitSeq = j.progress.CommitSeq
+			} else if seq, ok := j.progress.TableCommitSeqMap[j.Src.TableId]; !ok {
+				return xerror.Errorf(xerror.Normal, "table id %d, commit seq not found", j.Src.TableId)
+			} else {
+				commitSeq = seq
+				// The entire table has been restored, clear the partition commit seq map and shadow index.
+				j.progress.PartitionCommitSeqMap = nil
+				j.progress.ShadowIndexes = nil
 			}
 			j.Dest.TableId = destTable.Id
 			j.progress.TableMapping = nil

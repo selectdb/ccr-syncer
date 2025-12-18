@@ -149,4 +149,14 @@ suite("test_dsd_index_drop_bf") {
     assertTrue(helper.checkShowTimesOf(
         """ select * from ${tableName} where username = 'post_drop_unique' """,
         has_count(1), 30, "target"))
+
+    // Insert some more data to verify downstream is still functional
+    sql """
+        INSERT INTO ${tableName} VALUES
+        (2, 200, "final_user_1", "final_data_1"),
+        (2, 201, "final_user_2", "final_data_2")
+    """
+    assertTrue(helper.checkShowTimesOf(
+        """ select * from ${tableName} """,
+        has_count(insert_num + 5), 60, "target"))
 }
