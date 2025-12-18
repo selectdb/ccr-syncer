@@ -19,6 +19,7 @@ package ccr
 import (
 	"encoding/json"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/selectdb/ccr_syncer/pkg/storage"
@@ -174,8 +175,9 @@ type JobPartialSyncData struct {
 }
 
 type JobProgress struct {
-	JobName string     `json:"job_name"`
-	db      storage.DB `json:"-"`
+	JobName   string       `json:"job_name"`
+	db        storage.DB   `json:"-"`
+	isDeleted *atomic.Bool `json:"-"` // Reference to Job's isDeleted flag, used to prevent persist after deletion
 
 	// Table/DB big sync state machine states
 	SyncState SyncState `json:"sync_state"`
@@ -432,12 +434,26 @@ func (j *JobProgress) Rollback() {
 // write progress to db, busy loop until success
 // TODO: add timeout check
 func (j *JobProgress) Persist() {
+	// Check if job is deleted before persisting.
+	// This prevents a deleted job's goroutine from overwriting a new job's progress
+	// when they have the same name (the database uses job_name as the primary key).
+	if j.isDeleted != nil && j.isDeleted.Load() {
+		log.Infof("job %s is deleted, skip persist progress", j.JobName)
+		return
+	}
+
 	log.Tracef("update job progress, state: %s, subState: %s, commitSeq: %d, prevCommitSeq: %d",
 		j.SyncState, j.SubSyncState, j.CommitSeq, j.PrevCommitSeq)
 
 	defer xmetrics.RecordJobProgressPersist(j.JobName)()
 
 	for {
+		// Check again in the loop in case job is deleted during retry
+		if j.isDeleted != nil && j.isDeleted.Load() {
+			log.Infof("job %s is deleted during persist retry, abort", j.JobName)
+			return
+		}
+
 		// Step 1: to json
 		// TODO: fix to json error
 		jsonBytes, err := json.Marshal(j)
