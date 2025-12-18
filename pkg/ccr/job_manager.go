@@ -277,3 +277,22 @@ func (jm *JobManager) SkipBinlog(jobName string, params SkipBinlogParams) error 
 		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
 	}
 }
+
+// InvalidateBackendsCache invalidates backends cache. If jobName is empty, invalidates all jobs.
+func (jm *JobManager) InvalidateBackendsCache(jobName string) (int, error) {
+	jm.lock.RLock()
+	defer jm.lock.RUnlock()
+
+	if jobName != "" {
+		if job, ok := jm.jobs[jobName]; ok {
+			job.InvalidateBackendsCache()
+			return 1, nil
+		}
+		return 0, xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
+	}
+
+	for _, job := range jm.jobs {
+		job.InvalidateBackendsCache()
+	}
+	return len(jm.jobs), nil
+}

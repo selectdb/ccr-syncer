@@ -164,6 +164,7 @@ type Metaer interface {
 	UpdateBackends() error
 	GetBackends() ([]*base.Backend, error)
 	GetBackendId(host, portStr string) (int64, error)
+	InvalidateBackendsCache() // invalidate cache when cluster scaled
 
 	UpdateIndexes(tableId, partitionId int64) error
 	ShowIndexes(tableName string) ([]*IndexDesc, error)

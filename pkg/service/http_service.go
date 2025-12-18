@@ -1121,6 +1121,35 @@ func (s *HttpService) failpointHandler(w http.ResponseWriter, r *http.Request) {
 	result = newSuccessResult()
 }
 
+// invalidateBackendsCacheHandler invalidates backends cache for scaling scenarios.
+// Request body is optional:
+//   - empty or {"name": ""} -> invalidate all jobs
+//   - {"name": "job1"}      -> invalidate specific job only
+func (s *HttpService) invalidateBackendsCacheHandler(w http.ResponseWriter, r *http.Request) {
+	log.Info("invalidate backends cache")
+
+	type result struct {
+		*defaultResult
+		InvalidatedCount int `json:"invalidated_count"`
+	}
+	var res *result
+	defer func() { writeJson(w, res) }()
+
+	var request CcrCommonRequest
+	// ignore decode error for empty body, treat as invalidate all
+	_ = json.NewDecoder(r.Body).Decode(&request)
+
+	count, err := s.jobManager.InvalidateBackendsCache(request.Name)
+	if err != nil {
+		log.Warnf("invalidate backends cache failed: %+v", err)
+		res = &result{defaultResult: newErrorResult(err.Error())}
+		return
+	}
+
+	log.Infof("invalidated backends cache, job: %q, count: %d", request.Name, count)
+	res = &result{defaultResult: newSuccessResult(), InvalidatedCount: count}
+}
+
 func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/version", s.versionHandler)
 	s.mux.HandleFunc("/create_ccr", s.createHandler)
@@ -1138,6 +1167,7 @@ func (s *HttpService) RegisterHandlers() {
 	s.mux.HandleFunc("/update_host_mapping", s.updateHostMappingHandler)
 	s.mux.HandleFunc("/job_skip_binlog", s.skipBinlogHandler)
 	s.mux.HandleFunc("/failpoint", s.failpointHandler)
+	s.mux.HandleFunc("/invalidate_backends_cache", s.invalidateBackendsCacheHandler)
 	s.mux.Handle("/metrics", xmetrics.GetHttpHandler())
 	s.mux.HandleFunc("/sync", s.syncHandler)
 	s.mux.HandleFunc("/view", s.showJobStateHandler)

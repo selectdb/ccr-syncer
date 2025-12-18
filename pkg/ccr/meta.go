@@ -22,6 +22,8 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/selectdb/ccr_syncer/pkg/ccr/base"
 	"github.com/selectdb/ccr_syncer/pkg/rpc"
@@ -31,6 +33,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/btree"
+)
+
+const (
+	// DefaultBackendsCacheTTL is the default time-to-live for backends cache.
+	// After this duration, the cache will be considered stale and will be refreshed.
+	DefaultBackendsCacheTTL = 60 * time.Second
 )
 
 const (
@@ -50,8 +58,8 @@ func fmtHostPort(host string, port uint16) string {
 	return fmt.Sprintf("%s:%d", host, port)
 }
 
-// All op is not concurrent safety
-// Meta
+// Meta stores cluster metadata with caching support.
+// All operations are not concurrent safe except for backend cache methods.
 type Meta struct {
 	*base.Spec
 	DatabaseMeta
@@ -60,6 +68,11 @@ type Meta struct {
 	DatabaseName2IdMap    map[string]int64
 	TableName2IdMap       map[string]int64
 	BackendHostPort2IdMap map[string]int64
+
+	// backend cache fields (protected by backendsLock)
+	backendsLock       sync.RWMutex
+	backendsLastUpdate time.Time
+	backendsInvalid    bool
 }
 
 func NewMeta(spec *base.Spec) *Meta {
@@ -541,6 +554,16 @@ func (m *Meta) UpdateBackends() error {
 		return xerror.Wrap(err, xerror.Normal, query)
 	}
 
+	// Update cache with lock
+	m.backendsLock.Lock()
+	defer m.backendsLock.Unlock()
+
+	oldCount := len(m.Backends)
+
+	// Clear and rebuild backends map
+	m.Backends = make(map[int64]*base.Backend)
+	m.BackendHostPort2IdMap = make(map[string]int64)
+
 	for _, backend := range backends {
 		m.Backends[backend.Id] = backend
 
@@ -548,7 +571,41 @@ func (m *Meta) UpdateBackends() error {
 		m.BackendHostPort2IdMap[hostPort] = backend.Id
 	}
 
+	// update cache metadata
+	m.backendsLastUpdate = time.Now()
+	m.backendsInvalid = false
+
+	newCount := len(m.Backends)
+	if oldCount > 0 && oldCount != newCount {
+		log.Infof("backend count changed: %d -> %d", oldCount, newCount)
+	}
+	log.Debugf("backends cache updated, count: %d, ttl: %v", newCount, DefaultBackendsCacheTTL)
+
 	return nil
+}
+
+// isBackendsCacheValid checks if backend cache is still valid (not expired and not invalidated).
+func (m *Meta) isBackendsCacheValid() bool {
+	m.backendsLock.RLock()
+	defer m.backendsLock.RUnlock()
+
+	hasData := len(m.Backends) > 0
+	notInvalid := !m.backendsInvalid
+	notExpired := time.Since(m.backendsLastUpdate) < DefaultBackendsCacheTTL
+	valid := hasData && notInvalid && notExpired
+
+	log.Tracef("backends cache check: hasData=%v, notInvalid=%v, notExpired=%v, valid=%v",
+		hasData, notInvalid, notExpired, valid)
+	return valid
+}
+
+// InvalidateBackendsCache marks the backends cache as invalid.
+// Call this when cluster is scaled (add/remove backends).
+func (m *Meta) InvalidateBackendsCache() {
+	m.backendsLock.Lock()
+	defer m.backendsLock.Unlock()
+	m.backendsInvalid = true
+	log.Debugf("backends cache invalidated, will refresh on next access")
 }
 
 func (m *Meta) GetFrontends() ([]*base.Frontend, error) {
@@ -615,42 +672,49 @@ func (m *Meta) GetFrontends() ([]*base.Frontend, error) {
 }
 
 func (m *Meta) GetBackends() ([]*base.Backend, error) {
-	if len(m.Backends) > 0 {
-		backends := make([]*base.Backend, 0, len(m.Backends))
-		for _, backend := range m.Backends {
-			backend := *backend // copy
-			backends = append(backends, &backend)
+	if !m.isBackendsCacheValid() {
+		log.Debugf("backends cache miss, refreshing from FE")
+		if err := m.UpdateBackends(); err != nil {
+			return nil, err
 		}
-		if len(m.HostMapping) != 0 {
-			for _, backend := range backends {
-				if host, ok := m.HostMapping[backend.Host]; ok {
-					backend.Host = host
-				} else {
-					return nil, xerror.Errorf(xerror.Normal,
-						"the public ip of host %s is not found, consider adding it via HTTP API /add_host_mapping", backend.Host)
-				}
+	} else {
+		log.Tracef("backends cache hit, using cached data")
+	}
+
+	m.backendsLock.RLock()
+	defer m.backendsLock.RUnlock()
+
+	backends := make([]*base.Backend, 0, len(m.Backends))
+	for _, backend := range m.Backends {
+		backend := *backend // copy
+		backends = append(backends, &backend)
+	}
+	if len(m.HostMapping) != 0 {
+		for _, backend := range backends {
+			if host, ok := m.HostMapping[backend.Host]; ok {
+				backend.Host = host
+			} else {
+				return nil, xerror.Errorf(xerror.Normal,
+					"the public ip of host %s is not found, consider adding it via HTTP API /add_host_mapping", backend.Host)
 			}
 		}
-		return backends, nil
 	}
-
-	if err := m.UpdateBackends(); err != nil {
-		return nil, err
-	}
-
-	return m.GetBackends()
+	return backends, nil
 }
 
 func (m *Meta) GetBackendMap() (map[int64]*base.Backend, error) {
-	if len(m.Backends) > 0 {
-		return m.Backends, nil
+	if !m.isBackendsCacheValid() {
+		log.Debugf("backends cache miss, refreshing from FE")
+		if err := m.UpdateBackends(); err != nil {
+			return nil, err
+		}
+	} else {
+		log.Tracef("backends cache hit, using cached data")
 	}
 
-	if err := m.UpdateBackends(); err != nil {
-		return nil, err
-	}
-
-	return m.GetBackendMap()
+	m.backendsLock.RLock()
+	defer m.backendsLock.RUnlock()
+	return m.Backends, nil
 }
 
 func (m *Meta) GetBackendId(host string, portStr string) (int64, error) {

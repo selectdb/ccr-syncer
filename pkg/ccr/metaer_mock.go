@@ -327,6 +327,18 @@ func (mr *MockMetaerMockRecorder) GetBackends() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBackends", reflect.TypeOf((*MockMetaer)(nil).GetBackends))
 }
 
+// InvalidateBackendsCache mocks base method.
+func (m *MockMetaer) InvalidateBackendsCache() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "InvalidateBackendsCache")
+}
+
+// InvalidateBackendsCache indicates an expected call of InvalidateBackendsCache.
+func (mr *MockMetaerMockRecorder) InvalidateBackendsCache() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvalidateBackendsCache", reflect.TypeOf((*MockMetaer)(nil).InvalidateBackendsCache))
+}
+
 // GetDbId mocks base method.
 func (m *MockMetaer) GetDbId() (int64, error) {
 	m.ctrl.T.Helper()
