@@ -240,6 +240,14 @@ type Job struct {
 
 	lock sync.Mutex `json:"-"`
 
+	// Current running backup/restore names for cancellation on deletion
+	currentBackupName  string `json:"-"`
+	currentRestoreName string `json:"-"`
+
+	// Context for cancellation on deletion
+	ctx    context.Context    `json:"-"`
+	cancel context.CancelFunc `json:"-"`
+
 	// Replication number policy: -1 means inherit from upstream (default), >0 means fixed replica num, 0 is invalid
 	ReplicationNum int `json:"replication_num,omitempty"`
 }
@@ -576,6 +584,7 @@ func (j *Job) partialSync() error {
 			}
 			if snapshotName != "" {
 				log.Infof("partial sync status: there has a exist backup job %s", snapshotName)
+				j.currentBackupName = snapshotName
 				j.progress.NextSubVolatile(WaitBackupDone, snapshotName)
 				return nil
 			}
@@ -595,12 +604,14 @@ func (j *Job) partialSync() error {
 			return err
 		}
 
+		j.currentBackupName = snapshotName
 		j.progress.NextSubVolatile(WaitBackupDone, snapshotName)
 		return nil
 
 	case WaitBackupDone:
 		// Step 2: Wait backup job done
 		snapshotName := j.progress.InMemoryData.(string)
+
 		backupFinished, err := j.ISrc.CheckBackupFinished(snapshotName)
 		if err != nil {
 			j.progress.NextSubVolatile(BeginCreateSnapshot, snapshotName)
@@ -612,6 +623,7 @@ func (j *Job) partialSync() error {
 			return nil
 		}
 
+		j.currentBackupName = "" // Backup done, clear the name
 		j.progress.NextSubCheckpoint(GetSnapshotInfo, snapshotName)
 
 	case GetSnapshotInfo:
@@ -750,6 +762,7 @@ func (j *Job) partialSync() error {
 			if name != "" {
 				log.Infof("partial sync status: there has a exist restore job %s", name)
 				inMemoryData.RestoreLabel = name
+				j.currentRestoreName = name
 				j.progress.NextSubVolatile(WaitRestoreDone, inMemoryData)
 				break
 			}
@@ -823,6 +836,7 @@ func (j *Job) partialSync() error {
 		}
 		log.Tracef("partial sync restore snapshot resp: %v", restoreResp)
 		inMemoryData.RestoreLabel = restoreSnapshotName
+		j.currentRestoreName = restoreSnapshotName
 
 		j.progress.NextSubVolatile(WaitRestoreDone, inMemoryData)
 		return nil
@@ -868,6 +882,7 @@ func (j *Job) partialSync() error {
 		}
 		j.progress.TableNameMapping = utils.MergeMap(
 			j.progress.TableNameMapping, inMemoryData.TableNameMapping)
+		j.currentRestoreName = "" // Restore done, clear the name
 		j.progress.NextSubCheckpoint(PersistRestoreInfo, restoreSnapshotName)
 
 	case PersistRestoreInfo:
@@ -904,6 +919,7 @@ func (j *Job) partialSync() error {
 
 			// Save the replace result
 			j.progress.TableAliases = nil
+			j.currentRestoreName = "" // Restore done, clear the name
 			j.progress.NextSubCheckpoint(PersistRestoreInfo, j.progress.PersistData)
 		}
 
@@ -974,6 +990,7 @@ func (j *Job) fullSync() error {
 			}
 			if snapshotName != "" {
 				log.Infof("fullsync status: there has a exist backup job %s", snapshotName)
+				j.currentBackupName = snapshotName
 				j.progress.NextSubVolatile(WaitBackupDone, snapshotName)
 				return nil
 			}
@@ -1015,12 +1032,14 @@ func (j *Job) fullSync() error {
 		if err := j.ISrc.CreateSnapshot(snapshotName, backupTableList); err != nil {
 			return err
 		}
+		j.currentBackupName = snapshotName
 		j.progress.NextSubVolatile(WaitBackupDone, snapshotName)
 		return nil
 
 	case WaitBackupDone:
 		// Step 2: Wait backup job done
 		snapshotName := j.progress.InMemoryData.(string)
+
 		backupFinished, err := j.ISrc.CheckBackupFinished(snapshotName)
 		if err != nil {
 			j.progress.NextSubVolatile(BeginCreateSnapshot, snapshotName)
@@ -1031,6 +1050,7 @@ func (j *Job) fullSync() error {
 			return nil
 		}
 
+		j.currentBackupName = "" // Backup done, clear the name
 		j.progress.NextSubCheckpoint(GetSnapshotInfo, snapshotName)
 
 	case GetSnapshotInfo:
@@ -1165,6 +1185,7 @@ func (j *Job) fullSync() error {
 			if restoreSnapshotName != "" {
 				log.Infof("fullsync status: there has a exist restore job %s", restoreSnapshotName)
 				inMemoryData.RestoreLabel = restoreSnapshotName
+				j.currentRestoreName = restoreSnapshotName
 				j.progress.NextSubVolatile(WaitRestoreDone, inMemoryData)
 				break
 			}
@@ -1272,6 +1293,7 @@ func (j *Job) fullSync() error {
 		log.Tracef("fullsync restore snapshot resp: %v", restoreResp)
 
 		inMemoryData.RestoreLabel = restoreSnapshotName
+		j.currentRestoreName = restoreSnapshotName
 		j.progress.NextSubVolatile(WaitRestoreDone, inMemoryData)
 		return nil
 
@@ -1293,6 +1315,12 @@ func (j *Job) fullSync() error {
 		}
 
 		for {
+			// Check if job is deleted, exit and let Delete() handle the cancel
+			if j.isDeleted.Load() {
+				log.Infof("job %s deleted during restore check loop, exiting", j.Name)
+				return nil
+			}
+
 			restoreFinished, err := j.IDest.CheckRestoreFinished(restoreSnapshotName)
 			if err != nil && errors.Is(err, base.ErrRestoreSignatureNotMatched) {
 				// We need rebuild the exists table.
@@ -1373,6 +1401,7 @@ func (j *Job) fullSync() error {
 				commitSeq = tableCommitSeqMap[j.Src.TableId]
 			}
 
+			j.currentRestoreName = "" // Restore done, clear the name
 			j.progress.CommitNextSubWithPersist(commitSeq, PersistRestoreInfo, restoreSnapshotName)
 			break
 		}
@@ -1413,6 +1442,7 @@ func (j *Job) fullSync() error {
 
 			// Save the replace result
 			j.progress.TableAliases = nil
+			j.currentRestoreName = "" // Restore done, clear the name
 			j.progress.NextSubCheckpoint(PersistRestoreInfo, j.progress.PersistData)
 		}
 
@@ -2010,7 +2040,10 @@ func (j *Job) handleUpsert(binlog *festruct.TBinlog) error {
 		log.Tracef("commit txn %d resp: %v", txnId, resp)
 
 		if statusCode := resp.Status.GetStatusCode(); statusCode == tstatus.TStatusCode_PUBLISH_TIMEOUT {
-			dest.WaitTransactionDone(txnId)
+			if err := dest.WaitTransactionDoneWithContext(j.ctx, txnId); err != nil {
+				rollback(err, inMemoryData)
+				return err
+			}
 		} else if statusCode != tstatus.TStatusCode_OK {
 			err := xerror.Errorf(xerror.Normal, "commit txn failed, status: %v", resp.Status)
 			rollback(err, inMemoryData)
@@ -3622,7 +3655,9 @@ func (j *Job) handleNonBarrierBinlog(binlog *festruct.TBinlog) error {
 	if prevTxnId := j.progress.PrevTxnId; prevTxnId != -1 {
 		dest := &j.Dest
 		log.Infof("wait prev txn id: %d published", prevTxnId)
-		dest.WaitTransactionDone(prevTxnId)
+		if err := dest.WaitTransactionDoneWithContext(j.ctx, prevTxnId); err != nil {
+			return err
+		}
 		j.progress.PrevTxnId = -1
 	}
 
@@ -3801,7 +3836,9 @@ func (j *Job) incrementalSyncInternal() error {
 			// consume prev txn id for not to check and wait prev transaction finished
 			if j.progress.PrevTxnId != -1 {
 				log.Infof("consume prev txn id: %d", j.progress.PrevTxnId)
-				j.Dest.WaitTransactionDone(j.progress.PrevTxnId)
+				if err := j.Dest.WaitTransactionDoneWithContext(j.ctx, j.progress.PrevTxnId); err != nil {
+					return err
+				}
 				j.progress.PrevTxnId = -1
 				j.progress.Persist()
 			}
@@ -3840,6 +3877,7 @@ func (j *Job) recoverJobProgress() error {
 		return err
 	} else {
 		j.progress = progress
+		j.progress.isDeleted = &j.isDeleted // Set reference to job's isDeleted flag
 		return nil
 	}
 }
@@ -3936,6 +3974,12 @@ func (j *Job) sync() error {
 
 // if err is Panic, return it
 func (j *Job) handleError(jobName string, err error) error {
+	// context.Canceled is normal when job is deleted, don't log as error
+	if errors.Is(err, context.Canceled) {
+		log.Debugf("job %s sync cancelled due to deletion", jobName)
+		return nil
+	}
+
 	var xerr *xerror.XError
 	if !errors.As(err, &xerr) {
 		log.Errorf("convert error to xerror failed, err: %+v", err)
@@ -3992,7 +4036,12 @@ func (j *Job) run() {
 				break
 			}
 
-			log.Warnf("job sync failed, job: %s, err: %+v", j.Name, err)
+			// Use debug level for context.Canceled (normal deletion flow)
+			if errors.Is(err, context.Canceled) {
+				log.Debugf("job sync cancelled, job: %s", j.Name)
+			} else {
+				log.Warnf("job sync failed, job: %s, err: %+v", j.Name, err)
+			}
 			panicError = j.handleError(j.Name, err)
 		}
 	}
@@ -4082,6 +4131,9 @@ func (j *Job) Run() error {
 	gls.ResetGls(gls.GoID(), map[any]any{"job": j.Name})
 	defer gls.DeleteGls(gls.GoID())
 
+	// Initialize context for cancellation
+	j.ctx, j.cancel = context.WithCancel(context.Background())
+
 	// retry 3 times to check IsProgressExist
 	var isProgressExist bool
 	var err error
@@ -4103,6 +4155,7 @@ func (j *Job) Run() error {
 		}
 	} else {
 		j.progress = NewJobProgress(j.Name, j.SyncType, j.db)
+		j.progress.isDeleted = &j.isDeleted // Set reference to job's isDeleted flag
 		info := fmt.Sprintf("new job, job: %s, sync type: %v", j.Name, j.SyncType)
 		if err := j.NewSnapshot(0, info); err != nil {
 			return err
@@ -4214,6 +4267,40 @@ func (j *Job) Stop() {
 // delete job
 func (j *Job) Delete() {
 	j.isDeleted.Store(true)
+
+	// 1. Set interrupt signal to let pipeline loop detect deletion
+	atomic.AddInt32(&j.Extra.InterruptSignal, 1)
+	select {
+	case j.Extra.InterruptCh <- struct{}{}:
+	default:
+		// Channel may be full, ignore
+	}
+
+	// 2. Cancel job context to interrupt WaitTransactionDone etc.
+	if j.cancel != nil {
+		j.cancel()
+	}
+
+	// 3. Cancel pipeline context to interrupt async ingest goroutines
+	if j.pipelineCtx != nil {
+		j.pipelineCtx.Cancel()
+	}
+
+	// 4. Cancel any running backup/restore jobs
+	if j.currentBackupName != "" {
+		log.Infof("job %s deleted, cancelling backup: %s", j.Name, j.currentBackupName)
+		if err := j.ISrc.CancelBackupIfExists(j.currentBackupName); err != nil {
+			log.Warnf("job %s failed to cancel backup %s: %v", j.Name, j.currentBackupName, err)
+		}
+	}
+	if j.currentRestoreName != "" {
+		log.Infof("job %s deleted, cancelling restore: %s", j.Name, j.currentRestoreName)
+		if err := j.IDest.CancelRestoreIfExists(j.currentRestoreName); err != nil {
+			log.Warnf("job %s failed to cancel restore %s: %v", j.Name, j.currentRestoreName, err)
+		}
+	}
+
+	// 5. Close stop channel
 	close(j.stop)
 }
 
@@ -4222,12 +4309,13 @@ func (j *Job) maybeDeleted() bool {
 		return false
 	}
 
-	// job had been deleted
-	log.Infof("job deleted, job: %s, remove in db", j.Name)
-	if err := j.db.RemoveJob(j.Name); err != nil {
-		log.Errorf("remove job failed, job: %s, err: %+v", j.Name, err)
-	}
+	// Job has been deleted, just exit gracefully.
+	log.Infof("job deleted, job: %s, exiting gracefully", j.Name)
 	return true
+}
+
+func (j *Job) IsDeleted() bool {
+	return j.isDeleted.Load()
 }
 
 func (j *Job) updateFrontends() error {

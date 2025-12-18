@@ -17,6 +17,7 @@
 package base
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"regexp"
@@ -723,6 +724,7 @@ func (s *Spec) CancelRestoreIfExists(snapshotName string) error {
 	}
 
 	if info == nil || info.State == RestoreStateCancelled || info.State == RestoreStateFinished {
+		log.Debugf("skip cancel restore %s: not found or already completed/cancelled", snapshotName)
 		return nil
 	}
 
@@ -731,6 +733,53 @@ func (s *Spec) CancelRestoreIfExists(snapshotName string) error {
 	_, err = db.Exec(sql)
 	if err != nil {
 		return xerror.Wrapf(err, xerror.Normal, "cancel restore failed, sql: %s", sql)
+	}
+	return nil
+}
+
+// CancelBackupIfExists cancels a specific backup job if it exists and is running.
+func (s *Spec) CancelBackupIfExists(snapshotName string) error {
+	log.Tracef("cancel backup %s, db name: %s", snapshotName, s.Database)
+
+	db, err := s.Connect()
+	if err != nil {
+		return err
+	}
+
+	// Query backup status for this snapshot
+	sql := fmt.Sprintf("SHOW BACKUP FROM %s WHERE SnapshotName = '%s'",
+		utils.FormatKeywordName(s.Database), snapshotName)
+	log.Debugf("check backup state sql: %s", sql)
+	rows, err := db.Query(sql)
+	if err != nil {
+		return xerror.Wrapf(err, xerror.Normal, "show backup failed, sql: %s", sql)
+	}
+	defer rows.Close()
+
+	var backupState BackupState = BackupStateUnknown
+	if rows.Next() {
+		rowParser := utils.NewRowParser()
+		if err := rowParser.Parse(rows); err != nil {
+			return xerror.Wrap(err, xerror.Normal, "parse backup info failed")
+		}
+
+		info, err := parseBackupInfo(rowParser)
+		if err != nil {
+			return xerror.Wrap(err, xerror.Normal, "parse backup info failed")
+		}
+		backupState = info.State
+	}
+
+	if backupState == BackupStateCancelled || backupState == BackupStateFinished || backupState == BackupStateUnknown {
+		log.Debugf("skip cancel backup %s: not found or already completed/cancelled", snapshotName)
+		return nil
+	}
+
+	cancelSql := fmt.Sprintf("CANCEL BACKUP FROM %s", utils.FormatKeywordName(s.Database))
+	log.Infof("cancelling backup %s, sql: %s", snapshotName, cancelSql)
+	_, err = db.Exec(cancelSql)
+	if err != nil {
+		return xerror.Wrapf(err, xerror.Normal, "cancel backup failed, sql: %s", cancelSql)
 	}
 	return nil
 }
@@ -1131,13 +1180,25 @@ func (s *Spec) waitTransactionDone(txnId int64) error {
 	return xerror.Errorf(xerror.Normal, "no transaction status found")
 }
 
-func (s *Spec) WaitTransactionDone(txnId int64) {
+// WaitTransactionDoneWithContext waits for transaction to become VISIBLE, with context support for cancellation.
+// Returns nil if transaction is visible, or context.Canceled/context.DeadlineExceeded if cancelled.
+func (s *Spec) WaitTransactionDoneWithContext(ctx context.Context, txnId int64) error {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
 	for {
-		if err := s.waitTransactionDone(txnId); err != nil {
-			log.Errorf("wait transaction done failed, err +%v", err)
-			time.Sleep(time.Second)
-		} else {
-			break
+		select {
+		case <-ctx.Done():
+			// Job is deleted or cancelled
+			log.Infof("wait transaction %d cancelled: %v", txnId, ctx.Err())
+			return ctx.Err()
+		case <-ticker.C:
+			if err := s.waitTransactionDone(txnId); err != nil {
+				log.Debugf("transaction %d not visible yet, continue waiting: %v", txnId, err)
+			} else {
+				log.Infof("transaction %d is visible", txnId)
+				return nil
+			}
 		}
 	}
 }
