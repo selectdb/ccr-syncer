@@ -250,6 +250,13 @@ type Job struct {
 
 	// Replication number policy: -1 means inherit from upstream (default), >0 means fixed replica num, 0 is invalid
 	ReplicationNum int `json:"replication_num,omitempty"`
+
+	// SkipFullSync: if true, skip the full sync (backup/restore) and start from incremental sync directly.
+	// This is useful for cross-version migration where backup/restore is not compatible.
+	SkipFullSync bool `json:"skip_full_sync,omitempty"`
+	// InitialCommitSeq: the initial commit seq to start incremental sync from.
+	// Only used when SkipFullSync is true.
+	InitialCommitSeq int64 `json:"initial_commit_seq,omitempty"`
 }
 
 type JobContext struct {
@@ -263,6 +270,10 @@ type JobContext struct {
 	Factory          *Factory
 	// Replication number policy: -1 means inherit from upstream (default), >0 means fixed replica num, 0 is invalid
 	ReplicationNum int
+	// SkipFullSync: if true, skip the full sync (backup/restore) and start from incremental sync directly.
+	SkipFullSync bool
+	// InitialCommitSeq: the initial commit seq to start incremental sync from.
+	InitialCommitSeq int64
 }
 
 // new job
@@ -312,6 +323,13 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 		if err := job.validateReplicaFail(job.ReplicationNum); err != nil {
 			return nil, err
 		}
+	}
+
+	// set skip full sync options
+	job.SkipFullSync = jobContext.SkipFullSync
+	job.InitialCommitSeq = jobContext.InitialCommitSeq
+	if job.SkipFullSync {
+		log.Infof("job %s will skip full sync and start from commit seq %d", job.Name, job.InitialCommitSeq)
 	}
 
 	if err := job.valid(); err != nil {
@@ -4130,6 +4148,58 @@ func (j *Job) NewPartialSnapshot(tableId int64, table string, partitions []strin
 	}
 }
 
+// skipFullSyncAndStartIncremental skips the full sync (backup/restore) and starts from incremental sync directly.
+// This is useful for cross-version migration where backup/restore is not compatible.
+func (j *Job) skipFullSyncAndStartIncremental() error {
+	log.Infof("skip full sync for job %s, start from commit seq %d", j.Name, j.InitialCommitSeq)
+
+	// Set the sync state to incremental sync
+	var syncState SyncState
+	switch j.SyncType {
+	case TableSync:
+		syncState = TableIncrementalSync
+	case DBSync:
+		syncState = DBTablesIncrementalSync
+	default:
+		return xerror.Errorf(xerror.Normal, "unknown sync type: %v", j.SyncType)
+	}
+
+	// Build table mapping
+	if j.SyncType == TableSync {
+		// For table sync, we need to get the dest table id
+		destTableId, err := j.destMeta.GetTableId(j.Dest.Table)
+		if err != nil {
+			return xerror.Wrapf(err, xerror.Normal, "failed to get dest table id for %s", j.Dest.Table)
+		}
+		j.Dest.TableId = destTableId
+
+		j.progress.TableMapping = map[int64]int64{
+			j.Src.TableId: destTableId,
+		}
+		log.Infof("skip full sync: table mapping %d -> %d", j.Src.TableId, destTableId)
+	} else {
+		// For DB sync, we need to build table mapping for all tables
+		// This requires the dest tables to exist with the same names as src tables
+		j.progress.TableMapping = make(map[int64]int64)
+		j.progress.TableCommitSeqMap = make(map[int64]int64)
+	}
+
+	// Set progress state
+	j.progress.SyncState = syncState
+	j.progress.SubSyncState = Done
+	j.progress.CommitSeq = j.InitialCommitSeq
+	j.progress.PrevCommitSeq = j.InitialCommitSeq
+	j.progress.IncrementalSyncStartAt = time.Now().Unix()
+
+	// Persist progress
+	j.progress.Persist()
+
+	log.Infof("skip full sync completed for job %s, sync state: %s, commit seq: %d",
+		j.Name, syncState, j.InitialCommitSeq)
+
+	return nil
+}
+
 // run job
 func (j *Job) Run() error {
 	gls.ResetGls(gls.GoID(), map[any]any{"job": j.Name})
@@ -4160,9 +4230,17 @@ func (j *Job) Run() error {
 	} else {
 		j.progress = NewJobProgress(j.Name, j.SyncType, j.db)
 		j.progress.isDeleted = &j.isDeleted // Set reference to job's isDeleted flag
-		info := fmt.Sprintf("new job, job: %s, sync type: %v", j.Name, j.SyncType)
-		if err := j.NewSnapshot(0, info); err != nil {
-			return err
+
+		// Check if we should skip full sync
+		if j.SkipFullSync {
+			if err := j.skipFullSyncAndStartIncremental(); err != nil {
+				return err
+			}
+		} else {
+			info := fmt.Sprintf("new job, job: %s, sync type: %v", j.Name, j.SyncType)
+			if err := j.NewSnapshot(0, info); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -4418,13 +4496,22 @@ func (j *Job) FirstRun() error {
 	} else {
 		j.Dest.DbId = destDbId
 	}
-	if j.SyncType == TableSync && !j.Extra.allowTableExists {
+	if j.SyncType == TableSync {
 		dest_table_exists, err := j.IDest.CheckTableExists()
 		if err != nil {
 			return err
 		}
-		if dest_table_exists {
-			return xerror.Errorf(xerror.Normal, "dest table %s.%s already exists", j.Dest.Database, j.Dest.Table)
+
+		if j.SkipFullSync {
+			// When skip full sync, dest table MUST exist
+			if !dest_table_exists {
+				return xerror.Errorf(xerror.Normal, "dest table %s.%s must exist when skip_full_sync is enabled", j.Dest.Database, j.Dest.Table)
+			}
+		} else if !j.Extra.allowTableExists {
+			// Normal mode: dest table should not exist
+			if dest_table_exists {
+				return xerror.Errorf(xerror.Normal, "dest table %s.%s already exists", j.Dest.Database, j.Dest.Table)
+			}
 		}
 	}
 

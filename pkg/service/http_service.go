@@ -105,6 +105,12 @@ type CreateCcrRequest struct {
 	ReuseBinlogLabel bool `json:"reuse_binlog_label"`
 	// replication_num: nil or -1 means inherit from upstream (default), >0 means fixed replica count, 0 is invalid
 	ReplicationNum *int `json:"replication_num,omitempty"`
+	// SkipFullSync: if true, skip the full sync (backup/restore) and start from incremental sync directly.
+	// This is useful for cross-version migration where backup/restore is not compatible.
+	SkipFullSync bool `json:"skip_full_sync"`
+	// InitialCommitSeq: the initial commit seq to start incremental sync from.
+	// Only used when SkipFullSync is true.
+	InitialCommitSeq int64 `json:"initial_commit_seq"`
 }
 
 // Stringer
@@ -150,6 +156,8 @@ func createCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobMana
 		Db:               db,
 		Factory:          jobManager.GetFactory(),
 		ReplicationNum:   replicationNum,
+		SkipFullSync:     request.SkipFullSync,
+		InitialCommitSeq: request.InitialCommitSeq,
 	}
 	job, err := ccr.NewJobFromService(request.Name, ctx)
 	if err != nil {
