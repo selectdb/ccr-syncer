@@ -257,6 +257,31 @@ type Job struct {
 	// InitialCommitSeq: the initial commit seq to start incremental sync from.
 	// Only used when SkipFullSync is true.
 	InitialCommitSeq int64 `json:"initial_commit_seq,omitempty"`
+
+	// InsertBootstrap: if true, use INSERT INTO ... SELECT to bootstrap data instead of backup/restore.
+	// This is designed for cross-version migration where backup/restore is not compatible (e.g., 2.1 -> 4.0).
+	InsertBootstrap bool `json:"insert_bootstrap,omitempty"`
+	// InsertBootstrapState: persisted state for InsertBootstrap mode
+	InsertBootstrapState *InsertBootstrapState `json:"insert_bootstrap_state,omitempty"`
+}
+
+// InsertBootstrapState holds the state for InsertBootstrap mode
+// This state is persisted to allow recovery after restart
+type InsertBootstrapState struct {
+	// BootstrapCommitSeq: the binlog position recorded before INSERT operation
+	BootstrapCommitSeq int64 `json:"bootstrap_commit_seq"`
+	// TempTableName: the name of the temporary table created in source cluster
+	TempTableName string `json:"temp_table_name"`
+	// TempTableId: the ID of the temporary table
+	TempTableId int64 `json:"temp_table_id"`
+	// InsertStartTime: timestamp when INSERT started (for timeout detection)
+	InsertStartTime int64 `json:"insert_start_time"`
+	// TempTableSyncCompleted: whether temp table sync is completed
+	TempTableSyncCompleted bool `json:"temp_table_sync_completed"`
+	// OriginalTableBackedUp: whether original table in dest is backed up (renamed)
+	OriginalTableBackedUp bool `json:"original_table_backed_up"`
+	// Phase: current phase of InsertBootstrap for detailed logging
+	Phase string `json:"phase"`
 }
 
 type JobContext struct {
@@ -274,6 +299,9 @@ type JobContext struct {
 	SkipFullSync bool
 	// InitialCommitSeq: the initial commit seq to start incremental sync from.
 	InitialCommitSeq int64
+	// InsertBootstrap: if true, use INSERT INTO ... SELECT to bootstrap data instead of backup/restore.
+	// This is designed for cross-version migration where backup/restore is not compatible.
+	InsertBootstrap bool
 }
 
 // new job
@@ -330,6 +358,16 @@ func NewJobFromService(name string, ctx context.Context) (*Job, error) {
 	job.InitialCommitSeq = jobContext.InitialCommitSeq
 	if job.SkipFullSync {
 		log.Infof("job %s will skip full sync and start from commit seq %d", job.Name, job.InitialCommitSeq)
+	}
+
+	// set insert bootstrap options
+	job.InsertBootstrap = jobContext.InsertBootstrap
+	if job.InsertBootstrap {
+		log.Infof("[InsertBootstrap] job %s will use INSERT INTO ... SELECT mode for cross-version migration", job.Name)
+		// InsertBootstrap mode is only supported for table sync
+		if jobContext.Src.Table == "" {
+			return nil, xerror.Errorf(xerror.Normal, "InsertBootstrap mode only supports table sync, not database sync")
+		}
 	}
 
 	if err := job.valid(); err != nil {
@@ -3918,6 +3956,9 @@ func (j *Job) tableSync() error {
 	case TablePartialSync:
 		log.Trace("run table partial sync")
 		return j.partialSync()
+	case TableInsertBootstrap:
+		log.Trace("run table insert bootstrap sync")
+		return j.runInsertBootstrap()
 	default:
 		return xerror.Errorf(xerror.Normal, "unknown sync state: %v", j.progress.SyncState)
 	}
@@ -4227,12 +4268,23 @@ func (j *Job) Run() error {
 			log.Errorf("recover job %s progress failed: %+v", j.Name, err)
 			return err
 		}
+
+		// Check if we need to continue InsertBootstrap mode
+		if j.InsertBootstrap && j.progress.SyncState == TableInsertBootstrap {
+			log.Infof("[InsertBootstrap] Recovering InsertBootstrap mode for job %s", j.Name)
+		}
 	} else {
 		j.progress = NewJobProgress(j.Name, j.SyncType, j.db)
 		j.progress.isDeleted = &j.isDeleted // Set reference to job's isDeleted flag
 
-		// Check if we should skip full sync
-		if j.SkipFullSync {
+		// Check if we should use InsertBootstrap mode (for cross-version migration)
+		if j.InsertBootstrap {
+			log.Infof("[InsertBootstrap] Starting InsertBootstrap mode for job %s", j.Name)
+			j.progress.SyncState = TableInsertBootstrap
+			j.progress.SubSyncState = IBRecordBinlogPosition
+			j.progress.Persist()
+		} else if j.SkipFullSync {
+			// Check if we should skip full sync
 			if err := j.skipFullSyncAndStartIncremental(); err != nil {
 				return err
 			}
@@ -4506,6 +4558,15 @@ func (j *Job) FirstRun() error {
 			// When skip full sync, dest table MUST exist
 			if !dest_table_exists {
 				return xerror.Errorf(xerror.Normal, "dest table %s.%s must exist when skip_full_sync is enabled", j.Dest.Database, j.Dest.Table)
+			}
+		} else if j.InsertBootstrap {
+			// InsertBootstrap mode: dest table can exist or not
+			// If exists, it will be backed up and replaced
+			// If not exists, temp table will be renamed to it
+			if dest_table_exists {
+				log.Infof("[InsertBootstrap] Dest table %s.%s already exists, it will be backed up during migration", j.Dest.Database, j.Dest.Table)
+			} else {
+				log.Infof("[InsertBootstrap] Dest table %s.%s does not exist, will be created from temp table", j.Dest.Database, j.Dest.Table)
 			}
 		} else if !j.Extra.allowTableExists {
 			// Normal mode: dest table should not exist
