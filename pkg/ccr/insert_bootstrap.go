@@ -248,7 +248,8 @@ func (j *Job) ibCreateTempTable() error {
 	log.Infof("[InsertBootstrap] Temp table CREATE SQL (first 500 chars): %.500s...", tempTableSql)
 
 	// Execute the CREATE TABLE for temp table
-	if err := j.ISrc.Exec(tempTableSql); err != nil {
+	// Use j.Src.Exec() since Specer interface doesn't have Exec method
+	if err := j.Src.Exec(tempTableSql); err != nil {
 		log.Errorf("[InsertBootstrap] Failed to create temp table: %+v", err)
 		return err
 	}
@@ -313,9 +314,10 @@ func (j *Job) ibExecuteInsert() error {
 	log.Infof("[InsertBootstrap] [CrossVersionMigration] This operation captures data snapshot at binlog offset v1=%d", j.InsertBootstrapState.BootstrapCommitSeq)
 
 	// Execute INSERT (this may take a long time for large tables)
+	// Use j.Src.Exec() since Specer interface doesn't have Exec method
 	startTime := time.Now()
 	log.Infof("[InsertBootstrap] [Progress] INSERT operation started at %s", startTime.Format(time.RFC3339))
-	if err := j.ISrc.Exec(insertSql); err != nil {
+	if err := j.Src.Exec(insertSql); err != nil {
 		log.Errorf("[InsertBootstrap] Failed to execute INSERT: %+v", err)
 		return err
 	}
@@ -429,7 +431,8 @@ func (j *Job) ibSyncTempTable() error {
 	}
 
 	if !exists {
-		if err := j.IDest.Exec(destCreateSql); err != nil {
+		// Use j.Dest.Exec() since Specer interface doesn't have Exec method
+		if err := j.Dest.Exec(destCreateSql); err != nil {
 			log.Errorf("[InsertBootstrap] Failed to create temp table in dest: %+v", err)
 			return err
 		}
@@ -618,7 +621,7 @@ func (j *Job) ibWaitTempTableSync() error {
 			time.Sleep(insertBootstrapCheckInterval)
 			continue
 
-		case tstatus.TStatusCode_BINLOG_DISABLED:
+		case tstatus.TStatusCode_BINLOG_DISABLE:
 			log.Warnf("[InsertBootstrap] Binlog disabled")
 			return xerror.Errorf(xerror.Normal, "binlog disabled")
 
@@ -697,9 +700,10 @@ func (j *Job) ibRenameTables() error {
 
 	if exists {
 		// Rename original table to backup
+		// Use j.Dest.Exec() since Specer interface doesn't have Exec method
 		renameSql := fmt.Sprintf("ALTER TABLE %s.%s RENAME %s", destDb, originalTable, backupTable)
 		log.Infof("[InsertBootstrap] Backing up original table: %s", renameSql)
-		if err := j.IDest.Exec(renameSql); err != nil {
+		if err := j.Dest.Exec(renameSql); err != nil {
 			log.Errorf("[InsertBootstrap] Failed to backup original table: %+v", err)
 			return err
 		}
@@ -710,9 +714,10 @@ func (j *Job) ibRenameTables() error {
 	}
 
 	// Step 2: Rename temp table to original table name
+	// Use j.Dest.Exec() since Specer interface doesn't have Exec method
 	renameSql := fmt.Sprintf("ALTER TABLE %s.%s RENAME %s", destDb, tempTable, originalTable)
 	log.Infof("[InsertBootstrap] Renaming temp table to original: %s", renameSql)
-	if err := j.IDest.Exec(renameSql); err != nil {
+	if err := j.Dest.Exec(renameSql); err != nil {
 		log.Errorf("[InsertBootstrap] Failed to rename temp table: %+v", err)
 		return err
 	}
@@ -733,11 +738,12 @@ func (j *Job) ibCleanup() error {
 	j.InsertBootstrapState.Phase = "cleanup"
 
 	// Drop temp table in source cluster
+	// Use j.Src.Exec() since Specer interface doesn't have Exec method
 	srcDb := utils.FormatKeywordName(j.Src.Database)
 	tempTable := utils.FormatKeywordName(j.InsertBootstrapState.TempTableName)
 	dropSql := fmt.Sprintf("DROP TABLE IF EXISTS %s.%s", srcDb, tempTable)
 	log.Infof("[InsertBootstrap] Dropping temp table in source: %s", dropSql)
-	if err := j.ISrc.Exec(dropSql); err != nil {
+	if err := j.Src.Exec(dropSql); err != nil {
 		log.Warnf("[InsertBootstrap] Failed to drop temp table in source (non-fatal): %+v", err)
 		// Non-fatal error, continue
 	}
