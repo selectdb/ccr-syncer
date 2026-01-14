@@ -19,6 +19,7 @@ package ccr
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -401,61 +402,71 @@ func (j *Job) ibWaitInsertDone() error {
 	return nil
 }
 
-// ibSyncTempTable syncs the temp table to dest cluster using CCR
+// ibSyncTempTable syncs the temp table binlogs to dest cluster's old table
 func (j *Job) ibSyncTempTable() error {
-	log.Infof("[InsertBootstrap] Phase 5: Syncing temp table to dest cluster...")
-	log.Infof("[InsertBootstrap]   Temp table: %s (ID: %d)", j.InsertBootstrapState.TempTableName, j.InsertBootstrapState.TempTableId)
+	log.Infof("[InsertBootstrap] Phase 5: Creating old table in dest cluster and syncing tmp table binlogs...")
+	log.Infof("[InsertBootstrap]   Source tmp table: %s (ID: %d)", j.InsertBootstrapState.TempTableName, j.InsertBootstrapState.TempTableId)
+	log.Infof("[InsertBootstrap]   Dest old table: %s", j.Dest.Table)
 	log.Infof("[InsertBootstrap]   Starting from commitSeq: %d", j.InsertBootstrapState.BootstrapCommitSeq)
 
 	j.InsertBootstrapState.Phase = "sync_temp_table"
 
-	// We need to sync the temp table from BootstrapCommitSeq
-	// The binlogs after BootstrapCommitSeq should contain the INSERT data
-
-	// First, we need to create the temp table in dest cluster
-	// Get the CREATE TABLE statement
-	createTableSql, err := j.ISrc.GetCreateTableSql(j.InsertBootstrapState.TempTableName)
+	// IMPORTANT: We create the OLD table (not tmp table) in dest cluster
+	// The tmp table binlogs from source will be replayed to the old table in dest
+	// Get the CREATE TABLE statement of the ORIGINAL table (not temp table)
+	createTableSql, err := j.ISrc.GetCreateTableSql(j.Src.Table)
 	if err != nil {
-		log.Errorf("[InsertBootstrap] Failed to get temp table CREATE SQL: %+v", err)
+		log.Errorf("[InsertBootstrap] Failed to get original table CREATE SQL: %+v", err)
 		return err
 	}
 
-	// Modify for dest cluster (change database name if needed)
+	// Modify for dest cluster (change database name and ensure proper format)
 	destCreateSql := j.modifyCreateTableForDest(createTableSql)
-	log.Infof("[InsertBootstrap] Creating temp table in dest cluster...")
+	log.Infof("[InsertBootstrap] Creating old table in dest cluster...")
 	log.Infof("[InsertBootstrap] SQL (first 500 chars): %.500s...", destCreateSql)
 
-	// Check if temp table already exists in dest
-	exists, err := j.IDest.CheckTableExistsByName(j.InsertBootstrapState.TempTableName)
+	// Check if old table already exists in dest (should not exist, checked in FirstRun)
+	exists, err := j.IDest.CheckTableExistsByName(j.Dest.Table)
 	if err != nil {
-		log.Warnf("[InsertBootstrap] Failed to check if temp table exists in dest: %+v", err)
-	}
-
-	if !exists {
-		// Use j.Dest.Exec() since Specer interface doesn't have Exec method
-		if err := j.Dest.Exec(destCreateSql); err != nil {
-			log.Errorf("[InsertBootstrap] Failed to create temp table in dest: %+v", err)
-			return err
-		}
-		log.Infof("[InsertBootstrap] Temp table created in dest cluster")
-	} else {
-		log.Infof("[InsertBootstrap] Temp table already exists in dest cluster, skipping creation")
-	}
-
-	// Get dest temp table ID
-	destTempTableId, err := j.destMeta.GetTableId(j.InsertBootstrapState.TempTableName)
-	if err != nil {
-		log.Errorf("[InsertBootstrap] Failed to get dest temp table ID: %+v", err)
+		log.Errorf("[InsertBootstrap] Failed to check if old table exists in dest: %+v", err)
 		return err
 	}
-	log.Infof("[InsertBootstrap] Dest temp table ID: %d", destTempTableId)
 
-	// Set up table mapping for temp table
-	j.progress.TableMapping = map[int64]int64{
-		j.InsertBootstrapState.TempTableId: destTempTableId,
+	if exists {
+		return xerror.Errorf(xerror.Normal, "dest table %s.%s already exists, this should have been checked in FirstRun", j.Dest.Database, j.Dest.Table)
 	}
-	log.Infof("[InsertBootstrap] Table mapping: src %d -> dest %d",
-		j.InsertBootstrapState.TempTableId, destTempTableId)
+
+	// Create the old table in dest cluster
+	// Use j.Dest.Exec() since Specer interface doesn't have Exec method
+	if err := j.Dest.Exec(destCreateSql); err != nil {
+		log.Errorf("[InsertBootstrap] Failed to create old table in dest: %+v", err)
+		return err
+	}
+	log.Infof("[InsertBootstrap] Old table created successfully in dest cluster: %s.%s", j.Dest.Database, j.Dest.Table)
+
+	// Get dest old table ID
+	destOldTableId, err := j.destMeta.GetTableId(j.Dest.Table)
+	if err != nil {
+		log.Errorf("[InsertBootstrap] Failed to get dest old table ID: %+v", err)
+		return err
+	}
+	j.Dest.TableId = destOldTableId
+	log.Infof("[InsertBootstrap] Dest old table ID: %d", destOldTableId)
+
+	// Set up table mapping: src tmp table -> dest old table
+	// This mapping allows us to replay tmp table binlogs to old table
+	// IMPORTANT: This reuses the project's existing TableMapping mechanism
+	// When handleBinlog processes binlogs with tmp table ID, it will use TableMapping
+	// to find the corresponding dest table ID (old table) and replay binlogs there
+	if j.progress.TableMapping == nil {
+		j.progress.TableMapping = make(map[int64]int64)
+	}
+	j.progress.TableMapping[j.InsertBootstrapState.TempTableId] = destOldTableId
+	log.Infof("[InsertBootstrap] [CrossVersionMigration] Table mapping configured (reusing existing mechanism):")
+	log.Infof("[InsertBootstrap]   Source tmp table: %s (ID: %d) -> Dest old table: %s (ID: %d)",
+		j.InsertBootstrapState.TempTableName, j.InsertBootstrapState.TempTableId,
+		j.Dest.Table, destOldTableId)
+	log.Infof("[InsertBootstrap] [CrossVersionMigration] Tmp table binlogs will be automatically replayed to old table via TableMapping")
 
 	// Set the commit seq to start from BootstrapCommitSeq
 	j.progress.CommitSeq = j.InsertBootstrapState.BootstrapCommitSeq
@@ -471,16 +482,32 @@ func (j *Job) ibSyncTempTable() error {
 
 // modifyCreateTableForDest modifies CREATE TABLE SQL for dest cluster
 func (j *Job) modifyCreateTableForDest(createTableSql string) string {
-	// Replace source database name with dest database name if different
-	srcDbName := utils.FormatKeywordName(j.Src.Database)
 	destDbName := utils.FormatKeywordName(j.Dest.Database)
+	srcDbName := utils.FormatKeywordName(j.Src.Database)
 
+	// First, replace database prefix if present
 	result := strings.Replace(createTableSql, srcDbName+".", destDbName+".", -1)
 
 	// Also replace default_cluster prefix if present
 	srcOldStyle := fmt.Sprintf("`default_cluster:%s`.", j.Src.Database)
 	destOldStyle := fmt.Sprintf("`default_cluster:%s`.", j.Dest.Database)
 	result = strings.Replace(result, srcOldStyle, destOldStyle, -1)
+
+	// Ensure the CREATE TABLE statement has database prefix
+	// Pattern: CREATE TABLE `table_name` -> CREATE TABLE `db_name`.`table_name`
+	// This handles cases where the SQL doesn't have database prefix
+	re := regexp.MustCompile(`(?i)^\s*CREATE\s+(TABLE|VIEW)\s+` + "`([^`]+)`")
+	if matches := re.FindStringSubmatch(result); len(matches) == 3 {
+		resourceType := matches[1]
+		tableName := matches[2]
+		// Check if database prefix is already present
+		if !strings.Contains(tableName, ".") {
+			// Add database prefix
+			oldPattern := fmt.Sprintf("CREATE %s `%s`", resourceType, tableName)
+			newPattern := fmt.Sprintf("CREATE %s %s.`%s`", resourceType, destDbName, tableName)
+			result = strings.Replace(result, oldPattern, newPattern, 1)
+		}
+	}
 
 	return result
 }
@@ -559,7 +586,17 @@ func (j *Job) ibWaitTempTableSync() error {
 				}
 
 				// Handle the binlog using existing logic
-				// Note: The table mapping should already be set in ibSyncTempTable
+				// IMPORTANT: The TableMapping (tmp_table_id -> old_table_id) is already set in ibSyncTempTable
+				// The handleBinlog will automatically use TableMapping to find the dest table ID
+				// This reuses the project's proven mechanism for handling different table names
+				log.Infof("[InsertBootstrap] [CrossVersionMigration] Using TableMapping to replay binlog:")
+				log.Infof("[InsertBootstrap] [CrossVersionMigration]   Binlog tableId: %d (tmp table)", tableId)
+				if destTableId, ok := j.progress.TableMapping[tableId]; ok {
+					log.Infof("[InsertBootstrap] [CrossVersionMigration]   Mapped to dest tableId: %d (old table)", destTableId)
+				} else {
+					log.Warnf("[InsertBootstrap] [CrossVersionMigration]   WARNING: TableMapping not found for tableId %d", tableId)
+				}
+				
 				if err, back := j.handleBinlog(binlog); err != nil {
 					log.Errorf("[InsertBootstrap] Failed to handle binlog at offset %d: %+v", binlogCommitSeq, err)
 					return err
@@ -680,49 +717,16 @@ func (j *Job) ibWaitTempTableSync() error {
 	return nil
 }
 
-// ibRenameTables renames tables in dest cluster
+// ibRenameTables is no longer needed since we create old table directly in dest
+// This phase is kept for compatibility but does nothing
 func (j *Job) ibRenameTables() error {
-	log.Infof("[InsertBootstrap] Phase 7: Renaming tables in dest cluster...")
+	log.Infof("[InsertBootstrap] Phase 7: Skipping rename (old table already created in dest)...")
 
 	j.InsertBootstrapState.Phase = "rename_tables"
 
-	destDb := utils.FormatKeywordName(j.Dest.Database)
-	originalTable := utils.FormatKeywordName(j.Dest.Table)
-	tempTable := utils.FormatKeywordName(j.InsertBootstrapState.TempTableName)
-	backupTableName := fmt.Sprintf("_ccr_ib_backup_%s_%d", j.Dest.Table, time.Now().Unix())
-	backupTable := utils.FormatKeywordName(backupTableName)
-
-	// Step 1: Check if original table exists in dest
-	exists, err := j.IDest.CheckTableExistsByName(j.Dest.Table)
-	if err != nil {
-		log.Errorf("[InsertBootstrap] Failed to check if original table exists: %+v", err)
-		return err
-	}
-
-	if exists {
-		// Rename original table to backup
-		// Use j.Dest.Exec() since Specer interface doesn't have Exec method
-		renameSql := fmt.Sprintf("ALTER TABLE %s.%s RENAME %s", destDb, originalTable, backupTable)
-		log.Infof("[InsertBootstrap] Backing up original table: %s", renameSql)
-		if err := j.Dest.Exec(renameSql); err != nil {
-			log.Errorf("[InsertBootstrap] Failed to backup original table: %+v", err)
-			return err
-		}
-		j.InsertBootstrapState.OriginalTableBackedUp = true
-		log.Infof("[InsertBootstrap] Original table backed up as: %s", backupTableName)
-	} else {
-		log.Infof("[InsertBootstrap] Original table does not exist in dest, no backup needed")
-	}
-
-	// Step 2: Rename temp table to original table name
-	// Use j.Dest.Exec() since Specer interface doesn't have Exec method
-	renameSql := fmt.Sprintf("ALTER TABLE %s.%s RENAME %s", destDb, tempTable, originalTable)
-	log.Infof("[InsertBootstrap] Renaming temp table to original: %s", renameSql)
-	if err := j.Dest.Exec(renameSql); err != nil {
-		log.Errorf("[InsertBootstrap] Failed to rename temp table: %+v", err)
-		return err
-	}
-	log.Infof("[InsertBootstrap] Temp table renamed successfully")
+	// No rename needed since we created old table directly in dest cluster
+	// The tmp table binlogs have already been replayed to the old table
+	log.Infof("[InsertBootstrap] [CrossVersionMigration] Old table already exists in dest, no rename needed")
 
 	// Persist state and move to next phase
 	j.persistInsertBootstrapState()
@@ -772,17 +776,18 @@ func (j *Job) ibSwitchToIncremental() error {
 	// Refresh dest meta cache to get updated table info after rename
 	j.destMeta.ClearTablesCache()
 
-	// Get the dest table ID (now it's the renamed temp table)
+	// Get the dest table ID (the old table we created)
 	destTableId, err := j.destMeta.GetTableId(j.Dest.Table)
 	if err != nil {
 		log.Errorf("[InsertBootstrap] Failed to get dest table ID: %+v", err)
 		return err
 	}
 	j.Dest.TableId = destTableId
-	log.Infof("[InsertBootstrap] Dest table ID after rename: %d", destTableId)
+	log.Infof("[InsertBootstrap] Dest old table ID: %d", destTableId)
 
-	// Set up table mapping for the ORIGINAL table (not temp table)
-	// This is critical: we need to map src original table -> dest (renamed from temp)
+	// Set up table mapping for incremental sync: src original table -> dest old table
+	// This is critical: we need to map src original table -> dest old table
+	// The tmp table binlogs have been replayed, now we sync original table binlogs
 	j.progress.TableMapping = map[int64]int64{
 		j.Src.TableId: destTableId,
 	}

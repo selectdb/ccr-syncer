@@ -4560,14 +4560,12 @@ func (j *Job) FirstRun() error {
 				return xerror.Errorf(xerror.Normal, "dest table %s.%s must exist when skip_full_sync is enabled", j.Dest.Database, j.Dest.Table)
 			}
 		} else if j.InsertBootstrap {
-			// InsertBootstrap mode: dest table can exist or not
-			// If exists, it will be backed up and replaced
-			// If not exists, temp table will be renamed to it
+			// InsertBootstrap mode: dest table should NOT exist (same as normal mode)
+			// The old table will be created in dest cluster during sync process
 			if dest_table_exists {
-				log.Infof("[InsertBootstrap] Dest table %s.%s already exists, it will be backed up during migration", j.Dest.Database, j.Dest.Table)
-			} else {
-				log.Infof("[InsertBootstrap] Dest table %s.%s does not exist, will be created from temp table", j.Dest.Database, j.Dest.Table)
+				return xerror.Errorf(xerror.Normal, "dest table %s.%s already exists", j.Dest.Database, j.Dest.Table)
 			}
+			log.Infof("[InsertBootstrap] Dest table %s.%s does not exist, will be created during migration", j.Dest.Database, j.Dest.Table)
 		} else if !j.Extra.allowTableExists {
 			// Normal mode: dest table should not exist
 			if dest_table_exists {
