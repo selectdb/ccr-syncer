@@ -31,8 +31,8 @@ import (
 )
 
 const (
-	// Prefix for temporary table name
-	insertBootstrapTempTablePrefix = "_ccr_ib_tmp_"
+	// Suffix for temporary table name (will be appended to original table name)
+	insertBootstrapTempTableSuffix = "_tmp_"
 
 	// Timeout for INSERT operation (24 hours)
 	insertBootstrapInsertTimeout = 24 * time.Hour
@@ -213,10 +213,11 @@ func (j *Job) ibRecordBinlogPosition() error {
 	log.Infof("[InsertBootstrap] NOTE: Incremental sync will later start from commitSeq=%d (v1 offset)", bootstrapCommitSeq)
 	log.Infof("[InsertBootstrap] ----------------------------------------")
 
-	// Generate temp table name with timestamp for uniqueness
+	// Generate temp table name: original_table_name_tmp_timestamp
+	// This format ensures the table name starts with a letter (required by Doris table name regex)
 	timestamp := time.Now().Unix()
-	j.InsertBootstrapState.TempTableName = fmt.Sprintf("%s%s_%d", insertBootstrapTempTablePrefix, j.Src.Table, timestamp)
-	log.Infof("[InsertBootstrap] Generated temp table name: %s", j.InsertBootstrapState.TempTableName)
+	j.InsertBootstrapState.TempTableName = fmt.Sprintf("%s%s%d", j.Src.Table, insertBootstrapTempTableSuffix, timestamp)
+	log.Infof("[InsertBootstrap] Generated temp table name: %s (format: original_table_tmp_timestamp)", j.InsertBootstrapState.TempTableName)
 
 	// Persist state and move to next phase
 	j.persistInsertBootstrapState()
