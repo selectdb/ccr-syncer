@@ -18,6 +18,7 @@ package base
 
 import (
 	"database/sql"
+	"flag"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -36,6 +37,13 @@ import (
 var ErrRestoreSignatureNotMatched = xerror.NewWithoutStack(xerror.Normal, "The signature is not matched, the table already exist but with different schema")
 var ErrBackupTableNotFound = xerror.NewWithoutStack(xerror.Normal, "backup table not found")
 var ErrBackupPartitionNotFound = xerror.NewWithoutStack(xerror.Normal, "backup partition not found")
+
+var featureSkipNotFoundTxn bool
+
+func init() {
+	flag.BoolVar(&featureSkipNotFoundTxn, "feature_skip_not_found_txn", false,
+		"skip not found txn during waitTransactionDone")
+}
 
 const (
 	BACKUP_CHECK_DURATION  = time.Second * 3
@@ -1096,6 +1104,14 @@ func (s *Spec) waitTransactionDone(txnId int64) error {
 	log.Debugf("wait transaction done sql: %s", query)
 	rows, err := db.Query(query)
 	if err != nil {
+		if featureSkipNotFoundTxn {
+			msg := fmt.Sprintf("transaction with id %d does not exist", txnId)
+			if strings.Contains(err.Error(), msg) {
+				log.Warnf("txn %d is not found, maybe already finished and cleaned up, skip it since feature_skip_not_found_txn is set. spec: %s", txnId, s.String())
+				return nil
+			}
+		}
+
 		return xerror.Wrap(err, xerror.Normal, "query restore state failed")
 	}
 	defer rows.Close()
