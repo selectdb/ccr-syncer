@@ -950,6 +950,9 @@ func (j *Job) partialSync() error {
 				j.progress.ShadowIndexes = nil
 			}
 			j.Dest.TableId = destTable.Id
+			if err := j.persistJob(); err != nil {
+				return err
+			}
 			j.progress.TableMapping = nil
 			j.progress.TableCommitSeqMap = nil
 			j.progress.NextWithPersist(commitSeq, TableIncrementalSync, Done, "")
