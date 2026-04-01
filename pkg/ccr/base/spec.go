@@ -1186,6 +1186,7 @@ func (s *Spec) WaitTransactionDoneWithContext(ctx context.Context, txnId int64) 
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
+	msg := fmt.Sprintf("transaction with id %d does not exist", txnId)
 	for {
 		select {
 		case <-ctx.Done():
@@ -1193,7 +1194,9 @@ func (s *Spec) WaitTransactionDoneWithContext(ctx context.Context, txnId int64) 
 			log.Infof("wait transaction %d cancelled: %v", txnId, ctx.Err())
 			return ctx.Err()
 		case <-ticker.C:
-			if err := s.waitTransactionDone(txnId); err != nil {
+			if err := s.waitTransactionDone(txnId); strings.Contains(err.Error(), msg) {
+				return xerror.Errorf(xerror.Meta, "txn %d does not exist, maybe already finished and cleaned up, spec: %s", txnId, s.String())
+			} else if err != nil {
 				log.Debugf("transaction %d not visible yet, continue waiting: %v", txnId, err)
 			} else {
 				log.Infof("transaction %d is visible", txnId)
