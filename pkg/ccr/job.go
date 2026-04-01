@@ -126,7 +126,7 @@ func init() {
 		"enable the seperated handles (the refactor)")
 	flag.BoolVar(&featureEnableSnapshotCompress, "feature_enable_snapshot_compress", true,
 		"enable snapshot compress")
-	flag.BoolVar(&featureOverrideReplicationNumInternal, "feature_override_replication_num", true,
+	flag.BoolVar(&featureOverrideReplicationNumInternal, "feature_override_replication_num", false,
 		"enable override replication_num for downstream cluster")
 
 	flag.Int64Var(&flagBinlogBatchSize, "binlog_batch_size", 16, "the max num of binlogs to get in a batch")
