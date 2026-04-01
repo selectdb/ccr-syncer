@@ -81,7 +81,8 @@ var (
 	featureEnableSnapshotCompress         bool
 	featureOverrideReplicationNumInternal bool
 
-	flagBinlogBatchSize int64
+	flagBinlogBatchSize                      int64
+	flagMaxBackupRestoreConcurrencyPerTarget int64
 
 	ErrMaterializedViewTable = xerror.NewWithoutStack(xerror.Meta, "Not support table type: materialized view")
 )
@@ -129,6 +130,8 @@ func init() {
 		"enable override replication_num for downstream cluster")
 
 	flag.Int64Var(&flagBinlogBatchSize, "binlog_batch_size", 16, "the max num of binlogs to get in a batch")
+	flag.Int64Var(&flagMaxBackupRestoreConcurrencyPerTarget, "max_backup_restore_concurrency_per_target", 10,
+		"the max concurrency of backup or restore jobs per upstream or downstream target, 0 or negative means no limit. Only for full sync.")
 }
 
 // FeatureOverrideReplicationNum returns whether the feature is enabled
@@ -243,6 +246,7 @@ type Job struct {
 	// Current running backup/restore names for cancellation on deletion
 	currentBackupName  string `json:"-"`
 	currentRestoreName string `json:"-"`
+	syncPermitKey      string `json:"-"`
 
 	// Context for cancellation on deletion
 	ctx    context.Context    `json:"-"`
@@ -456,6 +460,60 @@ func (j *Job) buildRestoreReplicationProperties() (map[string]string, error) {
 		"replication_num": strconv.Itoa(int(p)),
 	}
 	return props, nil
+}
+
+func (j *Job) tryAcquirePermit(key string) bool {
+	limit := int(flagMaxBackupRestoreConcurrencyPerTarget)
+	if limit <= 0 || key == "" || j.syncPermitKey == key {
+		return true
+	}
+
+	if j.syncPermitKey != "" {
+		j.factory.backupRestoreLimiter.Release(j.syncPermitKey)
+		log.Debugf("job %s released permit, key: %s", j.Name, j.syncPermitKey)
+		j.syncPermitKey = ""
+	}
+
+	if !j.factory.backupRestoreLimiter.TryAcquire(key, limit) {
+		log.Debugf("job %s waiting for permit, key: %s, limit: %d", j.Name, key, limit)
+		return false
+	}
+
+	log.Debugf("job %s acquired permit, key: %s, limit: %d", j.Name, key, limit)
+
+	j.syncPermitKey = key
+	return true
+}
+
+func (j *Job) observePermit(key string) {
+	limit := int(flagMaxBackupRestoreConcurrencyPerTarget)
+	if limit <= 0 {
+		return
+	}
+
+	if j.syncPermitKey == key {
+		return
+	}
+
+	if j.syncPermitKey != "" {
+		j.factory.backupRestoreLimiter.Release(j.syncPermitKey)
+		log.Debugf("job %s released permit, key: %s", j.Name, j.syncPermitKey)
+	}
+
+	log.Debugf("job %s observed permit, key: %s, limit: %d", j.Name, key, limit)
+	j.factory.backupRestoreLimiter.Observe(key)
+	j.syncPermitKey = key
+}
+
+func (j *Job) releasePermit() {
+	if j.syncPermitKey == "" {
+		j.syncPermitKey = ""
+		return
+	}
+
+	j.factory.backupRestoreLimiter.Release(j.syncPermitKey)
+	log.Debugf("job %s released permit, key: %s", j.Name, j.syncPermitKey)
+	j.syncPermitKey = ""
 }
 
 func (j *Job) isTableDropped(tableId int64) (bool, error) {
@@ -853,6 +911,7 @@ func (j *Job) partialSync() error {
 			if err := j.IDest.CancelRestoreIfExists(restoreSnapshotName); err != nil {
 				return err
 			}
+			j.currentRestoreName = ""
 			log.Infof("force partial sync, because the snapshot %s is expired", restoreSnapshotName)
 			replace := len(j.progress.TableAliases) > 0
 			isView := j.progress.PartialSyncData.IsView
@@ -861,6 +920,7 @@ func (j *Job) partialSync() error {
 
 		restoreFinished, err := j.IDest.CheckRestoreFinished(restoreSnapshotName)
 		if errors.Is(err, base.ErrRestoreSignatureNotMatched) {
+			j.currentRestoreName = ""
 			log.Warnf("force partial sync with replace, because the snapshot %s signature is not matched", restoreSnapshotName)
 			return j.NewPartialSnapshot(tableId, table, nil, true, false) // only in partition sync.
 		} else if err != nil {
@@ -970,6 +1030,35 @@ func (j *Job) partialSync() error {
 }
 
 func (j *Job) fullSync() error {
+	switch j.progress.SubSyncState {
+	case BeginCreateSnapshot:
+		backupResourceKey := buildBackupRestoreLimitKey(backupLimitResource, j.Src)
+		if !j.tryAcquirePermit(backupResourceKey) {
+			return nil
+		}
+	case WaitBackupDone:
+		backupResourceKey := buildBackupRestoreLimitKey(backupLimitResource, j.Src)
+		j.observePermit(backupResourceKey)
+	case RestoreSnapshot:
+		restoreResourceKey := buildBackupRestoreLimitKey(restoreLimitResource, j.Dest)
+		if !j.tryAcquirePermit(restoreResourceKey) {
+			return nil
+		}
+	case WaitRestoreDone:
+		restoreResourceKey := buildBackupRestoreLimitKey(restoreLimitResource, j.Dest)
+		j.observePermit(restoreResourceKey)
+	default:
+		j.releasePermit()
+	}
+
+	err := j.fullSyncWithPermit()
+	if err != nil {
+		j.releasePermit()
+	}
+	return err
+}
+
+func (j *Job) fullSyncWithPermit() error {
 	type inMemoryData struct {
 		SnapshotName      string                        `json:"snapshot_name"`
 		SnapshotResp      *festruct.TGetSnapshotResult_ `json:"snapshot_resp"`
@@ -1191,7 +1280,7 @@ func (j *Job) fullSync() error {
 				return nil
 			}
 			if restoreSnapshotName != "" {
-				log.Infof("fullsync status: there has a exist restore job %s", restoreSnapshotName)
+				log.Infof("fullsync status: there has a existing restore job %s", restoreSnapshotName)
 				inMemoryData.RestoreLabel = restoreSnapshotName
 				j.currentRestoreName = restoreSnapshotName
 				j.progress.NextSubVolatile(WaitRestoreDone, inMemoryData)
@@ -1317,6 +1406,7 @@ func (j *Job) fullSync() error {
 			if err := j.IDest.CancelRestoreIfExists(restoreSnapshotName); err != nil {
 				return err
 			}
+			j.currentRestoreName = ""
 			info := fmt.Sprintf("the snapshot %s is expired", restoreSnapshotName)
 			log.Infof("force full sync, because %s", info)
 			return j.NewSnapshot(j.progress.CommitSeq, info)
@@ -1353,6 +1443,7 @@ func (j *Job) fullSync() error {
 						j.progress.TableAliases = make(map[string]string)
 					}
 					j.progress.TableAliases[tableName] = TableAlias(tableName)
+					j.currentRestoreName = ""
 					j.progress.NextSubCheckpoint(GetSnapshotInfo, inMemoryData.SnapshotName) // persist TableAliases
 					j.progress.NextSubVolatile(RestoreSnapshot, inMemoryData)
 					break
@@ -1369,6 +1460,7 @@ func (j *Job) fullSync() error {
 					}
 				}
 				log.Infof("the restore is cancelled, the unmatched %s %s is dropped, restore snapshot again", resource, tableName)
+				j.currentRestoreName = ""
 				j.progress.NextSubVolatile(RestoreSnapshot, inMemoryData)
 				break
 			} else if err != nil {
@@ -1384,6 +1476,7 @@ func (j *Job) fullSync() error {
 			if utils.HasJobFailpoint(j.Name, "fullsync_restore_snapshot_rebooting") {
 				log.Infof("hit failpoint fullsync_restore_snapshot_rebooting, step to RestoreSnapshot")
 				utils.RemoveJobFailpoint(j.Name, "fullsync_restore_snapshot_rebooting")
+				j.currentRestoreName = ""
 				j.recoverJobProgress()
 				return nil
 			}
@@ -4031,11 +4124,13 @@ func (j *Job) run() {
 		case <-ticker.C:
 			// loop to print error, not panic, waiting for user to pause/stop/remove Job
 			if j.getJobState() != JobRunning {
+				j.releasePermit()
 				break
 			}
 
 			if panicError != nil {
 				log.Errorf("job panic, job: %s, err: %+v", j.Name, panicError)
+				j.releasePermit()
 				break
 			}
 
@@ -4138,6 +4233,8 @@ func (j *Job) NewPartialSnapshot(tableId int64, table string, partitions []strin
 func (j *Job) Run() error {
 	gls.ResetGls(gls.GoID(), map[any]any{"job": j.Name})
 	defer gls.DeleteGls(gls.GoID())
+
+	defer j.releasePermit()
 
 	// Initialize context for cancellation
 	j.ctx, j.cancel = context.WithCancel(context.Background())
@@ -4307,6 +4404,9 @@ func (j *Job) Delete() {
 			log.Warnf("job %s failed to cancel restore %s: %v", j.Name, j.currentRestoreName, err)
 		}
 	}
+
+	j.currentBackupName = ""
+	j.currentRestoreName = ""
 
 	// 5. Close stop channel
 	close(j.stop)
