@@ -1,5 +1,17 @@
 # 更新日志
 
+# 3.0.6-rc06
+
+### Fix
+
+- 修复在 TableSync 模式下 partialSync 后未持久化 Dest.TableId 的问题，导致 syncer 重启后出现 "can't find table id" 错误 (selectdb/ccr-syncer#672)
+- 修复当目标事务不存在时触发快照的问题 (selectdb/ccr-syncer#673)
+- 修复移除 job 的问题 (selectdb/ccr-syncer#659)
+
+### Feature
+
+- 新增 `flagMaxBackupRestoreConcurrencyPerTarget` 标志位，用于控制每个目标的 backup&restore 并发数 (selectdb/ccr-syncer#674)
+
 # 3.0.7/2.1.11
 
 ### Fix
