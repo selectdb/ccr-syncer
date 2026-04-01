@@ -1,5 +1,17 @@
 # 更新日志
 
+# 3.0.7/2.1.10-rc07
+
+### Fix
+
+- 修复删除任务的问题 (selectdb/ccr-syncer#659)
+- 修复 TableSync 模式下 partialSync 后持久化 Dest.TableId 的问题 (selectdb/ccr-syncer#672)
+- 修复目标事务不存在时触发快照的问题 (selectdb/ccr-syncer#673)
+
+### Feature
+
+- 添加 flagMaxBackupRestoreConcurrencyPerTarget 标志用于控制 backup&restore 并发数 (selectdb/ccr-syncer#674)
+
 # 3.0.7/2.1.11
 
 ### Fix
