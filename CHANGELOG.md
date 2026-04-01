@@ -1,5 +1,21 @@
 # 更新日志
 
+# 4.0.1-rc02
+
+### Fix
+
+- 添加 backup restore limiter，防止过多的 backup/restore 任务导致资源耗尽 (selectdb/ccr-syncer#675)
+- 修复目标事务不存在时触发快照的问题 (selectdb/ccr-syncer#673)
+- 修复 TableSync 模式下 partialSync 后持久化 Dest.TableId 的问题 (selectdb/ccr-syncer#672)
+- 修复 table sync 应该重置 shadow index map 的问题 (selectdb/ccr-syncer#662)
+- 移除 BE 缓存机制并简化 replication number 验证 (selectdb/ccr-syncer#651)
+- 修复 legacy job 对 replication_num 的兼容性问题 (selectdb/ccr-syncer#658)
+- 修复 remove job 的问题 (selectdb/ccr-syncer#659)
+
+### Feature
+
+- 添加 flag `flagMaxBackupRestoreConcurrencyPerTarget` 用于控制每个目标的 backup & restore 并发数 (selectdb/ccr-syncer#674)
+
 # 3.0.7/2.1.11 (最新)
 
 ### Fix
