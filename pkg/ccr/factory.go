@@ -26,6 +26,7 @@ type Factory struct {
 	MetaerFactory
 	base.SpecerFactory
 	ThriftMetaFactory
+	backupRestoreLimiter *backupRestoreLimiter
 }
 
 func NewFactory(rpcFactory rpc.IRpcFactory, metaFactory MetaerFactory, ISpecFactory base.SpecerFactory, thriftMetaFactory ThriftMetaFactory) *Factory {
@@ -34,5 +35,6 @@ func NewFactory(rpcFactory rpc.IRpcFactory, metaFactory MetaerFactory, ISpecFact
 		MetaerFactory:     metaFactory,
 		SpecerFactory:     ISpecFactory,
 		ThriftMetaFactory: thriftMetaFactory,
+		backupRestoreLimiter: newBackupRestoreLimiter(),
 	}
 }
