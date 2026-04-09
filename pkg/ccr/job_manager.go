@@ -242,6 +242,8 @@ func (jm *JobManager) GetJobStatus(jobName string) (*JobStatus, error) {
 	defer jm.lock.RUnlock()
 
 	if job, ok := jm.jobs[jobName]; ok {
+		log.Debugf("job rawStatue: %s, job state:%s", job.rawStatus.state, job.State)
+		atomic.StoreInt32(&job.rawStatus.state, int32(job.State))
 		return job.Status(), nil
 	} else {
 		return nil, xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
