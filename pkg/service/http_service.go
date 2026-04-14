@@ -105,6 +105,32 @@ type CreateCcrRequest struct {
 	ReuseBinlogLabel bool `json:"reuse_binlog_label"`
 	// replication_num: nil or -1 means inherit from upstream (default), >0 means fixed replica count, 0 is invalid
 	ReplicationNum *int `json:"replication_num,omitempty"`
+	// SkipFullSync: if true, skip the full sync (backup/restore) and start from incremental sync directly.
+	// This is useful for cross-version migration where backup/restore is not compatible.
+	SkipFullSync bool `json:"skip_full_sync"`
+	// InitialCommitSeq: the initial commit seq to start incremental sync from.
+	// Only used when SkipFullSync is true.
+	InitialCommitSeq int64 `json:"initial_commit_seq"`
+	// InsertBootstrap: if true, use INSERT INTO ... SELECT to bootstrap data instead of backup/restore.
+	// This is designed for cross-version migration where backup/restore is not compatible (e.g., 2.1 -> 4.0).
+	// The syncer will:
+	// 1. Record current binlog position
+	// 2. Create a temp table in source cluster
+	// 3. Execute INSERT INTO temp_table SELECT FROM original_table
+	// 4. Sync temp table to dest cluster via CCR
+	// 5. Rename tables in dest cluster (temp -> original)
+	// 6. Switch to incremental sync from recorded position
+	InsertBootstrap bool `json:"insert_bootstrap"`
+	// CrossVersionMigration: if true, enables cross-version migration mode (e.g., Doris 2.1 -> 4.0).
+	// This is an alias for InsertBootstrap mode, designed specifically for cross-version migration scenarios.
+	// When enabled, it automatically uses INSERT INTO ... SELECT to bootstrap data instead of backup/restore.
+	// The workflow:
+	// 1. Record current binlog position (v1)
+	// 2. Create old_tmp table based on old table schema
+	// 3. Execute INSERT INTO old_tmp SELECT FROM old (captures snapshot at v1)
+	// 4. Sync old_tmp table binlogs to dest cluster's old table
+	// 5. After sync completes, start incremental sync from v1 offset for old table
+	CrossVersionMigration bool `json:"cross_version_migration"`
 }
 
 // Stringer
@@ -140,6 +166,13 @@ func createCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobMana
 		replicationNum = *request.ReplicationNum
 	}
 
+	// If CrossVersionMigration is enabled, automatically enable InsertBootstrap
+	insertBootstrap := request.InsertBootstrap || request.CrossVersionMigration
+	if request.CrossVersionMigration {
+		log.Infof("[CrossVersionMigration] Cross-version migration mode enabled for job: %s", request.Name)
+		log.Infof("[CrossVersionMigration] This will use INSERT INTO ... SELECT to bootstrap data for compatibility")
+	}
+
 	ctx := &ccr.JobContext{
 		Context:          context.Background(),
 		Src:              request.Src,
@@ -150,6 +183,9 @@ func createCcr(request *CreateCcrRequest, db storage.DB, jobManager *ccr.JobMana
 		Db:               db,
 		Factory:          jobManager.GetFactory(),
 		ReplicationNum:   replicationNum,
+		SkipFullSync:     request.SkipFullSync,
+		InitialCommitSeq: request.InitialCommitSeq,
+		InsertBootstrap:  insertBootstrap,
 	}
 	job, err := ccr.NewJobFromService(request.Name, ctx)
 	if err != nil {

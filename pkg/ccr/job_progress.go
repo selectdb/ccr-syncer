@@ -50,6 +50,10 @@ const (
 	TableIncrementalSync SyncState = 501
 	TablePartialSync     SyncState = 502
 
+	// InsertBootstrap sync state machine states (for cross-version migration)
+	// This mode uses INSERT INTO ... SELECT to bootstrap data instead of backup/restore
+	TableInsertBootstrap SyncState = 600
+
 	// TODO: add timeout state for restart full sync
 )
 
@@ -72,6 +76,8 @@ func (s SyncState) String() string {
 		return "TableIncrementalSync"
 	case TablePartialSync:
 		return "TablePartialSync"
+	case TableInsertBootstrap:
+		return "TableInsertBootstrap"
 	default:
 		return fmt.Sprintf("Unknown SyncState: %d", s)
 	}
@@ -128,6 +134,18 @@ var (
 	CommitPipeline            SubSyncState = SubSyncState{State: 201, BinlogType: BinlogNone} // All continuous upsert binlogs are launched, but not yet committed
 	CommitPipelineTransaction SubSyncState = SubSyncState{State: 202, BinlogType: BinlogNone} // Commit an upsert binlog
 	RollbackPipeline          SubSyncState = SubSyncState{State: 203, BinlogType: BinlogNone} // A upsert binlog commit failed, rollback all the following upsert binlogs
+
+	// InsertBootstrap state machine states (for cross-version migration)
+	// Uses INSERT INTO ... SELECT to bootstrap data instead of backup/restore
+	IBRecordBinlogPosition SubSyncState = SubSyncState{State: 300, BinlogType: BinlogNone} // Record current binlog position
+	IBCreateTempTable      SubSyncState = SubSyncState{State: 301, BinlogType: BinlogNone} // Create temp table in source cluster
+	IBExecuteInsert        SubSyncState = SubSyncState{State: 302, BinlogType: BinlogNone} // Execute INSERT INTO temp SELECT FROM original
+	IBWaitInsertDone       SubSyncState = SubSyncState{State: 303, BinlogType: BinlogNone} // Wait for INSERT to complete
+	IBSyncTempTable        SubSyncState = SubSyncState{State: 304, BinlogType: BinlogNone} // Sync temp table to dest cluster via CCR
+	IBWaitTempTableSync    SubSyncState = SubSyncState{State: 305, BinlogType: BinlogNone} // Wait for temp table sync to complete
+	IBRenameTables         SubSyncState = SubSyncState{State: 306, BinlogType: BinlogNone} // Rename tables in dest cluster
+	IBCleanup              SubSyncState = SubSyncState{State: 307, BinlogType: BinlogNone} // Cleanup temp resources
+	IBSwitchToIncremental  SubSyncState = SubSyncState{State: 308, BinlogType: BinlogNone} // Switch to incremental sync from recorded position
 )
 
 // SubSyncState Stringer
@@ -161,6 +179,25 @@ func (s SubSyncState) String() string {
 		return "CommitPipelineTransaction"
 	case RollbackPipeline:
 		return "RollbackPipeline"
+	// InsertBootstrap states
+	case IBRecordBinlogPosition:
+		return "IBRecordBinlogPosition"
+	case IBCreateTempTable:
+		return "IBCreateTempTable"
+	case IBExecuteInsert:
+		return "IBExecuteInsert"
+	case IBWaitInsertDone:
+		return "IBWaitInsertDone"
+	case IBSyncTempTable:
+		return "IBSyncTempTable"
+	case IBWaitTempTableSync:
+		return "IBWaitTempTableSync"
+	case IBRenameTables:
+		return "IBRenameTables"
+	case IBCleanup:
+		return "IBCleanup"
+	case IBSwitchToIncremental:
+		return "IBSwitchToIncremental"
 	default:
 		return fmt.Sprintf("Unknown sub sync state: %d, binlog type: %d", s.State, s.BinlogType)
 	}
