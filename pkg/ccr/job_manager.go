@@ -1,0 +1,323 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License
+package ccr
+
+import (
+	"encoding/json"
+	"fmt"
+	"sync"
+
+	"github.com/selectdb/ccr_syncer/pkg/storage"
+	"github.com/selectdb/ccr_syncer/pkg/xerror"
+	log "github.com/sirupsen/logrus"
+)
+
+var errJobExist = xerror.NewWithoutStack(xerror.Normal, "job exist")
+var errJobDeleting = xerror.NewWithoutStack(xerror.Normal, "job is being deleted, please wait and retry")
+var errJobName = xerror.NewWithoutStack(xerror.Normal, "job name does not match the regex of doris")
+
+// job manager is thread safety
+type JobManager struct {
+	db       storage.DB
+	jobs     map[string]*Job
+	lock     sync.RWMutex
+	factory  *Factory
+	hostInfo string
+	stop     chan struct{}
+	wg       sync.WaitGroup
+}
+
+func NewJobManager(db storage.DB, factory *Factory, hostInfo string) *JobManager {
+	return &JobManager{
+		db:       db,
+		jobs:     make(map[string]*Job),
+		factory:  factory,
+		hostInfo: hostInfo,
+		stop:     make(chan struct{}),
+	}
+}
+
+func (jm *JobManager) GetFactory() *Factory {
+	return jm.factory
+}
+
+// add job to job manager && run job
+func (jm *JobManager) AddJob(job *Job) error {
+	log.Infof("add job: %s", job.Name)
+
+	jm.lock.Lock()
+	defer jm.lock.Unlock()
+
+	// Step 0: check job name
+	if !CheckLabelRegex(job.Name) {
+		return xerror.XWrapf(errJobName, "job: %s", job.Name)
+	}
+
+	// Step 1: check job exist
+	if existingJob, ok := jm.jobs[job.Name]; ok {
+		// Distinguish between "job is running" and "job is being deleted"
+		if existingJob.IsDeleted() {
+			return xerror.XWrapf(errJobDeleting, "job: %s", job.Name)
+		}
+		return xerror.XWrapf(errJobExist, "job: %s", job.Name)
+	}
+
+	// Step 2: check job first run, mostly for dest/src fe db/table info
+	if err := job.FirstRun(); err != nil {
+		return err
+	}
+
+	// Step 3: add job info to db
+	data, err := json.Marshal(job)
+	if err != nil {
+		return xerror.Wrap(err, xerror.Normal, "marshal job error")
+	}
+	if err := jm.db.AddJob(job.Name, string(data), jm.hostInfo); err != nil {
+		return err
+	}
+
+	// Step 4: run job
+	jm.jobs[job.Name] = job
+	jm.runJob(job)
+
+	return nil
+}
+
+func (jm *JobManager) Recover(jobNames []string) error {
+	log.Info("job manager recover")
+
+	jm.lock.Lock()
+	defer jm.lock.Unlock()
+
+	jobs := make([]*Job, 0)
+	for _, jobName := range jobNames {
+		if _, ok := jm.jobs[jobName]; ok {
+			continue
+		}
+
+		log.Infof("recover job: %s", jobName)
+
+		if jobInfo, err := jm.db.GetJobInfo(jobName); err != nil {
+			return err
+		} else if job, err := NewJobFromJson(jobInfo, jm.db, jm.factory); err != nil {
+			return err
+		} else {
+			jobs = append(jobs, job)
+		}
+	}
+
+	for _, job := range jobs {
+		jm.jobs[job.Name] = job
+		jm.runJob(job)
+	}
+	return nil
+}
+
+// remove job
+func (jm *JobManager) RemoveJob(name string) error {
+	log.Infof("remove job: %s", name)
+
+	jm.lock.Lock()
+	defer jm.lock.Unlock()
+
+	job := jm.jobs[name]
+	// check job exist
+	if job == nil {
+		return xerror.Errorf(xerror.Normal, "job not exist: %s", name)
+	}
+
+	// Step 1: Mark job as deleted and interrupt running operations
+	job.Delete()
+
+	// Step 2: Remove from database (only once, maybeDeleted no longer does this)
+	if err := jm.db.RemoveJob(name); err != nil {
+		log.Errorf("remove job [%s] in db failed: %+v, but job is stopped", name, err)
+		return fmt.Errorf("remove job [%s] in db failed, but job is stopped, if can resume/delete, please do it manually", name)
+	}
+
+	// Step 3: Don't remove from map here!
+
+	log.Infof("job [%s] has been marked for deletion, will be removed from map after goroutine exits", name)
+	return nil
+}
+
+// go run all jobs and wait for stop chan
+func (jm *JobManager) Start() error {
+	jm.lock.RLock()
+	for _, job := range jm.jobs {
+		jm.runJob(job)
+	}
+	jm.lock.RUnlock()
+
+	<-jm.stop
+	return nil
+}
+
+// stop job manager
+// first stop all jobs, then stop job manager
+func (jm *JobManager) Stop() error {
+	jm.lock.RLock()
+
+	// stop all jobs
+	for _, job := range jm.jobs {
+		job.Stop()
+	}
+	jm.lock.RUnlock()
+
+	// stop job manager
+	close(jm.stop)
+	jm.wg.Wait()
+	return nil
+}
+
+// run job loop in job manager
+func (jm *JobManager) runJob(job *Job) {
+	jm.wg.Add(1)
+
+	go func() {
+		defer func() {
+			// 1. Recover from panic to ensure cleanup always runs
+			if r := recover(); r != nil {
+				log.Errorf("job %s panic: %v", job.Name, r)
+			}
+
+			// 2. If job was deleted, remove from map after goroutine exits
+			if job.IsDeleted() {
+				jm.lock.Lock()
+				delete(jm.jobs, job.Name)
+				jm.lock.Unlock()
+				log.Infof("job [%s] goroutine exited, removed from map", job.Name)
+			}
+
+			// 3. Always call wg.Done()
+			jm.wg.Done()
+		}()
+
+		err := job.Run()
+		if err != nil {
+			log.Errorf("job run failed, job name: %s, error: %+v", job.Name, err)
+		}
+	}()
+}
+
+func (jm *JobManager) dealJob(jobName string, dealFunc func(job *Job) error) error {
+	jm.lock.RLock()
+	defer jm.lock.RUnlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return dealFunc(job)
+	} else {
+		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
+	}
+}
+
+func (jm *JobManager) Pause(jobName string) error {
+	return jm.dealJob(jobName, func(job *Job) error {
+		return job.Pause()
+	})
+}
+
+func (jm *JobManager) Resume(jobName string) error {
+	return jm.dealJob(jobName, func(job *Job) error {
+		return job.Resume()
+	})
+}
+
+func (jm *JobManager) GetJobStatus(jobName string) (*JobStatus, error) {
+	jm.lock.RLock()
+	defer jm.lock.RUnlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return job.Status(), nil
+	} else {
+		return nil, xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
+	}
+}
+
+func (jm *JobManager) Desync(jobName string) error {
+	jm.lock.RLock()
+	defer jm.lock.RUnlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return job.Desync()
+	} else {
+		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
+	}
+}
+
+func (jm *JobManager) Sync(jobName string) error {
+	jm.lock.RLock()
+	defer jm.lock.RUnlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return job.Sync()
+	} else {
+		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
+	}
+}
+
+func (jm *JobManager) ListJobs() []*JobStatus {
+	jm.lock.RLock()
+	defer jm.lock.RUnlock()
+
+	jobs := make([]*JobStatus, 0)
+	for _, job := range jm.jobs {
+		jobs = append(jobs, job.Status())
+	}
+	return jobs
+}
+
+func (jm *JobManager) UpdateHostMapping(jobName string, srcHostMapping, destHostMapping map[string]string) error {
+	jm.lock.Lock()
+	defer jm.lock.Unlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return job.UpdateHostMapping(srcHostMapping, destHostMapping)
+	} else {
+		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
+	}
+}
+
+func (jm *JobManager) SkipBinlog(jobName string, params SkipBinlogParams) error {
+	jm.lock.Lock()
+	defer jm.lock.Unlock()
+
+	if job, ok := jm.jobs[jobName]; ok {
+		return job.SkipBinlog(params)
+	} else {
+		return xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
+	}
+}
+
+// InvalidateBackendsCache invalidates backends cache. If jobName is empty, invalidates all jobs.
+func (jm *JobManager) InvalidateBackendsCache(jobName string) (int, error) {
+	jm.lock.RLock()
+	defer jm.lock.RUnlock()
+
+	if jobName != "" {
+		if job, ok := jm.jobs[jobName]; ok {
+			job.InvalidateBackendsCache()
+			return 1, nil
+		}
+		return 0, xerror.Errorf(xerror.Normal, "job not exist: %s", jobName)
+	}
+
+	for _, job := range jm.jobs {
+		job.InvalidateBackendsCache()
+	}
+	return len(jm.jobs), nil
+}
